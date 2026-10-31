@@ -208,7 +208,7 @@ content:
         options:
           format: markdown
       - name: approccio
-        label: My Aproach
+        label: My Approach
         type: rich-text
         options:
           format: markdown
