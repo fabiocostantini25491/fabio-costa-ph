@@ -12,6 +12,20 @@
           "categoria": "Paesaggi"
         }
       ]
+    },
+    {
+      "nome": "Saint Magdalene",
+      "id": "Dolomiti",
+      "paese": "Italia",
+      "lat": "46.64635034253251",
+      "lon": "11.688709644085456",
+      "foto": [
+        {
+          "titolo": "Saint Magdalene",
+          "immagine": "/img/foto/fb-untitled-7-jpg-2-2026-10-30t09-12-09-547.jpg",
+          "categoria": "Paesaggi"
+        }
+      ]
     }
   ]
 }
