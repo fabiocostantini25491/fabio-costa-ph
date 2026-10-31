@@ -10,6 +10,7 @@ let trips = [];      // { id, name, country, lat, lon, start, end, description, 
 let photos = [];     // { id, trip, title, src, date, category, lat, lon, description }
 let articles = [];   // { id, title, category, date, minutes, cover, trip, excerpt, text }
 let about = {};
+let contentFailed = false;
 
 /* =========================================================
    2. UTILITÀ
@@ -118,8 +119,11 @@ async function loadContent() {
     getJSON("content/viaggi.json"), getJSON("content/articoli.json"), getJSON("content/chi-sono.json")
   ]);
   [v, a, c].forEach(r => r.status === "rejected" && console.error("[contenuti]", r.reason));
+  contentFailed = [v, a, c].every(r => r.status === "rejected");
 
-  const rawTrips = v.status === "fulfilled" && Array.isArray(v.value) ? v.value : [];
+  // il file può essere un elenco [..] oppure { "viaggi": [..] } (formato del pannello)
+  const listOf = (r, key) => r.status !== "fulfilled" || !r.value ? [] : Array.isArray(r.value) ? r.value : Array.isArray(r.value[key]) ? r.value[key] : [];
+  const rawTrips = listOf(v, "viaggi");
   trips = []; photos = [];
   rawTrips.forEach((t, ti) => {
     if (!t || !t.nome) return;
@@ -138,7 +142,7 @@ async function loadContent() {
     if (!trip.start && dates.length) { trip.start = dates[0]; trip.end = dates[dates.length - 1]; }
   });
 
-  const rawArticles = a.status === "fulfilled" && Array.isArray(a.value) ? a.value : [];
+  const rawArticles = listOf(a, "articoli");
   articles = rawArticles.filter(x => x && x.titolo).map(x => ({
     id: slug(x.slug || x.titolo), title: x.titolo, category: x.categoria || "Viaggi", date: x.data || "",
     minutes: num(x.minuti, 0), cover: mediaUrl(x.copertina), trip: slug(x.viaggio || ""),
@@ -365,7 +369,7 @@ function renderPanelIntro() {
   $("#locationPanel").innerHTML = `
     <span class="eyebrow">SELECT A LOCATION</span>
     <h2 class="intro-title">Dove sono stato</h2>
-    <p class="trip-desc">Seleziona un astronauta sulla mappa, oppure scegli un viaggio dall'elenco.</p>
+    <p class="trip-desc">${list.length ? "Seleziona un astronauta sulla mappa, oppure scegli un viaggio dall'elenco." : "I primi viaggi arriveranno presto."}</p>
     <ul class="trip-list">${list.map(t => `
       <li><button type="button" data-trip="${esc(t.id)}"><strong>${esc(t.name)}</strong><small>${esc(fmtRange(t.start, t.end))}</small></button></li>`).join("")}
     </ul>`;
@@ -763,7 +767,7 @@ function bindEvents() {
   $("#year").textContent = new Date().getFullYear();
   bindEvents();
   await loadContent();          // legge content/viaggi.json, articoli.json, chi-sono.json
-  if (!trips.length && !articles.length)
+  if (contentFailed)
     toast("Non riesco a leggere i contenuti del sito. Se hai aperto il file dal computer, usa la versione pubblicata su Netlify.", true);
   renderAll();
   route();
