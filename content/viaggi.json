@@ -1,3 +1,17 @@
 {
-  "viaggi": []
+  "viaggi": [
+    {
+      "nome": "Passo Sella",
+      "id": "Dolomiti",
+      "lat": "46.50782896989592 ",
+      "lon": "11.767028746306538",
+      "foto": [
+        {
+          "titolo": "Passo Sella",
+          "immagine": "/img/foto/fbuntitled-3jpg-3-2025-11-30t180326578-2.jpg",
+          "categoria": "Paesaggi"
+        }
+      ]
+    }
+  ]
 }
