@@ -1,0 +1,20 @@
+{
+  "titolo": "Fotografo, viaggiatore, esploratore.",
+  "presentazione": "Racconto i luoghi che visito attraverso la luce, la natura e le atmosfere che li rendono unici. La fotografia è per me un modo di esplorare il mondo, di rallentare, osservare e custodire ciò che rende speciale il nostro pianeta.",
+  "ritratto": "",
+  "immagine": "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1400&q=85",
+  "interessi": [
+    "Fotografia",
+    "Viaggi",
+    "Astronomia",
+    "Esplorazione"
+  ],
+  "citazione": "Esplorare, fotografare, condividere. Sempre con lo sguardo rivolto verso nuovi orizzonti.",
+  "attrezzatura": "Fotocamere · Obiettivi · Accessori\n\nQuesta sezione potrà essere personalizzata con il tuo corredo reale.",
+  "approccio": "Cerco di unire la precisione tecnica alla ricerca della bellezza, lasciando spazio all'imprevisto, alla luce giusta e alle emozioni che ogni viaggio sa regalare.",
+  "partenza": {
+    "nome": "Roma",
+    "lat": "41.9028",
+    "lon": "12.4964"
+  }
+}
