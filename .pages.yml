@@ -15,56 +15,111 @@ content:
     type: file
     path: content/viaggi.json
     format: json
-    list:
-      collapsible:
-        collapsed: true
-        summary: "{nome} ({inizio})"
     fields:
-      - name: nome
-        label: Nome del luogo
-        type: string
-        required: true
-        description: "Come apparirà sulla mappa e nella Gallery, es. Islanda"
-      - name: id
-        label: Codice del viaggio
-        type: string
-        required: true
-        description: "Breve, minuscolo, senza spazi né accenti (es. islanda, cinque-terre). Non cambiarlo dopo averlo creato."
-      - name: paese
-        label: Nazione
-        type: string
-      - name: lat
-        label: Latitudine (dove mettere l'astronauta)
-        type: string
-        required: true
-        description: "Su Google Maps fai clic destro sul punto e clicca sui numeri per copiarli: il PRIMO è la latitudine (es. 64.9631)."
-      - name: lon
-        label: Longitudine
-        type: string
-        required: true
-        description: "Il SECONDO numero (es. -19.0208). A ovest di Greenwich e a sud dell'equatore il numero ha il segno meno."
-      - name: inizio
-        label: Data di inizio
-        type: date
-        default: ""
-        options:
-          format: yyyy-MM-dd
-      - name: fine
-        label: Data di fine
-        type: date
-        default: ""
-        options:
-          format: yyyy-MM-dd
-      - name: descrizione
-        label: Descrizione breve
-        type: text
-        description: "Una o due frasi: compaiono nel riquadro del viaggio sulla mappa."
-      - name: articolo
-        label: Articolo collegato (facoltativo)
-        type: string
-        description: "L'indirizzo di un articolo del Journal, es. islanda. Lascia vuoto se non c'è."
-      - name: foto
-        label: Fotografie del viaggio
+      - name: viaggi
+        label: Viaggi
+        type: object
+        list:
+          collapsible:
+            collapsed: true
+            summary: "{nome}"
+        fields:
+          - name: nome
+            label: Nome del luogo
+            type: string
+            required: true
+            description: "Come apparirà sulla mappa e nella Gallery, es. Islanda"
+          - name: id
+            label: Codice del viaggio
+            type: string
+            required: true
+            description: "Breve, minuscolo, senza spazi né accenti (es. islanda, cinque-terre). Non cambiarlo dopo averlo creato."
+          - name: paese
+            label: Nazione
+            type: string
+          - name: lat
+            label: Latitudine (dove mettere l'astronauta)
+            type: string
+            required: true
+            description: "Su Google Maps fai clic destro sul punto e clicca sui numeri per copiarli: il PRIMO è la latitudine (es. 64.9631)."
+          - name: lon
+            label: Longitudine
+            type: string
+            required: true
+            description: "Il SECONDO numero (es. -19.0208). A ovest di Greenwich e a sud dell'equatore il numero ha il segno meno."
+          - name: inizio
+            label: Data di inizio
+            type: date
+            default: ""
+            options:
+              format: yyyy-MM-dd
+          - name: fine
+            label: Data di fine
+            type: date
+            default: ""
+            options:
+              format: yyyy-MM-dd
+          - name: descrizione
+            label: Descrizione breve
+            type: text
+            description: "Una o due frasi: compaiono nel riquadro del viaggio sulla mappa."
+          - name: articolo
+            label: Articolo collegato (facoltativo)
+            type: string
+            description: "L'indirizzo di un articolo del Journal, es. islanda. Lascia vuoto se non c'è."
+          - name: foto
+            label: Fotografie del viaggio
+            type: object
+            list:
+              collapsible:
+                collapsed: true
+                summary: "{titolo}"
+            fields:
+              - name: titolo
+                label: Titolo
+                type: string
+                required: true
+              - name: immagine
+                label: Fotografia
+                type: image
+                required: true
+                options:
+                  extensions: [jpg, jpeg, png, webp]
+                  rename: true
+              - name: data
+                label: Data dello scatto
+                type: date
+                default: ""
+                options:
+                  format: yyyy-MM-dd
+              - name: categoria
+                label: Categoria
+                type: select
+                default: Paesaggi
+                options:
+                  values: [Paesaggi, Urban]
+              - name: lat
+                label: Latitudine dello scatto (facoltativa)
+                type: string
+                description: "Lascia vuoto per usare quella del viaggio."
+              - name: lon
+                label: Longitudine dello scatto (facoltativa)
+                type: string
+              - name: descrizione
+                label: Descrizione
+                type: text
+
+  # ---------------------------------------------------------------
+  # ARTICOLI DEL JOURNAL
+  # ---------------------------------------------------------------
+  - name: articoli
+    label: Articoli del Journal
+    type: file
+    path: content/articoli.json
+    format: json
+    fields:
+      - name: articoli
+        label: Articoli
         type: object
         list:
           collapsible:
@@ -75,94 +130,47 @@ content:
             label: Titolo
             type: string
             required: true
-          - name: immagine
-            label: Fotografia
-            type: image
+          - name: slug
+            label: Indirizzo dell'articolo
+            type: string
             required: true
-            options:
-              extensions: [jpg, jpeg, png, webp]
-              rename: true
-          - name: data
-            label: Data dello scatto
-            type: date
-            default: ""
-            options:
-              format: yyyy-MM-dd
+            description: "Breve, minuscolo, senza spazi né accenti (es. islanda). Diventa il link: tuosito.it/#art-islanda"
           - name: categoria
             label: Categoria
             type: select
-            default: Paesaggi
+            default: Viaggi
             options:
-              values: [Paesaggi, Urban]
-          - name: lat
-            label: Latitudine dello scatto (facoltativa)
-            type: string
-            description: "Lascia vuoto per usare quella del viaggio."
-          - name: lon
-            label: Longitudine dello scatto (facoltativa)
-            type: string
-          - name: descrizione
-            label: Descrizione
+              values: [Viaggi, Fotografia, Tecnica, Ispirazione]
+          - name: data
+            label: Data di pubblicazione
+            type: date
+            options:
+              format: yyyy-MM-dd
+          - name: minuti
+            label: Minuti di lettura
+            type: number
+            options:
+              min: 0
+          - name: copertina
+            label: Immagine di copertina
+            type: image
+            options:
+              extensions: [jpg, jpeg, png, webp]
+              rename: true
+          - name: estratto
+            label: Estratto
             type: text
-
-  # ---------------------------------------------------------------
-  # ARTICOLI DEL JOURNAL
-  # ---------------------------------------------------------------
-  - name: articoli
-    label: Articoli del Journal
-    type: file
-    path: content/articoli.json
-    format: json
-    list:
-      collapsible:
-        collapsed: true
-        summary: "{titolo} ({data})"
-    fields:
-      - name: titolo
-        label: Titolo
-        type: string
-        required: true
-      - name: slug
-        label: Indirizzo dell'articolo
-        type: string
-        required: true
-        description: "Breve, minuscolo, senza spazi né accenti (es. islanda). Diventa il link: tuosito.it/#art-islanda"
-      - name: categoria
-        label: Categoria
-        type: select
-        default: Viaggi
-        options:
-          values: [Viaggi, Fotografia, Tecnica, Ispirazione]
-      - name: data
-        label: Data di pubblicazione
-        type: date
-        options:
-          format: yyyy-MM-dd
-      - name: minuti
-        label: Minuti di lettura
-        type: number
-        options:
-          min: 0
-      - name: copertina
-        label: Immagine di copertina
-        type: image
-        options:
-          extensions: [jpg, jpeg, png, webp]
-          rename: true
-      - name: estratto
-        label: Estratto
-        type: text
-        description: "Due righe che compaiono nell'elenco del Journal."
-      - name: testo
-        label: Testo dell'articolo
-        type: rich-text
-        options:
-          format: markdown
-          rename: true
-      - name: viaggio
-        label: Viaggio collegato (facoltativo)
-        type: string
-        description: "Il codice del viaggio, es. islanda: aggiunge il pulsante «Vedi il viaggio sulla mappa»."
+            description: "Due righe che compaiono nell'elenco del Journal."
+          - name: testo
+            label: Testo dell'articolo
+            type: rich-text
+            options:
+              format: markdown
+              rename: true
+          - name: viaggio
+            label: Viaggio collegato (facoltativo)
+            type: string
+            description: "Il codice del viaggio, es. islanda: aggiunge il pulsante «Vedi il viaggio sulla mappa»."
 
   # ---------------------------------------------------------------
   # PAGINA CHI SONO
