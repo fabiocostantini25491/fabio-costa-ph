@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#071c29">
+  <title>Fabio Costa Ph</title>
+  <meta name="description" content="Fabio Costa Ph: fotografia di viaggio, paesaggi e città. Esplora la mappa dei luoghi fotografati.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&family=Playfair+Display:ital,wght@0,400;0,500;1,400&display=swap">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<!--BODY-START-->
+  <header class="site-header">
+    <a class="brand" href="#home" aria-label="Fabio Costa Ph, home">
+      <img class="brand-mark" src="img/logo.png" width="288" height="192" alt="">
+      <span class="brand-text"><strong>Fabio Costa Ph</strong><small>PHOTOGRAPHY · TRAVEL · EXPLORATION</small></span>
+    </a>
+    <span class="header-divider" aria-hidden="true"></span>
+    <nav id="mainNav" aria-label="Sezioni">
+      <a href="#explore" data-page="explore">EXPLORE</a>
+      <a href="#gallery" data-page="gallery">GALLERY</a>
+      <a href="#journal" data-page="journal">JOURNAL</a>
+      <a href="#about" data-page="about">ABOUT</a>
+    </nav>
+    <div class="header-actions">
+      <button class="icon-button" id="searchToggle" type="button" aria-label="Cerca un luogo o una fotografia">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 21 21"/></svg>
+      </button>
+      <button class="icon-button menu-toggle" id="menuToggle" type="button" aria-label="Apri menu" aria-expanded="false" aria-controls="mainNav">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <main>
+    <!-- HOME -->
+    <section class="page" id="home" data-page="home">
+      <div class="home-hero">
+        <h1 class="visually-hidden">Fabio Costa Ph — Photography · Travel · Exploration</h1>
+        <img class="home-hero-img" src="img/home-map.jpg" width="1672" height="824"
+             alt="Mappa del mondo color sabbia su fondo blu notte, con i luoghi fotografati e le rotte tratteggiate">
+        <a class="hero-cue" href="#explore" aria-label="Esplora la mappa dei viaggi"></a>
+      </div>
+      <div class="home-intro">
+        <span class="eyebrow">A PHOTOGRAPHIC JOURNEY</span>
+        <h2>Il mondo, un luogo alla volta.</h2>
+        <p>Paesaggi, città e luoghi da ricordare. Esplora la mappa, scopri le fotografie e segui i racconti dei miei viaggi.</p>
+        <a class="outline-link" href="#explore">ESPLORA I LUOGHI <span aria-hidden="true">→</span></a>
+      </div>
+    </section>
+
+    <!-- EXPLORE -->
+    <section class="page content-page" id="explore" data-page="explore" hidden>
+      <div class="section-heading">
+        <div><span class="eyebrow">THE WORLD IS YOUR CANVAS</span><h1>Explore</h1></div>
+        <p>Seleziona un astronauta sulla mappa per aprire il viaggio, oppure cerca un luogo per nome.</p>
+      </div>
+      <div class="explore-stage">
+        <div id="exploreMap" class="map map-explore" aria-label="Mappa interattiva dei viaggi"></div>
+        <button class="map-search" id="mapSearch" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 21 21"/></svg>
+          Cerca un luogo
+        </button>
+        <svg class="compass compass-small" viewBox="0 0 100 100" aria-hidden="true"><use href="#compassShape"/></svg>
+        <aside class="location-panel" id="locationPanel" aria-live="polite"></aside>
+      </div>
+    </section>
+
+    <!-- GALLERY -->
+    <section class="page content-page" id="gallery" data-page="gallery" hidden>
+      <div class="section-heading">
+        <div><span class="eyebrow">SELECTED PHOTOGRAPHS</span><h1>Gallery</h1></div>
+        <p>Le mie fotografie, tra paesaggi naturali e scenari urbani.</p>
+      </div>
+      <div class="gallery-toolbar">
+        <div class="filters" role="group" aria-label="Filtra per categoria">
+          <button class="filter active" type="button" data-filter="Tutte">Tutte</button>
+          <button class="filter" type="button" data-filter="Paesaggi">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m2 19 7-10 4 6 3-4 6 8z"/></svg>Paesaggi</button>
+          <button class="filter" type="button" data-filter="Urban">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 21V9h5v12M8 21V4h7v17M15 21v-9h6v9M2 21h20"/></svg>Urban</button>
+          <span class="trip-chip" id="tripChip" hidden></span>
+        </div>
+        <p class="photo-count" id="photoCount"></p>
+      </div>
+      <div class="photo-grid" id="photoGrid"></div>
+      <p class="empty-state" id="galleryEmpty" hidden>Non ci sono ancora fotografie con questi filtri.</p>
+    </section>
+
+    <!-- JOURNAL -->
+    <section class="page content-page" id="journal" data-page="journal" hidden>
+      <div class="section-heading">
+        <div><span class="eyebrow">NOTES FROM THE ROAD</span><h1>Journal</h1></div>
+        <p>Racconti di viaggio, esperienze sul campo e ispirazioni fotografiche.</p>
+      </div>
+      <div class="journal-layout" id="journalLayout"></div>
+      <article class="full-article" id="articleReader" hidden></article>
+    </section>
+
+    <!-- ABOUT (testi modificabili dal pannello: content/chi-sono.json) -->
+    <section class="page content-page" id="about" data-page="about" hidden>
+      <div class="section-heading"><div><span class="eyebrow">BEHIND THE LENS</span><h1>Chi sono</h1></div></div>
+      <div class="about-layout">
+        <div class="portrait-placeholder" id="aboutPortrait" aria-hidden="true">FC</div>
+        <div class="about-copy">
+          <h2 id="aboutTitle"></h2>
+          <div id="aboutIntro" class="rich"></div>
+          <ul class="interest-grid" id="aboutInterests"></ul>
+        </div>
+        <img class="about-landscape" id="aboutImage" alt="" data-cat="Paesaggi" loading="lazy" hidden>
+      </div>
+      <div class="about-lower">
+        <blockquote id="aboutQuote"></blockquote>
+        <div><h3>La mia attrezzatura</h3><div id="aboutGear" class="rich"></div></div>
+        <div><h3>Il mio approccio</h3><div id="aboutApproach" class="rich"></div></div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <span>© <span id="year"></span> FABIO COSTA PH</span>
+    <span>PHOTOGRAPHY · TRAVEL · EXPLORATION</span>
+  </footer>
+
+  <!-- Lightbox -->
+  <dialog id="photoDialog" class="lightbox" aria-labelledby="dialogTitle">
+    <button class="dialog-close" id="dialogClose" type="button" aria-label="Chiudi">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+    </button>
+    <div class="lightbox-stage">
+      <img id="dialogImage" alt="">
+      <button class="nav-arrow prev" id="dialogPrev" type="button" aria-label="Foto precedente"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></button>
+      <button class="nav-arrow next" id="dialogNext" type="button" aria-label="Foto successiva"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>
+    </div>
+    <div class="lightbox-info">
+      <div>
+        <span class="eyebrow" id="dialogCategory"></span>
+        <h2 id="dialogTitle"></h2>
+        <p class="lightbox-meta" id="dialogMeta"></p>
+        <p id="dialogDescription"></p>
+      </div>
+      <button class="outline-link" id="dialogMapButton" type="button">VEDI SULLA MAPPA <span aria-hidden="true">→</span></button>
+    </div>
+  </dialog>
+
+  <!-- Ricerca -->
+  <dialog id="searchDialog" class="search-dialog" aria-label="Cerca">
+    <form id="searchForm" class="search-form" role="search">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 21 21"/></svg>
+      <input id="searchInput" type="search" placeholder="Cerca un luogo, un viaggio o una foto… es. Roma" autocomplete="off" aria-label="Cerca">
+      <button class="icon-button" type="button" id="searchClose" aria-label="Chiudi ricerca"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+    </form>
+    <div class="search-results" id="searchResults"></div>
+  </dialog>
+
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="compassShape" viewBox="0 0 100 100"><g fill="none" stroke="currentColor"><circle cx="50" cy="50" r="30" stroke-width=".8" opacity=".6"/><circle cx="50" cy="50" r="22" stroke-width=".5" opacity=".4"/></g><g fill="currentColor"><path d="M50 8 54 46 50 50 46 46Z"/><path d="M50 92 46 54 50 50 54 54Z" opacity=".55"/><path d="M8 50 46 46 50 50 46 54Z" opacity=".55"/><path d="M92 50 54 54 50 50 54 46Z" opacity=".55"/></g><g font-size="9" fill="currentColor" text-anchor="middle" font-family="DM Sans, sans-serif"><text x="50" y="6">N</text><text x="50" y="100">S</text><text x="3" y="53">W</text><text x="97" y="53">E</text></g></symbol>
+  </svg>
+<!--BODY-END-->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
