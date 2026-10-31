@@ -40,6 +40,22 @@
           "categoria": "Paesaggi"
         }
       ]
+    },
+    {
+      "nome": "Lerici",
+      "id": "Lerici",
+      "paese": "Italia",
+      "lat": "44.073849174457656",
+      "lon": "9.90963477602486",
+      "foto": [
+        {
+          "titolo": "Lerici",
+          "immagine": "/img/foto/fbuntitled-3jpg-3-2025-11-30t180326578-2026-10-24t162703991.jpg",
+          "categoria": "Urban",
+          "lat": "44.07420417975962, ",
+          "lon": "9.911285292927417"
+        }
+      ]
     }
   ]
 }
