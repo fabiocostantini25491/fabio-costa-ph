@@ -203,12 +203,12 @@ content:
         label: Citazione
         type: text
       - name: attrezzatura
-        label: La mia attrezzatura
+        label: My Gear
         type: rich-text
         options:
           format: markdown
       - name: approccio
-        label: Il mio approccio
+        label: My Aproach
         type: rich-text
         options:
           format: markdown
