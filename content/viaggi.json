@@ -26,6 +26,20 @@
           "categoria": "Paesaggi"
         }
       ]
+    },
+    {
+      "nome": "Torre Tarugi",
+      "id": "Val d'Orcia",
+      "paese": "Italia",
+      "lat": "42.992144214246565",
+      "lon": "11.76128261926689",
+      "foto": [
+        {
+          "titolo": "Torre Tarugi",
+          "immagine": "/img/foto/torre-tarugi-alta-risoluzione.jpg",
+          "categoria": "Paesaggi"
+        }
+      ]
     }
   ]
 }
