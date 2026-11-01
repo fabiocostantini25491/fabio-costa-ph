@@ -1271,3 +1271,24 @@ main > .page{scroll-margin-top:80px}
 .footer-guide{color:inherit;text-decoration:none;border-bottom:1px solid currentColor}
 .guest-guide{margin-left:4px}
 @media (max-width:760px){.guide,.guide-cols{grid-template-columns:1fr}.guide-card{padding:22px 18px}}
+
+/* offerte e lista dei workshop */
+.spot-pin.offer{border-color:#ffc46e;animation:pinOffer 1.6s ease-in-out infinite}
+@keyframes pinOffer{0%,100%{box-shadow:0 0 6px rgba(255,196,110,.5)}50%{box-shadow:0 0 0 6px rgba(255,196,110,.16),0 0 22px 5px rgba(255,196,110,.75)}}
+.offer-tag{position:absolute;top:-7px;right:-8px;min-width:16px;height:16px;padding:0 3px;border-radius:999px;background:#ffc46e;color:#06101d;font-size:10px;font-weight:700;line-height:16px;text-align:center}
+@media (prefers-reduced-motion:reduce){.spot-pin.offer{animation:none}}
+.ws-chip.offer{border-color:rgba(255,196,110,.75);color:#ffe0ad;background:rgba(255,196,110,.08)}
+.spots-ws{margin:22px 0 0}
+.spots-ws .around-head h2 small{font-size:.55em;color:var(--muted);margin-left:6px}
+.ws-list{list-style:none;margin:12px 0 0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+.ws-card{display:grid;gap:8px;align-content:start;padding:16px 18px;border:1px solid var(--line-strong);border-radius:16px;background:var(--glass)}
+.ws-card.hot{border-color:rgba(255,196,110,.6)}
+.ws-card.has-offer{border-color:rgba(255,196,110,.75);box-shadow:0 0 24px rgba(255,196,110,.12)}
+.ws-card-top{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.ws-date{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:#9fe3c8}
+.ws-date svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8}
+.ws-name{font-size:16px;font-weight:500;color:#fff;line-height:1.35}
+.ws-meta{font-size:13px;color:var(--soft)}
+.ws-card-offer{width:max-content;max-width:100%}
+.ws-card-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:2px}
+.ws-card-actions .pop-btn{text-decoration:none}

@@ -179,7 +179,7 @@ const Spots = (() => {
     for (let from = 0; ; from += PAGE_SIZE) {
       let data;
       try {
-        ({ data } = await api(`/rest/v1/spots?select=${cols}${schemaV2 ? ",category,starts_on,ends_on,created_by,author_name" : ""}${schemaV2 && socialV ? ",support_local,fragile,best_months" + (pubV ? ",public_pick" : "") : ""}${schemaV2 && wsV ? ",ws_capacity,ws_enrolled,ws_price,ws_currency,ws_link,support_since" : ""}&order=list.asc,name.asc`, {
+        ({ data } = await api(`/rest/v1/spots?select=${cols}${schemaV2 ? ",category,starts_on,ends_on,created_by,author_name" : ""}${schemaV2 && socialV ? ",support_local,fragile,best_months" + (pubV ? ",public_pick" : "") : ""}${schemaV2 && wsV ? ",ws_capacity,ws_enrolled,ws_price,ws_currency,ws_link,support_since,ws_offer,ws_offer_until" : ""}&order=list.asc,name.asc`, {
           headers: { "Range-Unit": "items", Range: `${from}-${from + PAGE_SIZE - 1}` } }));
       } catch (err) {
         // database non ancora aggiornato (colonne nuove assenti): funziona come prima
@@ -463,6 +463,7 @@ const Spots = (() => {
         <span class="hud-frame" aria-hidden="true"></span>
         ${schemaV2 ? `<button type="button" class="osm-scan" id="osmScan">${ICON_SCAN}Scan this area</button>` : ""}
       </div>
+      ${!guest ? workshopsHtml() : ""}
       <section class="spots-around" id="spotsAround" aria-live="polite" hidden>
         <header class="around-head">
           <div><span class="eyebrow" id="aroundEyebrow"></span><h2 id="aroundTitle"></h2></div>
@@ -522,6 +523,13 @@ const Spots = (() => {
     $("#spotsLogin")?.addEventListener("click", () => { wantLogin = true; wantJoin = false; render(); root().scrollIntoView({ behavior: "smooth" }); });
     [$("#spotsJoin"), $("#guestJoin")].forEach(b => b?.addEventListener("click", () => { wantJoin = true; render(); root().scrollIntoView({ behavior: "smooth" }); }));
     $("#spotsRequests")?.addEventListener("click", openRequests);
+    $$("[data-wsgo]").forEach(b => b.addEventListener("click", () => {
+      const s = spots.find(x => x.id === +b.dataset.wsgo);
+      if (!s) return;
+      if (activeCats && !activeCats.has("workshop")) { activeCats.add("workshop"); }
+      $("#spotsMap")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      focusSpot(s);
+    }));
     $("#spotsImport")?.addEventListener("click", openImport);
     $("#spotsAdd")?.addEventListener("click", () => withConduct(() => openAdd()));
     $("#alertMode")?.addEventListener("change", e => { alertMode = e.target.value; drawClusters(); renderNear(); });
@@ -977,6 +985,7 @@ const Spots = (() => {
     list.forEach(s => {
       if (keep && s.id === openId) return;
       if (!bounds.contains([s.lat, s.lon])) return;
+      if (highlighted(s)) return addSpotMarker(s, true);   // novità e workshop quasi pieni: mai dentro un gruppo
       const p = map.latLngToLayerPoint([s.lat, s.lon]);
       const key = z >= 16 ? s.id : `${Math.floor(p.x / cell)}:${Math.floor(p.y / cell)}`;
       (cells.get(key) || cells.set(key, []).get(key)).push(s);
@@ -993,9 +1002,8 @@ const Spots = (() => {
     });
   }
 
-  function addSpotMarker(s) {
-    const cat = CATS[s.category] || CATS.spot;
-    const m = L.marker([s.lat, s.lon], { keyboard: true, title: s.name, riseOnHover: true, icon: pinIcon(s) }).addTo(layer);
+  function addSpotMarker(s, front) {
+    const m = L.marker([s.lat, s.lon], { keyboard: true, title: s.name, riseOnHover: true, icon: pinIcon(s), zIndexOffset: front ? 800 : 0 }).addTo(layer);
     if (s.fragile && map.getZoom() >= 11) L.circle([s.lat, s.lon], { radius: 800, color: "#9fe3c8", weight: 1, dashArray: "4 5", fillOpacity: 0.04, interactive: false }).addTo(layer);
     markerById.set(s.id, m);
     m.bindTooltip(esc(s.name), { direction: "top" });
@@ -1023,17 +1031,20 @@ const Spots = (() => {
   const wsPlane = s => isWs(s) && wsLeft(s) != null && wsLeft(s) < 3;             // quasi pieno: l'aereo sta per partire
   const wsNew = s => isWs(s) && ageDays(s.created_at) <= 7;                          // nuovo workshop: brilla 7 giorni
   const localNew = s => s.support_local && ageDays(s.support_since) <= 30;           // nuovo «Support local»: brilla un mese
+  const freshPlace = s => String(s.source_key || "").startsWith("u:") && ageDays(s.created_at) <= 7;   // aggiunto da un membro: brilla 7 giorni (gli import no)
+  const wsOffer = s => isWs(s) && !!s.ws_offer && (!s.ws_offer_until || s.ws_offer_until >= new Date().toISOString().slice(0, 10));   // offerta in corso
+  const highlighted = s => wsPlane(s) || wsOffer(s) || wsNew(s) || localNew(s) || freshPlace(s);   // sempre visibili, anche da lontano
   const ICON_PLANE = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 19h19"/><path d="M3.8 13.6 6 15.4l12.3-3.3c1.2-.3 2-1.6 1.6-2.7-.3-.9-1.3-1.3-2.2-1.1l-3.6 1-5.4-4.6-2 .5 3 5.3-3.5 1-1.8-1.4-1.6.4z"/></svg>';
   const ICON_LOCAL = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21v-8"/><path d="M12 13c0-4 2.6-7 7.5-7.2C19.4 10.6 16.6 13 12 13z"/><path d="M12 15.5c0-3-2-5.3-6.5-5.5.1 3.7 2.3 5.5 6.5 5.5z"/></svg>';
   function pinIcon(s) {
     const cat = CATS[s.category] || CATS.spot;
-    const plane = wsPlane(s), shineWs = wsNew(s) && !plane, shineLocal = localNew(s) && !isWs(s);
-    const cls = ["spot-pin", s.support_local ? "local" : "", s.fragile ? "fragile" : "", plane ? "plane" : "", shineWs ? "shine" : "", shineLocal ? "shine-local" : ""].filter(Boolean).join(" ");
+    const plane = wsPlane(s), offer = wsOffer(s) && !plane, shineLocal = localNew(s) && !isWs(s), shineWs = (wsNew(s) || freshPlace(s)) && !plane && !offer && !shineLocal;
+    const cls = ["spot-pin", s.support_local ? "local" : "", s.fragile ? "fragile" : "", plane ? "plane" : "", offer ? "offer" : "", shineWs ? "shine" : "", shineLocal ? "shine-local" : ""].filter(Boolean).join(" ");
     const icon = plane ? ICON_PLANE : shineLocal ? ICON_LOCAL : cat.icon;
     const color = plane ? "#ffc46e" : shineLocal ? "#7ed69b" : cat.color;
     const alert = alertsOf(s).length ? `<span class="alert-dot" title="${esc(ALERTS[alertsOf(s)[0].kind].label)}"></span>` : "";
     return L.divIcon({ className: "", iconSize: [28, 28], iconAnchor: [14, 14], tooltipAnchor: [0, -14], popupAnchor: [0, -12],
-      html: `<div class="${cls}" style="--c:${color}">${icon}${alert}</div>` });
+      html: `<div class="${cls}" style="--c:${color}">${icon}${offer ? `<span class="offer-tag" aria-hidden="true">%</span>` : ""}${alert}</div>` });
   }
   const fmtMoneyWs = (v, cur) => { try { return new Intl.NumberFormat(window.I18N?.locale || "en-GB", { style: "currency", currency: cur || "EUR", maximumFractionDigits: v % 1 ? 2 : 0 }).format(v); } catch { return `${v} ${cur || ""}`; } };
   function wsBoxHtml(s) {
@@ -1042,9 +1053,37 @@ const Spots = (() => {
     if (s.ws_price != null) items.push(`<span class="ws-chip">💶 <b>${s.ws_price > 0 ? fmtMoneyWs(+s.ws_price, s.ws_currency) : "Free"}</b>${s.ws_price > 0 ? " per person" : ""}</span>`);
     if (left != null) items.push(`<span class="ws-chip${left < 3 ? " hot" : ""}">👥 <b>${left === 0 ? "Full" : left === 1 ? "1 place left" : `${left} places left`}</b> · ${s.ws_enrolled || 0}/${s.ws_capacity}</span>`);
     if (wsPlane(s) && left > 0) items.push(`<span class="ws-chip hot">✈️ Almost full — about to take off</span>`);
+    if (wsOffer(s)) items.push(`<span class="ws-chip offer">🏷️ <b>${esc(s.ws_offer)}</b>${s.ws_offer_until ? ` · until ${fmtDay(s.ws_offer_until)}` : ""}</span>`);
     if (wsNew(s)) items.push(`<span class="ws-chip new">✨ New</span>`);
     const link = s.ws_link && /^https?:\/\//.test(s.ws_link) ? `<a class="pop-btn primary ws-link" href="${esc(s.ws_link)}" target="_blank" rel="noopener">${ICON.ext}Workshop page${left === 0 ? "" : " · book"}</a>` : "";
     return items.length || link ? `<div class="ws-box">${items.join("")}${link}</div>` : "";
+  }
+
+  function workshopsHtml() {
+    const list = spots.filter(isWs).sort((a, b) => String(a.starts_on || "9999").localeCompare(String(b.starts_on || "9999")) || a.name.localeCompare(b.name));
+    if (!list.length) return "";
+    const card = s => {
+      const left = wsLeft(s), d = datesText(s);
+      return `<li class="ws-card${wsPlane(s) ? " hot" : ""}${wsOffer(s) ? " has-offer" : ""}">
+        <div class="ws-card-top">
+          <span class="ws-date">${ICON.cal}${d ? esc(d) : "Dates to be announced"}</span>
+          ${wsPlane(s) && left > 0 ? `<span class="ws-chip hot">✈️ Almost full</span>` : left === 0 ? `<span class="ws-chip">Full</span>` : wsNew(s) ? `<span class="ws-chip new">✨ New</span>` : ""}
+        </div>
+        ${wsOffer(s) ? `<span class="ws-chip offer ws-card-offer">🏷️ <b>${esc(s.ws_offer)}</b>${s.ws_offer_until ? ` · until ${fmtDay(s.ws_offer_until)}` : ""}</span>` : ""}
+        <b class="ws-name">${esc(s.name)}</b>
+        <span class="ws-meta">${[s.ws_price != null ? (s.ws_price > 0 ? `${fmtMoneyWs(+s.ws_price, s.ws_currency)} per person` : "Free") : "",
+          left != null ? (left === 0 ? "No places left" : left === 1 ? "1 place left" : `${left} places left`) : "",
+          s.author_name ? `by ${esc(s.author_name)}` : ""].filter(Boolean).join(" · ")}</span>
+        <div class="ws-card-actions">
+          <button type="button" class="pop-btn" data-wsgo="${s.id}">${ICON.pin}Show on map</button>
+          ${s.ws_link && /^https?:\/\//.test(s.ws_link) ? `<a class="pop-btn primary" href="${esc(s.ws_link)}" target="_blank" rel="noopener">${ICON.ext}Details &amp; booking</a>` : ""}
+        </div>
+      </li>`;
+    };
+    return `<section class="spots-ws" id="spotsWorkshops">
+      <header class="around-head"><div><span class="eyebrow">Members' calendar</span><h2>Upcoming workshops <small>${list.length}</small></h2></div></header>
+      <ul class="ws-list">${list.map(card).join("")}</ul>
+    </section>`;
   }
 
   function guestPopup(s) {
@@ -1077,13 +1116,16 @@ const Spots = (() => {
       <label>Price per person<span class="pay-row"><input type="number" name="price" id="${id}Price" min="0" max="100000" step="1" inputmode="decimal" value="${v(s.ws_price)}" placeholder="0 = free">
         <select name="cur" id="${id}Cur" aria-label="Currency">${CURRENCIES.map(c => `<option${c === (s.ws_currency || "EUR") ? " selected" : ""}>${c}</option>`).join("")}</select></span></label>
       <label class="ws-wide">Workshop link <small>(optional)</small><input type="url" name="link" id="${id}Link" maxlength="500" value="${v(s.ws_link)}" placeholder="https://…"></label>
+      <label>Special offer <small>(optional)</small><input type="text" name="offer" id="${id}Offer" maxlength="120" value="${v(s.ws_offer)}" placeholder="e.g. −20% early bird"></label>
+      <label>Offer ends<input type="date" name="offerUntil" id="${id}OfferUntil" value="${v(s.ws_offer_until)}"></label>
     </div>
-    <p class="gate-help left">Places left are calculated for you. With fewer than 3 left, a ✈️ appears on the map.</p>`;
+    <p class="gate-help left">Places left are calculated for you. With fewer than 3 left, a ✈️ appears on the map; with an offer, the workshop glows.</p>`;
   }
   const readWs = (root, id) => {
     const num = n => { const x = root.querySelector(`#${id}${n}`)?.value; return x === "" || x == null ? null : +x; };
     const link = (root.querySelector(`#${id}Link`)?.value || "").trim();
-    return { cap: num("Cap"), enr: num("Enr"), price: num("Price"), cur: root.querySelector(`#${id}Cur`)?.value || "EUR", link };
+    const offer = (root.querySelector(`#${id}Offer`)?.value || "").trim(), offerUntil = root.querySelector(`#${id}OfferUntil`)?.value || null;
+    return { cap: num("Cap"), enr: num("Enr"), price: num("Price"), cur: root.querySelector(`#${id}Cur`)?.value || "EUR", link, offer, offerUntil: offer ? offerUntil : null };
   };
 
   function popupHtml(s) {
@@ -1093,7 +1135,7 @@ const Spots = (() => {
     return `<div class="spot-pop">
       <span class="spot-cat" style="--c:${cat.color}">${cat.icon}${cat.label}</span>
       <strong>${esc(s.name)}</strong>
-      ${localNew(s) ? `<span class="ws-chip new local-chip">🌱 New in Support local</span>` : ""}
+      ${localNew(s) ? `<span class="ws-chip new local-chip">🌱 New in Support local</span>` : freshPlace(s) ? `<span class="ws-chip new local-chip">✨ New on the map</span>` : ""}
       ${dates ? `<p class="pop-dates">${ICON.cal}<span>${dates}</span></p>` : ""}
       <div data-wsbox>${wsBoxHtml(s)}</div>
       ${isWs(s) && wsV && canEdit(s) ? `<button type="button" class="pop-btn ws-edit" data-wsedit>👥 Update places, price and link</button>
@@ -1181,8 +1223,10 @@ const Spots = (() => {
       if (w.cap != null && w.enr != null && w.enr > w.cap) return toast("Booked can't be more than the places in total.", true);
       const btn = wf.querySelector("[type=submit]"); btn.disabled = true;
       try {
-        await api("/rest/v1/rpc/set_workshop", { method: "POST", body: { p_spot: s.id, p_capacity: w.cap, p_enrolled: w.enr, p_price: w.price, p_currency: w.cur, p_link: w.link || null } });
-        Object.assign(s, { ws_capacity: w.cap || null, ws_enrolled: w.enr, ws_price: w.price, ws_currency: w.cur, ws_link: w.link || null });
+        await api("/rest/v1/rpc/set_workshop", { method: "POST", body: { p_spot: s.id, p_capacity: w.cap, p_enrolled: w.enr, p_price: w.price, p_currency: w.cur, p_link: w.link || null, p_offer: w.offer || null, p_offer_until: w.offerUntil } });
+        Object.assign(s, { ws_capacity: w.cap || null, ws_enrolled: w.enr, ws_price: w.price, ws_currency: w.cur, ws_link: w.link || null, ws_offer: w.offer || null, ws_offer_until: w.offerUntil });
+        const wl = $("#spotsWorkshops"); if (wl) wl.outerHTML = workshopsHtml() || "";
+        $$("#spotsWorkshops [data-wsgo]").forEach(b => b.addEventListener("click", () => { const x = spots.find(y => y.id === +b.dataset.wsgo); if (x) { $("#spotsMap")?.scrollIntoView({ behavior: "smooth", block: "center" }); focusSpot(x); } }));
         el.querySelector("[data-wsbox]").innerHTML = wsBoxHtml(s);
         markerById.get(s.id)?.setIcon(pinIcon(s));
         wf.hidden = true; popup.update();
@@ -1645,7 +1689,7 @@ const Spots = (() => {
       const row = { source_key: `u:${crypto.randomUUID()}`, name: name.slice(0, 300), lat: c.lat, lon: c.lon, list,
         note: d.querySelector("#addNote").value.trim() || null, url: url || null };
       if (schemaV2) Object.assign(row, { category: cat, starts_on: cat === "workshop" ? from : null, ends_on: cat === "workshop" ? (to || from) : null, author_name: author || displayName() });
-      if (ws) Object.assign(row, { ws_capacity: ws.cap || null, ws_enrolled: ws.enr, ws_price: ws.price, ws_currency: ws.price != null ? ws.cur : null, ws_link: ws.link || null });
+      if (ws) Object.assign(row, { ws_capacity: ws.cap || null, ws_enrolled: ws.enr, ws_price: ws.price, ws_currency: ws.price != null ? ws.cur : null, ws_link: ws.link || null, ws_offer: ws.offer || null, ws_offer_until: ws.offerUntil });
       if (schemaV2 && socialV) Object.assign(row, { support_local: !!d.querySelector("#addSupport")?.checked, best_months: d.querySelector("#addMonths")?.value.trim() || null });
       const makeFragile = !!d.querySelector("#addFragile")?.checked;
       const files = [...(d.querySelector("#addPhotos")?.files || [])].slice(0, 4);
