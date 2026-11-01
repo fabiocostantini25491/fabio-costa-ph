@@ -1224,3 +1224,27 @@ main > .page{scroll-margin-top:80px}
 .req-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:12px 14px;border:1px solid var(--line-strong);border-radius:14px;background:rgba(3,9,18,.5)}
 .req-row > div{flex:1;min-width:180px;display:grid;gap:2px}
 .req-row span{font-size:12.5px;color:var(--muted)}
+
+/* workshop: posti, prezzo, link; segni speciali sulla mappa */
+.spot-pin.shine{animation:pinShine 1.8s ease-in-out infinite}
+.spot-pin.shine-local{border-color:#7ed69b;animation:pinShineLocal 2.2s ease-in-out infinite}
+@keyframes pinShine{0%,100%{box-shadow:0 0 0 0 rgba(159,227,200,.0),0 0 8px var(--c)}50%{box-shadow:0 0 0 6px rgba(159,227,200,.18),0 0 22px 4px var(--c)}}
+@keyframes pinShineLocal{0%,100%{box-shadow:0 0 0 1.5px rgba(255,255,255,.7),0 0 8px #7ed69b}50%{box-shadow:0 0 0 1.5px rgba(255,255,255,.7),0 0 0 7px rgba(126,214,155,.2),0 0 24px 5px #7ed69b}}
+.spot-pin.plane{border-color:#ffc46e;box-shadow:0 0 14px rgba(255,196,110,.65);animation:planeIdle 1.6s ease-in-out infinite}
+.spot-pin.plane svg{stroke:#ffc46e}
+@keyframes planeIdle{0%,100%{transform:translate(0,0) rotate(0)}25%{transform:translate(1.5px,-1px) rotate(-4deg)}50%{transform:translate(0,-2px) rotate(0)}75%{transform:translate(-1.5px,-1px) rotate(3deg)}}
+@media (prefers-reduced-motion:reduce){.spot-pin.shine,.spot-pin.shine-local,.spot-pin.plane{animation:none}}
+.ws-box{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 4px}
+.ws-chip{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border:1px solid var(--line-strong);border-radius:999px;font-size:12.5px;color:var(--soft);background:rgba(3,9,18,.55)}
+.ws-chip b{color:#fff;font-weight:600}
+.ws-chip.hot{border-color:rgba(255,196,110,.7);color:#ffd9a0}
+.ws-chip.new{border-color:rgba(159,227,200,.7);color:#bff3dc}
+.local-chip{margin:6px 0 2px;width:max-content}
+.ws-link{width:100%;justify-content:center;margin-top:2px;text-decoration:none}
+.ws-edit{margin:4px 0 6px}
+.ws-fields{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:8px 0}
+.ws-fields label{display:grid;gap:6px;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--accent)}
+.ws-fields .ws-wide{grid-column:1/-1}
+.ws-fields input,.ws-fields select{width:100%;min-width:0}
+.ws-fields .pay-row{display:flex;gap:6px}
+.ws-fields .pay-row select{width:auto}
