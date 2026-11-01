@@ -959,7 +959,7 @@ const Spots = (() => {
         ${canEdit(s) ? `<form class="pop-review" data-socialform hidden>
           <label class="shot-check"><input type="checkbox" name="support"${s.support_local ? " checked" : ""}> 🌱 Support local — this place benefits from visitors</label>
           <input type="text" name="months" maxlength="60" placeholder="Best months, e.g. Oct–Apr (optional)" value="${esc(s.best_months || "")}">
-          <label class="shot-check"><input type="checkbox" name="fragile"${s.fragile ? " checked" : ""}> 🛡️ Fragile — hide the exact location from other members</label>
+          <label class="shot-check"><input type="checkbox" name="fragile"${s.fragile ? " checked" : ""}> 🛡️ Fragile — hide it from the public map, ask members not to geotag it</label>
           ${admin ? `<label class="pub-pick">Public map (visitors)
             <select name="pub"><option value="auto"${s.public_pick == null ? " selected" : ""}>Automatic (1 spot every ~15 km)</option>
               <option value="yes"${s.public_pick === true ? " selected" : ""}>Always show to visitors</option>
@@ -1132,7 +1132,7 @@ const Spots = (() => {
         if (x) {
           const gm = x.url && /^https?:/.test(x.url) ? x.url : `https://www.google.com/maps/search/?api=1&query=${(+x.lat).toFixed(6)},${(+x.lon).toFixed(6)}`;
           el.querySelector("[data-coords]").innerHTML = `<p class="spot-coords">${ICON.pin}<span>${fmtCoord(+x.lat, +x.lon).replace("  |  ", " · ")}</span>
-            <button type="button" class="spot-copy" data-copy>Copy</button></p><p class="soc-note">Exact spot visible only to you and trusted members. Please don't share it.</p>
+            <button type="button" class="spot-copy" data-copy>Copy</button></p><p class="soc-note">Exact spot visible only to members. Please don't share it or geotag it.</p>
             <a class="text-link" href="${esc(gm)}" target="_blank" rel="noopener">${ICON.ext}Open in Google Maps</a>`;
           el.querySelector("[data-coords] [data-copy]").addEventListener("click", ev => copyText(ev.currentTarget, `${(+x.lat).toFixed(6)}, ${(+x.lon).toFixed(6)}`));
           popup.update();
@@ -1352,7 +1352,7 @@ const Spots = (() => {
         ${schemaV2 && socialV ? `<fieldset class="soc-add"><legend>Community <small>(optional)</small></legend>
           <label class="shot-check"><input type="checkbox" id="addSupport"> 🌱 Support local — this place benefits from visitors</label>
           <input type="text" id="addMonths" maxlength="60" placeholder="Best months to visit, e.g. Oct–Apr">
-          <label class="shot-check"><input type="checkbox" id="addFragile"> 🛡️ Fragile — hide the exact location from other members</label>
+          <label class="shot-check"><input type="checkbox" id="addFragile"> 🛡️ Fragile — hide it from the public map, ask members not to geotag it</label>
         </fieldset>` : ""}
         <label for="addNote">Description <small>(optional)</small></label>
         <textarea id="addNote" maxlength="2000" rows="3" placeholder="What makes it worth it? Best time, access, tips…"></textarea>
