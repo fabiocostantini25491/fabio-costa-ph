@@ -9,8 +9,8 @@
   <meta name="description" content="Fabio Costa Ph: travel, landscape and urban photography. Explore the map of the places I have photographed.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&family=Playfair+Display:ital,wght@0,400;0,500;1,400&display=swap">
-  <link rel="stylesheet" href="style.css?v=20261101e">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,500&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap">
+  <link rel="stylesheet" href="style.css?v=20261101g">
 </head>
 <body>
 <!--BODY-START-->
@@ -21,6 +21,7 @@
     </a>
     <span class="header-divider" aria-hidden="true"></span>
     <nav id="mainNav" aria-label="Sections">
+      <a href="#home" data-page="home">HOME</a>
       <a href="#explore" data-page="explore">EXPLORE</a>
       <a href="#gallery" data-page="gallery">GALLERY</a>
       <a href="#journal" data-page="journal">JOURNAL</a>
@@ -39,11 +40,25 @@
   <main>
     <!-- HOME -->
     <section class="page" id="home" data-page="home">
-      <div class="home-hero">
-        <h1 class="visually-hidden">Fabio Costa Ph — Photography · Travel · Exploration</h1>
-        <img class="home-hero-img" src="img/home-map.jpg" width="1672" height="824"
-             alt="Sand-coloured world map on a midnight-blue background, with the photographed places and dotted routes">
-        <a class="hero-cue" href="#explore" aria-label="Explore the travel map"></a>
+      <div class="home-hero" id="homeHero">
+        <div id="homeMap" class="map map-home" aria-hidden="true"></div>
+        <div class="hero-shade" aria-hidden="true"></div>
+        <div class="hero-planet" aria-hidden="true"></div>
+        <div class="hero-copy">
+          <h1>Fabio Costa Ph</h1>
+          <p>Photography · Travel · Exploration</p>
+          <a class="hero-button" href="#explore"><span>EXPLORE THE PLACES</span> <span aria-hidden="true">→</span></a>
+        </div>
+        <div class="hero-foot">
+          <p class="hero-coords" aria-live="off">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.5 2.6 3.5 5.4 3.5 8.5s-1 5.9-3.5 8.5c-2.5-2.6-3.5-5.4-3.5-8.5s1-5.9 3.5-8.5z"/></svg>
+            <span><strong id="heroPlace">EARTH</strong><span id="heroCoord">41.9028° N · 12.4964° E</span></span>
+          </p>
+          <a class="hero-scroll" href="#explore" aria-label="Go to the interactive map">
+            <svg viewBox="0 0 24 36" aria-hidden="true"><rect x="5" y="2" width="14" height="22" rx="7"/><path d="M12 7v4"/><path d="m8 30 4 4 4-4"/></svg>
+          </a>
+          <p class="hero-tags">PHOTOGRAPHY<br>TRAVEL · EXPLORATION</p>
+        </div>
       </div>
       <div class="home-intro">
         <span class="eyebrow">A PHOTOGRAPHIC JOURNEY</span>
@@ -66,6 +81,7 @@
           Search a place
         </button>
         <svg class="compass compass-small" viewBox="0 0 100 100" aria-hidden="true"><use href="#compassShape"/></svg>
+        <span class="hud-frame" aria-hidden="true"></span>
         <aside class="location-panel" id="locationPanel" aria-live="polite"></aside>
       </div>
     </section>
@@ -114,7 +130,10 @@
           <div id="aboutIntro" class="rich"></div>
           <ul class="interest-grid" id="aboutInterests"></ul>
         </div>
-        <img class="about-landscape" id="aboutImage" alt="" data-cat="Paesaggi" loading="lazy" hidden>
+        <div class="about-photo" id="aboutPhoto" hidden>
+          <img class="about-landscape" id="aboutImage" alt="" data-cat="Paesaggi" loading="lazy">
+          <span class="hud-frame" aria-hidden="true"></span>
+        </div>
       </div>
       <div class="about-lower">
         <blockquote id="aboutQuote"></blockquote>
@@ -168,6 +187,6 @@
 <!--BODY-END-->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
-  <script src="app.js?v=20261101e"></script>
+  <script src="app.js?v=20261101g"></script>
 </body>
 </html>

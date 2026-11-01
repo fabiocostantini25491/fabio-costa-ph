@@ -205,16 +205,9 @@ function showPhotoMarker(p) {
     .addTo(map).bindTooltip("Where this photo was taken", { direction: "top", offset: [0, -6] });
 }
 
-const PIN_SVG = `<svg viewBox="0 0 34 42" aria-hidden="true">
-  <path class="pin-body" d="M17 41C17 41 3 25.5 3 16a14 14 0 0 1 28 0c0 9.5-14 25-14 25z" fill="#0b2635" stroke="currentColor" stroke-width="1.6"/>
-  <circle cx="17" cy="15.5" r="7.2" fill="none" stroke="currentColor" stroke-width="1.4"/>
-  <rect x="12.4" y="12" width="9.2" height="6.4" rx="3.2" fill="currentColor" opacity=".9"/>
-  <path d="M10.5 26.5c1.2-3 3.6-4.4 6.5-4.4s5.3 1.4 6.5 4.4" fill="none" stroke="currentColor" stroke-width="1.4"/>
-</svg>`;
-
 function pinIcon(active) {
-  return L.divIcon({ className: "", html: `<div class="astro-pin${active ? " is-active" : ""}">${PIN_SVG}</div>`,
-    iconSize: [34, 42], iconAnchor: [17, 41], tooltipAnchor: [0, -38] });
+  return L.divIcon({ className: "", iconSize: [40, 52], iconAnchor: [20, 48], tooltipAnchor: [0, -44],
+    html: `<div class="home-astro${active ? " is-active" : ""}">${ASTRO_SVG}</div>` });
 }
 
 /* Geometria dei continenti (Natural Earth). Prova più fonti in ordine e usa la prima valida.
@@ -334,18 +327,17 @@ function createMap(kind) {
   map.attributionControl.setPrefix(false);
   map.fitBounds([[-50, -165], [75, 175]]);
 
-  // Livello "artistico" (da lontano): reticolo + continenti color sabbia
+  // Livello "artistico" (da lontano): la Terra di notte con le luci delle città (NASA Black Marble)
   const art = L.layerGroup().addTo(map);
-  const grid = [];
-  for (let lon = -180; lon <= 180; lon += 30) grid.push([[-80, lon], [85, lon]]);
-  for (let lat = -60; lat <= 80; lat += 20) grid.push([[lat, -180], [lat, 180]]);
-  L.polyline(grid, { color: "#d5aa76", weight: 0.5, opacity: 0.12, interactive: false }).addTo(art);
-  let landOk = false;
-  loadLand().then(geo => {
-    if (!geo) return;
-    landOk = true;
-    L.geoJSON(geo, { interactive: false, style: { color: "#8f7650", weight: 0.6, fillColor: "#bfa077", fillOpacity: 0.88, className: "land" }, attribution: "Natural Earth" }).addTo(art);
-    updateBase();
+  const landOk = true;
+  let nightErrors = 0, nightFallback = false;
+  const night = L.tileLayer(NIGHT_TILES, { maxNativeZoom: 8, maxZoom: 10, className: "tiles-night", attribution: NIGHT_ATTRIBUTION }).addTo(art);
+  night.on("tileerror", () => {
+    if (++nightErrors < 4 || nightFallback) return;
+    nightFallback = true;
+    art.removeLayer(night);
+    loadLand().then(geo => geo && L.geoJSON(geo, { interactive: false, attribution: "Natural Earth",
+      style: { color: "#6f9bd6", weight: 0.6, fillColor: "#16304f", fillOpacity: 0.95, className: "land" } }).addTo(art));
   });
 
   // Mappe dettagliate (da vicino o a scelta)
@@ -371,7 +363,7 @@ function createMap(kind) {
   };
   let mode = "mappa";
   try { if (bases[localStorage.getItem("fcph-map")]) mode = localStorage.getItem("fcph-map"); } catch {}
-  const DETAIL_ZOOM = 5;   // sotto questo zoom, in modalità "Mappa", resta lo stile disegnato
+  const DETAIL_ZOOM = 7;   // sotto questo zoom, in modalità "Map", si vede la Terra di notte
 
   function updateBase() {
     const artistic = mode === "mappa" && landOk && map.getZoom() < DETAIL_ZOOM;
@@ -420,6 +412,120 @@ function createMap(kind) {
   return map;
 }
 
+
+/* =========================================================
+   4b. HOME: mappa notturna fissa con astronauti luminosi
+   ========================================================= */
+const ASTRO_SVG = `<svg viewBox="0 0 40 52" aria-hidden="true">
+  <ellipse class="astro-glow" cx="20" cy="48" rx="13" ry="3.6"/>
+  <rect x="9" y="22" width="22" height="16" rx="6" fill="#cfd6db"/>
+  <rect x="12.5" y="25" width="15" height="12" rx="4" fill="#f4f1ec"/>
+  <rect x="17" y="28" width="6" height="4" rx="1" fill="#e7b37a"/>
+  <rect x="6.5" y="24" width="5" height="11" rx="2.5" fill="#eceae6"/>
+  <rect x="28.5" y="24" width="5" height="11" rx="2.5" fill="#eceae6"/>
+  <rect x="13" y="36" width="6" height="9" rx="2.6" fill="#eceae6"/>
+  <rect x="21" y="36" width="6" height="9" rx="2.6" fill="#eceae6"/>
+  <circle cx="20" cy="14" r="11" fill="#f4f1ec"/>
+  <rect x="12" y="9" width="16" height="11" rx="5.5" fill="#0b2635"/>
+  <path d="M15 11.5c1.6-1.2 3.6-1.6 5.6-1.3" stroke="#9fd0ff" stroke-width="1.4" fill="none" stroke-linecap="round" opacity=".8"/>
+  <circle cx="24.5" cy="16" r="1.2" fill="#e7b37a" opacity=".9"/>
+</svg>`;
+
+const NIGHT_TILES = "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_Black_Marble/default/2016-01-01/GoogleMapsCompatible_Level8/{z}/{y}/{x}.png";
+const NIGHT_ATTRIBUTION = 'Earth at night &copy; <a href="https://earthobservatory.nasa.gov/features/NightLights" target="_blank" rel="noopener">NASA Earth Observatory</a>';
+let homeMap = null;
+let homeCycle = null;
+
+function createHomeMap() {
+  if (homeMap || !window.L) return homeMap;
+  const map = L.map("homeMap", {
+    zoomControl: false, attributionControl: true, dragging: false, scrollWheelZoom: false, doubleClickZoom: false,
+    touchZoom: false, boxZoom: false, keyboard: false, tap: false, zoomSnap: 0, inertia: false, fadeAnimation: true
+  });
+  map.attributionControl.setPrefix(false);
+  homeMap = map;
+
+  // Terra di notte (NASA Black Marble). Se non risponde, uso i continenti disegnati.
+  let errors = 0, fallback = false;
+  const night = L.tileLayer(NIGHT_TILES, {
+    maxNativeZoom: 8, maxZoom: 10, noWrap: true, className: "tiles-night", bounds: [[-85, -180], [85, 180]], attribution: NIGHT_ATTRIBUTION
+  }).addTo(map);
+  night.on("tileerror", () => {
+    if (++errors < 4 || fallback) return;
+    fallback = true;
+    map.removeLayer(night);
+    loadLand().then(geo => geo && L.geoJSON(geo, { interactive: false, attribution: "Natural Earth",
+      style: { color: "#8f7650", weight: 0.6, fillColor: "#bfa077", fillOpacity: 0.85, className: "land" } }).addTo(map));
+  });
+
+  homeMap._pins = L.layerGroup().addTo(map);
+  fitHomeMap();
+  map.on("resize", () => fitHomeMap());
+  return map;
+}
+
+/* La mappa riempie tutto il riquadro (come una foto), centrata sul mondo abitato */
+function fitHomeMap() {
+  const map = homeMap;
+  if (!map) return;
+  map.invalidateSize({ pan: false });
+  const world = L.latLngBounds([[-56, -168], [76, 190]]);
+  const zoom = Math.max(map.getBoundsZoom(world, true), 1);   // "true": la mappa copre tutto il riquadro, senza bordi vuoti
+  const narrow = map.getSize().x < 700;
+  const center = narrow ? [14, 12] : [10, 11];               // gli spot (Europa) restano in alto, sopra al titolo
+  map.setView(center, zoom, { animate: false });
+  drawHomePins();
+}
+
+/* Astronauti: quelli troppo vicini per stare separati diventano uno solo con il numero */
+function drawHomePins() {
+  const map = homeMap;
+  if (!map || !map._pins) return;
+  map._pins.clearLayers();
+  const spots = trips.filter(t => photosOfTrip(t.id).length);
+  const groups = [];
+  spots.forEach(t => {
+    const pt = map.latLngToContainerPoint([t.lat, t.lon]);
+    const g = groups.find(g => g.pt.distanceTo(pt) < 46);
+    if (g) { g.trips.push(t); } else groups.push({ pt, trips: [t] });
+  });
+  groups.forEach((g, i) => {
+    const lat = g.trips.reduce((s, t) => s + t.lat, 0) / g.trips.length;
+    const lon = g.trips.reduce((s, t) => s + t.lon, 0) / g.trips.length;
+    const n = g.trips.length;
+    const label = n === 1 ? g.trips[0].name : `${n} spots · ${g.trips.map(t => t.name).join(", ")}`;
+    const m = L.marker([lat, lon], {
+      icon: L.divIcon({ className: "", iconSize: [40, 52], iconAnchor: [20, 48], tooltipAnchor: [0, -44],
+        html: `<div class="home-astro" style="--d:${(i * 0.7) % 3}s">${ASTRO_SVG}${n > 1 ? `<span class="astro-count">${n}</span>` : ""}</div>` }),
+      title: label, keyboard: true, riseOnHover: true
+    }).addTo(map._pins);
+    m.bindTooltip(n === 1 ? esc(g.trips[0].name) : `${n} spots<br><small>${g.trips.map(t => esc(t.name)).join(" · ")}</small>`, { direction: "top" });
+    m.on("click", () => {
+      location.hash = "explore";
+      setTimeout(() => {
+        if (n === 1) return openTrip(g.trips[0].id);
+        const em = maps.explore;
+        if (em) em.flyToBounds(L.latLngBounds(g.trips.map(t => [t.lat, t.lon])).pad(0.2), { ...mapPadding(), maxZoom: 9, duration: 1 });
+      }, 120);
+    });
+  });
+  startHomeCycle(spots);
+}
+
+/* In basso a sinistra scorrono nome e coordinate degli spot, come nel mockup */
+function startHomeCycle(spots) {
+  clearInterval(homeCycle);
+  const show = t => {
+    $("#heroPlace").textContent = (t ? t.name : "Earth").toUpperCase();
+    $("#heroCoord").textContent = t ? fmtCoord(t.lat, t.lon).replace("  |  ", " · ") : "";
+  };
+  if (!spots.length) return show(null);
+  let i = 0;
+  show(spots[0]);
+  if (spots.length > 1 && !matchMedia("(prefers-reduced-motion: reduce)").matches)
+    homeCycle = setInterval(() => show(spots[++i % spots.length]), 4000);
+}
+
 /* Margini per non coprire i punti col riquadro del viaggio (a destra, su schermi larghi) */
 function mapPadding() {
   const wide = window.innerWidth > 900;
@@ -460,7 +566,7 @@ function drawPins(kind) {
   trips.forEach(t => {
     if (!photosOfTrip(t.id).length) return;
     if (distKm(t, HOME_BASE) > 50)
-      L.polyline(curve(HOME_BASE, t), { color: "#e9d2b5", weight: 1.1, opacity: 0.55, dashArray: "2 7", interactive: false }).addTo(layer);
+      L.polyline(curve(HOME_BASE, t), { color: "#bcdcff", weight: 1.1, opacity: 0.5, dashArray: "2 7", interactive: false }).addTo(layer);
   });
   trips.forEach(t => {
     if (!photosOfTrip(t.id).length) return;
@@ -665,25 +771,21 @@ function articleMeta(a, withIcons = true) {
 }
 function renderJournal() {
   if (!articles.length) { $("#journalLayout").innerHTML = `<p class="empty-state">No articles yet.</p>`; return; }
-  const [first, ...rest] = [...articles].sort((a, b) => (b.date || "").localeCompare(a.date || ""));
-  $("#journalLayout").innerHTML = `
-    <article class="featured-article">
-      <img src="${esc(first.cover)}" alt="${esc(first.title)}" data-cat="Paesaggi">
-      <div class="article-copy">
-        <span class="eyebrow">${esc(catLabel(first.category))}</span>
-        <h2>${esc(first.title)}</h2>
-        <p class="meta-row">${articleMeta(first)}</p>
-        <p>${esc(first.excerpt)}</p>
-        <a class="outline-link" href="#art-${esc(first.id)}">READ THE ARTICLE <span aria-hidden="true">→</span></a>
+  const list = [...articles].sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+  $("#journalLayout").innerHTML = list.map(a => {
+    const t = a.trip && tripById(a.trip);
+    return `
+    <a class="log-card" href="#art-${esc(a.id)}">
+      <img src="${esc(a.cover)}" alt="" data-cat="Paesaggi" loading="lazy">
+      <div class="log-body">
+        <p class="meta-row"><span>${ICON.cal}${esc(fmtDate(a.date))}</span>${a.minutes ? `<span>${a.minutes} min</span>` : ""}<span>${esc(catLabel(a.category))}</span></p>
+        <h3>${esc(a.title)}</h3>
+        ${a.excerpt ? `<p class="log-excerpt">${esc(a.excerpt)}</p>` : ""}
+        ${t ? `<span class="log-coords">${ICON.pin}${fmtCoord(t.lat, t.lon).replace("  |  ", ", ")}</span>` : "<span></span>"}
+        <span class="log-arrow" aria-hidden="true">${ICON.next}</span>
       </div>
-    </article>
-    <div class="article-list">${rest.map(a => `
-      <a class="article-card" href="#art-${esc(a.id)}">
-        <img src="${esc(a.cover)}" alt="" data-cat="Paesaggi" loading="lazy">
-        <div><span class="eyebrow">${esc(catLabel(a.category))}</span><h3>${esc(a.title)}</h3>
-          <p class="meta-row"><span>${ICON.cal}${esc(fmtDate(a.date))}</span>${a.minutes ? `<span>${a.minutes} min</span>` : ""}</p></div>
-      </a>`).join("")}
-    </div>`;
+    </a>`;
+  }).join("");
 }
 function renderArticle(id) {
   const reader = $("#articleReader"), a = articles.find(x => x.id === id);
@@ -819,7 +921,7 @@ function renderAbout() {
   $("#aboutGear").innerHTML = md(about.attrezzatura);
   $("#aboutApproach").innerHTML = md(about.approccio);
   const img = $("#aboutImage");
-  img.hidden = !about.immagine;
+  $("#aboutPhoto").hidden = !about.immagine;
   if (about.immagine) { delete img.dataset.fallback; img.src = mediaUrl(about.immagine); }
   const owner = (about.proprietario || "Fabio Costantini").trim();
   $$("[data-owner]").forEach(el => (el.textContent = owner));
@@ -856,7 +958,11 @@ function route() {
   $("#mainNav").classList.remove("open");
   $("#menuToggle").setAttribute("aria-expanded", "false");
 
-  if (page === "explore") {           // la Home usa un'immagine: la mappa interattiva è solo in Explore
+  if (page === "home") {
+    const hm = createHomeMap();
+    if (hm) setTimeout(fitHomeMap, 30);
+  }
+  if (page === "explore") {
     const map = createMap("explore");
     if (map) setTimeout(() => map.invalidateSize(), 30);
     if (!activeTripId) renderPanelIntro();
@@ -873,6 +979,7 @@ function renderAll() {
   renderGallery();
   renderJournal();
   renderAbout();
+  drawHomePins();
   if (activeTripId && tripById(activeTripId)) drawPins("explore"); else if (maps.explore) renderPanelIntro();
 }
 
