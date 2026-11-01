@@ -51,13 +51,19 @@ const Spots = (() => {
   let admin = false;
   let map = null, layer = null, satLabels = null, originLayer = null;
   let markerById = new Map(), openId = null;
-  let osmLayer = null, osmItems = [], osmState = "", osmSeq = 0, showOsm = true;   // marker singoli disegnati ora (per aprire il popup da ricerca/vicini)
+  let osmLayer = null, osmItems = [], osmState = "", osmSeq = 0, showOsm = true;
+  const RADII = [1, 2, 5, 10, 25, 50];
+  let nearKm = (() => { try { const v = +localStorage.getItem("fcph-near-km"); return RADII.includes(v) ? v : 5; } catch { return 5; } })();   // marker singoli disegnati ora (per aprire il popup da ricerca/vicini)
   let origin = null;            // { lat, lon, label, kind: "me" | "place", acc } — punto da cui calcolare i vicini
   let placeResults = [], placeTimer = 0, placeSeq = 0, suggestIdx = -1;
   let activeLists = null;   // Set delle liste visibili (null = tutte)
   let activeCats = null;    // Set delle categorie visibili
   let knownLists = new Set();
   let schemaV2 = true;      // false finché non è stato eseguito supabase-community.sql
+  let socialV = true;       // false finché non è stato eseguito supabase-sociale.sql
+  let reports = new Map();  // spot_id → segnalazioni attive
+  let alertMode = "show";   // show | hide | only
+  let onlySupport = false;
   let query = "";
   let notice = "";          // messaggio da mostrare nella schermata di accesso
   let loaded = false;
@@ -127,10 +133,11 @@ const Spots = (() => {
     for (let from = 0; ; from += PAGE_SIZE) {
       let data;
       try {
-        ({ data } = await api(`/rest/v1/spots?select=${cols}${schemaV2 ? ",category,starts_on,ends_on,created_by,author_name" : ""}&order=list.asc,name.asc`, {
+        ({ data } = await api(`/rest/v1/spots?select=${cols}${schemaV2 ? ",category,starts_on,ends_on,created_by,author_name" : ""}${schemaV2 && socialV ? ",support_local,fragile,best_months" : ""}&order=list.asc,name.asc`, {
           headers: { "Range-Unit": "items", Range: `${from}-${from + PAGE_SIZE - 1}` } }));
       } catch (err) {
         // database non ancora aggiornato (colonne nuove assenti): funziona come prima
+        if (socialV && schemaV2 && err.status === 400 && from === 0) { socialV = false; from -= PAGE_SIZE; continue; }
         if (schemaV2 && err.status === 400 && from === 0) { schemaV2 = false; from -= PAGE_SIZE; continue; }
         throw err;
       }
@@ -143,6 +150,25 @@ const Spots = (() => {
       .filter(s => !(s.ends_on || s.starts_on) || (s.ends_on || s.starts_on) >= today)   // eventi finiti: spariscono da soli
       .map(s => ({ ...s, lat: +s.lat, lon: +s.lon, list: s.list || "Spots", category: CATS[s.category] ? s.category : "spot" }));
   }
+  const ALERTS = {
+    closed: { label: "Closed", icon: "⛔" }, works: { label: "Works or landslide", icon: "🚧" }, event: { label: "Event on", icon: "🎪" },
+    crowded: { label: "Very crowded", icon: "👥" }, danger: { label: "Danger", icon: "⚠️" }, access: { label: "Access changed", icon: "🚪" }
+  };
+  const REQUESTS = { fragile: "Suggested as fragile", support: "Suggested for Support local" };
+  async function fetchReports() {
+    reports = new Map();
+    if (!schemaV2 || !socialV) return;
+    try {
+      const { data } = await api("/rest/v1/spot_reports?select=id,spot_id,user_id,author_name,kind,note,until,confirmations,created_at&resolved=eq.false&order=created_at.desc&limit=3000");
+      const today = new Date().toISOString().slice(0, 10), cut = Date.now() - 14 * 864e5;
+      (data || []).forEach(r => {
+        const active = REQUESTS[r.kind] ? true : r.until ? r.until >= today : Date.parse(r.created_at) >= cut;
+        if (active) (reports.get(r.spot_id) || reports.set(r.spot_id, []).get(r.spot_id)).push(r);
+      });
+    } catch { socialV = false; }
+  }
+  const alertsOf = s => (reports.get(s.id) || []).filter(r => ALERTS[r.kind]);
+
   async function checkAdmin() {
     try { const { data } = await api("/rest/v1/rpc/is_admin", { method: "POST", body: {} }); return data === true; } catch { return false; }
   }
@@ -177,6 +203,7 @@ const Spots = (() => {
       el.innerHTML = gateHtml(`<p class="gate-note">Loading the map…</p>`);
       try {
         [spots, admin] = await Promise.all([fetchSpots(), checkAdmin()]);
+        await fetchReports();
         loaded = true;
       } catch (err) {
         if (err.status === 401) { saveSession(null); notice = "Please log in again."; return renderGate(); }
@@ -257,6 +284,16 @@ const Spots = (() => {
         ${CAT_KEYS.map(k => `<button class="filter cat-filter${activeCats.has(k) && activeCats.size !== CAT_KEYS.length ? " active" : ""}" type="button" data-cat="${k}" style="--c:${CATS[k].color}">
           ${CATS[k].icon}${CATS[k].label} <small>${spots.filter(s => s.category === k).length}</small></button>`).join("")}
       </div>` : ""}
+      ${schemaV2 && socialV ? `<div class="spots-social" role="group" aria-label="Alerts and community">
+        <label class="soc-pick">${ICON_ALERT}<span class="sr-only">Alerts</span>
+          <select id="alertMode">
+            <option value="show"${alertMode === "show" ? " selected" : ""}>Alerts: show</option>
+            <option value="hide"${alertMode === "hide" ? " selected" : ""}>Hide places with alerts</option>
+            <option value="only"${alertMode === "only" ? " selected" : ""}>Only places with alerts</option>
+          </select></label>
+        <button type="button" class="filter soc-support${onlySupport ? " active" : ""}" id="onlySupport" aria-pressed="${onlySupport}">🌱 Support local <small>${spots.filter(x => x.support_local).length}</small></button>
+        <button type="button" class="text-link" id="openConduct">Community code</button>
+      </div>` : ""}
       <div class="filters spots-lists" role="group" aria-label="Lists">
         <button class="filter${activeLists.size === lists.length ? " active" : ""}" type="button" data-list="__all">All</button>
         ${lists.map(l => `<button class="filter${activeLists.has(l) && activeLists.size !== lists.length ? " active" : ""}" type="button" data-list="${esc(l)}">
@@ -270,6 +307,8 @@ const Spots = (() => {
       <section class="spots-around" id="spotsAround" aria-live="polite" hidden>
         <header class="around-head">
           <div><span class="eyebrow" id="aroundEyebrow"></span><h2 id="aroundTitle"></h2></div>
+          <label class="near-radius">Within
+            <select id="nearKm">${RADII.map(k => `<option value="${k}"${k === nearKm ? " selected" : ""}>${k} km</option>`).join("")}</select></label>
           <button type="button" class="near-close" id="nearClose" aria-label="Close">${ICON.close}</button>
         </header>
         <div class="around-cols">
@@ -299,11 +338,19 @@ const Spots = (() => {
       ${spots.length ? "" : `<p class="empty-state">No spots yet.${admin ? " Use «Importa da Google Maps» to add them." : ""}</p>`}`;
 
     wireSearch();
+    $("#nearKm")?.addEventListener("change", e => {
+      nearKm = +e.target.value;
+      try { localStorage.setItem("fcph-near-km", nearKm); } catch {}
+      if (!origin) return;
+      if (origin.kind === "scan") origin.radius = nearKm * 1000;
+      drawOrigin(); renderNear(); fitRadius();
+      if (schemaV2) scanOsm(origin);
+    });
     $("#osmScan")?.addEventListener("click", () => {
       if (map.getZoom() < 9) return toast("Zoom in a little more to scan an area.", true);
       const c = map.getCenter(), b = map.getBounds();
       const r = Math.min(15000, map.distance(c, b.getNorthEast()) * 0.8);
-      setOriginScan({ lat: c.lat, lon: L.Util.wrapNum(c.lng, [-180, 180], true), label: "This area", kind: "scan", radius: r });
+      setOriginScan({ lat: c.lat, lon: L.Util.wrapNum(c.lng, [-180, 180], true), label: "This area", kind: "scan", radius: Math.min(r, nearKm * 1000) });
     });
     $$(".spots-lists [data-list]").forEach(b => b.addEventListener("click", () => {
       const l = b.dataset.list;
@@ -321,7 +368,10 @@ const Spots = (() => {
     }));
     $("#spotsLogout").addEventListener("click", logout);
     $("#spotsImport")?.addEventListener("click", openImport);
-    $("#spotsAdd")?.addEventListener("click", () => openAdd());
+    $("#spotsAdd")?.addEventListener("click", () => withConduct(() => openAdd()));
+    $("#alertMode")?.addEventListener("change", e => { alertMode = e.target.value; drawClusters(); renderNear(); });
+    $("#onlySupport")?.addEventListener("click", () => { onlySupport = !onlySupport; renderApp(); });
+    $("#openConduct")?.addEventListener("click", () => showConduct());
     buildMap();
     if (origin) renderNear();
   }
@@ -450,15 +500,16 @@ const Spots = (() => {
     if (schemaV2) scanOsm(o, extent);
     renderNear();
     map.invalidateSize();   // sul telefono il pannello cambia l'altezza della mappa
-    const near = nearestSpots(5).filter(n => n.d <= 60);
-    if (extent && extent.length === 4 && Math.abs(extent[2] - extent[0]) > 0.05) {
-      // area grande (regione, lago, parco): mostra tutta l'area
+    if (extent && extent.length === 4 && Math.abs(extent[2] - extent[0]) > 0.3) {
+      // area grande (regione, parco): mostra tutta l'area
       map.flyToBounds([[extent[3], extent[0]], [extent[1], extent[2]]], { maxZoom: 13, duration: 1 });
-    } else if (near.length) {
-      map.flyToBounds(L.latLngBounds([[o.lat, o.lon], ...near.map(n => [n.s.lat, n.s.lon])]).pad(0.25), { maxZoom: 14, duration: 1 });
-    } else map.flyTo([o.lat, o.lon], 11, { duration: 1 });
+    } else fitRadius();
   }
 
+  function fitRadius() {
+    if (!origin) return;
+    map.flyToBounds(L.latLng(origin.lat, origin.lon).toBounds(nearKm * 2000), { duration: 0.8 });
+  }
   function setOriginScan(o) {
     origin = o; drawOrigin(); renderNear(); scanOsm(o);
   }
@@ -469,6 +520,7 @@ const Spots = (() => {
     if (!origin) return;
     if (origin.kind === "me" && origin.acc && origin.acc < 3000)
       L.circle([origin.lat, origin.lon], { radius: origin.acc, color: "#6fb4ff", weight: 1, opacity: .6, fillOpacity: .08, interactive: false }).addTo(originLayer);
+    L.circle([origin.lat, origin.lon], { radius: nearKm * 1000, color: "#9cc8ff", weight: 1.2, dashArray: "6 6", fillOpacity: 0.03, interactive: false }).addTo(originLayer);
     L.marker([origin.lat, origin.lon], { interactive: false, keyboard: false, zIndexOffset: 1000,
       icon: L.divIcon({ className: "", iconSize: [22, 22], iconAnchor: [11, 11],
         html: `<div class="origin-dot ${origin.kind}"></div>` }) }).addTo(originLayer);
@@ -492,15 +544,14 @@ const Spots = (() => {
     box.hidden = false;
     $("#aroundEyebrow").textContent = origin.kind === "me" ? "Near you" : origin.kind === "scan" ? "This area" : "Around";
     $("#aroundTitle").textContent = origin.kind === "me" ? "What's around you" : origin.label;
-    const all = visibleSpots().map(s => distKm(origin, s));
-    const in10 = all.filter(d => d <= 10).length, in50 = all.filter(d => d <= 50).length;
-    const top = nearestSpots(8);
+    const inR = visibleSpots().map(s => ({ s, d: distKm(origin, s) })).filter(o => o.d <= nearKm).sort((a, b) => a.d - b.d);
+    const top = inR.length ? inR.slice(0, 15) : nearestSpots(1);
     const where = origin.kind === "me" ? "you" : esc(origin.label);
     el.innerHTML = `
       <h3 class="col-title"><span class="col-dot community"></span>From the community</h3>
       <p class="near-sum">${!top.length ? "No spots match the current filters."
-        : in50 ? `<strong>${in10}</strong> within 10 km · <strong>${in50}</strong> within 50 km`
-        : `No spots within 50 km of ${where}. The nearest is <strong>${fmtKm(top[0].d)}</strong> away.`}</p>
+        : inR.length ? `<strong>${inR.length}</strong> place${inR.length > 1 ? "s" : ""} within ${nearKm} km${inR.length > 15 ? " · showing the 15 closest" : ""}`
+        : `Nothing within ${nearKm} km of ${where}. The nearest is <strong>${fmtKm(top[0].d)}</strong> away — try a larger radius.`}</p>
       <ol class="near-list">${top.map(({ s, d }) => `
         <li><button type="button" data-near="${s.id}">
           <span class="sg-cat" style="--c:${(CATS[s.category] || CATS.spot).color}">${(CATS[s.category] || CATS.spot).icon}</span>
@@ -544,8 +595,7 @@ const Spots = (() => {
   const osmCache = new Map();
   async function scanOsm(o, extent) {
     const seq = ++osmSeq;
-    let r = o.radius || (o.kind === "me" ? 5000 : 4000);
-    if (extent && extent.length === 4) r = Math.min(15000, Math.max(r, distKm({ lat: extent[1], lon: extent[0] }, { lat: extent[3], lon: extent[2] }) * 500));
+    let r = Math.min(25000, o.radius || nearKm * 1000);   // OpenStreetMap: al massimo 25 km per non sovraccaricarlo
     r = Math.round(r);
     const key = `${o.lat.toFixed(3)},${o.lon.toFixed(3)},${r}`;
     osmState = "loading"; renderOsm();
@@ -713,6 +763,8 @@ const Spots = (() => {
   function visibleSpots() {
     const q = norm(query);
     return spots.filter(s => activeLists.has(s.list) && (!activeCats || activeCats.has(s.category))
+      && (!onlySupport || s.support_local)
+      && (alertMode === "show" || (alertMode === "hide" ? !alertsOf(s).length : alertsOf(s).length > 0))
       && (!q || norm(s.name).includes(q) || norm(s.note).includes(q) || norm(s.list).includes(q) || norm(CATS[s.category].label).includes(q)));
   }
 
@@ -733,7 +785,7 @@ const Spots = (() => {
     drawOsm();
     drawOrigin();
     map.on("moveend zoomend", drawClusters);
-    if (admin || schemaV2) map.on("contextmenu", e => openAdd({ lat: e.latlng.lat, lon: L.Util.wrapNum(e.latlng.lng, [-180, 180], true) }));
+    if (admin || schemaV2) map.on("contextmenu", e => withConduct(() => openAdd({ lat: e.latlng.lat, lon: L.Util.wrapNum(e.latlng.lng, [-180, 180], true) })));
     const pts = visibleSpots().map(s => [s.lat, s.lon]);
     if (keep) map.setView(keep.c, keep.z, { animate: false });
     else if (pts.length) map.fitBounds(L.latLngBounds(pts).pad(0.1), { maxZoom: 12, animate: false });
@@ -776,7 +828,8 @@ const Spots = (() => {
     const cat = CATS[s.category] || CATS.spot;
     const m = L.marker([s.lat, s.lon], { keyboard: true, title: s.name, riseOnHover: true,
       icon: L.divIcon({ className: "", iconSize: [28, 28], iconAnchor: [14, 14], tooltipAnchor: [0, -14], popupAnchor: [0, -12],
-        html: `<div class="spot-pin" style="--c:${cat.color}">${cat.icon}</div>` }) }).addTo(layer);
+        html: `<div class="spot-pin${s.support_local ? " local" : ""}${s.fragile ? " fragile" : ""}" style="--c:${cat.color}">${cat.icon}${alertsOf(s).length ? `<span class="alert-dot" title="${esc(ALERTS[alertsOf(s)[0].kind].label)}"></span>` : ""}</div>` }) }).addTo(layer);
+    if (s.fragile && map.getZoom() >= 11) L.circle([s.lat, s.lon], { radius: 800, color: "#9fe3c8", weight: 1, dashArray: "4 5", fillOpacity: 0.04, interactive: false }).addTo(layer);
     markerById.set(s.id, m);
     m.bindTooltip(esc(s.name), { direction: "top" });
     // la scheda è un nodo creato una sola volta: Leaflet la ridisegna a ogni update() e così non perde foto, recensioni e pulsanti
@@ -802,14 +855,17 @@ const Spots = (() => {
     return `<div class="spot-pop">
       <span class="spot-cat" style="--c:${cat.color}">${cat.icon}${cat.label}<em>${esc(s.list)}</em></span>
       <strong>${esc(s.name)}</strong>
+      <div class="pop-alerts" data-alerts>${alertsHtml(s)}</div>
       <p class="pop-rating" data-rating hidden></p>
       ${PRICED[s.category] ? `<p class="pop-spend" data-spend></p>` : ""}
       ${dates ? `<p class="pop-dates">${ICON.cal}<span>${dates}</span></p>` : ""}
       ${s.note ? `<p class="pop-desc">${esc(s.note)}</p>` : ""}
       ${schemaV2 ? `<div class="pop-photos" data-photos></div>` : ""}
-      <p class="spot-coords">${ICON.pin}<span>${fmtCoord(s.lat, s.lon).replace("  |  ", " · ")}</span>
+      ${s.support_local ? `<div class="soc-box local"><b>🌱 Support local</b><p>Your visit helps this place: eat, sleep and buy locally.${s.best_months ? ` Best visited: <em>${esc(s.best_months)}</em>.` : ""}</p><div data-nearby></div></div>` : ""}
+      ${s.fragile ? `<div class="soc-box fragile"><b>🛡️ Fragile place</b><p>Please leave no trace: stay on paths, keep groups small, no drones, no geotags on social media.</p></div>` : ""}
+      <div data-coords>${s.fragile ? `<p class="spot-coords">${ICON.pin}<span>Approximate area (about 1 km)</span></p>` : `<p class="spot-coords">${ICON.pin}<span>${fmtCoord(s.lat, s.lon).replace("  |  ", " · ")}</span>
         <button type="button" class="spot-copy" data-copy>Copy</button></p>
-      <a class="text-link" href="${esc(gm)}" target="_blank" rel="noopener">${ICON.ext}Open in Google Maps</a>
+      <a class="text-link" href="${esc(gm)}" target="_blank" rel="noopener">${ICON.ext}Open in Google Maps</a>`}</div>
       ${schemaV2 ? `<div class="pop-actions">
           <button type="button" class="pop-btn" data-addphoto>${ICON.img}Add photo</button>
           <button type="button" class="pop-btn" data-review>${ICON_STAR}Review</button>
@@ -833,6 +889,25 @@ const Spots = (() => {
           <button type="submit" class="pop-btn primary">Post review</button>
         </form>
         <div class="pop-reviews" data-reviews></div>` : ""}
+      ${schemaV2 && socialV ? `<div class="pop-actions">
+          <button type="button" class="pop-btn" data-report>${ICON_ALERT}Report</button>
+          ${canEdit(s) ? `<button type="button" class="pop-btn" data-social>Community settings</button>` : ""}
+        </div>
+        <form class="pop-review pop-reportform" data-reportform hidden>
+          <label>What's going on?
+            <select name="kind">${Object.entries(ALERTS).map(([k, a]) => `<option value="${k}">${a.icon} ${a.label}</option>`).join("")}
+              <option value="fragile">🛡️ This place is fragile (needs protection)</option>
+              <option value="support">🌱 This place needs visitors (Support local)</option></select></label>
+          <textarea name="note" rows="2" maxlength="600" placeholder="Details: what, where exactly, until when…"></textarea>
+          <label class="pay-row">Valid until <input type="date" name="until"> <small>(empty = 14 days)</small></label>
+          <button type="submit" class="pop-btn primary">Send report</button>
+        </form>
+        ${canEdit(s) ? `<form class="pop-review" data-socialform hidden>
+          <label class="shot-check"><input type="checkbox" name="support"${s.support_local ? " checked" : ""}> 🌱 Support local — this place benefits from visitors</label>
+          <input type="text" name="months" maxlength="60" placeholder="Best months, e.g. Oct–Apr (optional)" value="${esc(s.best_months || "")}">
+          <label class="shot-check"><input type="checkbox" name="fragile"${s.fragile ? " checked" : ""}> 🛡️ Fragile — hide the exact location from other members</label>
+          <button type="submit" class="pop-btn primary">Save</button>
+        </form>` : ""}` : ""}
       <p class="pop-author">Added by ${esc(s.author_name || OWNER)}</p>
       ${canEdit(s) ? `<button type="button" class="spot-delete" data-delete>Delete</button>` : ""}
     </div>`;
@@ -850,8 +925,9 @@ const Spots = (() => {
     });
     el.querySelector("[data-rights]")?.addEventListener("click", ev => { ev.preventDefault(); map.closePopup(); $("#photoRights")?.scrollIntoView({ behavior: "smooth", block: "center" }); });
     if (!schemaV2) return;
+    if (socialV) wireSocial(popup, s);
     const fileIn = el.querySelector("[data-photofile]");
-    el.querySelector("[data-addphoto]").addEventListener("click", () => fileIn.click());
+    el.querySelector("[data-addphoto]").addEventListener("click", () => withConduct(() => fileIn.click()));
     fileIn.addEventListener("change", async () => {
       const files = [...fileIn.files].slice(0, 4);
       fileIn.value = "";
@@ -863,7 +939,7 @@ const Spots = (() => {
       loadExtras(popup, s);
     });
     const form = el.querySelector("[data-reviewform]");
-    el.querySelector("[data-review]").addEventListener("click", () => { form.hidden = !form.hidden; popup.update(); if (!form.hidden) form.querySelector("textarea").focus(); });
+    el.querySelector("[data-review]").addEventListener("click", () => withConduct(() => { form.hidden = !form.hidden; popup.update(); if (!form.hidden) form.querySelector("textarea").focus(); }));
     let rating = 0;
     const paint = () => form.querySelectorAll("[data-star]").forEach(b => { const on = +b.dataset.star <= rating; b.classList.toggle("on", on); b.setAttribute("aria-checked", +b.dataset.star === rating ? "true" : "false"); });
     form.querySelectorAll("[data-star]").forEach(b => b.addEventListener("click", () => { rating = +b.dataset.star === rating ? 0 : +b.dataset.star; paint(); }));
@@ -925,6 +1001,126 @@ const Spots = (() => {
     }
     const pp = median(list.map(x => x.paid / (x.people || 1)));
     return `💶 About <b>${fmtMoney(Math.round(pp), cur)}</b> per person <small>(${n})</small>`;
+  }
+
+  /* =========================================================
+     PARTE SOCIALE: segnalazioni, Support local, Fragile, codice della community
+     ========================================================= */
+  function alertsHtml(s) {
+    const list = reports.get(s.id) || [];
+    const al = list.filter(r => ALERTS[r.kind]), req = admin ? list.filter(r => REQUESTS[r.kind]) : [];
+    return al.map(r => `<div class="alert-box" data-rid="${r.id}">
+        <b>${ALERTS[r.kind].icon} ${ALERTS[r.kind].label}</b>${r.note ? `<p>${esc(r.note)}</p>` : ""}
+        <small>${esc(r.author_name || "Member")} · ${fmtDay(r.created_at.slice(0, 10))}${r.until ? ` · until ${fmtDay(r.until)}` : ""}${r.confirmations ? ` · confirmed ${r.confirmations}×` : ""}</small>
+        <div class="alert-act"><button type="button" class="pop-btn" data-confirm="${r.id}">Still valid</button><button type="button" class="pop-btn" data-resolve="${r.id}">Not valid anymore</button></div>
+      </div>`).join("")
+      + req.map(r => `<div class="alert-box req" data-rid="${r.id}"><b>${REQUESTS[r.kind]}</b>${r.note ? `<p>${esc(r.note)}</p>` : ""}
+        <small>${esc(r.author_name || "Member")} · only you see this</small>
+        <div class="alert-act"><button type="button" class="pop-btn" data-resolve="${r.id}">Done</button></div></div>`).join("");
+  }
+  function refreshAlerts(popup, s) {
+    const box = popup.getElement()?.querySelector("[data-alerts]");
+    if (box) { box.innerHTML = alertsHtml(s); wireAlertButtons(popup, s); popup.update(); }
+  }
+  function wireAlertButtons(popup, s) {
+    const el = popup.getElement();
+    el.querySelectorAll("[data-confirm]").forEach(b => b.onclick = async () => {
+      b.disabled = true;
+      try { await api("/rest/v1/rpc/confirm_report", { method: "POST", body: { p_id: +b.dataset.confirm } }); await fetchReports(); refreshAlerts(popup, s); toast("Thanks, confirmed."); }
+      catch (err) { toast(`Could not confirm: ${err.message}`, true); b.disabled = false; }
+    });
+    el.querySelectorAll("[data-resolve]").forEach(b => b.onclick = async () => {
+      b.disabled = true;
+      try { await api("/rest/v1/rpc/resolve_report", { method: "POST", body: { p_id: +b.dataset.resolve } }); await fetchReports(); refreshAlerts(popup, s); drawClusters(); toast("Report closed."); }
+      catch (err) { toast(`Could not update: ${err.message}`, true); b.disabled = false; }
+    });
+  }
+  async function wireSocial(popup, s) {
+    const el = popup.getElement();
+    wireAlertButtons(popup, s);
+    const rf = el.querySelector("[data-reportform]");
+    el.querySelector("[data-report]")?.addEventListener("click", () => withConduct(() => { rf.hidden = !rf.hidden; popup.update(); }));
+    rf?.addEventListener("submit", async e => {
+      e.preventDefault();
+      const kind = rf.kind.value, note = rf.note.value.trim(), until = rf.until.value || null, btn = rf.querySelector("[type=submit]");
+      btn.disabled = true;
+      try {
+        await api("/rest/v1/spot_reports", { method: "POST", body: { spot_id: s.id, kind, note: note || null, until, author_name: displayName() }, headers: { Prefer: "return=minimal" } });
+        rf.hidden = true; rf.reset();
+        await fetchReports(); refreshAlerts(popup, s); drawClusters();
+        toast(REQUESTS[kind] ? "Thanks! Fabio will review your suggestion." : "Thanks, other members will see your report.");
+      } catch (err) { toast(`Could not send: ${err.message}`, true); }
+      btn.disabled = false;
+    });
+    const sf = el.querySelector("[data-socialform]");
+    el.querySelector("[data-social]")?.addEventListener("click", () => { sf.hidden = !sf.hidden; popup.update(); });
+    sf?.addEventListener("submit", async e => {
+      e.preventDefault();
+      const btn = sf.querySelector("[type=submit]"); btn.disabled = true;
+      try {
+        await api("/rest/v1/rpc/set_social", { method: "POST", body: { p_spot: s.id, p_support: sf.support.checked, p_months: sf.months.value } });
+        if (sf.fragile.checked !== !!s.fragile) await api("/rest/v1/rpc/set_fragile", { method: "POST", body: { p_spot: s.id, p_fragile: sf.fragile.checked } });
+        spots = await fetchSpots(); map.closePopup(); renderApp();
+        const n = spots.find(x => x.id === s.id); if (n) focusSpot(n);
+        toast("Saved.");
+      } catch (err) { toast(`Could not save: ${err.message}`, true); btn.disabled = false; }
+    });
+    // posizione esatta dei posti fragili: solo autore, admin e membri di fiducia
+    if (s.fragile) {
+      try {
+        const { data } = await api(`/rest/v1/spot_secrets?select=lat,lon,url&spot_id=eq.${s.id}`);
+        const x = data?.[0];
+        if (x) {
+          const gm = x.url && /^https?:/.test(x.url) ? x.url : `https://www.google.com/maps/search/?api=1&query=${(+x.lat).toFixed(6)},${(+x.lon).toFixed(6)}`;
+          el.querySelector("[data-coords]").innerHTML = `<p class="spot-coords">${ICON.pin}<span>${fmtCoord(+x.lat, +x.lon).replace("  |  ", " · ")}</span>
+            <button type="button" class="spot-copy" data-copy>Copy</button></p><p class="soc-note">Exact spot visible only to you and trusted members. Please don't share it.</p>
+            <a class="text-link" href="${esc(gm)}" target="_blank" rel="noopener">${ICON.ext}Open in Google Maps</a>`;
+          el.querySelector("[data-coords] [data-copy]").addEventListener("click", ev => copyText(ev.currentTarget, `${(+x.lat).toFixed(6)}, ${(+x.lon).toFixed(6)}`));
+          popup.update();
+        }
+      } catch {}
+    }
+    // Support local: dove mangiare e dormire vicino (dalla community)
+    const nb = el.querySelector("[data-nearby]");
+    if (nb) {
+      const near = spots.filter(x => (x.category === "restaurant" || x.category === "hotel") && x.id !== s.id)
+        .map(x => ({ x, d: distKm(s, x) })).filter(o => o.d <= 15).sort((a, b) => a.d - b.d).slice(0, 4);
+      nb.innerHTML = near.length ? `<p class="soc-sub">Eat & sleep nearby</p>${near.map(({ x, d }) =>
+        `<button type="button" class="soc-near" data-goto="${x.id}">${CATS[x.category].icon}<span>${esc(x.name)}</span><small>${fmtKm(d)}</small></button>`).join("")}`
+        : `<p class="soc-sub">No places to eat or sleep added nearby yet — add your favourite local ones!</p>`;
+      nb.querySelectorAll("[data-goto]").forEach(b => b.addEventListener("click", () => { const x = spots.find(y => String(y.id) === b.dataset.goto); if (x) { map.closePopup(); focusSpot(x); } }));
+      popup.update();
+    }
+  }
+
+  /* ---------- codice della community: si accetta una volta prima di contribuire ---------- */
+  const CONDUCT_KEY = "fcph-conduct-ok";
+  const conductOk = () => { try { return localStorage.getItem(CONDUCT_KEY) === "1"; } catch { return false; } };
+  function withConduct(fn) { if (conductOk() || !schemaV2) return fn(); showConduct(fn); }
+  function showConduct(after) {
+    let d = $("#conductDialog");
+    if (!d) { d = document.createElement("dialog"); d.id = "conductDialog"; d.className = "import-dialog conduct-dialog"; document.body.appendChild(d); }
+    d.innerHTML = `<button class="dialog-close" type="button" data-close aria-label="Close">${ICON.close}</button>
+      <div class="import-body">
+        <span class="eyebrow">Spots community</span>
+        <h2>Our code</h2>
+        <ol class="conduct">
+          <li><b>Leave no trace.</b> Take only photos, leave only footprints. Stay on paths and take your rubbish home.</li>
+          <li><b>Protect fragile places.</b> No geotags for places marked fragile, small groups, no drones where wildlife lives.</li>
+          <li><b>Respect people and property.</b> Ask before entering private land, keep noise down at night, respect local rules.</li>
+          <li><b>Support local.</b> Eat, sleep and buy from local businesses when you can.</li>
+          <li><b>Share honestly.</b> Only your own photos, real prices and accurate reports. Update or close reports that are no longer true.</li>
+          <li><b>Be kind.</b> Reviews describe places, not people. No insults, no spam.</li>
+        </ol>
+        <p class="gate-help left">Places, photos or reviews that break the code can be removed, and accounts can be closed.</p>
+        ${after ? `<button class="outline-link" type="button" data-agree>I AGREE <span aria-hidden="true">→</span></button>` : ""}
+      </div>`;
+    d.querySelector("[data-close]").onclick = () => d.close();
+    d.querySelector("[data-agree]")?.addEventListener("click", () => {
+      try { localStorage.setItem(CONDUCT_KEY, "1"); } catch {}
+      d.close(); after?.();
+    });
+    if (!d.open) d.showModal();
   }
 
   async function loadExtras(popup, s) {
@@ -1094,6 +1290,11 @@ const Spots = (() => {
           <div><label for="addTo">To</label><input id="addTo" type="date"></div>
           <p class="gate-help left">The workshop disappears from the map by itself once it's over.</p>
         </div>` : ""}
+        ${schemaV2 && socialV ? `<fieldset class="soc-add"><legend>Community <small>(optional)</small></legend>
+          <label class="shot-check"><input type="checkbox" id="addSupport"> 🌱 Support local — this place benefits from visitors</label>
+          <input type="text" id="addMonths" maxlength="60" placeholder="Best months to visit, e.g. Oct–Apr">
+          <label class="shot-check"><input type="checkbox" id="addFragile"> 🛡️ Fragile — hide the exact location from other members</label>
+        </fieldset>` : ""}
         <label for="addNote">Description <small>(optional)</small></label>
         <textarea id="addNote" maxlength="2000" rows="3" placeholder="What makes it worth it? Best time, access, tips…"></textarea>
         ${schemaV2 ? `<label for="addPhotos">Photos <small>(optional, up to 4)</small></label>
@@ -1142,12 +1343,15 @@ const Spots = (() => {
       const row = { source_key: `u:${crypto.randomUUID()}`, name: name.slice(0, 300), lat: c.lat, lon: c.lon, list,
         note: d.querySelector("#addNote").value.trim() || null, url: url || null };
       if (schemaV2) Object.assign(row, { category: cat, starts_on: cat === "workshop" ? from : null, ends_on: cat === "workshop" ? (to || from) : null, author_name: author || displayName() });
+      if (schemaV2 && socialV) Object.assign(row, { support_local: !!d.querySelector("#addSupport")?.checked, best_months: d.querySelector("#addMonths")?.value.trim() || null });
+      const makeFragile = !!d.querySelector("#addFragile")?.checked;
       const files = [...(d.querySelector("#addPhotos")?.files || [])].slice(0, 4);
       btn.disabled = true; status.className = "gate-note"; status.textContent = "Saving…";
       try {
         if (!(await ensureSession())) throw new Error("please log in again");
         const { data } = await api("/rest/v1/spots", { method: "POST", body: row, headers: { Prefer: "return=representation" } });
         const saved = Array.isArray(data) ? data[0] : data;
+        if (makeFragile) { try { await api("/rest/v1/rpc/set_fragile", { method: "POST", body: { p_spot: saved.id, p_fragile: true } }); } catch {} }
         let photoErr = "";
         for (let i = 0; i < files.length; i++) {
           status.textContent = `Uploading photo ${i + 1} of ${files.length}…`;
@@ -1254,6 +1458,10 @@ const Spots = (() => {
     // salta gli spot già presenti sulla mappa: si cercano (e si pagano) solo quelli nuovi
     const known = new Set(spots.map(s => s.source_key).filter(Boolean));
     const fresh = [...seen.values()];
+    if ([...known].some(k => k.startsWith("fragile:")) && crypto.subtle) {
+      const hex = async t => [...new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(t)))].map(b => b.toString(16).padStart(2, "0")).join("");
+      for (const f of fresh) if (known.has("fragile:" + await hex(f.source_key))) known.add(f.source_key);
+    }
     pending = fresh.filter(s => !known.has(s.source_key));
     alreadyThere = fresh.length - pending.length;
     if (alreadyThere) report.push(`<li><strong>${alreadyThere}</strong> spot sono già sulla mappa e vengono saltati: restano solo quelli nuovi.</li>`);
@@ -1509,6 +1717,7 @@ const Spots = (() => {
 const LOCK_SVG = '<svg viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/><circle cx="12" cy="15.5" r="1.3"/></svg>';
 const ICON_PLUS = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>';
 const ICON_LOCATE = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/><circle cx="12" cy="12" r="7.5"/><path d="M12 1.5v3M12 19.5v3M1.5 12h3M19.5 12h3"/></svg>';
+const ICON_ALERT = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 2 21h20L12 3zm0 6v5m0 3v.5"/></svg>';
 const ICON_SCAN = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3"/><circle cx="12" cy="12" r="3.5"/></svg>';
 const ICON_STAR = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3.5 2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></svg>';
 const ICON_UPLOAD = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V4M7.5 8.5 12 4l4.5 4.5M5 15v3.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V15"/></svg>';
