@@ -534,3 +534,6 @@ main > .page{scroll-margin-top:80px}
   .spots-stage{height:62vh;min-height:380px}
   .spots-user{margin-left:0}
 }
+.import-missing strong{color:#fff;font-weight:500}
+.import-missing .outline-link{margin-bottom:4px}
+.import-or{margin:14px 0 8px!important;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted)}

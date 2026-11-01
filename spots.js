@@ -389,8 +389,12 @@ const Spots = (() => {
       </tbody></table>
       <p class="import-totals"><strong>${ok.length}</strong> pronti da caricare${missing.length ? ` · <strong>${missing.length}</strong> senza coordinate` : ""}</p>
       ${missing.length ? `<div class="import-missing">
-        <p>Per questi posso cercare le coordinate per nome su OpenStreetMap (circa 1 secondo per luogo, ~${Math.ceil(missing.length / 60)} min). Il risultato può essere approssimativo: per la massima precisione usa il file KML di My Maps.</p>
-        <button class="outline-link" type="button" id="importGeocode">CERCA LE COORDINATE MANCANTI</button>
+        <p><strong>Coordinate esatte con Google My Maps (consigliato):</strong> scarica gli spot senza coordinate in
+          ${Math.ceil(missing.length / MYMAPS_MAX)} ${Math.ceil(missing.length / MYMAPS_MAX) === 1 ? "file" : "file"} da massimo ${MYMAPS_MAX} righe, importali in My Maps e ricarica qui il KML esportato.</p>
+        <button class="outline-link" type="button" id="importMyMaps">SCARICA FILE PER MY MAPS <span aria-hidden="true">↓</span></button>
+        <p class="import-or">oppure</p>
+        <p>Cerca le coordinate per nome su OpenStreetMap: circa 1 secondo per luogo (~${Math.ceil(missing.length / 60)} min), risultato approssimativo.</p>
+        <button class="outline-link" type="button" id="importGeocode">CERCA SU OPENSTREETMAP</button>
         <p class="gate-note" id="geoProgress"></p>
       </div>` : ""}
       <div class="import-actions">
@@ -398,7 +402,27 @@ const Spots = (() => {
         <p class="gate-note" id="uploadProgress" role="status"></p>
       </div>`;
     $("#importGeocode")?.addEventListener("click", geocodeMissing);
+    $("#importMyMaps")?.addEventListener("click", downloadForMyMaps);
     $("#importUpload")?.addEventListener("click", uploadPending);
+  }
+
+  /* File CSV per Google My Maps: solo gli spot senza coordinate, a blocchi da 2.000 righe.
+     La colonna "List" torna indietro nel KML, così ogni spot rientra nella sua lista. */
+  const MYMAPS_MAX = 2000;
+  function downloadForMyMaps() {
+    const missing = pending.filter(s => s.lat == null);
+    const q = v => `"${String(v ?? "").replace(/"/g, '""').replace(/\r?\n/g, " ")}"`;
+    const parts = Math.ceil(missing.length / MYMAPS_MAX);
+    for (let i = 0; i < parts; i++) {
+      const rows = missing.slice(i * MYMAPS_MAX, (i + 1) * MYMAPS_MAX);
+      const csv = "\uFEFFTitle,List,Note,URL\n" + rows.map(s => [s.name, s.list, s.note, s.url].map(q).join(",")).join("\n");
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+      a.download = `spot-per-mymaps-${i + 1}-di-${parts}.csv`;
+      document.body.appendChild(a);
+      setTimeout(() => { a.click(); a.remove(); }, i * 400);
+    }
+    toast(`Scaricati ${parts} file con ${missing.length} spot. Importali in My Maps: ogni file in un livello.`);
   }
 
   let geocoding = false;
@@ -514,8 +538,9 @@ const Spots = (() => {
       while (folder && folder.localName !== "Folder" && folder.localName !== "Document") folder = folder.parentElement;
       const folderName = folder && folder.localName === "Folder" ? [...folder.children].find(c => c.localName === "name")?.textContent.trim() : "";
       const url = data.url || data["google maps url"] || "";
-      const note = data.note || data.nota || data.comment || (desc && !/^(title|url|note):/i.test(desc) ? desc : "");
-      return make(folderName || docName || fallbackList, name, note, url, c || coordsFromText(url));
+      const hasData = Object.keys(data).length > 0;   // file di My Maps: le note stanno nelle colonne, la descrizione è solo un riepilogo
+      const note = data.note || data.nota || data.comment || (!hasData && desc ? desc : "");
+      return make(data.list || data.lista || folderName || docName || fallbackList, name, note, url, c || coordsFromText(url));
     });
   }
   function fromGeoJSON(obj, list) {
