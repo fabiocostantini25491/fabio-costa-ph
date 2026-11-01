@@ -197,7 +197,8 @@ const Spots = (() => {
         </div>
         <p class="spots-count" id="spotsCount"></p>
         <div class="spots-user">
-          ${admin ? `<button class="text-link" type="button" id="spotsImport">${ICON_UPLOAD}Importa da Google Maps</button>` : ""}
+          ${admin ? `<button class="text-link" type="button" id="spotsAdd">${ICON_PLUS}Aggiungi spot</button>
+          <button class="text-link" type="button" id="spotsImport">${ICON_UPLOAD}Importa da Google Maps</button>` : ""}
           <span class="spots-email">${esc(email)}</span>
           <button class="text-link" type="button" id="spotsLogout">Log out</button>
         </div>
@@ -237,6 +238,7 @@ const Spots = (() => {
     }));
     $("#spotsLogout").addEventListener("click", logout);
     $("#spotsImport")?.addEventListener("click", openImport);
+    $("#spotsAdd")?.addEventListener("click", () => openAdd());
     buildMap();
   }
 
@@ -259,6 +261,7 @@ const Spots = (() => {
       maxZoom: 19, maxNativeZoom: 18, pane: "spotLabels", opacity: .9 }).addTo(map);
     layer = L.layerGroup().addTo(map);
     map.on("moveend zoomend", drawClusters);
+    if (admin) map.on("contextmenu", e => openAdd({ lat: e.latlng.lat, lon: L.Util.wrapNum(e.latlng.lng, [-180, 180], true) }));
     const pts = visibleSpots().map(s => [s.lat, s.lon]);
     if (keep) map.setView(keep.c, keep.z, { animate: false });
     else if (pts.length) map.fitBounds(L.latLngBounds(pts).pad(0.1), { maxZoom: 12, animate: false });
@@ -334,6 +337,93 @@ const Spots = (() => {
   /* =========================================================
      IMPORTAZIONE DA GOOGLE MAPS (solo admin)
      ========================================================= */
+  /* ---------- aggiunta rapida di uno spot (solo admin) ---------- */
+  function parseCoordsInput(t) {
+    t = String(t || "").trim();
+    const c = coordsFromText(t);
+    if (c) return c;
+    const m = t.replace(/[°]/g, "").match(/^\s*(-?\d{1,2}(?:[.]\d+)?)\s*([NS])?\s*[,;\s]\s*(-?\d{1,3}(?:[.]\d+)?)\s*([EOW])?\s*$/i);
+    if (!m) return null;
+    let lat = +m[1], lon = +m[3];
+    if (/s/i.test(m[2] || "")) lat = -Math.abs(lat);
+    if (/w/i.test(m[4] || "")) lon = -Math.abs(lon);
+    return Math.abs(lat) <= 90 && Math.abs(lon) <= 180 ? { lat, lon } : null;
+  }
+
+  function openAdd(pre) {
+    let d = $("#addDialog");
+    if (!d) {
+      d = document.createElement("dialog");
+      d.id = "addDialog"; d.className = "import-dialog add-dialog";
+      document.body.appendChild(d);
+      d.addEventListener("click", e => { if (e.target === d) d.close(); });
+    }
+    const lists = [...new Set(spots.map(s => s.list))].sort((a, b) => a.localeCompare(b));
+    const lastList = (() => { try { return localStorage.getItem("fcph-last-list") || ""; } catch { return ""; } })();
+    const c0 = pre ? `${pre.lat.toFixed(6)}, ${pre.lon.toFixed(6)}` : "";
+    d.innerHTML = `
+      <button class="dialog-close" type="button" data-close aria-label="Chiudi">${ICON.close}</button>
+      <form class="import-body gate-form add-form" novalidate>
+        <span class="eyebrow">Solo per te</span>
+        <h2>Aggiungi spot</h2>
+        <p class="gate-help left">Incolla le coordinate copiate da Google Maps (tieni premuto sul punto → tocca le coordinate per copiarle) oppure il link completo del luogo.
+          Sulla mappa puoi anche fare <strong>clic destro</strong> (o tenere premuto sul telefono) nel punto esatto.</p>
+        <label for="addCoords">Coordinate o link</label>
+        <div class="gkey-row">
+          <input id="addCoords" type="text" inputmode="text" placeholder="41.902782, 12.496366" value="${esc(c0)}" autocomplete="off" required>
+          <button class="text-link" type="button" id="addPaste">Incolla</button>
+        </div>
+        <p class="gate-note" id="addCoordsNote" role="status"></p>
+        <label for="addName">Nome</label>
+        <input id="addName" type="text" maxlength="300" placeholder="Es. Faro di Capo Testa" required>
+        <label for="addList">Lista</label>
+        <input id="addList" type="text" maxlength="120" list="addLists" value="${esc(lastList || lists[0] || "Spots")}" placeholder="Spots" autocomplete="off">
+        <datalist id="addLists">${lists.map(l => `<option value="${esc(l)}">`).join("")}</datalist>
+        <label for="addNote">Nota (facoltativa)</label>
+        <input id="addNote" type="text" maxlength="2000" placeholder="Es. meglio all'alba, parcheggio sterrato">
+        <button class="outline-link" type="submit" id="addSave">SALVA SPOT <span aria-hidden="true">→</span></button>
+        <p class="gate-note" id="addStatus" role="status"></p>
+      </form>`;
+    const f = d.querySelector("form"), ci = d.querySelector("#addCoords"), note = d.querySelector("#addCoordsNote");
+    const check = () => {
+      const c = parseCoordsInput(ci.value);
+      note.className = "gate-note" + (ci.value && !c ? " warn" : "");
+      note.textContent = c ? `📍 ${fmtCoord(c.lat, c.lon).replace("  |  ", " · ")}`
+        : ci.value ? (/goo\.gl|maps\.app/.test(ci.value) ? "I link brevi (maps.app.goo.gl) non contengono le coordinate: copia le coordinate o il link completo." : "Non riconosco le coordinate. Formato: 41.902782, 12.496366") : "";
+      return c;
+    };
+    ci.addEventListener("input", check); check();
+    d.querySelector("#addPaste").addEventListener("click", async () => {
+      try { ci.value = (await navigator.clipboard.readText()).trim(); check(); d.querySelector("#addName").focus(); }
+      catch { ci.focus(); toast("Il browser non consente di incollare: usa Ctrl+V.", true); }
+    });
+    d.querySelector("[data-close]").addEventListener("click", () => d.close());
+    f.addEventListener("submit", async e => {
+      e.preventDefault();
+      const c = check(), status = d.querySelector("#addStatus"), btn = d.querySelector("#addSave");
+      const name = d.querySelector("#addName").value.trim();
+      if (!c) { ci.focus(); return; }
+      if (!name) { d.querySelector("#addName").focus(); status.className = "gate-note warn"; status.textContent = "Dai un nome allo spot."; return; }
+      const raw = ci.value.trim(), url = /^https?:\/\//.test(raw) ? raw : "";
+      const row = make(d.querySelector("#addList").value, name, d.querySelector("#addNote").value, url, c);
+      btn.disabled = true; status.className = "gate-note"; status.textContent = "Salvo…";
+      try {
+        await upsert([{ source_key: row.source_key, name: row.name, lat: row.lat, lon: row.lon, list: row.list, note: row.note || null, url: row.url || null }]);
+        try { localStorage.setItem("fcph-last-list", row.list); } catch {}
+        spots = await fetchSpots();
+        if (activeLists && !activeLists.has(row.list)) activeLists.add(row.list);
+        d.close();
+        renderApp();
+        map.flyTo([row.lat, row.lon], Math.max(map.getZoom(), 16), { duration: 1 });
+        toast(`Spot «${row.name}» salvato.`);
+      } catch (err) {
+        status.className = "gate-note warn"; status.textContent = `Salvataggio non riuscito: ${err.message}`; btn.disabled = false;
+      }
+    });
+    if (!d.open) d.showModal();
+    (c0 ? d.querySelector("#addName") : ci).focus();
+  }
+
   let alreadyThere = 0;  // spot dei file già presenti sulla mappa
   let pending = [];   // spot letti dai file, pronti da caricare
 
@@ -670,6 +760,7 @@ const Spots = (() => {
 })();
 
 const LOCK_SVG = '<svg viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/><circle cx="12" cy="15.5" r="1.3"/></svg>';
+const ICON_PLUS = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>';
 const ICON_UPLOAD = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V4M7.5 8.5 12 4l4.5 4.5M5 15v3.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V15"/></svg>';
 
 /* subito, prima che app.js legga l'indirizzo */

@@ -549,3 +549,7 @@ main > .page{scroll-margin-top:80px}
 .gkey-row input{flex:1 1 240px;min-width:0;background:rgba(3,9,18,.7);border:1px solid var(--line-strong);border-radius:999px;color:#fff;padding:10px 16px;font-size:14px;outline:none}
 .gkey-row input:focus{border-color:var(--accent);box-shadow:var(--glow)}
 .gate-help.left{text-align:left;margin:0 0 4px}
+.add-dialog{width:min(540px,94vw)}
+.add-form .gkey-row{margin:0;align-items:center}
+.add-form .gkey-row input{margin:0}
+.add-form .outline-link{margin-top:14px}
