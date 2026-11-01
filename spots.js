@@ -18,7 +18,8 @@ const SPOTS_CONFIG = {
 const Spots = (() => {
   const SESSION_KEY = "fcph-session";
   const PAGE_SIZE = 1000;
-  const COMMUNITY = "Community";   // lista per i posti aggiunti dai membri
+  const COMMUNITY = "Community";
+  const OWNER = "Fabio Costantini";   // autore degli spot importati da Google Maps   // lista per i posti aggiunti dai membri
   const CATS = {
     spot:       { label: "Photo spots", color: "#9cc8ff",
       icon: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8.5h3.2l1.8-2.5h6l1.8 2.5H20V19H4z"/><circle cx="12" cy="13" r="3.4"/></svg>' },
@@ -271,7 +272,17 @@ const Spots = (() => {
           <strong>Before you go</strong>
           <p>Many of these spots are places I have saved but <em>not visited myself</em>. Locations, access, opening times and conditions may be inaccurate or out of date.
           Always check current information before you go — access rights, private property, permits, local rules, safety and weather.</p>
+          <p>Places, descriptions, photos and reviews added by members are their own responsibility and are not checked in advance.</p>
           <p>The map is shared for inspiration only. You visit any spot entirely at your own risk: Fabio Costantini accepts no responsibility for any injury, damage, loss, fine or other consequence arising from the use of this information.</p>
+        </div>
+      </aside>
+      <aside class="spots-disclaimer photo-rights" id="photoRights" role="note">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M14.8 9.6a3.6 3.6 0 1 0 0 4.8"/></svg>
+        <div>
+          <strong>Photo terms</strong>
+          <p>Every photo shows the name of the member who uploaded it. By uploading a photo you confirm that <em>you took it yourself</em>, or that you hold the rights to share it, and that it doesn't show identifiable people without their consent.</p>
+          <p><em>You keep the copyright.</em> You only grant Fabio Costa Ph a free, non-exclusive permission to show the photo to members inside this map, and you can withdraw it at any time by deleting the photo. Photos are not used elsewhere, sold or shared outside the map.</p>
+          <p>All photos remain the property of their authors: they may not be downloaded, copied or reused without the author's permission. Photos that break these terms will be removed.</p>
         </div>
       </aside>
       ${spots.length ? "" : `<p class="empty-state">No spots yet.${admin ? " Use «Importa da Google Maps» to add them." : ""}</p>`}`;
@@ -593,6 +604,7 @@ const Spots = (() => {
           <button type="button" class="pop-btn" data-review>${ICON_STAR}Review</button>
           <input type="file" accept="image/*" multiple hidden data-photofile>
         </div>
+        <p class="pop-rights">By adding a photo you confirm it's yours and accept the <a href="#photoRights" data-rights>photo terms</a>.</p>
         <form class="pop-review" data-reviewform hidden>
           <div class="stars" role="radiogroup" aria-label="Rating">${[1, 2, 3, 4, 5].map(n =>
             `<button type="button" role="radio" aria-checked="false" aria-label="${n} star${n > 1 ? "s" : ""}" data-star="${n}">★</button>`).join("")}</div>
@@ -600,7 +612,7 @@ const Spots = (() => {
           <button type="submit" class="pop-btn primary">Post review</button>
         </form>
         <div class="pop-reviews" data-reviews></div>` : ""}
-      ${s.author_name ? `<p class="pop-author">Added by ${esc(s.author_name)}</p>` : ""}
+      <p class="pop-author">Added by ${esc(s.author_name || OWNER)}</p>
       ${canEdit(s) ? `<button type="button" class="spot-delete" data-delete>Delete</button>` : ""}
     </div>`;
   }
@@ -615,6 +627,7 @@ const Spots = (() => {
       try { await removeSpot(s.id); spots = spots.filter(x => x.id !== s.id); map.closePopup(); drawClusters(); toast("Place deleted."); }
       catch (err) { toast(`Could not delete: ${err.message}`, true); b.disabled = false; }
     });
+    el.querySelector("[data-rights]")?.addEventListener("click", ev => { ev.preventDefault(); map.closePopup(); $("#photoRights")?.scrollIntoView({ behavior: "smooth", block: "center" }); });
     if (!schemaV2) return;
     const fileIn = el.querySelector("[data-photofile]");
     el.querySelector("[data-addphoto]").addEventListener("click", () => fileIn.click());
@@ -661,8 +674,9 @@ const Spots = (() => {
       ]);
       const urls = photos.length ? await signPhotos(photos.map(p => p.path)) : {};
       const pbox = el.querySelector("[data-photos]");
-      pbox.innerHTML = photos.map((p, i) => urls[p.path] ? `<button type="button" class="pop-thumb" data-photo="${i}" aria-label="Open photo ${i + 1}">
-        <img src="${esc(urls[p.path])}" alt="" loading="lazy"></button>` : "").join("");
+      pbox.innerHTML = photos.map((p, i) => urls[p.path] ? `<figure class="pop-fig">
+        <button type="button" class="pop-thumb" data-photo="${i}" aria-label="Open photo ${i + 1} by ${esc(p.author_name || "a member")}">
+        <img src="${esc(urls[p.path])}" alt="" loading="lazy"></button><figcaption>© ${esc(p.author_name || "Member")}</figcaption></figure>` : "").join("");
       pbox.querySelectorAll("[data-photo]").forEach(b => b.addEventListener("click", () => openPhotos(photos, urls, +b.dataset.photo, s)));
       const rated = reviews.filter(r => r.rating);
       const rbox = el.querySelector("[data-rating]");
@@ -734,10 +748,11 @@ const Spots = (() => {
       const p = list[i];
       d.innerHTML = `<button class="dialog-close" type="button" data-close aria-label="Close">${ICON.close}</button>
         <img src="${esc(urls[p.path])}" alt="Photo of ${esc(s.name)}">
-        <p class="photo-meta"><span>${esc(s.name)}${p.author_name ? ` · by ${esc(p.author_name)}` : ""}</span>
+        <p class="photo-meta"><span>${esc(s.name)} · <strong>© ${esc(p.author_name || "Member")}</strong> — all rights reserved by the author</span>
           ${list.length > 1 ? `<span class="photo-nav"><button type="button" data-prev aria-label="Previous photo">${ICON.prev}</button>${i + 1} / ${list.length}<button type="button" data-next aria-label="Next photo">${ICON.next}</button></span>` : ""}
           ${p.user_id === myUid() || admin ? `<button type="button" class="spot-delete" data-delphoto>Delete photo</button>` : ""}</p>`;
       d.querySelector("[data-close]").onclick = () => d.close();
+      d.querySelector("img").addEventListener("contextmenu", e => e.preventDefault());   // scoraggia il «salva immagine»
       d.querySelector("[data-prev]")?.addEventListener("click", () => { i = (i - 1 + list.length) % list.length; draw(); });
       d.querySelector("[data-next]")?.addEventListener("click", () => { i = (i + 1) % list.length; draw(); });
       d.querySelector("[data-delphoto]")?.addEventListener("click", async ev => {
@@ -816,6 +831,7 @@ const Spots = (() => {
         <textarea id="addNote" maxlength="2000" rows="3" placeholder="What makes it worth it? Best time, access, tips…"></textarea>
         ${schemaV2 ? `<label for="addPhotos">Photos <small>(optional, up to 4)</small></label>
           <input id="addPhotos" type="file" accept="image/*" multiple>
+          <p class="gate-help left">Only upload photos you took yourself. You keep all rights: see the <a href="#photoRights" data-rights>photo terms</a> under the map.</p>
           <label for="addAuthor">Your name <small>(shown to members)</small></label>
           <input id="addAuthor" type="text" maxlength="60" value="${esc(displayName())}" autocomplete="nickname">` : ""}
         ${admin ? `<label for="addList">Lista <small>(solo tu)</small></label>
@@ -841,6 +857,7 @@ const Spots = (() => {
       catch { ci.focus(); toast("Your browser doesn't allow pasting here: use Ctrl+V.", true); }
     });
     d.querySelector("[data-close]").addEventListener("click", () => d.close());
+    d.querySelector("[data-rights]")?.addEventListener("click", ev => { ev.preventDefault(); d.close(); $("#photoRights")?.scrollIntoView({ behavior: "smooth", block: "center" }); });
     f.addEventListener("submit", async e => {
       e.preventDefault();
       const status = d.querySelector("#addStatus"), btn = d.querySelector("#addSave");
