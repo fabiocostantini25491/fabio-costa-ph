@@ -53,6 +53,8 @@ const Spots = (() => {
   let markerById = new Map(), openId = null;
   let osmLayer = null, osmItems = [], osmState = "", osmSeq = 0, showOsm = true;
   const RADII = [1, 2, 5, 10, 25, 50];
+  const trS = s => (window.I18N ? I18N.t(s) : s);
+  const fmtN = n => n.toLocaleString(window.I18N?.locale || "en-GB");
   let nearKm = (() => { try { const v = +localStorage.getItem("fcph-near-km"); return RADII.includes(v) ? v : 5; } catch { return 5; } })();   // marker singoli disegnati ora (per aprire il popup da ricerca/vicini)
   let origin = null;            // { lat, lon, label, kind: "me" | "place", acc } — punto da cui calcolare i vicini
   let placeResults = [], placeTimer = 0, placeSeq = 0, suggestIdx = -1;
@@ -315,9 +317,13 @@ const Spots = (() => {
         ${CAT_KEYS.map(k => `<button class="filter cat-filter${activeCats.has(k) && activeCats.size !== CAT_KEYS.length ? " active" : ""}" type="button" data-cat="${k}" style="--c:${CATS[k].color}">
           ${CATS[k].icon}${CATS[k].label} <small>${spots.filter(s => s.category === k).length}</small></button>`).join("")}
       </div>` : ""}
-      ${guest ? `<div class="guest-banner">${LOCK_SVG}<p><strong>You're seeing ${spots.length.toLocaleString("en-GB")} of ${Math.max(publicTotal, spots.length).toLocaleString("en-GB")} spots</strong>, in approximate positions.
+      ${guest ? `<div class="guest-banner">${LOCK_SVG}<p>${(() => {
+          const tr = window.I18N ? I18N.t("GUEST_BANNER") : "GUEST_BANNER";
+          const tpl = tr !== "GUEST_BANNER" ? tr : `<strong>You're seeing {n} of {total} spots</strong>, in approximate positions.
           Members see every spot with its exact location, photos, reviews, prices and live alerts — and can add their own.
-          <em>Membership is free:</em> <a href="#about">ask me for an account</a>.</p>
+          <em>Membership is free:</em> <a href="#about">ask me for an account</a>.`;
+          return tpl.replace("{n}", fmtN(spots.length)).replace("{total}", fmtN(Math.max(publicTotal, spots.length)));
+        })()}</p>
           <button type="button" class="outline-link" id="guestJoin">LOG IN <span aria-hidden="true">→</span></button></div>` : ""}
       ${schemaV2 && socialV && !guest ? `<div class="spots-social" role="group" aria-label="Alerts and community">
         <label class="soc-pick">${ICON_ALERT}<span class="sr-only">Alerts</span>
@@ -840,7 +846,7 @@ const Spots = (() => {
     markerById = new Map(); if (keep) markerById.set(openId, keep);
     const list = visibleSpots();
     const count = $("#spotsCount");
-    if (count) count.textContent = guest ? `${list.length.toLocaleString("en-GB")} of ${Math.max(publicTotal, spots.length).toLocaleString("en-GB")} spots` : `${list.length} ${list.length === 1 ? "place" : "places"}`;
+    if (count) count.textContent = guest ? trS("{n} of {total} spots").replace("{n}", fmtN(list.length)).replace("{total}", fmtN(Math.max(publicTotal, spots.length))) : (list.length === 1 ? trS("1 place") : trS("{n} places").replace("{n}", list.length));
     const bounds = map.getBounds().pad(0.2), cell = 64, z = map.getZoom();
     const cells = new Map();
     list.forEach(s => {
@@ -896,7 +902,7 @@ const Spots = (() => {
   }
 
   const canEdit = s => admin || (s.created_by && s.created_by === myUid());
-  const fmtDay = d => new Date(d + "T12:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+  const fmtDay = d => new Date(d + "T12:00:00").toLocaleDateString((window.I18N?.locale || "en-GB"), { day: "numeric", month: "short", year: "numeric" });
   function datesText(s) {
     if (!s.starts_on && !s.ends_on) return "";
     if (s.starts_on && s.ends_on && s.starts_on !== s.ends_on) return `${fmtDay(s.starts_on)} – ${fmtDay(s.ends_on)}`;
@@ -1035,7 +1041,7 @@ const Spots = (() => {
   const CURRENCIES = ["EUR", "USD", "GBP", "CHF", "NOK", "SEK", "DKK", "ISK", "JPY", "AUD", "CAD"];
   const STAY_TYPES = ["Hotel", "B&B", "Agriturismo / farm stay", "Apartment", "Hostel", "Mountain hut", "Camping", "Guesthouse", "Other"];
   let pricesV2 = true;
-  const fmtMoney = (v, c) => { try { return new Intl.NumberFormat("en-GB", { style: "currency", currency: c || "EUR", maximumFractionDigits: v % 1 ? 2 : 0 }).format(v); } catch { return `${v} ${c || ""}`; } };
+  const fmtMoney = (v, c) => { try { return new Intl.NumberFormat((window.I18N?.locale || "en-GB"), { style: "currency", currency: c || "EUR", maximumFractionDigits: v % 1 ? 2 : 0 }).format(v); } catch { return `${v} ${c || ""}`; } };
   async function fetchReviews(id) {
     const base = "id,user_id,author_name,rating,body,created_at";
     if (pricesV2) {

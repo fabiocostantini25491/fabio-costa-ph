@@ -24,10 +24,10 @@ function esc(s = "") {
 const norm = s => String(s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").trim();
 const slug = s => norm(s).replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "luogo";
 
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const MONTHS = Array.from({ length: 12 }, (_, i) => new Intl.DateTimeFormat(window.I18N?.locale || "en-GB", { month: "short" }).format(new Date(2026, i, 15)));
 /* Le categorie restano in italiano nel pannello, sul sito si leggono in inglese */
 const CATEGORY_EN = { Paesaggi: "Landscapes", Urban: "Urban", Viaggi: "Travel", Fotografia: "Photography", Tecnica: "Technique", Ispirazione: "Inspiration" };
-const catLabel = c => CATEGORY_EN[c] || c || "";
+const catLabel = c => (window.I18N?.t || (x => x))(CATEGORY_EN[c] || c || "");
 function parseDate(d) { return d ? new Date(d + "T00:00:00") : null; }
 function fmtDate(d) {
   const x = parseDate(d);
@@ -689,7 +689,8 @@ function renderGallery() {
     chip.innerHTML = `${esc(t.name)} <button type="button" aria-label="Show all places">${ICON.close}</button>`;
     chip.querySelector("button").addEventListener("click", () => { gallery.trip = null; renderGallery(); });
   }
-  $("#photoCount").textContent = `${items.length} ${items.length === 1 ? "photograph" : "photographs"}`;
+  const tr = s => window.I18N ? I18N.t(s) : s;
+  $("#photoCount").textContent = items.length === 1 ? tr("1 photograph") : tr("{n} photographs").replace("{n}", items.length);
   $("#photoGrid").innerHTML = items.map(p => `
     <div class="photo-cell">
       <button class="photo-card" type="button" data-id="${esc(p.id)}">
@@ -1076,8 +1077,11 @@ function renderContacts() {
   if (note) {
     const okMail = mail && /^[^\s@]+@[^\s@]+$/.test(mail);
     note.hidden = !(okMail || ig);
-    note.innerHTML = `${ICON_SPARK}<p><strong>All my photographs are available for licensing</strong>, for editorial and commercial use, and as <strong>fine-art prints</strong>.
-      For licences and prints, just write to me${okMail ? ` at <a href="mailto:${esc(mail)}?subject=${encodeURIComponent("Photo licensing / prints")}" data-lic="email">${esc(mail)}</a>` : ""}${okMail && ig ? " or" : ""}${ig ? ` on <a href="https://ig.me/m/${encodeURIComponent(ig)}" target="_blank" rel="noopener" data-lic="instagram">Instagram @${esc(ig)}</a>` : ""}.</p>`;
+    const T = s => window.I18N ? I18N.t(s) : s;
+    const intro = T("LIC_INTRO") === "LIC_INTRO" ? `<strong>All my photographs are available for licensing</strong>, for editorial and commercial use, and as <strong>fine-art prints</strong>.` : T("LIC_INTRO");
+    const write = T("LIC_WRITE") === "LIC_WRITE" ? "For licences and prints, just write to me" : T("LIC_WRITE");
+    note.innerHTML = `${ICON_SPARK}<p>${intro}
+      ${write}${okMail ? `${T(" at ")}<a href="mailto:${esc(mail)}?subject=${encodeURIComponent("Photo licensing / prints")}" data-lic="email">${esc(mail)}</a>` : ""}${okMail && ig ? T(" or") : ""}${ig ? `${T(" on ")}<a href="https://ig.me/m/${encodeURIComponent(ig)}" target="_blank" rel="noopener" data-lic="instagram">Instagram @${esc(ig)}</a>` : ""}.</p>`;
     note.querySelectorAll("[data-lic]").forEach(a => a.addEventListener("click", () => trackEvent(`Gallery: licensing via ${a.dataset.lic}`)));
   }
 }

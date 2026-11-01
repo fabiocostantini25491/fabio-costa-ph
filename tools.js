@@ -148,8 +148,8 @@ const Tools = (() => {
   const sameDay = (a, b) => a.y === b.y && a.m === b.m && a.d === b.d;
 
   const fmtT = ms => ms == null || !Number.isFinite(ms) ? "—"
-    : new Intl.DateTimeFormat("en-GB", { timeZone: tz, hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date(ms));
-  const fmtDate = (ms, opts) => new Intl.DateTimeFormat("en-GB", { timeZone: tz, ...opts }).format(new Date(ms));
+    : new Intl.DateTimeFormat((window.I18N?.locale || "en-GB"), { timeZone: tz, hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date(ms));
+  const fmtDate = (ms, opts) => new Intl.DateTimeFormat((window.I18N?.locale || "en-GB"), { timeZone: tz, ...opts }).format(new Date(ms));
   const fmtDur = ms => { const m = Math.round(ms / 60000); return `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, "0")} min`; };
 
   /* ---------- calcoli per un giorno e una notte ---------- */
@@ -572,7 +572,7 @@ const Tools = (() => {
         <span class="cal-d">${d}</span>${moonSvg(il.phase, 26)}<span class="cal-p">${Math.round(il.fraction * 100)}%</span>
         ${mw ? `<span class="cal-mw" aria-label="Milky Way">✦</span>` : ""}</button>`;
     }
-    const label = new Intl.DateTimeFormat("en-GB", { month: "long", year: "numeric", timeZone: "UTC" }).format(first);
+    const label = new Intl.DateTimeFormat((window.I18N?.locale || "en-GB"), { month: "long", year: "numeric", timeZone: "UTC" }).format(first);
     return `<article class="tool-card tool-cal">
       <header class="cal-head"><div><span class="eyebrow">Moon calendar</span><h2>${label}</h2></div>
         <div class="cal-nav"><button type="button" data-month="-1" aria-label="Previous month">‹</button><button type="button" data-month="1" aria-label="Next month">›</button></div></header>
