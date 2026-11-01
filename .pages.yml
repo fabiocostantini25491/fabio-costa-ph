@@ -181,6 +181,10 @@ content:
     path: content/chi-sono.json
     format: json
     fields:
+      - name: proprietario
+        label: Nome e cognome (titolare del sito)
+        type: string
+        description: "Compare nella pagina About, nel fondo pagina (©) e nei dati letti dai motori di ricerca."
       - name: titolo
         label: Titolo
         type: string

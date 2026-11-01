@@ -821,8 +821,17 @@ function renderAbout() {
   const img = $("#aboutImage");
   img.hidden = !about.immagine;
   if (about.immagine) { delete img.dataset.fallback; img.src = mediaUrl(about.immagine); }
+  const owner = (about.proprietario || "Fabio Costantini").trim();
+  $$("[data-owner]").forEach(el => (el.textContent = owner));
+  $("#metaAuthor")?.setAttribute("content", owner);
+  const initials = owner.split(/\s+/).map(w => w[0] || "").join("").slice(0, 2).toUpperCase() || "FC";
   const portrait = $("#aboutPortrait");
-  portrait.innerHTML = about.ritratto ? `<img src="${esc(mediaUrl(about.ritratto))}" alt="">` : "FC";
+  portrait.innerHTML = about.ritratto ? `<img src="${esc(mediaUrl(about.ritratto))}" alt="${esc(owner)}">` : esc(initials);
+  // Dati strutturati: dicono a Google chi è il titolare e fotografo del sito
+  let ld = document.getElementById("ownerData");
+  if (!ld) { ld = document.createElement("script"); ld.type = "application/ld+json"; ld.id = "ownerData"; document.head.appendChild(ld); }
+  ld.textContent = JSON.stringify({ "@context": "https://schema.org", "@type": "Person", name: owner,
+    jobTitle: "Photographer", brand: { "@type": "Brand", name: "Fabio Costa Ph" }, url: location.origin + location.pathname });
 }
 
 /* =========================================================
