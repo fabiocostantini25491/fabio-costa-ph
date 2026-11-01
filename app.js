@@ -716,6 +716,8 @@ function setupLightbox() {
   tools.innerHTML = `<span class="lightbox-count" id="dialogCount"></span>
     <button class="lightbox-btn" type="button" id="dialogInfo" aria-label="Hide details" title="Show/hide details (I)">
       <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5M12 8h.01"/></svg></button>
+    <button class="lightbox-btn" type="button" id="dialogRotate" aria-label="Rotate photo" title="Rotate (R)">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg></button>
     <button class="lightbox-btn" type="button" id="dialogFull" aria-label="Full screen" title="Full screen (F)">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>`;
   d.prepend(tools);
@@ -730,6 +732,22 @@ function toggleInfo(force) {
   $("#dialogInfo").setAttribute("aria-label", hide ? "Show details" : "Hide details");
 }
 function isFullscreen() { return !!(document.fullscreenElement || document.webkitFullscreenElement); }
+/* Ruotare la foto: sul telefono, se il sistema lo consente, si gira davvero lo schermo (Android a schermo intero);
+   altrimenti (iPhone o rotazione bloccata) si gira la foto di 90° dentro lo schermo. */
+const isTouch = () => matchMedia("(pointer: coarse)").matches;
+async function rotatePhoto() {
+  const d = $("#photoDialog"), so = screen.orientation;
+  if (isTouch() && so?.lock) {
+    try {
+      if (!isFullscreen()) await (d.requestFullscreen || d.webkitRequestFullscreen).call(d);
+      await so.lock(so.type.startsWith("portrait") ? "landscape" : "portrait");
+      d.classList.remove("rot-90");
+      return;
+    } catch { /* non permesso: si ruota la foto */ }
+  }
+  d.classList.toggle("rot-90");
+  toggleInfo(d.classList.contains("rot-90") ? true : undefined);
+}
 function toggleFullscreen() {
   const d = $("#photoDialog");
   try {
@@ -743,8 +761,11 @@ function openPhoto(id, list = photos) {
   lightboxIndex = Math.max(0, list.findIndex(p => p.id === id));
   showLightbox();
   const d = $("#photoDialog");
-  toggleInfo(false);
+  d.classList.remove("rot-90");
+  // sul telefono in orizzontale: solo la foto, a tutto schermo
+  toggleInfo(isTouch() && matchMedia("(orientation: landscape)").matches);
   if (!d.open) d.showModal();
+  if (isTouch() && !isFullscreen()) { try { (d.requestFullscreen || d.webkitRequestFullscreen)?.call(d)?.catch?.(() => {}); } catch {} }
   document.documentElement.classList.add("no-scroll");
   renderPickBar();
 }
@@ -1198,11 +1219,20 @@ function bindEvents() {
   setupLightbox();
   $("#dialogClose").addEventListener("click", () => dlg.close());
   $("#dialogFull").addEventListener("click", toggleFullscreen);
+  $("#dialogRotate").addEventListener("click", rotatePhoto);
+  // quando si gira il telefono: in orizzontale si nascondono i dettagli per lasciare spazio alla foto
+  matchMedia("(orientation: landscape)").addEventListener?.("change", e => {
+    if (!dlg.open || !isTouch()) return;
+    dlg.classList.remove("rot-90");
+    toggleInfo(e.matches);
+  });
   $("#dialogInfo").addEventListener("click", () => toggleInfo());
   $("#dialogImage").addEventListener("click", () => toggleInfo());          // clic sulla foto: solo immagine
   dlg.addEventListener("close", () => {
     document.documentElement.classList.remove("no-scroll");
     renderPickBar();
+    try { screen.orientation?.unlock?.(); } catch {}
+    dlg.classList.remove("rot-90");
     if (isFullscreen()) try { (document.exitFullscreen || document.webkitExitFullscreen).call(document); } catch {}
   });
   // scorrimento col dito sul telefono
@@ -1221,6 +1251,7 @@ function bindEvents() {
     if (e.key === "ArrowLeft") stepLightbox(-1);
     if (e.key === "ArrowRight") stepLightbox(1);
     if (e.key === "f" || e.key === "F") toggleFullscreen();
+    if (e.key === "r" || e.key === "R") rotatePhoto();
     if (e.key === "i" || e.key === "I") toggleInfo();
   });
   $("#dialogMapButton").addEventListener("click", () => {

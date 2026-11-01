@@ -1165,3 +1165,24 @@ main > .page{scroll-margin-top:80px}
 .pick-actions svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
 .pick-note{margin:10px 0 0;color:#9ff0b8;font-size:13px}
 @media (max-width:600px){ .pick-bar{border-radius:18px} .pick-thumbs{display:none} .photo-pick{width:36px;height:36px;top:8px;right:8px} }
+/* foto ruotata di 90° (quando il telefono non può girare lo schermo) */
+.lightbox-full.rot-90 .lightbox-stage{overflow:hidden}
+.lightbox-full.rot-90 .lightbox-stage img{position:absolute;left:50%;top:50%;width:100dvh;height:100vw;max-width:none;transform:translate(-50%,-50%) rotate(90deg)}
+.lightbox-full.rot-90 .nav-arrow,.lightbox-full.rot-90 .photo-interest{display:none}
+
+/* telefono in orizzontale: pagine compatte, mappe e foto a tutta altezza */
+@media (orientation:landscape) and (max-height:540px){
+  .site-header{height:52px}
+  .home-hero{height:calc(100dvh - 52px);min-height:300px}
+  .hero-copy{top:52%}
+  .hero-copy h1{font-size:clamp(26px,5vh,40px);margin-bottom:6px}
+  .hero-copy .hero-tagline{margin-bottom:14px}
+  .hero-copy .hero-kicker{margin-bottom:8px}
+  .hero-foot{bottom:8px}
+  .content-page{padding-block:22px 40px}
+  .section-heading h1{font-size:clamp(30px,7vh,44px)}
+  .explore-stage,.spots-stage,.pl-stage{height:calc(100dvh - 72px);min-height:260px}
+  .explore-stage .map{height:calc(100dvh - 72px)}
+  .lightbox-full .lightbox-info{max-height:40vh;overflow:auto}
+  .pick-bar{bottom:8px;padding:6px 10px}
+}
