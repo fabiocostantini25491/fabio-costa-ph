@@ -12,7 +12,7 @@
 const SPOTS_CONFIG = {
   url: "https://hfidpbssartkmjlqcqvz.supabase.co",
   anonKey: "sb_publishable_5vB1AGpYjMyh2Kv5TgPD0w_xfFzUdXV",   // chiave pubblica (publishable): la protezione la fanno le regole del database
-  showInMenu: false   // false = la voce SPOTS compare nel menu solo a chi ha fatto l'accesso (ora: solo tu)
+  showInMenu: true    // la voce SPOTS è nel menu per tutti: i visitatori vedono una selezione, i membri tutto
 };
 
 const Spots = (() => {
@@ -61,6 +61,9 @@ const Spots = (() => {
   let knownLists = new Set();
   let schemaV2 = true;      // false finché non è stato eseguito supabase-community.sql
   let socialV = true;       // false finché non è stato eseguito supabase-sociale.sql
+  let guest = false;        // visitatore senza account: vede solo la selezione pubblica
+  let guestLoaded = false, publicTotal = 0, wantLogin = false;
+  let pubV = true;          // false finché non è stato eseguito supabase-pubblico.sql
   let reports = new Map();  // spot_id → segnalazioni attive
   let alertMode = "show";   // show | hide | only
   let onlySupport = false;
@@ -122,7 +125,7 @@ const Spots = (() => {
   }
   async function logout() {
     try { await api("/auth/v1/logout", { method: "POST" }); } catch {}
-    saveSession(null); spots = []; loaded = false; admin = false;
+    saveSession(null); spots = []; loaded = false; admin = false; guestLoaded = false; activeCats = null;
     render();
   }
 
@@ -133,10 +136,11 @@ const Spots = (() => {
     for (let from = 0; ; from += PAGE_SIZE) {
       let data;
       try {
-        ({ data } = await api(`/rest/v1/spots?select=${cols}${schemaV2 ? ",category,starts_on,ends_on,created_by,author_name" : ""}${schemaV2 && socialV ? ",support_local,fragile,best_months" : ""}&order=list.asc,name.asc`, {
+        ({ data } = await api(`/rest/v1/spots?select=${cols}${schemaV2 ? ",category,starts_on,ends_on,created_by,author_name" : ""}${schemaV2 && socialV ? ",support_local,fragile,best_months" + (pubV ? ",public_pick" : "") : ""}&order=list.asc,name.asc`, {
           headers: { "Range-Unit": "items", Range: `${from}-${from + PAGE_SIZE - 1}` } }));
       } catch (err) {
         // database non ancora aggiornato (colonne nuove assenti): funziona come prima
+        if (pubV && socialV && schemaV2 && err.status === 400 && from === 0) { pubV = false; from -= PAGE_SIZE; continue; }
         if (socialV && schemaV2 && err.status === 400 && from === 0) { socialV = false; from -= PAGE_SIZE; continue; }
         if (schemaV2 && err.status === 400 && from === 0) { schemaV2 = false; from -= PAGE_SIZE; continue; }
         throw err;
@@ -198,7 +202,12 @@ const Spots = (() => {
       el.innerHTML = gateHtml(`<p class="gate-note">The members' map is being set up. Please come back soon.</p>`);
       return;
     }
-    if (!(await ensureSession())) { renderGate(); return; }
+    if (!(await ensureSession())) {
+      if (wantLogin || notice) return renderGate();
+      if (await loadPublic()) { renderApp(); return; }
+      renderGate(); return;
+    }
+    guest = false;
     if (!loaded) {
       el.innerHTML = gateHtml(`<p class="gate-note">Loading the map…</p>`);
       try {
@@ -218,10 +227,28 @@ const Spots = (() => {
     return `<div class="spots-gate">
       <div class="gate-icon" aria-hidden="true">${LOCK_SVG}</div>
       <h2>Members only</h2>
-      <p>Photo spots, places to eat and stay, workshops and trails — collected over the years and shared by members. Access is by invitation only.</p>
+      <p>Photo spots, places to eat and stay, workshops and trails — collected over the years and shared by members. Membership is free: I create the accounts personally.</p>
       ${inner}
     </div>`;
   }
+  /* ---------- visitatori: la selezione pubblica (vista «public_spots» del database) ---------- */
+  async function loadPublic() {
+    if (guestLoaded) { guest = true; return true; }
+    try {
+      const all = [];
+      for (let from = 0; ; from += PAGE_SIZE) {
+        const { data } = await api("/rest/v1/public_spots?select=id,name,category,lat,lon,support_local,reviews,avg_rating", {
+          auth: false, headers: { "Range-Unit": "items", Range: `${from}-${from + PAGE_SIZE - 1}` } });
+        all.push(...(data || []));
+        if (!data || data.length < PAGE_SIZE) break;
+      }
+      try { const { data } = await api("/rest/v1/rpc/spots_total", { method: "POST", body: {}, auth: false }); publicTotal = +data || 0; } catch {}
+      spots = all.filter(x => Number.isFinite(+x.lat)).map(x => ({ ...x, lat: +x.lat, lon: +x.lon, list: "Public", category: CATS[x.category] ? x.category : "spot", fragile: false }));
+      admin = false; guest = true; guestLoaded = true; reports = new Map();
+      return true;
+    } catch { return false; }
+  }
+
   function renderGate() {
     root().innerHTML = gateHtml(`
       ${notice ? `<p class="gate-note warn">${esc(notice)}</p>` : ""}
@@ -232,8 +259,10 @@ const Spots = (() => {
         <input id="gatePassword" type="password" autocomplete="current-password" required>
         <button class="outline-link" type="submit" id="gateSend">LOG IN <span aria-hidden="true">→</span></button>
         <p class="gate-note" id="gateMsg" role="status"></p>
-        <p class="gate-help">Forgot your password or need access? Contact me and I will help you.</p>
+        <p class="gate-help">No account yet, or forgot your password? <a href="#about">Contact me</a> and I will set it up for you — it's free.</p>
+        ${guestLoaded ? `<button type="button" class="text-link gate-back" id="gateBack">← Back to the public map</button>` : ""}
       </form>`);
+    $("#gateBack")?.addEventListener("click", () => { wantLogin = false; notice = ""; render(); });
     $("#gateForm").addEventListener("submit", async e => {
       e.preventDefault();
       const email = $("#gateEmail").value.trim(), password = $("#gatePassword").value, msg = $("#gateMsg"), btn = $("#gateSend");
@@ -243,7 +272,7 @@ const Spots = (() => {
       btn.disabled = true; msg.className = "gate-note"; msg.textContent = "Logging in…";
       try {
         await signIn(email, password);
-        notice = ""; loaded = false;
+        notice = ""; loaded = false; wantLogin = false; guest = false; guestLoaded = false;
         render();
       } catch (err) {
         msg.className = "gate-note warn";
@@ -273,10 +302,11 @@ const Spots = (() => {
         </div>
         <p class="spots-count" id="spotsCount"></p>
         <div class="spots-user">
+          ${guest ? `<button class="outline-link spots-add" type="button" id="spotsLogin">${LOCK_SVG}Members: log in</button>` : `
           ${schemaV2 || admin ? `<button class="outline-link spots-add" type="button" id="spotsAdd">${ICON_PLUS}Add a place</button>` : ""}
           ${admin ? `<button class="text-link" type="button" id="spotsImport">${ICON_UPLOAD}Importa da Google Maps</button>` : ""}
           <span class="spots-email">${esc(email)}</span>
-          <button class="text-link" type="button" id="spotsLogout">Log out</button>
+          <button class="text-link" type="button" id="spotsLogout">Log out</button>`}
         </div>
       </div>
       ${schemaV2 ? `<div class="filters spots-cats" role="group" aria-label="Categories">
@@ -284,7 +314,11 @@ const Spots = (() => {
         ${CAT_KEYS.map(k => `<button class="filter cat-filter${activeCats.has(k) && activeCats.size !== CAT_KEYS.length ? " active" : ""}" type="button" data-cat="${k}" style="--c:${CATS[k].color}">
           ${CATS[k].icon}${CATS[k].label} <small>${spots.filter(s => s.category === k).length}</small></button>`).join("")}
       </div>` : ""}
-      ${schemaV2 && socialV ? `<div class="spots-social" role="group" aria-label="Alerts and community">
+      ${guest ? `<div class="guest-banner">${LOCK_SVG}<p><strong>You're seeing ${spots.length.toLocaleString("en-GB")} of ${Math.max(publicTotal, spots.length).toLocaleString("en-GB")} spots</strong>, in approximate positions.
+          Members see every spot with its exact location, photos, reviews, prices and live alerts — and can add their own.
+          <em>Membership is free:</em> <a href="#about">ask me for an account</a>.</p>
+          <button type="button" class="outline-link" id="guestJoin">LOG IN <span aria-hidden="true">→</span></button></div>` : ""}
+      ${schemaV2 && socialV && !guest ? `<div class="spots-social" role="group" aria-label="Alerts and community">
         <label class="soc-pick">${ICON_ALERT}<span class="sr-only">Alerts</span>
           <select id="alertMode">
             <option value="show"${alertMode === "show" ? " selected" : ""}>Alerts: show</option>
@@ -321,7 +355,7 @@ const Spots = (() => {
           <p>The map is shared for inspiration only. You visit any spot entirely at your own risk: Fabio Costantini accepts no responsibility for any injury, damage, loss, fine or other consequence arising from the use of this information.</p>
         </div>
       </aside>
-      <aside class="spots-disclaimer photo-rights" id="photoRights" role="note">
+      <aside class="spots-disclaimer photo-rights" id="photoRights" role="note"${guest ? " hidden" : ""}>
         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M14.8 9.6a3.6 3.6 0 1 0 0 4.8"/></svg>
         <div>
           <strong>Photo terms</strong>
@@ -354,7 +388,8 @@ const Spots = (() => {
       else { activeCats.has(k) ? activeCats.delete(k) : activeCats.add(k); if (!activeCats.size) activeCats = new Set(CAT_KEYS); }
       renderApp();
     }));
-    $("#spotsLogout").addEventListener("click", logout);
+    $("#spotsLogout")?.addEventListener("click", logout);
+    [$("#spotsLogin"), $("#guestJoin")].forEach(b => b?.addEventListener("click", () => { wantLogin = true; render(); root().scrollIntoView({ behavior: "smooth" }); }));
     $("#spotsImport")?.addEventListener("click", openImport);
     $("#spotsAdd")?.addEventListener("click", () => withConduct(() => openAdd()));
     $("#alertMode")?.addEventListener("change", e => { alertMode = e.target.value; drawClusters(); renderNear(); });
@@ -787,7 +822,7 @@ const Spots = (() => {
     drawOsm();
     drawOrigin();
     map.on("moveend zoomend", drawClusters);
-    if (admin || schemaV2) map.on("contextmenu", e => withConduct(() => openAdd({ lat: e.latlng.lat, lon: L.Util.wrapNum(e.latlng.lng, [-180, 180], true) })));
+    if (!guest && (admin || schemaV2)) map.on("contextmenu", e => withConduct(() => openAdd({ lat: e.latlng.lat, lon: L.Util.wrapNum(e.latlng.lng, [-180, 180], true) })));
     const pts = visibleSpots().map(s => [s.lat, s.lon]);
     if (keep) map.setView(keep.c, keep.z, { animate: false });
     else if (pts.length) map.fitBounds(L.latLngBounds(pts).pad(0.1), { maxZoom: 12, animate: false });
@@ -804,7 +839,7 @@ const Spots = (() => {
     markerById = new Map(); if (keep) markerById.set(openId, keep);
     const list = visibleSpots();
     const count = $("#spotsCount");
-    if (count) count.textContent = `${list.length} ${list.length === 1 ? "place" : "places"}`;
+    if (count) count.textContent = guest ? `${list.length.toLocaleString("en-GB")} of ${Math.max(publicTotal, spots.length).toLocaleString("en-GB")} spots` : `${list.length} ${list.length === 1 ? "place" : "places"}`;
     const bounds = map.getBounds().pad(0.2), cell = 64, z = map.getZoom();
     const cells = new Map();
     list.forEach(s => {
@@ -836,10 +871,27 @@ const Spots = (() => {
     m.bindTooltip(esc(s.name), { direction: "top" });
     // la scheda è un nodo creato una sola volta: Leaflet la ridisegna a ogni update() e così non perde foto, recensioni e pulsanti
     let node = null;
-    m.bindPopup(() => node || (node = Object.assign(document.createElement("div"), { innerHTML: popupHtml(s) }).firstElementChild),
+    m.bindPopup(() => node || (node = Object.assign(document.createElement("div"), { innerHTML: guest ? guestPopup(s) : popupHtml(s) }).firstElementChild),
       { maxWidth: 320, minWidth: 260, className: "spot-popup" });
-    m.on("popupopen", e => { openId = s.id; if (!node.dataset.wired) { node.dataset.wired = "1"; wirePopup(e.popup, s); } else if (schemaV2) loadExtras(e.popup, s); });
+    m.on("popupopen", e => {
+      openId = s.id;
+      if (guest) { node.querySelector("[data-login]")?.addEventListener("click", () => { map.closePopup(); wantLogin = true; render(); }); return; }
+      if (!node.dataset.wired) { node.dataset.wired = "1"; wirePopup(e.popup, s); } else if (schemaV2) loadExtras(e.popup, s);
+    });
     m.on("popupclose", () => { if (openId === s.id) { openId = null; setTimeout(drawClusters, 0); } });
+  }
+
+  function guestPopup(s) {
+    const cat = CATS[s.category] || CATS.spot;
+    return `<div class="spot-pop">
+      <span class="spot-cat" style="--c:${cat.color}">${cat.icon}${cat.label}</span>
+      <strong>${esc(s.name)}</strong>
+      ${s.avg_rating ? `<p class="pop-rating"><span class="stars-static" style="--v:${(s.avg_rating / 5 * 100).toFixed(0)}%">★★★★★</span> <b>${(+s.avg_rating).toFixed(1)}</b> · ${s.reviews} review${s.reviews > 1 ? "s" : ""}</p>` : ""}
+      ${s.support_local ? `<p class="soc-note">🌱 Support local — your visit helps this place</p>` : ""}
+      <p class="spot-coords">${ICON.pin}<span>Approximate area (about 1 km)</span></p>
+      <div class="guest-cta">${LOCK_SVG}<p><b>Members see more:</b> exact location and directions, photos, reviews, prices, live alerts and all the other spots nearby. Membership is free — <a href="#about">ask me for an account</a>.</p>
+        <button type="button" class="pop-btn primary" data-login>Log in</button></div>
+    </div>`;
   }
 
   const canEdit = s => admin || (s.created_by && s.created_by === myUid());
@@ -908,6 +960,10 @@ const Spots = (() => {
           <label class="shot-check"><input type="checkbox" name="support"${s.support_local ? " checked" : ""}> 🌱 Support local — this place benefits from visitors</label>
           <input type="text" name="months" maxlength="60" placeholder="Best months, e.g. Oct–Apr (optional)" value="${esc(s.best_months || "")}">
           <label class="shot-check"><input type="checkbox" name="fragile"${s.fragile ? " checked" : ""}> 🛡️ Fragile — hide the exact location from other members</label>
+          ${admin ? `<label class="pub-pick">Public map (visitors)
+            <select name="pub"><option value="auto"${s.public_pick == null ? " selected" : ""}>Automatic (1 spot every ~15 km)</option>
+              <option value="yes"${s.public_pick === true ? " selected" : ""}>Always show to visitors</option>
+              <option value="no"${s.public_pick === false ? " selected" : ""}>Never show to visitors</option></select></label>` : ""}
           <button type="submit" class="pop-btn primary">Save</button>
         </form>` : ""}` : ""}
       <p class="pop-author">Added by ${esc(s.author_name || OWNER)}</p>
@@ -1061,6 +1117,7 @@ const Spots = (() => {
       const btn = sf.querySelector("[type=submit]"); btn.disabled = true;
       try {
         await api("/rest/v1/rpc/set_social", { method: "POST", body: { p_spot: s.id, p_support: sf.support.checked, p_months: sf.months.value } });
+        if (admin && sf.pub) { const v = sf.pub.value; try { await api("/rest/v1/rpc/set_public", { method: "POST", body: { p_spot: s.id, p_pick: v === "auto" ? null : v === "yes" } }); } catch {} }
         if (sf.fragile.checked !== !!s.fragile) await api("/rest/v1/rpc/set_fragile", { method: "POST", body: { p_spot: s.id, p_fragile: sf.fragile.checked } });
         spots = await fetchSpots(); map.closePopup(); renderApp();
         const n = spots.find(x => x.id === s.id); if (n) focusSpot(n);
