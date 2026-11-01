@@ -492,6 +492,11 @@ main > .page{scroll-margin-top:80px}
 .spots-lists .filter{padding:6px 14px;font-size:12.5px;gap:7px}
 .spots-lists .filter small{color:var(--muted);font-size:11px}
 .list-dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--c);box-shadow:0 0 8px var(--c);flex:none}
+.spots-disclaimer{display:flex;gap:14px;align-items:flex-start;margin:16px 0 0;padding:16px 20px;border:1px solid rgba(255,196,110,.35);border-radius:var(--radius);background:rgba(40,28,10,.55);color:var(--soft);font-size:13.5px;line-height:1.6}
+.spots-disclaimer svg{width:22px;height:22px;flex:none;color:#ffc46e;margin-top:2px}
+.spots-disclaimer strong{display:block;color:#ffd79a;letter-spacing:.14em;text-transform:uppercase;font-size:12px;margin-bottom:4px}
+.spots-disclaimer p{margin:0 0 6px}.spots-disclaimer p:last-child{margin:0}
+.spots-disclaimer em{color:#fff;font-style:normal}
 .spots-stage{position:relative;height:min(76vh,760px);min-height:460px;border:1px solid var(--line-strong);border-radius:var(--radius);overflow:hidden;
   box-shadow:0 0 0 1px rgba(0,0,0,.4),0 0 40px rgba(60,120,220,.15),0 24px 60px rgba(0,0,0,.45)}
 .map-spots{background:#03080f}

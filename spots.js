@@ -211,6 +211,15 @@ const Spots = (() => {
         <div id="spotsMap" class="map map-spots" aria-label="Members map of photo spots"></div>
         <span class="hud-frame" aria-hidden="true"></span>
       </div>
+      <aside class="spots-disclaimer" role="note">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 2 21h20L12 3zm0 6v6m0 3v.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <div>
+          <strong>Before you go</strong>
+          <p>Many of these spots are places I have saved but <em>not visited myself</em>. Locations, access, opening times and conditions may be inaccurate or out of date.
+          Always check current information before you go — access rights, private property, permits, local rules, safety and weather.</p>
+          <p>The map is shared for inspiration only. You visit any spot entirely at your own risk: Fabio Costantini accepts no responsibility for any injury, damage, loss, fine or other consequence arising from the use of this information.</p>
+        </div>
+      </aside>
       ${spots.length ? "" : `<p class="empty-state">No spots yet.${admin ? " Use «Importa da Google Maps» to add them." : ""}</p>`}`;
 
     $("#spotsQuery").addEventListener("input", e => { query = e.target.value; drawClusters(); });
