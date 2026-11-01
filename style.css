@@ -1059,3 +1059,12 @@ main > .page{scroll-margin-top:80px}
 .conduct{margin:10px 0 14px;padding-left:20px;display:grid;gap:8px;color:var(--soft);font-size:14px;line-height:1.55}
 .conduct b{color:#fff;font-weight:500}
 .conduct-dialog .outline-link{margin-top:6px}
+
+/* home: titolo più piccolo, occhiello sopra e motto sotto */
+.hero-copy .hero-kicker{font:500 clamp(9.5px,.85vw,11.5px)/1.4 var(--sans);letter-spacing:.5em;color:var(--accent);margin:0 0 14px;opacity:.95}
+.hero-copy h1{font-size:clamp(30px,4.4vw,60px);margin-bottom:10px}
+.hero-copy .hero-tagline{font:italic 400 clamp(17px,1.7vw,24px)/1.35 var(--display);letter-spacing:.02em;text-transform:none;color:#e9eef5;margin:0 0 28px}
+@media (max-width:900px){
+  .hero-copy .hero-kicker{letter-spacing:.32em}
+  .hero-copy .hero-tagline{letter-spacing:.01em}
+}
