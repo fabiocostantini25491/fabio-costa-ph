@@ -758,6 +758,41 @@ function showLightbox() {
   $("#dialogDescription").textContent = p.description || "";
   const many = lightboxList.length > 1;
   $("#dialogPrev").hidden = $("#dialogNext").hidden = !many;
+  renderInterest(p);
+}
+
+/* «Ti interessa questa foto? Contattami»: stampe e licenze, via email o Instagram */
+function renderInterest(p) {
+  const box = $("#photoInterest");
+  if (!box) return;
+  const ig = String(about.instagram || "").trim().replace(/^@/, "").replace(/^https?:\/\/(www\.)?instagram\.com\//i, "").replace(/\/.*$/, "");
+  const mail = String(about.email || "").trim();
+  if (!ig && !/^[^\s@]+@[^\s@]+$/.test(mail)) { box.hidden = true; return; }
+  const subject = encodeURIComponent(`About your photo “${p.title}”`);
+  const body = encodeURIComponent(`Hi Fabio,\n\nI'm interested in your photo “${p.title}”${tripById(p.trip)?.name ? ` (${tripById(p.trip).name})` : ""}.\nhttps://fabiocostaph.com/#gallery\n\nI'd like to know more about: [a print / using it / something else]\n\nThanks!`);
+  box.hidden = false;
+  box.classList.remove("open");
+  box.innerHTML = `
+    <button type="button" class="pi-toggle" aria-expanded="false">${ICON_SPARK}<span>Interested in this photo?</span></button>
+    <div class="pi-panel">
+      <p><strong>Prints, licensing or a special use?</strong> Get in touch and tell me what you have in mind.</p>
+      <div class="pi-actions">
+        ${mail ? `<a class="outline-link" href="mailto:${esc(mail)}?subject=${subject}&body=${body}">${ICON_MAIL}<span>Email me</span></a>` : ""}
+        ${ig ? `<a class="outline-link" href="https://ig.me/m/${encodeURIComponent(ig)}" target="_blank" rel="noopener">${ICON_IG}<span>Message on Instagram</span></a>` : ""}
+      </div>
+    </div>`;
+  const t = box.querySelector(".pi-toggle");
+  t.addEventListener("click", e => {
+    e.stopPropagation();
+    const open = !box.classList.contains("open");
+    box.classList.toggle("open", open); t.setAttribute("aria-expanded", String(open));
+    if (open) trackEvent("Gallery: interested in photo");
+  });
+  box.querySelectorAll(".pi-actions a").forEach(a => a.addEventListener("click", e => {
+    e.stopPropagation();
+    trackEvent(a.href.startsWith("mailto:") ? "Gallery: photo enquiry by email" : "Gallery: photo enquiry on Instagram");
+  }));
+  box.addEventListener("click", e => e.stopPropagation());   // non chiude la foto né cambia immagine
 }
 function stepLightbox(d) {
   lightboxIndex = (lightboxIndex + d + lightboxList.length) % lightboxList.length;
@@ -913,6 +948,7 @@ function flyToPlace(lat, lon, name, full) {
    9. PAGINA CHI SONO
    ========================================================= */
 const ICON_IG = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.3" cy="6.7" r="1" fill="currentColor" stroke="none"/></svg>';
+const ICON_SPARK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/></svg>';
 const ICON_MAIL = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5.5" width="18" height="13" rx="2"/><path d="m3.5 7 8.5 6 8.5-6"/></svg>';
 function renderContacts() {
   const ig = String(about.instagram || "").trim().replace(/^@/, "").replace(/^https?:\/\/(www\.)?instagram\.com\//i, "").replace(/\/.*$/, "");
@@ -920,6 +956,15 @@ function renderContacts() {
   const html = (ig ? `<a href="https://www.instagram.com/${encodeURIComponent(ig)}/" target="_blank" rel="noopener" aria-label="Instagram @${esc(ig)}">${ICON_IG}<span>@${esc(ig)}</span></a>` : "")
     + (mail && /^[^\s@]+@[^\s@]+$/.test(mail) ? `<a href="mailto:${esc(mail)}" aria-label="Email ${esc(mail)}">${ICON_MAIL}<span>${esc(mail)}</span></a>` : "");
   $$("[data-contact]").forEach(el => { el.innerHTML = html; el.hidden = !html; });
+  // avviso in cima alla Gallery: foto disponibili per licenze e stampe
+  const note = $("#licenseNote");
+  if (note) {
+    const okMail = mail && /^[^\s@]+@[^\s@]+$/.test(mail);
+    note.hidden = !(okMail || ig);
+    note.innerHTML = `${ICON_SPARK}<p><strong>All my photographs are available for licensing</strong>, for editorial and commercial use, and as <strong>fine-art prints</strong>.
+      For licences and prints, just write to me${okMail ? ` at <a href="mailto:${esc(mail)}?subject=${encodeURIComponent("Photo licensing / prints")}" data-lic="email">${esc(mail)}</a>` : ""}${okMail && ig ? " or" : ""}${ig ? ` on <a href="https://ig.me/m/${encodeURIComponent(ig)}" target="_blank" rel="noopener" data-lic="instagram">Instagram @${esc(ig)}</a>` : ""}.</p>`;
+    note.querySelectorAll("[data-lic]").forEach(a => a.addEventListener("click", () => trackEvent(`Gallery: licensing via ${a.dataset.lic}`)));
+  }
 }
 
 function renderAbout() {

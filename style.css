@@ -1095,3 +1095,28 @@ main > .page{scroll-margin-top:80px}
 .footer-contact{gap:18px}
 .footer-contact a{font-size:12px;letter-spacing:.06em}
 @media (max-width:700px){ .footer-contact span{display:none} .footer-contact svg{width:22px;height:22px} }
+/* lightbox: «Interested in this photo?» */
+.photo-interest{position:absolute;left:max(16px,env(safe-area-inset-left,0px));bottom:16px;z-index:3;max-width:min(380px,calc(100% - 32px))}
+.photo-interest[hidden]{display:none}
+.pi-toggle{display:inline-flex;align-items:center;gap:8px;padding:10px 16px;border:1px solid rgba(156,200,255,.55);border-radius:999px;background:rgba(5,11,20,.78);backdrop-filter:blur(8px);color:#fff;font-size:13px;letter-spacing:.04em;cursor:pointer;min-height:42px;box-shadow:0 6px 24px rgba(0,0,0,.45)}
+.pi-toggle:hover{border-color:var(--accent);color:var(--accent)}
+.pi-toggle svg{width:16px;height:16px;fill:none;stroke:var(--accent);stroke-width:1.7;stroke-linejoin:round}
+.pi-panel{display:none;margin-top:8px;padding:16px 18px;border:1px solid var(--line-strong);border-radius:16px;background:rgba(5,11,20,.92);backdrop-filter:blur(8px);box-shadow:0 14px 40px rgba(0,0,0,.55)}
+.photo-interest.open .pi-panel{display:block}
+.photo-interest.open .pi-toggle{border-color:var(--accent)}
+.pi-panel p{margin:0 0 12px;color:var(--soft);font-size:13.5px;line-height:1.55}
+.pi-panel strong{color:#fff;font-weight:500}
+.pi-actions{display:flex;flex-wrap:wrap;gap:8px}
+.pi-actions .outline-link{display:inline-flex;align-items:center;gap:8px;padding:9px 14px;font-size:12px;letter-spacing:.06em}
+.pi-actions svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.lightbox:not(.lightbox-full) .photo-interest{bottom:12px}
+@media (max-width:600px){ .photo-interest{bottom:calc(12px + env(safe-area-inset-bottom,0px))} .pi-toggle{font-size:12px;padding:9px 14px} }
+.photo-interest .pi-actions .outline-link{font:500 12px/1 var(--sans)!important;letter-spacing:.08em!important;padding:10px 14px!important;box-shadow:none!important;min-height:38px}
+.photo-interest .pi-actions .outline-link span{font-size:12px!important}
+/* Gallery: foto disponibili per licenze e stampe */
+.license-note{display:flex;gap:14px;align-items:flex-start;margin:0 0 22px;padding:16px 20px;border:1px solid rgba(255,210,122,.35);border-radius:var(--radius);background:linear-gradient(90deg,rgba(60,42,18,.55),rgba(7,16,29,.6));backdrop-filter:blur(6px)}
+.license-note[hidden]{display:none}
+.license-note svg{width:22px;height:22px;flex:none;margin-top:2px;fill:none;stroke:#ffd27a;stroke-width:1.6;stroke-linejoin:round}
+.license-note p{margin:0;color:var(--soft);font-size:14.5px;line-height:1.6}
+.license-note strong{color:#fff;font-weight:500}
+.license-note a{color:#ffd27a;text-decoration:underline;text-underline-offset:3px}
