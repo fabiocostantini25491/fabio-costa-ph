@@ -50,7 +50,8 @@ const Spots = (() => {
   let spots = [];
   let admin = false;
   let map = null, layer = null, satLabels = null, originLayer = null;
-  let markerById = new Map(), openId = null;   // marker singoli disegnati ora (per aprire il popup da ricerca/vicini)
+  let markerById = new Map(), openId = null;
+  let osmLayer = null, osmItems = [], osmState = "", osmSeq = 0, showOsm = true;   // marker singoli disegnati ora (per aprire il popup da ricerca/vicini)
   let origin = null;            // { lat, lon, label, kind: "me" | "place", acc } — punto da cui calcolare i vicini
   let placeResults = [], placeTimer = 0, placeSeq = 0, suggestIdx = -1;
   let activeLists = null;   // Set delle liste visibili (null = tutte)
@@ -264,8 +265,18 @@ const Spots = (() => {
       <div class="spots-stage">
         <div id="spotsMap" class="map map-spots" aria-label="Members map of photo spots"></div>
         <span class="hud-frame" aria-hidden="true"></span>
-        <section class="spots-near" id="spotsNear" aria-live="polite" hidden></section>
+        ${schemaV2 ? `<button type="button" class="osm-scan" id="osmScan">${ICON_SCAN}Scan this area</button>` : ""}
       </div>
+      <section class="spots-around" id="spotsAround" aria-live="polite" hidden>
+        <header class="around-head">
+          <div><span class="eyebrow" id="aroundEyebrow"></span><h2 id="aroundTitle"></h2></div>
+          <button type="button" class="near-close" id="nearClose" aria-label="Close">${ICON.close}</button>
+        </header>
+        <div class="around-cols">
+          <div class="around-col" id="spotsNear"></div>
+          <div class="around-col osm-col" id="osmCol"></div>
+        </div>
+      </section>
       <aside class="spots-disclaimer" role="note">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 2 21h20L12 3zm0 6v6m0 3v.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
         <div>
@@ -288,6 +299,12 @@ const Spots = (() => {
       ${spots.length ? "" : `<p class="empty-state">No spots yet.${admin ? " Use «Importa da Google Maps» to add them." : ""}</p>`}`;
 
     wireSearch();
+    $("#osmScan")?.addEventListener("click", () => {
+      if (map.getZoom() < 9) return toast("Zoom in a little more to scan an area.", true);
+      const c = map.getCenter(), b = map.getBounds();
+      const r = Math.min(15000, map.distance(c, b.getNorthEast()) * 0.8);
+      setOriginScan({ lat: c.lat, lon: L.Util.wrapNum(c.lng, [-180, 180], true), label: "This area", kind: "scan", radius: r });
+    });
     $$(".spots-lists [data-list]").forEach(b => b.addEventListener("click", () => {
       const l = b.dataset.list;
       if (l === "__all") activeLists = new Set(lists);
@@ -430,6 +447,7 @@ const Spots = (() => {
   function setOrigin(o, extent) {
     origin = o;
     drawOrigin();
+    if (schemaV2) scanOsm(o, extent);
     renderNear();
     map.invalidateSize();   // sul telefono il pannello cambia l'altezza della mappa
     const near = nearestSpots(5).filter(n => n.d <= 60);
@@ -439,6 +457,10 @@ const Spots = (() => {
     } else if (near.length) {
       map.flyToBounds(L.latLngBounds([[o.lat, o.lon], ...near.map(n => [n.s.lat, n.s.lon])]).pad(0.25), { maxZoom: 14, duration: 1 });
     } else map.flyTo([o.lat, o.lon], 11, { duration: 1 });
+  }
+
+  function setOriginScan(o) {
+    origin = o; drawOrigin(); renderNear(); scanOsm(o);
   }
 
   function drawOrigin() {
@@ -464,20 +486,18 @@ const Spots = (() => {
   }
 
   function renderNear() {
-    const el = $("#spotsNear");
+    const el = $("#spotsNear"), box = $("#spotsAround");
     if (!el) return;
-    if (!origin) { el.hidden = true; el.innerHTML = ""; return; }
+    if (!origin) { box.hidden = true; el.innerHTML = ""; return; }
+    box.hidden = false;
+    $("#aroundEyebrow").textContent = origin.kind === "me" ? "Near you" : origin.kind === "scan" ? "This area" : "Around";
+    $("#aroundTitle").textContent = origin.kind === "me" ? "What's around you" : origin.label;
     const all = visibleSpots().map(s => distKm(origin, s));
     const in10 = all.filter(d => d <= 10).length, in50 = all.filter(d => d <= 50).length;
     const top = nearestSpots(8);
     const where = origin.kind === "me" ? "you" : esc(origin.label);
-    el.hidden = false;
     el.innerHTML = `
-      <header class="near-head">
-        <div><span class="eyebrow">${origin.kind === "me" ? "Near you" : "Near"}</span>
-          <h3>${origin.kind === "me" ? "Spots around you" : esc(origin.label)}</h3></div>
-        <button type="button" class="near-close" id="nearClose" aria-label="Close">${ICON.close}</button>
-      </header>
+      <h3 class="col-title"><span class="col-dot community"></span>From the community</h3>
       <p class="near-sum">${!top.length ? "No spots match the current filters."
         : in50 ? `<strong>${in10}</strong> within 10 km · <strong>${in50}</strong> within 50 km`
         : `No spots within 50 km of ${where}. The nearest is <strong>${fmtKm(top[0].d)}</strong> away.`}</p>
@@ -490,7 +510,195 @@ const Spots = (() => {
       const s = spots.find(x => String(x.id) === b.dataset.near);
       if (s) focusSpot(s);
     }));
-    $("#nearClose").addEventListener("click", () => { origin = null; drawOrigin(); renderNear(); map.invalidateSize(); drawClusters(); });
+    $("#nearClose").onclick = () => { origin = null; osmItems = []; drawOrigin(); drawOsm(); renderNear(); drawClusters(); };
+    renderOsm();
+  }
+
+  /* =========================================================
+     OPENSTREETMAP: cosa c'è di interessante intorno (oltre agli spot della community)
+     ========================================================= */
+  const OSM_TYPES = {
+    viewpoint: { label: "Viewpoint", score: 3, icon: '<svg viewBox="0 0 24 24"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/></svg>' },
+    peak: { label: "Peak", score: 2, icon: '<svg viewBox="0 0 24 24"><path d="m3 19 7-12 3.5 6 2-3L21 19z"/></svg>' },
+    waterfall: { label: "Waterfall", score: 3, icon: '<svg viewBox="0 0 24 24"><path d="M5 4h14M8 4v9M12 4v12M16 4v9M5 20c2-1.5 4-1.5 7 0s5 1.5 7 0"/></svg>' },
+    nature: { label: "Nature", score: 2, icon: '<svg viewBox="0 0 24 24"><path d="M12 3c4 3 6 6 6 9a6 6 0 0 1-12 0c0-3 2-6 6-9zM12 21v-9"/></svg>' },
+    castle: { label: "Castle & tower", score: 3, icon: '<svg viewBox="0 0 24 24"><path d="M4 20V8h3v2h2V8h2v2h2V8h2v2h2V8h3v12zM10 20v-4a2 2 0 0 1 4 0v4"/></svg>' },
+    ruins: { label: "Ruins & archaeology", score: 3, icon: '<svg viewBox="0 0 24 24"><path d="M4 20h16M6 20V9M10 20v-7M14 20V9M18 20v-5M4 7l8-3 8 3"/></svg>' },
+    church: { label: "Church & abbey", score: 1, icon: '<svg viewBox="0 0 24 24"><path d="M12 2v5M10 4h4M6 21V11l6-4 6 4v10zM10 21v-4h4v4"/></svg>' },
+    landmark: { label: "Landmark", score: 2, icon: '<svg viewBox="0 0 24 24"><path d="M9 21l1.5-14h3L15 21zM8 7h8M12 3v4M6 12l-3 1M18 12l3 1"/></svg>' },
+    attraction: { label: "Attraction", score: 1, icon: '<svg viewBox="0 0 24 24"><path d="m12 3 2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.4l-5.2 2.7 1-5.8L3.5 9.2l5.9-.9z"/></svg>' },
+    hut: { label: "Hut & camp", score: 1, icon: '<svg viewBox="0 0 24 24"><path d="M3 20 12 5l9 15zM10 20l2-4 2 4"/></svg>' }
+  };
+  function osmType(t) {
+    if (t.tourism === "viewpoint" || t["tower:type"] === "observation") return "viewpoint";
+    if (t.natural === "peak" || t.natural === "volcano") return "peak";
+    if (t.waterway === "waterfall" || t.natural === "waterfall") return "waterfall";
+    if (t.natural) return "nature";
+    if (/^(castle|fort|palace|manor|tower|city_gate)$/.test(t.historic)) return "castle";
+    if (/^(ruins|archaeological_site|aqueduct)$/.test(t.historic)) return "ruins";
+    if (t.historic === "monastery" || t.historic === "church" || t.amenity === "place_of_worship") return "church";
+    if (t.man_made || t.historic === "lighthouse") return "landmark";
+    if (/^(alpine_hut|wilderness_hut|camp_site|picnic_site)$/.test(t.tourism)) return "hut";
+    return "attraction";
+  }
+  const osmCache = new Map();
+  async function scanOsm(o, extent) {
+    const seq = ++osmSeq;
+    let r = o.radius || (o.kind === "me" ? 5000 : 4000);
+    if (extent && extent.length === 4) r = Math.min(15000, Math.max(r, distKm({ lat: extent[1], lon: extent[0] }, { lat: extent[3], lon: extent[2] }) * 500));
+    r = Math.round(r);
+    const key = `${o.lat.toFixed(3)},${o.lon.toFixed(3)},${r}`;
+    osmState = "loading"; renderOsm();
+    const A = `(around:${r},${o.lat.toFixed(5)},${o.lon.toFixed(5)})`;
+    const q = `[out:json][timeout:25];(
+      nwr["tourism"~"^(viewpoint|attraction|museum|artwork|alpine_hut|wilderness_hut)$"]${A};
+      nwr["natural"~"^(peak|volcano|waterfall|cave_entrance|arch|cliff|glacier|hot_spring|beach|rock|stone)$"]["name"]${A};
+      nwr["natural"="peak"]["ele"]${A};
+      nwr["waterway"="waterfall"]${A};
+      nwr["historic"~"^(castle|fort|palace|manor|tower|city_gate|ruins|archaeological_site|aqueduct|monastery|lighthouse)$"]${A};
+      nwr["man_made"~"^(lighthouse|observatory|windmill|watermill)$"]${A};
+      nwr["tower:type"="observation"]${A};
+      nwr["amenity"="place_of_worship"]["historic"]${A};
+      nwr["boundary"="protected_area"]["name"]${A};
+      nwr["leisure"="nature_reserve"]["name"]${A};
+    );out center tags meta 300;`;
+    try {
+      let data = osmCache.get(key);
+      if (!data) {
+        const res = await fetch("https://overpass-api.de/api/interpreter", { method: "POST", body: "data=" + encodeURIComponent(q),
+          headers: { "Content-Type": "application/x-www-form-urlencoded" } });
+        if (!res.ok) throw new Error(res.status === 429 ? "busy" : `HTTP ${res.status}`);
+        data = await res.json();
+        osmCache.set(key, data);
+      }
+      if (seq !== osmSeq) return;
+      const now = Date.now(), seen = new Set();
+      osmProtected = [];
+      osmItems = (data.elements || []).map(e => {
+        const t = e.tags || {}, lat = e.lat ?? e.center?.lat, lon = e.lon ?? e.center?.lon;
+        if (lat == null) return null;
+        if (t.boundary === "protected_area" || t.leisure === "nature_reserve") { if (!osmProtected.includes(t.name)) osmProtected.push(t.name); return null; }
+        const type = osmType(t), name = t["name:en"] || t.name || OSM_TYPES[type].label;
+        const k = `${name}|${lat.toFixed(3)}|${lon.toFixed(3)}`;
+        if (seen.has(k)) return null; seen.add(k);
+        const age = e.timestamp ? (now - Date.parse(e.timestamp)) / 864e5 : 999;
+        const d = distKm(o, { lat, lon });
+        const score = OSM_TYPES[type].score + (t.wikipedia || t.wikidata ? 3 : 0) + (t.name ? 1 : 0) + (age <= 30 ? 1 : 0) - d / 4;
+        return { id: `${e.type}/${e.id}`, lat, lon, tags: t, type, name, named: !!t.name, d, age, fresh: age <= 30, score };
+      }).filter(Boolean).sort((a, b) => b.score - a.score);
+      osmState = osmItems.length ? "ok" : "empty";
+    } catch (err) {
+      if (seq !== osmSeq) return;
+      osmItems = []; osmState = err.message === "busy" ? "busy" : "error";
+    }
+    drawOsm(); renderOsm();
+    flashTop();
+  }
+  let osmProtected = [];
+
+  function drawOsm() {
+    if (!osmLayer) return;
+    osmLayer.clearLayers();
+    if (!showOsm || !origin) return;
+    osmItems.slice(0, 200).forEach(it => {
+      const T = OSM_TYPES[it.type];
+      const m = L.marker([it.lat, it.lon], { zIndexOffset: -1000, title: it.name, keyboard: false,
+        icon: L.divIcon({ className: "", iconSize: [24, 24], iconAnchor: [12, 12],
+          html: `<div class="osm-pin${it.fresh ? " fresh" : ""}" data-osm="${it.id}">${T.icon}</div>` }) }).addTo(osmLayer);
+      m.bindTooltip(esc(it.name), { direction: "top" });
+      m.bindPopup(() => osmPopup(it), { maxWidth: 300, minWidth: 240, className: "spot-popup" });
+      m.on("popupopen", e => wireOsmPopup(e.popup, it));
+      it.marker = m;
+    });
+  }
+  /* «lampi»: i posti più interessanti (e quelli appena aggiornati su OpenStreetMap) si accendono per un attimo */
+  function flashTop() {
+    const pick = [...osmItems.filter(i => i.fresh).slice(0, 6), ...osmItems.slice(0, 5)];
+    pick.forEach((it, i) => setTimeout(() => {
+      const el = it.marker?.getElement()?.querySelector(".osm-pin");
+      if (!el) return;
+      el.classList.remove("flash"); void el.offsetWidth; el.classList.add("flash");
+    }, 250 + i * 220));
+  }
+
+  const ago = d => d < 1 ? "today" : d < 2 ? "yesterday" : `${Math.round(d)} days ago`;
+  function osmFacts(t) {
+    const f = [];
+    if (t.ele) f.push(`${Math.round(parseFloat(t.ele))} m`);
+    if (t.fee === "yes" || t.charge) f.push(`🎟️ ${t.charge ? esc(t.charge) : "Ticket required"}`);
+    else if (t.fee === "no") f.push("Free entry");
+    if (t.opening_hours) f.push(`🕒 ${esc(t.opening_hours)}`);
+    if (t.access === "private" || t.access === "no") f.push("⛔ Private / no access");
+    else if (t.access === "permissive") f.push("Access tolerated by the owner");
+    return f;
+  }
+  function osmPopup(it) {
+    const t = it.tags, T = OSM_TYPES[it.type], web = t.website || t["contact:website"] || t.url;
+    const wiki = t.wikipedia && /^([a-z-]+):(.+)$/.exec(t.wikipedia);
+    const g = encodeURIComponent(`${it.named ? it.name : T.label} ${t["addr:city"] || origin?.label || ""} opening hours tickets access`.trim());
+    return `<div class="spot-pop osm-pop">
+      <span class="spot-cat" style="--c:#e6edf7">${T.icon}${T.label}<em>OpenStreetMap</em></span>
+      <strong>${esc(it.name)}</strong>
+      ${osmFacts(t).length ? `<p class="osm-facts">${osmFacts(t).join(" · ")}</p>` : ""}
+      ${t.description ? `<p class="pop-desc">${esc(t.description)}</p>` : ""}
+      <div class="osm-wiki" data-wiki></div>
+      <p class="pop-author">${fmtKm(it.d)} from ${origin?.kind === "me" ? "you" : esc(origin?.label || "the point")}${it.fresh ? ` · ⚡ updated on OpenStreetMap ${ago(it.age)}` : ""}</p>
+      <div class="osm-links">
+        ${web ? `<a class="text-link" href="${esc(/^https?:/.test(web) ? web : "https://" + web)}" target="_blank" rel="noopener">${ICON.ext}Official website</a>` : ""}
+        ${wiki ? `<a class="text-link" href="https://${wiki[1]}.wikipedia.org/wiki/${encodeURIComponent(wiki[2])}" target="_blank" rel="noopener">${ICON.ext}Wikipedia</a>` : ""}
+        <a class="text-link" href="https://www.google.com/search?q=${g}" target="_blank" rel="noopener">${ICON.ext}Check tickets & access</a>
+        <a class="text-link" href="https://www.google.com/maps/search/?api=1&query=${it.lat.toFixed(6)},${it.lon.toFixed(6)}" target="_blank" rel="noopener">${ICON.ext}Open in Google Maps</a>
+        <a class="text-link" href="https://www.openstreetmap.org/${it.id}" target="_blank" rel="noopener">${ICON.ext}View on OpenStreetMap</a>
+      </div>
+      ${schemaV2 ? `<button type="button" class="pop-btn primary" data-addosm>${ICON_PLUS}Add to community spots</button>` : ""}
+    </div>`;
+  }
+  async function wireOsmPopup(popup, it) {
+    const el = popup.getElement();
+    el.querySelector("[data-addosm]")?.addEventListener("click", () => {
+      map.closePopup();
+      openAdd({ lat: it.lat, lon: it.lon }, { name: it.named ? it.name : "", category: it.type === "hut" ? "hotel" : "spot" });
+    });
+    const t = it.tags, wiki = t.wikipedia && /^([a-z-]+):(.+)$/.exec(t.wikipedia), box = el.querySelector("[data-wiki]");
+    if (!wiki || !box || box.dataset.done) return;
+    box.dataset.done = "1";
+    try {
+      const r = await fetch(`https://${wiki[1]}.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(wiki[2])}`);
+      const j = await r.json();
+      if (j.extract) {
+        box.innerHTML = `${j.thumbnail?.source ? `<img src="${esc(j.thumbnail.source)}" alt="" loading="lazy">` : ""}<p>${esc(j.extract.split(/(?<=\.)\s/).slice(0, 2).join(" "))}</p>`;
+        popup.update();
+      }
+    } catch {}
+  }
+
+  function renderOsm() {
+    const col = $("#osmCol");
+    if (!col) return;
+    if (!schemaV2 || !origin) { col.innerHTML = ""; return; }
+    const fresh = osmItems.filter(i => i.fresh).length;
+    const head = `<h3 class="col-title"><span class="col-dot osm"></span>Also around, from OpenStreetMap
+      <label class="osm-toggle"><input type="checkbox" id="osmShow"${showOsm ? " checked" : ""}> on map</label></h3>`;
+    const body = osmState === "loading" ? `<p class="near-sum">Looking for viewpoints, waterfalls, castles and more…</p>`
+      : osmState === "error" ? `<p class="near-sum">OpenStreetMap didn't answer. <button type="button" class="text-link" id="osmRetry">Try again</button></p>`
+      : osmState === "busy" ? `<p class="near-sum">OpenStreetMap is busy right now. <button type="button" class="text-link" id="osmRetry">Try again</button> in a minute.</p>`
+      : osmState === "empty" ? `<p class="near-sum">Nothing notable found on OpenStreetMap here.</p>`
+      : `<p class="near-sum"><strong>${osmItems.length}</strong> places${fresh ? ` · <span class="osm-fresh-n">⚡ ${fresh} updated in the last 30 days</span>` : ""}</p>
+        ${osmProtected.length ? `<p class="osm-protected">🌲 Protected area: <strong>${osmProtected.slice(0, 3).map(esc).join(", ")}</strong> — check local rules (drones, camping, night access).</p>` : ""}
+        <ol class="near-list">${osmItems.slice(0, 12).map((it, i) => `
+          <li><button type="button" data-osmi="${i}">
+            <span class="sg-cat osm-ico${it.fresh ? " fresh" : ""}" style="--c:#e6edf7">${OSM_TYPES[it.type].icon}</span>
+            <span class="sg-text"><strong>${esc(it.name)}</strong><small>${OSM_TYPES[it.type].label}${osmFacts(it.tags).length ? " · " + osmFacts(it.tags)[0] : ""}</small></span>
+            <span class="near-d">${fmtKm(it.d)}</span></button></li>`).join("")}</ol>`;
+    col.innerHTML = head + body + `<p class="osm-credit">Data © OpenStreetMap contributors. Prices and hours may be out of date: check before you go.</p>`;
+    col.querySelector("#osmRetry")?.addEventListener("click", () => { osmCache.clear(); scanOsm(origin); });
+    col.querySelector("#osmShow")?.addEventListener("change", e => { showOsm = e.target.checked; drawOsm(); });
+    col.querySelectorAll("[data-osmi]").forEach(b => b.addEventListener("click", () => {
+      const it = osmItems[+b.dataset.osmi];
+      if (!showOsm) { showOsm = true; drawOsm(); }
+      map.flyTo([it.lat, it.lon], Math.max(map.getZoom(), 15), { duration: .9 });
+      map.once("moveend", () => setTimeout(() => it.marker?.openPopup(), 80));
+    }));
   }
 
   function focusSpot(s) {
@@ -521,6 +729,8 @@ const Spots = (() => {
       maxZoom: 19, maxNativeZoom: 18, pane: "spotLabels", opacity: .9 }).addTo(map);
     layer = L.layerGroup().addTo(map);
     originLayer = L.layerGroup().addTo(map);
+    osmLayer = L.layerGroup().addTo(map);
+    drawOsm();
     drawOrigin();
     map.on("moveend zoomend", drawClusters);
     if (admin || schemaV2) map.on("contextmenu", e => openAdd({ lat: e.latlng.lat, lon: L.Util.wrapNum(e.latlng.lng, [-180, 180], true) }));
@@ -593,6 +803,7 @@ const Spots = (() => {
       <span class="spot-cat" style="--c:${cat.color}">${cat.icon}${cat.label}<em>${esc(s.list)}</em></span>
       <strong>${esc(s.name)}</strong>
       <p class="pop-rating" data-rating hidden></p>
+      ${PRICED[s.category] ? `<p class="pop-spend" data-spend></p>` : ""}
       ${dates ? `<p class="pop-dates">${ICON.cal}<span>${dates}</span></p>` : ""}
       ${s.note ? `<p class="pop-desc">${esc(s.note)}</p>` : ""}
       ${schemaV2 ? `<div class="pop-photos" data-photos></div>` : ""}
@@ -609,6 +820,16 @@ const Spots = (() => {
           <div class="stars" role="radiogroup" aria-label="Rating">${[1, 2, 3, 4, 5].map(n =>
             `<button type="button" role="radio" aria-checked="false" aria-label="${n} star${n > 1 ? "s" : ""}" data-star="${n}">★</button>`).join("")}</div>
           <textarea rows="3" maxlength="2000" placeholder="What is it like? Tips for others…" aria-label="Your review"></textarea>
+          ${PRICED[s.category] ? `<fieldset class="pay">
+            <legend>What did you pay? <small>(optional, helps others)</small></legend>
+            <div class="pay-row">
+              <input type="number" name="paid" min="0" max="100000" step="0.5" inputmode="decimal" placeholder="Total" aria-label="Total paid">
+              <select name="currency" aria-label="Currency">${CURRENCIES.map(c => `<option>${c}</option>`).join("")}</select>
+              <label>for <input type="number" name="people" min="1" max="50" step="1" value="2" inputmode="numeric"> people</label>
+              ${s.category === "hotel" ? `<label><input type="number" name="nights" min="1" max="60" step="1" value="1" inputmode="numeric"> night(s)</label>` : ""}
+            </div>
+            ${s.category === "hotel" ? `<select name="stay" aria-label="Type of stay">${STAY_TYPES.map(t => `<option>${t}</option>`).join("")}</select>` : ""}
+          </fieldset>` : ""}
           <button type="submit" class="pop-btn primary">Post review</button>
         </form>
         <div class="pop-reviews" data-reviews></div>` : ""}
@@ -649,19 +870,61 @@ const Spots = (() => {
     form.addEventListener("submit", async e => {
       e.preventDefault();
       const body = form.querySelector("textarea").value.trim(), btn = form.querySelector("[type=submit]");
-      if (!rating && !body) { form.querySelector("textarea").focus(); return; }
+      const fv = n => form.querySelector(`[name=${n}]`)?.value;
+      const paid = parseFloat(fv("paid")) >= 0 ? parseFloat(fv("paid")) : null;
+      if (!rating && !body && paid == null) { form.querySelector("textarea").focus(); return; }
+      const extra = pricesV2 && PRICED[s.category] ? { paid, currency: paid != null ? fv("currency") : null,
+        people: paid != null ? Math.max(1, parseInt(fv("people")) || 1) : null,
+        nights: paid != null && s.category === "hotel" ? Math.max(1, parseInt(fv("nights")) || 1) : null,
+        stay_type: s.category === "hotel" ? fv("stay") || null : null } : {};
       btn.disabled = true;
       try {
         await api("/rest/v1/spot_reviews?on_conflict=spot_id,user_id", { method: "POST",
-          body: { spot_id: s.id, rating: rating || null, body: body || null, author_name: displayName() },
+          body: { spot_id: s.id, rating: rating || null, body: body || null, author_name: displayName(), ...extra },
           headers: { Prefer: "resolution=merge-duplicates,return=minimal" } });
         form.hidden = true; toast("Thanks for your review!");
         loadExtras(popup, s);
       } catch (err) { toast(`Could not post: ${err.message}`, true); }
       btn.disabled = false;
     });
-    form._setMine = r => { rating = r?.rating || 0; form.querySelector("textarea").value = r?.body || ""; paint(); };
+    form._setMine = r => {
+      rating = r?.rating || 0; form.querySelector("textarea").value = r?.body || ""; paint();
+      const set = (n, v) => { const x = form.querySelector(`[name=${n}]`); if (x && v != null) x.value = v; };
+      set("paid", r?.paid); set("currency", r?.currency); set("people", r?.people); set("nights", r?.nights); set("stay", r?.stay_type);
+    };
     loadExtras(popup, s);
+  }
+
+  /* ---------- prezzi pagati dai membri (ristoranti, bar, hotel, B&B…) ---------- */
+  const PRICED = { restaurant: true, hotel: true };
+  const CURRENCIES = ["EUR", "USD", "GBP", "CHF", "NOK", "SEK", "DKK", "ISK", "JPY", "AUD", "CAD"];
+  const STAY_TYPES = ["Hotel", "B&B", "Agriturismo / farm stay", "Apartment", "Hostel", "Mountain hut", "Camping", "Guesthouse", "Other"];
+  let pricesV2 = true;
+  const fmtMoney = (v, c) => { try { return new Intl.NumberFormat("en-GB", { style: "currency", currency: c || "EUR", maximumFractionDigits: v % 1 ? 2 : 0 }).format(v); } catch { return `${v} ${c || ""}`; } };
+  async function fetchReviews(id) {
+    const base = "id,user_id,author_name,rating,body,created_at";
+    if (pricesV2) {
+      try { return await api(`/rest/v1/spot_reviews?select=${base},paid,currency,people,nights,stay_type&spot_id=eq.${id}&order=created_at.desc`); }
+      catch (err) { if (err.status !== 400) throw err; pricesV2 = false; }
+    }
+    return api(`/rest/v1/spot_reviews?select=${base}&spot_id=eq.${id}&order=created_at.desc`);
+  }
+  function spendSummary(s, reviews) {
+    const r = reviews.filter(x => x.paid != null && x.paid > 0);
+    if (!r.length) return "";
+    const byCur = {};
+    r.forEach(x => (byCur[x.currency || "EUR"] ||= []).push(x));
+    const [cur, list] = Object.entries(byCur).sort((a, b) => b[1].length - a[1].length)[0];
+    const median = a => { const v = [...a].sort((p, q) => p - q), m = v.length >> 1; return v.length % 2 ? v[m] : (v[m - 1] + v[m]) / 2; };
+    const n = `${list.length} report${list.length > 1 ? "s" : ""}`;
+    if (s.category === "hotel") {
+      const perNight = median(list.map(x => x.paid / (x.nights || 1)));
+      const perPerson = median(list.map(x => x.paid / (x.nights || 1) / (x.people || 1)));
+      const types = [...new Set(list.map(x => x.stay_type).filter(Boolean))].slice(0, 2).join(", ");
+      return `💶 About <b>${fmtMoney(Math.round(perNight), cur)}</b> a night · ${fmtMoney(Math.round(perPerson), cur)} per person <small>(${n}${types ? ` · ${esc(types)}` : ""})</small>`;
+    }
+    const pp = median(list.map(x => x.paid / (x.people || 1)));
+    return `💶 About <b>${fmtMoney(Math.round(pp), cur)}</b> per person <small>(${n})</small>`;
   }
 
   async function loadExtras(popup, s) {
@@ -670,7 +933,7 @@ const Spots = (() => {
     try {
       const [{ data: photos }, { data: reviews }] = await Promise.all([
         api(`/rest/v1/spot_photos?select=id,path,user_id,author_name&spot_id=eq.${s.id}&order=created_at.desc`),
-        api(`/rest/v1/spot_reviews?select=id,user_id,author_name,rating,body,created_at&spot_id=eq.${s.id}&order=created_at.desc`)
+        fetchReviews(s.id)
       ]);
       const urls = photos.length ? await signPhotos(photos.map(p => p.path)) : {};
       const pbox = el.querySelector("[data-photos]");
@@ -685,12 +948,16 @@ const Spots = (() => {
         rbox.hidden = false;
         rbox.innerHTML = `<span class="stars-static" style="--v:${(avg / 5 * 100).toFixed(0)}%">★★★★★</span> <strong>${avg.toFixed(1)}</strong> · ${rated.length} review${rated.length > 1 ? "s" : ""}`;
       } else rbox.hidden = true;
+      // quanto si spende: media di quanto hanno pagato i membri
+      const pbox2 = el.querySelector("[data-spend]");
+      if (pbox2) pbox2.innerHTML = spendSummary(s, reviews);
       const uid = myUid();
       el.querySelector("[data-reviews]").innerHTML = reviews.map(r => `<div class="pop-rev">
         <p class="rev-head">${r.rating ? `<span class="rev-stars">${"★".repeat(r.rating)}<i>${"★".repeat(5 - r.rating)}</i></span>` : ""}
           <b>${esc(r.author_name || "Member")}</b><time>${fmtDay(r.created_at.slice(0, 10))}</time>
           ${r.user_id === uid || admin ? `<button type="button" class="rev-del" data-delrev="${r.id}" aria-label="Delete review">${ICON.close}</button>` : ""}</p>
-        ${r.body ? `<p>${esc(r.body)}</p>` : ""}</div>`).join("");
+        ${r.body ? `<p>${esc(r.body)}</p>` : ""}
+        ${r.paid != null ? `<p class="rev-paid">💶 Paid ${fmtMoney(r.paid, r.currency)}${r.people ? ` for ${r.people} ${r.people > 1 ? "people" : "person"}` : ""}${r.nights ? `, ${r.nights} night${r.nights > 1 ? "s" : ""}` : ""}${r.stay_type ? ` · ${esc(r.stay_type)}` : ""}</p>` : ""}</div>`).join("");
       el.querySelectorAll("[data-delrev]").forEach(b => b.addEventListener("click", async () => {
         try { await api(`/rest/v1/spot_reviews?id=eq.${b.dataset.delrev}`, { method: "DELETE" }); loadExtras(popup, s); }
         catch (err) { toast(`Could not delete: ${err.message}`, true); }
@@ -792,7 +1059,7 @@ const Spots = (() => {
     return Math.abs(lat) <= 90 && Math.abs(lon) <= 180 ? { lat, lon } : null;
   }
 
-  function openAdd(pre) {
+  function openAdd(pre, preset = {}) {
     let d = $("#addDialog");
     if (!d) {
       d = document.createElement("dialog");
@@ -802,7 +1069,7 @@ const Spots = (() => {
     }
     const lists = [...new Set(spots.map(s => s.list))].sort((a, b) => a.localeCompare(b));
     const lastList = (() => { try { return localStorage.getItem("fcph-last-list") || ""; } catch { return ""; } })();
-    const lastCat = (() => { try { return localStorage.getItem("fcph-last-cat") || "spot"; } catch { return "spot"; } })();
+    const lastCat = preset.category || (() => { try { return localStorage.getItem("fcph-last-cat") || "spot"; } catch { return "spot"; } })();
     const c0 = pre ? `${pre.lat.toFixed(6)}, ${pre.lon.toFixed(6)}` : "";
     d.innerHTML = `
       <button class="dialog-close" type="button" data-close aria-label="Close">${ICON.close}</button>
@@ -814,7 +1081,7 @@ const Spots = (() => {
             <input type="radio" name="addCat" value="${k}"${k === lastCat ? " checked" : ""}>${CATS[k].icon}<span>${CATS[k].label}</span></label>`).join("")}
         </fieldset>` : ""}
         <label for="addName">Name</label>
-        <input id="addName" type="text" maxlength="300" placeholder="e.g. Capo Testa lighthouse" required>
+        <input id="addName" type="text" maxlength="300" placeholder="e.g. Capo Testa lighthouse" value="${esc(preset.name || "")}" required>
         <label for="addCoords">Coordinates or Google Maps link</label>
         <div class="gkey-row">
           <input id="addCoords" type="text" inputmode="text" placeholder="41.902782, 12.496366" value="${esc(c0)}" autocomplete="off" required>
@@ -1242,6 +1509,7 @@ const Spots = (() => {
 const LOCK_SVG = '<svg viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/><circle cx="12" cy="15.5" r="1.3"/></svg>';
 const ICON_PLUS = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>';
 const ICON_LOCATE = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/><circle cx="12" cy="12" r="7.5"/><path d="M12 1.5v3M12 19.5v3M1.5 12h3M19.5 12h3"/></svg>';
+const ICON_SCAN = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3"/><circle cx="12" cy="12" r="3.5"/></svg>';
 const ICON_STAR = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3.5 2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></svg>';
 const ICON_UPLOAD = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V4M7.5 8.5 12 4l4.5 4.5M5 15v3.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V15"/></svg>';
 

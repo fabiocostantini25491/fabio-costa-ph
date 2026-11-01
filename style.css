@@ -526,8 +526,6 @@ main > .page{scroll-margin-top:80px}
 @media (max-width:700px){
   .spots-locate span{display:none}
   .spots-near{position:static;width:auto;max-height:none;margin:0;border-width:1px 0 0;border-radius:0;background:rgba(6,13,24,.96)}
-  .spots-stage:has(.spots-near:not([hidden])){height:auto;min-height:0}
-  .spots-stage:has(.spots-near:not([hidden])) #spotsMap{position:relative;height:52vh}
 }
 .spots-disclaimer{display:flex;gap:14px;align-items:flex-start;margin:16px 0 0;padding:16px 20px;border:1px solid rgba(255,196,110,.35);border-radius:var(--radius);background:rgba(40,28,10,.55);color:var(--soft);font-size:13.5px;line-height:1.6}
 .spots-disclaimer svg{width:22px;height:22px;flex:none;color:#ffc46e;margin-top:2px}
@@ -958,3 +956,58 @@ main > .page{scroll-margin-top:80px}
   .pl-look{flex-wrap:nowrap;overflow-x:auto;right:56px;max-width:none}
   .pl-look button{flex:none}
 }
+/* SPOTS: intorno al punto, due colonne (community | OpenStreetMap) */
+.spots-around{margin:18px 0 0;padding:20px 22px;border:1px solid var(--line-strong);border-radius:var(--radius);background:rgba(7,16,29,.78);backdrop-filter:blur(6px)}
+.around-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:12px}
+.around-head h2{margin:4px 0 0;font:500 28px/1.1 var(--display);color:var(--head)}
+.around-cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:26px}
+.around-col .spots-near,.spots-around .spots-near{position:static}
+.col-title{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 4px;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--soft);font-weight:500}
+.col-dot{width:9px;height:9px;border-radius:50%}
+.col-dot.community{background:var(--accent);box-shadow:0 0 8px var(--accent)}
+.col-dot.osm{background:#e6edf7;box-shadow:0 0 8px #e6edf7}
+.osm-toggle{margin-left:auto;display:inline-flex;align-items:center;gap:6px;letter-spacing:0;text-transform:none;font-size:12px;color:var(--muted);cursor:pointer}
+.osm-toggle input{accent-color:var(--accent)}
+.osm-col .near-list li:nth-child(n+1) button{opacity:.95}
+.osm-ico svg,.osm-pin svg{fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.osm-ico{color:#e6edf7;border-style:dashed}
+.osm-ico.fresh{border-color:#ffe14d;color:#ffe14d;border-style:solid}
+.osm-fresh-n{color:#ffe14d}
+.osm-protected{margin:6px 0 10px;padding:8px 10px;border:1px solid rgba(159,227,200,.35);border-radius:10px;background:rgba(159,227,200,.06);font-size:12.5px;color:var(--soft)}
+.osm-protected strong{color:#9fe3c8;font-weight:500}
+.osm-credit{margin:10px 0 0;font-size:11px;color:var(--muted)}
+.osm-pin{width:24px;height:24px;display:grid;place-items:center;border-radius:6px;transform:rotate(45deg);background:rgba(10,18,32,.92);border:1.5px solid rgba(230,237,247,.85);color:#e6edf7;box-shadow:0 0 8px rgba(0,0,0,.6);cursor:pointer;position:relative}
+.osm-pin svg{width:13px;height:13px;transform:rotate(-45deg)}
+.osm-pin.fresh{border-color:#ffe14d;color:#ffe14d;box-shadow:0 0 10px rgba(255,225,77,.6)}
+.osm-pin.fresh::after{content:"";position:absolute;inset:-4px;border-radius:8px;border:1.5px solid rgba(255,225,77,.7);animation:osmPulse 2.4s ease-out infinite}
+.osm-pin.flash{animation:osmFlash 1.1s ease-out}
+.osm-pin.flash::before{content:"";position:absolute;inset:-14px;border-radius:50%;background:radial-gradient(circle,rgba(255,240,170,.85),rgba(255,225,77,0) 70%);animation:osmBolt 1.1s ease-out forwards}
+@keyframes osmPulse{0%{opacity:.9;transform:scale(1)}100%{opacity:0;transform:scale(1.9)}}
+@keyframes osmFlash{0%{transform:rotate(45deg) scale(1)}25%{transform:rotate(45deg) scale(1.5)}100%{transform:rotate(45deg) scale(1)}}
+@keyframes osmBolt{0%{opacity:1;transform:scale(.4)}100%{opacity:0;transform:scale(2.2)}}
+@media (prefers-reduced-motion:reduce){.osm-pin.fresh::after,.osm-pin.flash,.osm-pin.flash::before{animation:none}}
+.osm-facts{color:#e6edf7!important;font-size:12px!important}
+.osm-wiki:empty{display:none}
+.osm-wiki{display:flex;gap:8px;align-items:flex-start}
+.osm-wiki img{width:64px;height:64px;object-fit:cover;border-radius:8px;flex:none}
+.osm-wiki p{margin:0;font-size:12px!important}
+.osm-links{display:grid;gap:4px}
+.osm-scan{position:absolute;top:12px;right:12px;z-index:800;display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line-strong);border-radius:999px;background:rgba(5,11,20,.88);color:#fff;padding:8px 14px;font-size:12px;cursor:pointer;min-height:38px}
+.osm-scan:hover{border-color:var(--accent);color:var(--accent)}
+.osm-scan svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round}
+@media (max-width:800px){
+  .around-cols{grid-template-columns:1fr;gap:18px}
+  .spots-around{padding:16px}
+}
+.pay{border:1px solid var(--line);border-radius:10px;padding:8px 10px 10px;margin:0;display:grid;gap:8px}
+.pay legend{font-size:11px;color:var(--soft);padding:0 4px}
+.pay legend small{color:var(--muted)}
+.pay-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:12px;color:var(--soft)}
+.pay input,.pay select{background:rgba(3,9,18,.7);border:1px solid var(--line-strong);border-radius:8px;color:#fff;padding:6px 8px;font:inherit;font-size:13px;color-scheme:dark}
+.pay input[name=paid]{width:84px}
+.pay input[name=people],.pay input[name=nights]{width:52px}
+.pay label{display:inline-flex;align-items:center;gap:5px}
+.pop-spend{color:#e6edf7!important;font-size:12.5px!important}
+.pop-spend small{color:var(--muted)}
+.rev-paid{color:var(--muted)!important;font-size:11.5px!important;margin-top:3px!important}
+.pop-spend b{color:#fff;font-weight:600}
