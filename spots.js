@@ -459,9 +459,11 @@ const Spots = (() => {
     }
     return null;
   }
+  const cleanList = l => (l || "Spots").replace(/\.(csv|tsv|xlsx|kml|json|geojson)$/i, "").replace(/\s+/g, " ").trim() || "Spots";
   const make = (list, name, note, url, c) => {
+    list = cleanList(list);
     name = (name || "").trim() || (c ? `${c.lat.toFixed(5)}, ${c.lon.toFixed(5)}` : "Untitled spot");
-    return { list: (list || "Spots").trim(), name, note: (note || "").trim(), url: (url || "").trim(),
+    return { list, name, note: (note || "").trim(), url: (url || "").trim(),
       lat: c ? c.lat : null, lon: c ? c.lon : null, source_key: keyOf(list, name, url, c && c.lat, c && c.lon) };
   };
 
