@@ -346,11 +346,19 @@ function createMap(kind) {
   });
 
   // Mappe dettagliate (da vicino o a scelta)
+  map.createPane("labels");
+  map.getPane("labels").style.zIndex = 450;
+  map.getPane("labels").style.pointerEvents = "none";
   const OSM = '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>';
   const bases = {
-    mappa: L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
-      subdomains: "abcd", maxZoom: 19, className: "tiles-site",
-      attribution: `${OSM} &copy; <a href="https://carto.com/attributions" target="_blank" rel="noopener">CARTO</a>` }),
+    // Esri "Dark Gray Canvas": gratuita, senza chiave; i nomi dei luoghi sono un livello a parte
+    mappa: L.featureGroup([
+      L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}", {
+        maxZoom: 18, maxNativeZoom: 16, className: "tiles-site",
+        attribution: "Mappa &copy; Esri, HERE, Garmin, &copy; OpenStreetMap e la comunità GIS" }),
+      L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}", {
+        maxZoom: 18, maxNativeZoom: 16, pane: "labels", className: "tiles-labels" })
+    ]),
     satellite: L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
       maxZoom: 18, maxNativeZoom: 18,
       attribution: "Immagini &copy; Esri, Maxar, Earthstar Geographics e la comunità GIS" }),

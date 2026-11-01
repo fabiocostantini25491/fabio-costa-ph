@@ -388,7 +388,8 @@ dialog::backdrop{background:rgba(1,8,13,.82)}
 }
 
 /* ---------- Mappa di Explore: viste e dettaglio ---------- */
-.tiles-site{filter:sepia(.45) hue-rotate(165deg) saturate(1.7) brightness(1.3) contrast(.95)}
+.tiles-site{filter:sepia(.5) hue-rotate(168deg) saturate(1.9) brightness(1.15) contrast(1.05)}
+.tiles-labels{filter:sepia(.7) saturate(1.3) brightness(1.05);opacity:.85}
 .map-explore[data-base="satellite"],.map-explore[data-base="rilievo"]{background:#0b2635}
 .map-modes{display:flex;gap:2px;padding:3px;border:1px solid var(--line-strong);border-radius:8px;background:rgba(7,28,41,.92);
   margin-right:max(12px,env(safe-area-inset-right,0px))!important;margin-bottom:22px!important;box-shadow:0 4px 18px rgba(0,0,0,.35)}
