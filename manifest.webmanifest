@@ -1,7 +1,7 @@
 {
   "name": "Fabio Costa Ph",
   "short_name": "Fabio Costa Ph",
-  "description": "Travel, landscape and night photography \u2014 maps, tools and photo spots.",
+  "description": "Travel, landscape and night photography — maps, tools and photo spots.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
@@ -9,6 +9,12 @@
   "background_color": "#050b14",
   "theme_color": "#071c29",
   "icons": [
+    {
+      "src": "/img/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
     {
       "src": "/img/icon-512.png",
       "sizes": "512x512",
@@ -19,6 +25,45 @@
       "src": "/img/apple-touch-icon.png",
       "sizes": "180x180",
       "type": "image/png"
+    }
+  ],
+  "id": "/",
+  "lang": "en",
+  "categories": [
+    "photo",
+    "travel",
+    "navigation"
+  ],
+  "shortcuts": [
+    {
+      "name": "Spots",
+      "url": "/#spots",
+      "icons": [
+        {
+          "src": "/img/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Tools",
+      "url": "/#tools",
+      "icons": [
+        {
+          "src": "/img/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Gallery",
+      "url": "/#gallery",
+      "icons": [
+        {
+          "src": "/img/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
     }
   ]
 }

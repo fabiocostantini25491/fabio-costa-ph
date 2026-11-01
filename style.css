@@ -1194,3 +1194,13 @@ main > .page{scroll-margin-top:80px}
 .lang-code{font-size:11.5px;letter-spacing:.12em}
 .header-actions{display:flex;align-items:center;gap:8px}
 @media (max-width:420px){ .lang-pick{padding:0 8px} .lang-pick svg{display:none} }
+
+/* invito a installare l'app (PWA) */
+.install-tip{position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));z-index:3000;display:flex;align-items:center;gap:12px;padding:12px 40px 12px 12px;border:1px solid var(--line-strong);border-radius:18px;background:rgba(7,18,32,.96);box-shadow:0 12px 40px rgba(0,0,0,.55);color:#dbe7f5;font-size:13.5px;line-height:1.4;transform:translateY(140%);transition:transform .35s ease;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+.install-tip.show{transform:none}
+.install-tip img{flex:none;border-radius:10px}
+.install-tip p{margin:0;flex:1}
+.install-tip strong{display:block;color:#fff;font-size:14.5px;margin-bottom:2px}
+.install-share svg{width:16px;height:16px;vertical-align:-3px;fill:none;stroke:#9cc8ff;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.install-go{flex:none;height:36px;padding:0 16px;border:1px solid #9cc8ff;border-radius:999px;background:rgba(156,200,255,.12);color:#fff;font:inherit;font-weight:600;cursor:pointer}
+.install-x{position:absolute;top:6px;right:8px;width:30px;height:30px;border:0;background:none;color:#9fb0c4;font-size:22px;line-height:1;cursor:pointer}
