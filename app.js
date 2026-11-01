@@ -911,6 +911,16 @@ function flyToPlace(lat, lon, name, full) {
 /* =========================================================
    9. PAGINA CHI SONO
    ========================================================= */
+const ICON_IG = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.3" cy="6.7" r="1" fill="currentColor" stroke="none"/></svg>';
+const ICON_MAIL = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5.5" width="18" height="13" rx="2"/><path d="m3.5 7 8.5 6 8.5-6"/></svg>';
+function renderContacts() {
+  const ig = String(about.instagram || "").trim().replace(/^@/, "").replace(/^https?:\/\/(www\.)?instagram\.com\//i, "").replace(/\/.*$/, "");
+  const mail = String(about.email || "").trim();
+  const html = (ig ? `<a href="https://www.instagram.com/${encodeURIComponent(ig)}/" target="_blank" rel="noopener" aria-label="Instagram @${esc(ig)}">${ICON_IG}<span>@${esc(ig)}</span></a>` : "")
+    + (mail && /^[^\s@]+@[^\s@]+$/.test(mail) ? `<a href="mailto:${esc(mail)}" aria-label="Email ${esc(mail)}">${ICON_MAIL}<span>${esc(mail)}</span></a>` : "");
+  $$("[data-contact]").forEach(el => { el.innerHTML = html; el.hidden = !html; });
+}
+
 function renderAbout() {
   $("#aboutTitle").textContent = about.titolo || "";
   $("#aboutIntro").innerHTML = md(about.presentazione);
@@ -922,6 +932,7 @@ function renderAbout() {
   const img = $("#aboutImage");
   $("#aboutPhoto").hidden = !about.immagine;
   if (about.immagine) { delete img.dataset.fallback; img.src = mediaUrl(about.immagine); }
+  renderContacts();
   const owner = (about.proprietario || "Fabio Costantini").trim();
   $$("[data-owner]").forEach(el => (el.textContent = owner));
   $("#metaAuthor")?.setAttribute("content", owner);

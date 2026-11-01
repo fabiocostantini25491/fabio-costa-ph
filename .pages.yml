@@ -179,6 +179,14 @@ content:
         label: Nome e cognome (titolare del sito)
         type: string
         description: "Compare nella pagina About, nel fondo pagina (©) e nei dati letti dai motori di ricerca."
+      - name: email
+        label: Email per i contatti
+        type: string
+        description: "Compare nella pagina About e in fondo al sito."
+      - name: instagram
+        label: Instagram (solo il nome utente)
+        type: string
+        description: "Es. fabiocostaph, senza @ e senza link."
       - name: titolo
         label: Titolo
         type: string
