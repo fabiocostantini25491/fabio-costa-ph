@@ -272,6 +272,7 @@ const Spots = (() => {
       btn.disabled = true; msg.className = "gate-note"; msg.textContent = "Logging in…";
       try {
         await signIn(email, password);
+        window.fcTrack?.("Spots: logged in");
         notice = ""; loaded = false; wantLogin = false; guest = false; guestLoaded = false;
         render();
       } catch (err) {

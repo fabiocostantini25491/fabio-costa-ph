@@ -733,6 +733,7 @@ function toggleFullscreen() {
   } catch {}
 }
 function openPhoto(id, list = photos) {
+  trackEvent("Gallery: open photo");
   lightboxList = list;
   lightboxIndex = Math.max(0, list.findIndex(p => p.id === id));
   showLightbox();
@@ -951,6 +952,52 @@ function renderAbout() {
    ========================================================= */
 const PAGES = ["home", "explore", "gallery", "journal", "tools", "spots", "about"];
 
+/* =========================================================
+   STATISTICHE (Umami, anonime e senza cookie)
+   Il sito usa gli indirizzi con # (es. #explore): ogni sezione viene registrata come una pagina.
+   ========================================================= */
+const PAGE_TITLES = { home: "Home", explore: "Explore", gallery: "Gallery", journal: "Journal", tools: "Tools", spots: "Spots", about: "About" };
+function whenUmami(fn, tries = 0) {
+  if (window.umami?.track) { try { fn(window.umami); } catch {} return; }
+  if (tries < 40) setTimeout(() => whenUmami(fn, tries + 1), 250);   // lo script arriva dopo: si aspetta fino a 10 s
+}
+function trackPage(page, extra = "") {
+  const url = "/" + (page === "home" ? "" : page) + extra;
+  whenUmami(u => u.track(p => ({ ...p, url, title: `Fabio Costa Ph — ${PAGE_TITLES[page] || page}` })));
+}
+function trackEvent(name, data) { whenUmami(u => u.track(name, data)); }
+window.fcTrack = trackEvent;
+
+// clic importanti, riconosciuti da dove avvengono (nessun dato personale)
+const CLICK_EVENTS = [
+  [".hero-button", "Home: explore the places"],
+  [".contact-links a[href*='instagram.com']", "Contact: Instagram"],
+  [".contact-links a[href^='mailto:']", "Contact: email"],
+  ["a[href*='google.com/maps']", "Open in Google Maps"],
+  ["#spotsLogin, #guestJoin, [data-login]", "Spots: log in prompt"],
+  ["#spotsAdd", "Spots: add a place"],
+  ["[data-addphoto]", "Spots: add photo"],
+  ["[data-review]", "Spots: review"],
+  ["[data-report]", "Spots: report"],
+  ["#osmScan", "Spots: scan this area"],
+  ["#spotsLocate", "Spots: near me"],
+  ["[data-osmi], [data-addosm]", "Spots: OpenStreetMap place"],
+  ["#toolsLocate", "Tools: near me"],
+  ["[data-tab]", el => `Tools: tab ${el.dataset.tab}`],
+  ["[data-mode]", el => `Planner: ${el.dataset.mode}`],
+  ["[data-look]", el => `Planner: look at ${el.dataset.look}`],
+  ["#plPlay", "Planner: play"],
+  ["#shotAi", "Analyze: AI detect"],
+  ["[data-scene]", el => `Analyze: scene ${el.dataset.scene}`]
+];
+document.addEventListener("click", e => {
+  for (const [sel, name] of CLICK_EVENTS) {
+    const el = e.target.closest?.(sel);
+    if (el) { trackEvent(typeof name === "function" ? name(el) : name); break; }
+  }
+}, { capture: true, passive: true });
+document.addEventListener("change", e => { if (e.target.id === "shotFile" && e.target.files?.length) trackEvent("Analyze: photo loaded"); }, { capture: true });
+
 function route() {
   let hash = decodeURIComponent(location.hash.slice(1));
   let page = hash, article = null;
@@ -959,6 +1006,8 @@ function route() {
 
   const changed = document.body.dataset.page !== page;
   document.body.dataset.page = page;
+  const trackKey = page + (article ? "/" + article : "");
+  if (trackKey !== route.lastTracked) { route.lastTracked = trackKey; trackPage(page, article ? "/" + article : ""); }
   $$("main > .page").forEach(s => (s.hidden = s.dataset.page !== page));
   $$("#mainNav a").forEach(a => {
     const on = a.dataset.page === page;
