@@ -342,8 +342,9 @@ const Spots = (() => {
         <span class="eyebrow">Solo per te</span>
         <h2>Importa da Google Maps</h2>
         <ol class="import-steps">
-          <li><strong>Consigliato (coordinate esatte):</strong> su <em>takeout.google.com</em> esporta «Salvati», importa i file CSV delle liste in <em>Google My Maps</em> (posizione = colonna «Title»), poi dal menu della mappa scegli <em>Esporta in KML/KMZ</em> spuntando «Esporta in un file .KML». Carica qui il file .kml.</li>
-          <li><strong>Veloce:</strong> carica direttamente i file <em>.csv</em> delle liste di Takeout (o <em>.json</em>/<em>.geojson</em>). Dove il link contiene le coordinate le uso subito; per gli altri posso cercarle per nome.</li>
+          <li>Su <em>takeout.google.com</em> esporta solo <strong>«Salvati»</strong> e prendi i file <em>.csv</em> delle liste (cartella Takeout → Salvati).</li>
+          <li>Trascinali qui sotto. Ogni link di Google contiene il codice del luogo: lo trasformo nel suo <strong>Place ID</strong>.</li>
+          <li>Con la tua <strong>chiave API di Google Maps</strong> chiedo a Google le coordinate esatte di ogni luogo, poi premi <strong>Carica</strong>.</li>
         </ol>
         <label class="import-drop" for="importFiles">
           <input id="importFiles" type="file" accept=".kml,.kmz,.csv,.json,.geojson,application/vnd.google-earth.kml+xml,application/vnd.google-earth.kmz" multiple>
@@ -411,7 +412,7 @@ const Spots = (() => {
 
   function renderSummary() {
     const box = $("#importSummary");
-    const ok = pending.filter(s => s.lat != null), missing = pending.filter(s => s.lat == null);
+    const ok = pending.filter(s => s.lat != null), missing = pending.filter(s => s.lat == null), withPid = missing.filter(s => s.placeId);
     const byList = {};
     pending.forEach(s => { (byList[s.list] ||= { tot: 0, ok: 0 }).tot++; if (s.lat != null) byList[s.list].ok++; });
     box.innerHTML = !pending.length ? `<p class="gate-note warn">Nessuno spot trovato nei file scelti.</p>` : `
@@ -420,10 +421,15 @@ const Spots = (() => {
       </tbody></table>
       <p class="import-totals"><strong>${ok.length}</strong> pronti da caricare${missing.length ? ` · <strong>${missing.length}</strong> senza coordinate` : ""}</p>
       ${missing.length ? `<div class="import-missing">
-        <p><strong>Coordinate esatte con Google My Maps (consigliato):</strong> scarica gli spot senza coordinate in
-          ${Math.ceil(missing.length / MYMAPS_MAX)} ${Math.ceil(missing.length / MYMAPS_MAX) === 1 ? "file" : "file"} da massimo ${MYMAPS_MAX} righe, importali in My Maps e ricarica qui il KML esportato.</p>
-        <button class="outline-link" type="button" id="importMyMaps">SCARICA FILE PER MY MAPS <span aria-hidden="true">↓</span></button>
-        <p class="import-or">oppure</p>
+        ${withPid.length ? `<p><strong>Coordinate esatte da Google (consigliato):</strong> ${withPid.length} spot hanno il codice del luogo.
+          Google ne regala 10.000 al mese, quindi resta gratis. Tempo stimato: ~${Math.max(1, Math.ceil(withPid.length / 600))} min.</p>
+        <div class="gkey-row">
+          <input id="gmapsKey" type="password" placeholder="Chiave API di Google Maps (AIza…)" autocomplete="off" value="${esc(savedKey())}">
+          <button class="outline-link" type="button" id="importGoogle">TROVA LE COORDINATE <span aria-hidden="true">→</span></button>
+        </div>
+        <p class="gate-help left">La chiave resta solo in questo browser: non viene salvata sul sito.</p>
+        <p class="gate-note" id="googleProgress" role="status"></p>
+        <p class="import-or">oppure</p>` : ""}
         <p>Cerca le coordinate per nome su OpenStreetMap: circa 1 secondo per luogo (~${Math.ceil(missing.length / 60)} min), risultato approssimativo.</p>
         <button class="outline-link" type="button" id="importGeocode">CERCA SU OPENSTREETMAP</button>
         <p class="gate-note" id="geoProgress"></p>
@@ -433,27 +439,85 @@ const Spots = (() => {
         <p class="gate-note" id="uploadProgress" role="status"></p>
       </div>`;
     $("#importGeocode")?.addEventListener("click", geocodeMissing);
-    $("#importMyMaps")?.addEventListener("click", downloadForMyMaps);
+    $("#importGoogle")?.addEventListener("click", geocodeWithGoogle);
     $("#importUpload")?.addEventListener("click", uploadPending);
   }
 
-  /* File CSV per Google My Maps: solo gli spot senza coordinate, a blocchi da 2.000 righe.
-     La colonna "List" torna indietro nel KML, così ogni spot rientra nella sua lista. */
-  const MYMAPS_MAX = 2000;
-  function downloadForMyMaps() {
-    const missing = pending.filter(s => s.lat == null);
-    const q = v => `"${String(v ?? "").replace(/"/g, '""').replace(/\r?\n/g, " ")}"`;
-    const parts = Math.ceil(missing.length / MYMAPS_MAX);
-    for (let i = 0; i < parts; i++) {
-      const rows = missing.slice(i * MYMAPS_MAX, (i + 1) * MYMAPS_MAX);
-      const csv = "\uFEFFTitle,List,Note,URL\n" + rows.map(s => [s.name, s.list, s.note, s.url].map(q).join(",")).join("\n");
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
-      a.download = `spot-per-mymaps-${i + 1}-di-${parts}.csv`;
-      document.body.appendChild(a);
-      setTimeout(() => { a.click(); a.remove(); }, i * 400);
-    }
-    toast(`Scaricati ${parts} file con ${missing.length} spot. Importali in My Maps: ogni file in un livello.`);
+  /* Codice del luogo nei link di Google (…!1s0xAAA:0xBBB) → Place ID ufficiale (ChIJ…).
+     Formato: protobuf di 20 byte con i due numeri a 64 bit in little-endian, in base64url. */
+  function placeIdFromUrl(url) {
+    const m = String(url || "").match(/(?:!1s|ftid=)(0x[0-9a-f]{1,16}):(0x[0-9a-f]{1,16})/i);
+    if (!m) return null;
+    const le = h => { h = h.slice(2).padStart(16, "0"); const o = []; for (let i = 0; i < 16; i += 2) o.unshift(parseInt(h.slice(i, i + 2), 16)); return o; };
+    const bytes = [0x0a, 0x12, 0x09, ...le(m[1]), 0x11, ...le(m[2])];
+    return btoa(String.fromCharCode(...bytes)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  }
+
+  const KEY_STORE = "fcph-gmaps-key";
+  const savedKey = () => { try { return localStorage.getItem(KEY_STORE) || ""; } catch { return ""; } };
+
+  let googleLoading = null;
+  function loadGoogleMaps(key) {
+    if (window.google?.maps?.Geocoder) return Promise.resolve();
+    if (googleLoading) return googleLoading;
+    googleLoading = new Promise((resolve, reject) => {
+      window.__fcphGmapsReady = () => resolve();
+      window.gm_authFailure = () => reject(new Error("chiave non valida o non autorizzata per questo sito"));
+      const sc = document.createElement("script");
+      sc.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&v=weekly&loading=async&callback=__fcphGmapsReady`;
+      sc.onerror = () => reject(new Error("impossibile caricare Google Maps"));
+      document.head.appendChild(sc);
+      setTimeout(() => reject(new Error("Google Maps non risponde")), 20000);
+    }).catch(err => { googleLoading = null; throw err; });
+    return googleLoading;
+  }
+
+  let googleRunning = false, googleStop = false;
+  async function geocodeWithGoogle() {
+    const btn = $("#importGoogle"), prog = $("#googleProgress");
+    if (googleRunning) { googleStop = true; btn.textContent = "INTERRUZIONE…"; return; }
+    const key = $("#gmapsKey").value.trim();
+    if (!/^AIza[\w-]{30,}$/.test(key)) { prog.className = "gate-note warn"; prog.textContent = "Incolla una chiave API valida: inizia con «AIza»."; return; }
+    try { localStorage.setItem(KEY_STORE, key); } catch {}
+    prog.className = "gate-note"; prog.textContent = "Collegamento a Google…";
+    try { await loadGoogleMaps(key); }
+    catch (err) { prog.className = "gate-note warn"; prog.textContent = `Google non ha accettato la richiesta: ${err.message}.`; return; }
+
+    const geocoder = new google.maps.Geocoder();
+    const todo = pending.filter(s => s.lat == null && s.placeId);
+    let done = 0, found = 0, failed = 0, authError = null;
+    googleRunning = true; googleStop = false;
+    btn.innerHTML = "INTERROMPI";
+    const one = s => new Promise(resolve => {
+      geocoder.geocode({ placeId: s.placeId }, (res, status) => resolve({ res, status }));
+    });
+    const worker = async () => {
+      while (!googleStop && !authError) {
+        const s = todo.shift();
+        if (!s) return;
+        let tries = 0, r;
+        do {
+          r = await one(s);
+          if (r.status === "OVER_QUERY_LIMIT") await new Promise(x => setTimeout(x, 1500 * ++tries));
+        } while (r.status === "OVER_QUERY_LIMIT" && tries < 5);
+        if (r.status === "OK" && r.res[0]) {
+          const loc = r.res[0].geometry.location;
+          s.lat = loc.lat(); s.lon = loc.lng(); found++;
+        } else if (r.status === "REQUEST_DENIED") { authError = "richiesta rifiutata: controlla che la «Geocoding API» sia attiva e la chiave autorizzata"; }
+        else failed++;
+        done++;
+        if (done % 20 === 0 || !todo.length) prog.textContent = `Trovati ${found} su ${done} controllati (${todo.length} rimanenti)…`;
+        await new Promise(x => setTimeout(x, 120));
+      }
+    };
+    await Promise.all([worker(), worker(), worker(), worker()]);
+    googleRunning = false;
+    renderSummary();
+    const msg = authError ? `Interrotto: ${authError}. Trovati ${found} spot.`
+      : `${googleStop ? "Interrotto. " : ""}Coordinate trovate per ${found} spot${failed ? `; ${failed} non trovati (luoghi chiusi o rimossi da Google)` : ""}. Ora premi «Carica».`;
+    const p = $("#googleProgress") || $("#uploadProgress");   // se non manca più nulla, il riquadro di Google sparisce
+    if (p) { p.className = authError ? "gate-note warn" : "gate-note"; p.textContent = msg; }
+    toast(msg, !!authError);
   }
 
   let geocoding = false;
@@ -518,7 +582,7 @@ const Spots = (() => {
   const make = (list, name, note, url, c) => {
     list = cleanList(list);
     name = (name || "").trim() || (c ? `${c.lat.toFixed(5)}, ${c.lon.toFixed(5)}` : "Untitled spot");
-    return { list, name, note: (note || "").trim(), url: (url || "").trim(),
+    return { list, name, note: (note || "").trim(), url: (url || "").trim(), placeId: placeIdFromUrl(url),
       lat: c ? c.lat : null, lon: c ? c.lon : null, source_key: keyOf(list, name, url, c && c.lat, c && c.lon) };
   };
 
