@@ -341,7 +341,7 @@ const Spots = (() => {
         <input id="joinEmail" type="email" autocomplete="email" placeholder="you@example.com" required>
         <label for="joinPassword">Password</label>
         <input id="joinPassword" type="password" autocomplete="new-password" minlength="8" placeholder="At least 8 characters" required>
-        <label class="gate-check"><input type="checkbox" id="joinCode"> <span>I accept the <button type="button" class="text-link" id="joinShowCode">community code</button> and the terms below the map.</span></label>
+        <label class="gate-check"><input type="checkbox" id="joinCode"> <span>I accept the <button type="button" class="text-link" id="joinShowCode">community code</button>, the <a href="#terms" target="_blank">terms</a> and the <a href="#privacy" target="_blank">privacy policy</a>. I'm 16 or older.</span></label>
         <button class="outline-link" type="submit" id="joinSend">JOIN <span aria-hidden="true">→</span></button>
         <p class="gate-note" id="gateMsg" role="status"></p>
         <p class="gate-help">I approve every request personally, usually within a day. Until then you can browse the public map.</p>

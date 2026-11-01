@@ -1284,7 +1284,7 @@ function renderAbout() {
 /* =========================================================
    10. NAVIGAZIONE
    ========================================================= */
-const PAGES = ["home", "explore", "gallery", "journal", "tools", "spots", "about", "guide"];
+const PAGES = ["home", "explore", "gallery", "journal", "tools", "spots", "about", "guide", "privacy", "terms"];
 
 /* =========================================================
    STATISTICHE (Umami, anonime e senza cookie)
