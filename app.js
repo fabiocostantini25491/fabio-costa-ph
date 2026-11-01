@@ -324,37 +324,122 @@ function createMap(kind) {
   const map = L.map(kind === "home" ? "homeMap" : "exploreMap", {
     zoomControl: false, attributionControl: true, worldCopyJump: false,
     dragging: interactive, scrollWheelZoom: interactive, doubleClickZoom: interactive, touchZoom: interactive,
-    boxZoom: false, keyboard: interactive, minZoom: 1.5, maxZoom: 12, zoomSnap: 0.25,
+    boxZoom: false, keyboard: interactive, minZoom: 1.5, maxZoom: 18, zoomSnap: 0.25,
     maxBounds: [[-62, -200], [86, 200]], maxBoundsViscosity: 0.8
   });
   if (interactive) L.control.zoom({ position: "topleft", zoomInTitle: "Ingrandisci", zoomOutTitle: "Riduci" }).addTo(map);
   map.attributionControl.setPrefix(false);
   map.fitBounds([[-50, -165], [75, 175]]);
 
-  // reticolo geografico
+  // Livello "artistico" (da lontano): reticolo + continenti color sabbia
+  const art = L.layerGroup().addTo(map);
   const grid = [];
   for (let lon = -180; lon <= 180; lon += 30) grid.push([[-80, lon], [85, lon]]);
   for (let lat = -60; lat <= 80; lat += 20) grid.push([[lat, -180], [lat, 180]]);
-  L.polyline(grid, { color: "#d5aa76", weight: 0.5, opacity: 0.12, interactive: false }).addTo(map);
-
+  L.polyline(grid, { color: "#d5aa76", weight: 0.5, opacity: 0.12, interactive: false }).addTo(art);
+  let landOk = false;
   loadLand().then(geo => {
-    if (geo) {
-      L.geoJSON(geo, { interactive: false, style: { color: "#8f7650", weight: 0.6, fillColor: "#bfa077", fillOpacity: 0.88, className: "land" } })
-        .addTo(map).bringToBack();
-      map.attributionControl.addAttribution("Dati mappa: Natural Earth");
-    } else {
-      // Sfondo di riserva: mappa scura senza scritte, colorata verso il blu e la sabbia del sito
-      L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png", {
-        subdomains: "abcd", maxZoom: 19, className: "fallback-tiles",
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions" target="_blank" rel="noopener">CARTO</a>'
-      }).addTo(map);
-    }
+    if (!geo) return;
+    landOk = true;
+    L.geoJSON(geo, { interactive: false, style: { color: "#8f7650", weight: 0.6, fillColor: "#bfa077", fillOpacity: 0.88, className: "land" } }).addTo(art);
+    updateBase();
   });
 
+  // Mappe dettagliate (da vicino o a scelta)
+  const OSM = '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>';
+  const bases = {
+    mappa: L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+      subdomains: "abcd", maxZoom: 19, className: "tiles-site",
+      attribution: `${OSM} &copy; <a href="https://carto.com/attributions" target="_blank" rel="noopener">CARTO</a>` }),
+    satellite: L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
+      maxZoom: 18, maxNativeZoom: 18,
+      attribution: "Immagini &copy; Esri, Maxar, Earthstar Geographics e la comunità GIS" }),
+    rilievo: L.tileLayer("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", {
+      subdomains: "abc", maxZoom: 18, maxNativeZoom: 17,
+      attribution: `${OSM}, SRTM &middot; stile &copy; <a href="https://opentopomap.org" target="_blank" rel="noopener">OpenTopoMap</a> (CC-BY-SA)` })
+  };
+  let mode = "mappa";
+  try { if (bases[localStorage.getItem("fcph-map")]) mode = localStorage.getItem("fcph-map"); } catch {}
+  const DETAIL_ZOOM = 5;   // sotto questo zoom, in modalità "Mappa", resta lo stile disegnato
+
+  function updateBase() {
+    const artistic = mode === "mappa" && landOk && map.getZoom() < DETAIL_ZOOM;
+    Object.entries(bases).forEach(([k, layer]) => {
+      const want = k === mode && !artistic;
+      if (want && !map.hasLayer(layer)) layer.addTo(map).bringToBack();
+      if (!want && map.hasLayer(layer)) map.removeLayer(layer);
+    });
+    if (artistic && !map.hasLayer(art)) art.addTo(map);
+    if (!artistic && map.hasLayer(art)) map.removeLayer(art);
+    map.getContainer().dataset.base = artistic ? "art" : mode;
+    $$(".map-modes [data-mode]", map.getContainer()).forEach(b => b.setAttribute("aria-pressed", String(b.dataset.mode === mode)));
+  }
+  map.on("zoomend", () => { updateBase(); updateShotDots(); });
+
+  if (interactive) {
+    const Modes = L.Control.extend({
+      options: { position: "bottomright" },
+      onAdd() {
+        const box = L.DomUtil.create("div", "map-modes");
+        box.innerHTML = `
+          <button type="button" data-mode="mappa" aria-pressed="false">Mappa</button>
+          <button type="button" data-mode="satellite" aria-pressed="false">Satellite</button>
+          <button type="button" data-mode="rilievo" aria-pressed="false">Rilievo</button>
+          <button type="button" class="fit-all" title="Mostra tutti i miei spot" aria-label="Mostra tutti i miei spot">${ICON.globe}</button>`;
+        L.DomEvent.disableClickPropagation(box);
+        L.DomEvent.disableScrollPropagation(box);
+        box.querySelectorAll("[data-mode]").forEach(b => b.addEventListener("click", () => {
+          mode = b.dataset.mode;
+          try { localStorage.setItem("fcph-map", mode); } catch {}
+          updateBase();
+        }));
+        box.querySelector(".fit-all").addEventListener("click", () => fitAllTrips(true));
+        return box;
+      }
+    });
+    new Modes().addTo(map);
+  }
+  updateBase();
+
+  shotLayer = L.layerGroup().addTo(map);
   pinLayers[kind] = L.layerGroup().addTo(map);
   maps[kind] = map;
   drawPins(kind);
+  setTimeout(() => { map.invalidateSize(); fitAllTrips(false); }, 60);
   return map;
+}
+
+/* Margini per non coprire i punti col riquadro del viaggio (a destra, su schermi larghi) */
+function mapPadding() {
+  const wide = window.innerWidth > 900;
+  const panel = $("#locationPanel");
+  const right = wide && panel ? panel.offsetWidth + 40 : 40;
+  return { paddingTopLeft: [60, 60], paddingBottomRight: [right, 60] };
+}
+/* Inquadra tutti i viaggi */
+function fitAllTrips(animate) {
+  const map = maps.explore;
+  const pts = trips.filter(t => photosOfTrip(t.id).length).map(t => [t.lat, t.lon]);
+  if (!map || !pts.length) return;
+  map.fitBounds(L.latLngBounds(pts), { ...mapPadding(), maxZoom: 7, animate });
+}
+
+/* Punti dei singoli scatti (con coordinate proprie), visibili da vicino */
+let shotLayer = null;
+const SHOT_ZOOM = 8;
+function updateShotDots() {
+  const map = maps.explore;
+  if (!map || !shotLayer) return;
+  shotLayer.clearLayers();
+  if (map.getZoom() < SHOT_ZOOM) return;
+  photos.filter(p => p.ownCoords).forEach(p => {
+    const t = tripById(p.trip);
+    if (t && distKm(t, p) < 0.05) return;
+    L.marker([p.lat, p.lon], { icon: L.divIcon({ className: "", html: '<div class="shot-dot"></div>', iconSize: [14, 14], iconAnchor: [7, 7] }), title: p.title, keyboard: true })
+      .addTo(shotLayer)
+      .bindTooltip(p.title, { direction: "top", offset: [0, -6] })
+      .on("click", () => openTrip(p.trip, p.id));
+  });
 }
 
 function drawPins(kind) {
@@ -375,6 +460,7 @@ function drawPins(kind) {
       else openTrip(t.id);
     });
   });
+  if (kind === "explore") updateShotDots();
 }
 
 /* =========================================================
@@ -457,9 +543,10 @@ function openTrip(id, photoId) {
   const map = maps.explore;
   if (map) {
     drawPins("explore");
-    const panelWide = window.innerWidth > 900;
-    map.flyTo([t.lat, t.lon], Math.max(map.getZoom(), 4), { duration: 0.9 });
-    if (panelWide) setTimeout(() => map.panBy([Math.min(180, $("#locationPanel").offsetWidth / 2), 0], { animate: true }), 950);
+    const pts = [[t.lat, t.lon], ...items.filter(p => p.ownCoords).map(p => [p.lat, p.lon])];
+    const target = items[carouselIndex];
+    if (photoId && target && target.ownCoords) pts.splice(0, pts.length, [t.lat, t.lon], [target.lat, target.lon]);
+    map.flyToBounds(L.latLngBounds(pts).pad(0.05), { ...mapPadding(), maxZoom: 13, duration: 1.1 });
   }
   if (window.innerWidth <= 900) $("#locationPanel").scrollIntoView({ behavior: "smooth", block: "nearest" });
 }
@@ -703,7 +790,7 @@ function flyToPlace(lat, lon, name, full) {
       .addTo(map)
       .bindPopup(`<strong>${esc(name)}</strong>${esc(full && full !== name ? full.split(",").slice(1, 3).join(",") : "")}<br><span class="muted">Ancora nessuna foto qui.</span>${nearHtml}`)
       .openPopup();
-    map.flyTo([lat, lon], 7, { duration: 1 });
+    map.flyTo([lat, lon], 11, { duration: 1.1 });
     searchMarker.getPopup().getElement()?.querySelector("[data-near]")?.addEventListener("click", e => openTrip(e.currentTarget.dataset.near));
   }, 80);
 }
