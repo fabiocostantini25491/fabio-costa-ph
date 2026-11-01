@@ -928,3 +928,33 @@ main > .page{scroll-margin-top:80px}
 .pl-sv-box{position:relative}
 .pl-sv-clock{position:absolute;top:10px;left:12px;margin:0;padding:5px 12px;border-radius:999px;background:rgba(2,6,15,.7);border:1px solid var(--line);color:#fff;font-size:13px;font-variant-numeric:tabular-nums;pointer-events:none}
 .pano-foot{fill:#01040a}
+/* planner: controlli */
+.pl-daynav{display:flex;align-items:center;gap:4px;margin-left:8px}
+.pl-daynav button{width:34px;height:34px;border:1px solid var(--line-strong);border-radius:50%;background:none;color:var(--accent);font-size:16px;cursor:pointer}
+.pl-daynav button:hover{border-color:var(--accent)}
+.pl-daynav span{min-width:128px;text-align:center;color:#fff;font-size:13.5px;font-variant-numeric:tabular-nums}
+.pl-speed{background:rgba(3,9,18,.7);border:1px solid var(--line-strong);border-radius:999px;color:var(--soft);padding:8px 12px;font:inherit;font-size:12.5px;color-scheme:dark;min-height:38px}
+.pl-layers{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
+.pl-layer{border:1px solid var(--line-strong);border-radius:999px;background:none;color:var(--muted);padding:6px 12px;font-size:12px;cursor:pointer;min-height:34px}
+.pl-layer[aria-pressed="true"]{color:#fff;border-color:var(--accent);background:rgba(156,200,255,.12)}
+.pl-layer[aria-pressed="false"]{text-decoration:line-through;text-decoration-color:rgba(255,255,255,.3)}
+.pl-tools{position:absolute;right:12px;top:118px;z-index:2;display:flex;flex-direction:column;gap:4px}
+.pl-tools button,.pl-sv-tools button{width:38px;height:38px;display:grid;place-items:center;border:1px solid var(--line-strong);border-radius:10px;background:rgba(5,11,20,.85);color:#fff;font-size:17px;cursor:pointer}
+.pl-tools button:hover,.pl-sv-tools button:hover{border-color:var(--accent);color:var(--accent)}
+.pl-sv-tools{position:absolute;right:10px;top:10px;display:flex;gap:4px}
+.pl-sv-tools button{width:34px;height:34px;font-size:14px}
+.pano-year{fill:none;stroke:rgba(255,255,255,.45);stroke-width:1.2;stroke-dasharray:3 5}
+.pano-yearlbl{fill:rgba(255,255,255,.7);font-size:11px;text-anchor:middle}
+.pl-stage:fullscreen{height:100vh;border-radius:0}
+.pl-sv-box:fullscreen{background:#02060f;display:flex;flex-direction:column;justify-content:center}
+.pl-sv-box:fullscreen .pl-pano-wrap{border-radius:0}
+@media (max-width:700px){
+  .pl-daynav{order:3;width:100%;margin:6px 0 0;justify-content:center}
+  .pl-tools{top:auto;bottom:58px}
+  .pl-tools button{width:34px;height:34px}
+}
+@media (max-width:700px){
+  .pl-sv-tools{top:auto;bottom:34px;right:6px}
+  .pl-look{flex-wrap:nowrap;overflow-x:auto;right:56px;max-width:none}
+  .pl-look button{flex:none}
+}

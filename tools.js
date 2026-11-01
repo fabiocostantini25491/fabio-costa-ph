@@ -601,6 +601,7 @@ const Tools = (() => {
     localToUtc: (...a) => localToUtc(...a), addDays, partsIn: ms => partsIn(ms, tz), fmtT, fmtDate, fmtDur,
     sunDay: () => sunDay(day), night: () => night(day), moonRiseSet: () => moonRiseSet(day), isToday: () => sameDay(day, todayIn(tz)),
     setPlace: p => setPlace(p, { keepDay: true }),
+    setDay: o => { day = o; calMonth = { y: o.y, m: o.m }; render(); },
     reverseName,
     onUpdate: fn => listeners.push(fn),
     loadScript
