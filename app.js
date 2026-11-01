@@ -318,6 +318,55 @@ function curve(a, b) {
   return pts;
 }
 
+/* Mappa a tutto schermo (Explore e Spots), da computer e telefono.
+   Dove il browser lo permette usa il vero schermo intero; su iPhone, che non lo consente, la mappa riempie la finestra. */
+const ICON_FULL = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>';
+const ICON_FULL_EXIT = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg>';
+function addMapFullscreen(map, stage) {
+  if (!map || !stage) return;
+  const Ctrl = L.Control.extend({
+    options: { position: "topleft" },
+    onAdd() {
+      const box = L.DomUtil.create("div", "leaflet-bar map-full-ctrl");
+      const b = L.DomUtil.create("a", "", box);
+      b.href = "#"; b.setAttribute("role", "button"); b.title = "Full screen"; b.setAttribute("aria-label", "Full screen");
+      b.innerHTML = ICON_FULL;
+      L.DomEvent.disableClickPropagation(box);
+      L.DomEvent.on(b, "click", e => { L.DomEvent.preventDefault(e); toggle(); });
+      const sync = () => {
+        const on = stage.classList.contains("map-full");
+        b.innerHTML = on ? ICON_FULL_EXIT : ICON_FULL;
+        b.title = on ? "Exit full screen" : "Full screen";
+        b.setAttribute("aria-label", b.title);
+      };
+      const set = on => {
+        stage.classList.toggle("map-full", on);
+        document.body.classList.toggle("map-full-open", on);
+        sync();
+        setTimeout(() => map.invalidateSize(), 60);
+        setTimeout(() => map.invalidateSize(), 350);
+      };
+      const toggle = async () => {
+        const on = !stage.classList.contains("map-full");
+        if (on) {
+          set(true);
+          window.fcTrack?.("Map: full screen");
+          try { if (stage.requestFullscreen && !document.fullscreenElement) await stage.requestFullscreen({ navigationUI: "hide" }); } catch {}
+        } else {
+          if (document.fullscreenElement) { try { await document.exitFullscreen(); } catch {} }
+          set(false);
+        }
+      };
+      document.addEventListener("fullscreenchange", () => { if (!document.fullscreenElement && stage.classList.contains("map-full")) set(false); });
+      document.addEventListener("keydown", e => { if (e.key === "Escape" && stage.classList.contains("map-full") && !document.fullscreenElement) set(false); });
+      window.addEventListener("hashchange", () => { if (stage.classList.contains("map-full")) { if (document.fullscreenElement) document.exitFullscreen().catch(() => {}); set(false); } });
+      return box;
+    }
+  });
+  map.addControl(new Ctrl());
+}
+window.addMapFullscreen = addMapFullscreen;
+
 function createMap(kind) {
   if (maps[kind] || !window.L) return maps[kind];
   const interactive = kind === "explore";
@@ -328,6 +377,7 @@ function createMap(kind) {
     maxBounds: [[-62, -200], [86, 200]], maxBoundsViscosity: 0.8
   });
   if (interactive) L.control.zoom({ position: "topleft", zoomInTitle: "Zoom in", zoomOutTitle: "Zoom out" }).addTo(map);
+  if (interactive) addMapFullscreen(map, document.querySelector(".explore-stage"));
   map.attributionControl.setPrefix(false);
   map.fitBounds([[-50, -165], [75, 175]]);
 

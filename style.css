@@ -1482,3 +1482,20 @@ main > .page{scroll-margin-top:80px}
 .legal b{color:#fff;font-weight:500}
 .legal a{color:var(--accent)}
 .legal-note{margin-top:26px;padding-top:16px;border-top:1px solid var(--line);font-size:13.5px;color:var(--muted)}
+
+/* mappa a tutto schermo */
+.map-full-ctrl a{display:grid !important;place-items:center;width:32px;height:32px;background:rgba(6,16,29,.85);color:#fff}
+.map-full-ctrl svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.map-full{position:fixed !important;inset:0 !important;z-index:5000 !important;width:100vw !important;height:100vh !important;height:100dvh !important;
+  margin:0 !important;max-width:none !important;min-height:0 !important;border-radius:0 !important;border:0 !important;background:#050b14}
+.map-full > .map,.map-full .leaflet-container{position:absolute !important;inset:0 !important;width:100% !important;height:100% !important;border-radius:0 !important;min-height:0 !important}
+.map-full .hud-frame{display:none}
+.map-full .leaflet-top{top:env(safe-area-inset-top)}
+.map-full .leaflet-bottom{bottom:env(safe-area-inset-bottom)}
+.map-full:fullscreen{width:100%;height:100%}
+body.map-full-open{overflow:hidden}
+body.map-full-open .site-header,body.map-full-open .pick-bar,body.map-full-open .install-tip{display:none !important}
+@media (max-width:900px){
+  .map-full .location-panel{position:absolute;left:10px;right:10px;bottom:calc(74px + env(safe-area-inset-bottom));top:auto;width:auto;margin:0;max-height:34vh;overflow:auto;z-index:950}
+}
+.map-full-ctrl{border:1px solid var(--line-strong) !important;border-radius:12px !important;overflow:hidden;box-shadow:0 0 14px rgba(80,140,230,.25) !important}.map-full-ctrl a{border-radius:0 !important;border:0 !important}
