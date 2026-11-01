@@ -12,6 +12,40 @@ const Planner = (() => {
   const LBL_URL = "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}";
   const COL = { sunrise: "#ffd27a", sunset: "#ff9a5a", sun: "#ffe14d", moonrise: "#cfd8e6", moonset: "#9fb0c8", moon: "#ffffff", core: "#c79bff" };
   const R_EARTH = 6371000, rad = Math.PI / 180;
+  const h2d = (h, m, s) => (h + m / 60 + s / 3600) * 15;
+  const d2d = (d, m, sgn = 1) => sgn * (Math.abs(d) + m / 60);
+  /* stelle principali (ascensione retta, declinazione) e linee della figura */
+  const CONSTELLATIONS = {
+    orion: { name: "Orion", stars: [
+        [h2d(5, 55, 10), d2d(7, 24)], [h2d(5, 25, 8), d2d(6, 21)], [h2d(5, 32, 0), d2d(0, 18, -1)], [h2d(5, 36, 13), d2d(1, 12, -1)],
+        [h2d(5, 40, 46), d2d(1, 57, -1)], [h2d(5, 47, 45), d2d(9, 40, -1)], [h2d(5, 14, 32), d2d(8, 12, -1)], [h2d(5, 35, 8), d2d(9, 56)]],
+      lines: [[0, 1], [0, 4], [1, 2], [2, 3], [3, 4], [4, 5], [2, 6], [0, 7], [1, 7]], labels: { 0: "Betelgeuse", 6: "Rigel" } },
+    bigdipper: { name: "Big Dipper", stars: [
+        [h2d(11, 3, 44), 61.75], [h2d(11, 1, 51), 56.38], [h2d(11, 53, 50), 53.7], [h2d(12, 15, 26), 57.03],
+        [h2d(12, 54, 2), 55.96], [h2d(13, 23, 56), 54.93], [h2d(13, 47, 32), 49.31]],
+      lines: [[0, 1], [1, 2], [2, 3], [3, 0], [3, 4], [4, 5], [5, 6]] },
+    cassiopeia: { name: "Cassiopeia", stars: [
+        [h2d(0, 9, 11), 59.15], [h2d(0, 40, 30), 56.54], [h2d(0, 56, 43), 60.72], [h2d(1, 25, 49), 60.24], [h2d(1, 54, 24), 63.67]],
+      lines: [[0, 1], [1, 2], [2, 3], [3, 4]] },
+    scorpius: { name: "Scorpius", stars: [
+        [h2d(16, 5, 26), -19.8], [h2d(16, 0, 20), -22.62], [h2d(15, 58, 51), -26.11], [h2d(16, 21, 11), -25.59], [h2d(16, 29, 24), -26.43],
+        [h2d(16, 35, 53), -28.22], [h2d(16, 50, 10), -34.29], [h2d(16, 51, 52), -38.05], [h2d(16, 54, 35), -42.36], [h2d(17, 12, 9), -43.24],
+        [h2d(17, 37, 19), -43.0], [h2d(17, 47, 35), -40.13], [h2d(17, 42, 29), -39.03], [h2d(17, 33, 36), -37.1]],
+      lines: [[0, 1], [1, 2], [1, 3], [3, 4], [4, 5], [5, 6], [6, 7], [7, 8], [8, 9], [9, 10], [10, 11], [11, 12], [12, 13]], labels: { 4: "Antares" } },
+    cygnus: { name: "Cygnus (Northern Cross)", stars: [
+        [h2d(20, 41, 26), 45.28], [h2d(20, 22, 14), 40.26], [h2d(19, 30, 43), 27.96], [h2d(20, 46, 13), 33.97], [h2d(19, 44, 58), 45.13]],
+      lines: [[0, 1], [1, 2], [1, 3], [1, 4]], labels: { 0: "Deneb" } },
+    pleiades: { name: "Pleiades", stars: [[h2d(3, 47, 29), 24.1], [h2d(3, 49, 9), 24.05], [h2d(3, 45, 50), 24.37], [h2d(3, 44, 53), 24.11], [h2d(3, 46, 20), 23.95]],
+      lines: [] },
+    crux: { name: "Southern Cross", stars: [[h2d(12, 26, 36), -63.1], [h2d(12, 31, 10), -57.11], [h2d(12, 47, 43), -59.69], [h2d(12, 15, 9), -58.75]],
+      lines: [[0, 1], [2, 3]] },
+    polaris: { name: "Polaris (North Star)", stars: [[h2d(2, 31, 49), 89.26]], lines: [] }
+  };
+  const CON_KEY = "fcph-planner-con";
+  let con = (() => { try { const v = localStorage.getItem(CON_KEY); return v === "" ? "" : (CONSTELLATIONS[v] ? v : "orion"); } catch { return "orion"; } })();
+  const conCenter = k => { const st = CONSTELLATIONS[k].stars; return [st.reduce((a, x) => a + x[0], 0) / st.length, st.reduce((a, x) => a + x[1], 0) / st.length]; };
+  const conPos = (k, t) => { const [ra, dec] = conCenter(k), pl = ctx.place; return Astro.radecPos(t, pl.lat, pl.lon, ra, dec); };
+  let skyCanvas = null, groundMarkers = {};
 
   let ctx = null, map = null, marker = null, built = false, styleReady = false;
   let is3d = false, minute = 0, playing = 0, lastKey = "", followNow = true;
@@ -61,6 +95,7 @@ const Planner = (() => {
       <div class="planner">
         <div class="pl-stage">
           <div id="plMap" class="pl-map" aria-label="Planner map"></div>
+          <canvas class="pl-sky" id="plSky" aria-hidden="true"></canvas>
           <div class="pl-modes" role="group" aria-label="Map view">
             <button type="button" data-mode="2d" aria-pressed="true">2D</button>
             <button type="button" data-mode="3d" aria-pressed="false">3D</button>
@@ -91,18 +126,33 @@ const Planner = (() => {
           <div class="pl-jumps" id="plJumps"></div>
         </div>
 
+        <article class="tool-card pl-skyview">
+          <header class="pl-sv-head"><div><span class="eyebrow">Sky view from the pin</span><h2>Watch the sky move</h2></div>
+            <label class="shot-check pl-follow"><input type="checkbox" id="plFollow" checked> Follow the action</label></header>
+          <div class="pl-sv-box"><div class="pl-pano-wrap" id="plPanoWrap"><div id="plPano"></div></div>
+            <p class="pl-sv-clock" id="plSvClock" aria-hidden="true"></p></div>
+          <p class="tool-foot">Move the time slider (or press ▶) to see the sun, the moon, the Milky Way and the constellation rise and set over the real skyline. Drag sideways to look around: N, E, S and W are at the bottom.</p>
+        </article>
+
         <div class="pl-cards">
           <article class="tool-card pl-card"><span class="eyebrow">Sun</span><dl id="plSun"></dl></article>
           <article class="tool-card pl-card"><span class="eyebrow">Moon</span><dl id="plMoon"></dl></article>
           <article class="tool-card pl-card"><span class="eyebrow">Milky Way core</span><dl id="plCore"></dl></article>
         </div>
 
+        <article class="tool-card pl-con">
+          <header class="pl-con-head"><div><span class="eyebrow">Constellations</span><h2>When to see them</h2></div>
+            <label class="pl-con-pick"><span class="sr-only">Constellation</span>
+              <select id="plCon"><option value="">None</option>${Object.entries(CONSTELLATIONS).map(([k, c]) => `<option value="${k}">${c.name}</option>`).join("")}</select></label></header>
+          <ul class="tool-times" id="plConTimes"></ul>
+          <p class="tool-foot">The constellation is drawn on the map and in the sky view. Times are for the night that starts on the chosen date.</p>
+        </article>
+
         <article class="tool-card pl-horizon">
           <header><span class="eyebrow">Real horizon</span><h2>Mountains, hills and the light</h2></header>
           <p class="tool-note" id="plHorizonNote">Calculating the horizon from the terrain around your point…</p>
           <ul class="tool-times" id="plHorizonTimes"></ul>
-          <div class="pl-pano-wrap" id="plPanoWrap"><div id="plPano"></div></div>
-          <p class="tool-foot">The panorama shows the skyline seen from the pin (terrain only — buildings and trees are not included) with today's path of the sun, the moon and the Milky Way core. Accuracy depends on the terrain data (about 30–75 m): always check on location.</p>
+          <p class="tool-foot">The skyline comes from terrain data (about 30–75 m detail): buildings and trees are not included. Always check on location.</p>
         </article>
       </div>`;
   }
@@ -112,6 +162,19 @@ const Planner = (() => {
     $p("#plNow").addEventListener("click", () => { followNow = true; stopPlay(); setNow(); updateTime(); });
     $p("#plPlay").addEventListener("click", () => playing ? stopPlay() : startPlay());
     document.querySelectorAll("#plannerRoot [data-mode]").forEach(b => b.addEventListener("click", () => setMode(b.dataset.mode === "3d")));
+    $p("#plCon").value = con;
+    $p("#plFollow").addEventListener("change", e => { followSky = e.target.checked; if (followSky) centerPanoOn(); });
+    // trascinare il panorama per guardarsi intorno
+    const wrap = $p("#plPanoWrap");
+    let drag = null;
+    wrap.addEventListener("pointerdown", e => { if (e.pointerType === "mouse") { drag = { x: e.clientX, l: wrap.scrollLeft }; wrap.setPointerCapture(e.pointerId); } });
+    wrap.addEventListener("pointermove", e => { if (drag) { wrap.scrollLeft = drag.l - (e.clientX - drag.x); } });
+    wrap.addEventListener("pointerup", () => { drag = null; });
+    const manual = () => { if (followSky) { followSky = false; $p("#plFollow").checked = false; } };   // chi si guarda intorno smette di seguire
+    wrap.addEventListener("pointerdown", manual);
+    wrap.addEventListener("wheel", manual, { passive: true });
+    wrap.addEventListener("touchstart", manual, { passive: true });
+    $p("#plCon").addEventListener("change", e => { con = e.target.value; try { localStorage.setItem(CON_KEY, con); } catch {} renderCon(); updateTime(); });
     document.querySelectorAll("#plannerRoot [data-look]").forEach(b => b.addEventListener("click", () => lookFromPin(b.dataset.look)));
   }
 
@@ -167,12 +230,16 @@ const Planner = (() => {
       },
       center: [pl.lon, pl.lat], zoom: 11.5, maxPitch: 85, attributionControl: false
     });
-    map.on("load", () => {
+    // pronto appena lo stile è letto (non serve aspettare tutte le immagini satellitari)
+    const ready = () => {
+      if (styleReady || !map.getSource("lines")) return;
       styleReady = true;
       if (is3d) setMode(true);
       try { map.setSky?.({ "sky-color": "#0b1a33", "horizon-color": "#30507e", "fog-color": "#0b1a33", "sky-horizon-blend": 0.6, "horizon-fog-blend": 0.6, "fog-ground-blend": 0.4 }); } catch {}
-      drawLines();
-    });
+      updateTime();
+    };
+    map.on("styledata", ready);
+    map.on("load", ready);
     map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), "top-right");
     map.addControl(new maplibregl.AttributionControl({ compact: true }), "bottom-right");
     const el = document.createElement("div");
@@ -180,6 +247,13 @@ const Planner = (() => {
     marker = new maplibregl.Marker({ element: el, draggable: true, anchor: "bottom" }).setLngLat([pl.lon, pl.lat]).addTo(map);
     marker.on("dragend", () => { const ll = marker.getLngLat(); movePin(ll.lat, ll.lng); });
     map.on("click", e => { marker.setLngLat(e.lngLat); movePin(e.lngLat.lat, e.lngLat.lng); });
+    skyCanvas = document.getElementById("plSky");
+    map.on("move", drawSky);
+    map.on("resize", drawSky);
+    map.on("moveend", () => { drawLines(); drawGround(); });
+    // sole, luna, Via Lattea e costellazione come sfere sulla mappa (vista dall'alto)
+    const mk = cls => { const el = document.createElement("div"); el.className = `pl-body ${cls}`; return new maplibregl.Marker({ element: el, anchor: "center" }); };
+    groundMarkers = { sun: mk("b-sun"), moon: mk("b-moon"), core: mk("b-core"), con: mk("b-con") };
   }
 
   async function movePin(lat, lon) {
@@ -220,14 +294,9 @@ const Planner = (() => {
     }
     if (az == null) return toast("Not available for this day.", true);
     if (!is3d) setMode(true);
-    const elev = observerElev ?? 0;
-    const to = dest(pl.lat, pl.lon, az, 3000);
-    try {
-      const cam = map.calculateCameraOptionsFromTo(new maplibregl.LngLat(pl.lon, pl.lat), elev + 40, new maplibregl.LngLat(to[0], to[1]), elev + 40);
-      map.easeTo({ ...cam, pitch: Math.min(85, cam.pitch ?? 85), duration: 1600 });
-    } catch {
-      map.easeTo({ center: [pl.lon, pl.lat], bearing: az, pitch: 82, zoom: 15, duration: 1600 });
-    }
+    // camera poco dietro e sopra il segnaposto, rivolta nella direzione scelta, con il cielo in alto
+    const center = dest(pl.lat, pl.lon, az, 1200);
+    map.easeTo({ center, bearing: az, pitch: 85, zoom: 14.2, duration: 1600 });
   }
 
   /* ---------- linee di direzione ---------- */
@@ -236,10 +305,145 @@ const Planner = (() => {
     for (let i = 0; i <= 24; i++) pts.push(dest(pl.lat, pl.lon, az, (km * 1000 * i) / 24));
     return { type: "Feature", properties: { kind, color: COL[kind], w, dash }, geometry: { type: "LineString", coordinates: pts } };
   }
+  /* lunghezza delle linee: circa metà dello schermo, a qualsiasi zoom */
+  const lineKm = () => {
+    const el = map.getContainer(), px = 0.46 * Math.min(el.clientWidth, el.clientHeight);
+    const mpp = 40075016 * Math.cos((ctx.place?.lat || 0) * rad) / (512 * 2 ** map.getZoom());
+    return Math.max(0.3, (px * mpp) / 1000);
+  };
+  const groundR = (alt, km) => km * 1000 * 0.92 * Math.max(0.04, 1 - Math.max(0, alt) / 90);   // metri dal segnaposto
+
+  /* vista dall'alto: ogni astro è una sfera sulla sua direzione; più è alto, più è vicino al segnaposto */
+  function drawGround() {
+    if (!map || !ctx.place || !groundMarkers.sun) return;
+    const pl = ctx.place, t = msAt(minute), km = lineKm(), flat = map.getPitch() < 35;
+    const place = (m, p, show) => {
+      if (show && flat) { m.setLngLat(dest(pl.lat, pl.lon, p.az, groundR(p.alt, km))); if (!m._map) m.addTo(map); m.getElement().style.setProperty("--a", Math.max(0.35, Math.min(1, (p.alt + 6) / 20))); }
+      else if (m._map) m.remove();
+    };
+    const sun = Astro.sunPos(t, pl.lat, pl.lon), moon = Astro.moonPos(t, pl.lat, pl.lon), core = Astro.corePos(t, pl.lat, pl.lon);
+    const il = Astro.moonIllum(t);
+    groundMarkers.moon.getElement().innerHTML = moonDisc(il.phase, 22);
+    place(groundMarkers.sun, sun, sun.alt > -2);
+    place(groundMarkers.moon, moon, moon.alt > -2);
+    place(groundMarkers.core, core, core.alt > 0 && sun.alt < -10);
+    if (con) {
+      const c = conPos(con, t);
+      groundMarkers.con.getElement().textContent = CONSTELLATIONS[con].name.split(" (")[0];
+      place(groundMarkers.con, c, c.alt > 0 && sun.alt < -6);
+    } else if (groundMarkers.con._map) groundMarkers.con.remove();
+  }
+
+  function moonDisc(p, size) {
+    const r = size / 2 - 1, c = size / 2, k = Math.cos(2 * Math.PI * p), rx = Math.abs(r * k).toFixed(2);
+    const waxing = p < 0.5, outer = waxing ? 1 : 0, inner = waxing ? (k > 0 ? 0 : 1) : (k > 0 ? 1 : 0);
+    const lit = p < 0.01 || p > 0.99 ? "" : `<path d="M${c} ${c - r}A${r} ${r} 0 0 ${outer} ${c} ${c + r}A${rx} ${r} 0 0 ${inner} ${c} ${c - r}Z" fill="#f4eedc"/>`;
+    return `<svg viewBox="0 0 ${size} ${size}" width="${size}" height="${size}"><circle cx="${c}" cy="${c}" r="${r}" fill="#26303f" stroke="rgba(255,255,255,.5)"/>${lit}</svg>`;
+  }
+
+  /* =========================================================
+     CIELO 3D: gli astri sono all'infinito, quindi la loro posizione sullo schermo dipende solo
+     dall'orientamento della camera (direzione e inclinazione), non da dove si trova.
+     ========================================================= */
+  function drawSky() {
+    if (!skyCanvas || !map) return;
+    const W = skyCanvas.clientWidth, H = skyCanvas.clientHeight, dpr = Math.min(2, window.devicePixelRatio || 1);
+    if (skyCanvas.width !== Math.round(W * dpr) || skyCanvas.height !== Math.round(H * dpr)) { skyCanvas.width = Math.round(W * dpr); skyCanvas.height = Math.round(H * dpr); }
+    const g = skyCanvas.getContext("2d");
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    g.clearRect(0, 0, W, H);
+    const pitch = map.getPitch();
+    if (pitch < 35 || !ctx.place) return;
+    const tr = map.transform, fov = tr._fov || (tr.fov ? tr.fov * rad : 0.6435);
+    const b = map.getBearing() * rad, e = (pitch - 90) * rad;
+    const F = [Math.cos(e) * Math.sin(b), Math.cos(e) * Math.cos(b), Math.sin(e)];
+    const Rt = [Math.cos(b), -Math.sin(b), 0];
+    const U = [-Math.sin(e) * Math.sin(b), -Math.sin(e) * Math.cos(b), Math.cos(e)];
+    const f = (H / 2) / Math.tan(fov / 2), cy = H / 2 + (tr.centerOffset?.y || 0);
+    const proj = (alt, az) => {
+      const a = alt * rad, z = az * rad, d = [Math.cos(a) * Math.sin(z), Math.cos(a) * Math.cos(z), Math.sin(a)];
+      const Z = d[0] * F[0] + d[1] * F[1] + d[2] * F[2];
+      if (Z <= 0.05) return null;
+      return [W / 2 + (d[0] * Rt[0] + d[1] * Rt[1]) / Z * f, cy - (d[0] * U[0] + d[1] * U[1] + d[2] * U[2]) / Z * f];
+    };
+    const pl = ctx.place, t = msAt(minute), st = dayStart();
+    const sun = Astro.sunPos(t, pl.lat, pl.lon), dark = sun.alt < -12;
+    const visible = p => p.alt > horizonAt(p.az) - 0.2;
+    const polyline = (pts, style, width, dash = []) => {
+      g.strokeStyle = style; g.lineWidth = width; g.setLineDash(dash); g.beginPath();
+      let pen = false;
+      pts.forEach(p => { const q = p && visible(p) ? proj(p.alt, p.az) : null; if (q) { pen ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1]); pen = true; } else pen = false; });
+      g.stroke(); g.setLineDash([]);
+    };
+    // Via Lattea: una fascia lungo il piano galattico, più larga e luminosa verso il nucleo
+    if (dark) {
+      const band = [];
+      for (let l = -180; l <= 180; l += 3) { const [ra, dec] = Astro.galToRaDec(l); band.push({ ...Astro.radecPos(t, pl.lat, pl.lon, ra, dec), l }); }
+      for (let i = 1; i < band.length; i++) {
+        const p0 = band[i - 1], p1 = band[i];
+        if (!visible(p0) || !visible(p1)) continue;
+        const q0 = proj(p0.alt, p0.az), q1 = proj(p1.alt, p1.az);
+        if (!q0 || !q1 || Math.hypot(q1[0] - q0[0], q1[1] - q0[1]) > W) continue;
+        const near = Math.max(0, 1 - Math.abs(p1.l) / 70);
+        g.strokeStyle = `rgba(214,200,255,${0.07 + near * 0.18})`; g.lineWidth = 18 + near * 40; g.lineCap = "round";
+        g.beginPath(); g.moveTo(q0[0], q0[1]); g.lineTo(q1[0], q1[1]); g.stroke();
+      }
+    }
+    // percorsi del giorno
+    const path = fn => { const out = []; for (let m = 0; m <= 1440; m += 8) out.push(fn(st + m * 60000)); return out; };
+    polyline(path(x => Astro.sunPos(x, pl.lat, pl.lon)), "rgba(255,210,122,.55)", 1.5, [5, 6]);
+    polyline(path(x => Astro.moonPos(x, pl.lat, pl.lon)), "rgba(207,216,230,.35)", 1.2, [2, 6]);
+    // costellazione
+    if (con && sun.alt < -6) {
+      const C = CONSTELLATIONS[con], P = C.stars.map(s => Astro.radecPos(t, pl.lat, pl.lon, s[0], s[1]));
+      g.strokeStyle = "rgba(159,227,255,.7)"; g.lineWidth = 1.3;
+      C.lines.forEach(([a, b2]) => { if (!visible(P[a]) || !visible(P[b2])) return; const qa = proj(P[a].alt, P[a].az), qb = proj(P[b2].alt, P[b2].az); if (qa && qb) { g.beginPath(); g.moveTo(qa[0], qa[1]); g.lineTo(qb[0], qb[1]); g.stroke(); } });
+      P.forEach((p, i) => { if (!visible(p)) return; const q = proj(p.alt, p.az); if (!q) return;
+        g.fillStyle = "#fff"; g.shadowColor = "#9fe3ff"; g.shadowBlur = 8; g.beginPath(); g.arc(q[0], q[1], C.labels?.[i] ? 3.2 : 2.4, 0, 7); g.fill(); g.shadowBlur = 0;
+        if (C.labels?.[i]) { g.fillStyle = "rgba(220,240,255,.85)"; g.font = "11px DM Sans, sans-serif"; g.fillText(C.labels[i], q[0] + 7, q[1] - 6); } });
+      const c = conPos(con, t), qc = visible(c) ? proj(c.alt, c.az) : null;
+      if (qc) { g.fillStyle = "rgba(159,227,255,.95)"; g.font = "600 12px DM Sans, sans-serif"; g.fillText(C.name.split(" (")[0].toUpperCase(), qc[0] + 14, qc[1] + 22); }
+    }
+    // nucleo della Via Lattea
+    const core = Astro.corePos(t, pl.lat, pl.lon), qcore = dark && visible(core) ? proj(core.alt, core.az) : null;
+    if (qcore) {
+      const gr = g.createRadialGradient(qcore[0], qcore[1], 0, qcore[0], qcore[1], 46);
+      gr.addColorStop(0, "rgba(255,236,210,.9)"); gr.addColorStop(0.3, "rgba(220,190,255,.45)"); gr.addColorStop(1, "rgba(199,155,255,0)");
+      g.fillStyle = gr; g.beginPath(); g.arc(qcore[0], qcore[1], 46, 0, 7); g.fill();
+      g.fillStyle = "rgba(230,215,255,.9)"; g.font = "600 11px DM Sans, sans-serif"; g.fillText("MILKY WAY CORE", qcore[0] + 18, qcore[1] - 18);
+    }
+    // luna
+    const moon = Astro.moonPos(t, pl.lat, pl.lon), qm = visible(moon) ? proj(moon.alt, moon.az) : null;
+    if (qm) {
+      const il = Astro.moonIllum(t), r = 13;
+      const gr = g.createRadialGradient(qm[0], qm[1], r * 0.6, qm[0], qm[1], r * 4);
+      gr.addColorStop(0, `rgba(240,236,220,${0.15 + il.fraction * 0.35})`); gr.addColorStop(1, "rgba(240,236,220,0)");
+      g.fillStyle = gr; g.beginPath(); g.arc(qm[0], qm[1], r * 4, 0, 7); g.fill();
+      g.fillStyle = "#2a3444"; g.beginPath(); g.arc(qm[0], qm[1], r, 0, 7); g.fill();
+      const k = Math.cos(2 * Math.PI * il.phase), waxing = il.phase < 0.5;
+      if (il.fraction > 0.01) {
+        g.fillStyle = "#f4eedc"; g.beginPath();
+        g.arc(qm[0], qm[1], r, -Math.PI / 2, Math.PI / 2, !waxing);
+        g.ellipse(qm[0], qm[1], Math.abs(r * k), r, 0, Math.PI / 2, -Math.PI / 2, waxing ? k > 0 : k <= 0);
+        g.fill();
+      }
+    }
+    // sole
+    const qs = visible(sun) ? proj(sun.alt, sun.az) : null;
+    if (qs) {
+      const low = Math.max(0, Math.min(1, sun.alt / 12));
+      const col = `rgb(255,${Math.round(150 + low * 90)},${Math.round(60 + low * 120)})`;
+      const gr = g.createRadialGradient(qs[0], qs[1], 4, qs[0], qs[1], 90);
+      gr.addColorStop(0, "rgba(255,230,160,.85)"); gr.addColorStop(0.25, "rgba(255,190,90,.35)"); gr.addColorStop(1, "rgba(255,170,60,0)");
+      g.fillStyle = gr; g.beginPath(); g.arc(qs[0], qs[1], 90, 0, 7); g.fill();
+      g.fillStyle = col; g.beginPath(); g.arc(qs[0], qs[1], 15, 0, 7); g.fill();
+    }
+  }
+
   function drawLines() {
     if (!map || !styleReady || !ctx.place) return;
     const pl = ctx.place, T = ctx.sunDay(), mrs = ctx.moonRiseSet(), t = msAt(minute), f = [];
-    const km = Math.max(4, 40 / Math.pow(2, Math.max(0, map.getZoom() - 10)));   // più corte quando si avvicina
+    const km = lineKm();   // più corte quando si avvicina
     if (T[-0.833].rise) f.push(lineFeature("sunrise", Astro.sunPos(T[-0.833].rise, pl.lat, pl.lon).az, km, 2.5));
     if (T[-0.833].set) f.push(lineFeature("sunset", Astro.sunPos(T[-0.833].set, pl.lat, pl.lon).az, km, 2.5));
     if (mrs.rise) f.push(lineFeature("moonrise", Astro.moonPos(mrs.rise, pl.lat, pl.lon).az, km * 0.85, 2, true));
@@ -248,6 +452,21 @@ const Planner = (() => {
     if (sun.alt > -6) f.push(lineFeature("sun", sun.az, km * 1.1, 5));
     if (moon.alt > -1) f.push(lineFeature("moon", moon.az, km, 4));
     if (core.alt > 0 && sun.alt < -12) f.push(lineFeature("core", core.az, km, 4));
+    // percorso del sole nella giornata, proiettato a terra: vicino al segnaposto = alto nel cielo
+    const st = dayStart(), arc = [];
+    for (let m = 0; m <= 1440; m += 10) {
+      const p = Astro.sunPos(st + m * 60000, pl.lat, pl.lon);
+      if (p.alt > -1) arc.push(dest(pl.lat, pl.lon, p.az, groundR(p.alt, km)));
+      else if (arc.length > 1) break;
+    }
+    if (arc.length > 1) f.push({ type: "Feature", properties: { kind: "sunpath", color: "#ffd27a", w: 1.5, dash: true }, geometry: { type: "LineString", coordinates: arc } });
+    if (con) CONSTELLATIONS[con].lines.forEach(([a, b]) => {
+      const A = CONSTELLATIONS[con].stars[a], B = CONSTELLATIONS[con].stars[b];
+      const pa = Astro.radecPos(t, pl.lat, pl.lon, A[0], A[1]), pb = Astro.radecPos(t, pl.lat, pl.lon, B[0], B[1]);
+      if (pa.alt > 0 && pb.alt > 0 && map.getPitch() < 35)
+        f.push({ type: "Feature", properties: { kind: "con", color: "#9fe3ff", w: 1.4, dash: false },
+          geometry: { type: "LineString", coordinates: [dest(pl.lat, pl.lon, pa.az, groundR(pa.alt, km)), dest(pl.lat, pl.lon, pb.az, groundR(pb.alt, km))] } });
+    });
     map.getSource("lines")?.setData({ type: "FeatureCollection", features: f });
   }
 
@@ -262,6 +481,7 @@ const Planner = (() => {
       if (marker) marker.setLngLat([pl.lon, pl.lat]);
       if (map && moved) map.easeTo({ center: [pl.lon, pl.lat], duration: 900 });
       renderJumps();
+      renderCon();
       computeHorizon();
     }
     updateTime();
@@ -281,6 +501,8 @@ const Planner = (() => {
     $p("#plCore").innerHTML = row("Direction", fmtAz(core.az)) + row("Height", fmtAlt(core.alt))
       + row("Visible", core.alt > 10 && sun.alt < -18 ? (moon.alt > 0 && il.fraction > 0.3 ? "Yes, but moonlit" : "Yes") : core.alt <= 0 ? "Below the horizon" : sun.alt >= -18 ? "Sky too bright" : "Too low");
     drawLines();
+    drawGround();
+    drawSky();
     drawPano();
   }
 
@@ -297,6 +519,35 @@ const Planner = (() => {
       minute = Math.max(0, Math.min(1439, +b.dataset.min)); followNow = false; stopPlay();
       $p("#plSlider").value = minute; updateTime(); centerPanoOn("current");
     }));
+  }
+
+  /* ---------- orari della costellazione: sorge, punto più alto, tramonta, visibile a cielo buio ---------- */
+  function renderCon() {
+    const list = $p("#plConTimes");
+    if (!list || !ctx?.place) return;
+    if (!con) { list.innerHTML = `<li><span>Choose a constellation to see its times.</span><strong></strong></li>`; return; }
+    const d = ctx.day, from = ctx.localToUtc(d.y, d.m, d.d, 12), pl = ctx.place;
+    let rise = null, set = null, best = null, bestAlt = -90, visFrom = null, visTo = null, prev = null;
+    for (let t = from; t <= from + 864e5; t += 5 * 60000) {
+      const p = conPos(con, t), up = p.alt > Math.max(0, horizonAt(p.az));
+      if (prev !== null && up && !prev && rise == null) rise = t;
+      if (prev !== null && !up && prev && set == null && rise != null) set = t;
+      if (prev !== null && !up && prev && set == null && rise == null) set = t;
+      const dark = Astro.sunPos(t, pl.lat, pl.lon).alt < -12;
+      if (dark && p.alt > bestAlt) { bestAlt = p.alt; best = t; }
+      if (dark && p.alt > Math.max(10, horizonAt(p.az) + 3)) { if (visFrom == null) visFrom = t; visTo = t; }
+      prev = up;
+    }
+    const always = conPos(con, from).alt > 0 && rise == null && set == null;
+    const row = (k, v, c = "") => `<li class="${c}"><span>${k}</span><strong>${v}</strong></li>`;
+    list.innerHTML = always ? row("Above the horizon", "all night") + (best ? row("Highest in the dark", `${ctx.fmtT(best)} · ${bestAlt.toFixed(0)}°`, "is-key") : "")
+      : bestAlt < 0 && !rise ? row("Visible", "not from here on this night")
+      : row("Rises", rise ? ctx.fmtT(rise) : "—") + row("Sets", set ? ctx.fmtT(set) : "—")
+        + (best && bestAlt > 0 ? row("Best moment (highest in the dark)", `${ctx.fmtT(best)} · ${bestAlt.toFixed(0)}°`, "is-key") : "")
+        + row("Well visible in a dark sky", visFrom ? `${ctx.fmtT(visFrom)} – ${ctx.fmtT(visTo)}` : "not tonight");
+    list.querySelectorAll(".is-key").forEach(li => { li.style.cursor = "pointer"; li.title = "Show this moment"; li.addEventListener("click", () => {
+      minute = Math.round((best - dayStart()) / 60000); if (minute >= 1440) minute -= 1440; if (minute < 0) minute += 1440;
+      followNow = false; $p("#plSlider").value = minute; updateTime(); }); });
   }
 
   /* =========================================================
@@ -377,6 +628,7 @@ const Planner = (() => {
     const max = Math.max(...H);
     note.innerHTML = `Your point is at <strong>${Math.round(observerElev)} m</strong>. The skyline rises up to <strong>${max.toFixed(1)}°</strong>${max > 1 ? ` (towards ${compass(H.indexOf(max) / 2)})` : ""}.`;
     renderHorizonTimes();
+    renderCon();
     drawPano();
     centerPanoOn("current");
   }
@@ -426,24 +678,24 @@ const Planner = (() => {
   }
 
   /* ---------- panorama dell'orizzonte con i percorsi ---------- */
-  const PX = 4, PH = 280;
+  const PX = 5, PH = 340;
+  let followSky = true;
   function drawPano() {
     const box = $p("#plPano");
     if (!box || !ctx?.place) return;
-    const pl = ctx.place, st = dayStart(), W = 360 * PX;
-    const sunPath = [], moonPath = [], corePath = [];
-    let maxAlt = 20;
+    const pl = ctx.place, st = dayStart(), W = 360 * PX, t = msAt(minute);
+    const sunPath = [], moonPath = [];
+    let maxAlt = 25;
     for (let m = 0; m <= 1440; m += 6) {
-      const t = st + m * 60000, s = Astro.sunPos(t, pl.lat, pl.lon), mo = Astro.moonPos(t, pl.lat, pl.lon), c = Astro.corePos(t, pl.lat, pl.lon);
-      sunPath.push({ ...s, m }); moonPath.push({ ...mo, m });
-      corePath.push({ ...c, m, dark: s.alt < -12 });
-      maxAlt = Math.max(maxAlt, s.alt);
+      const x = st + m * 60000, sp = Astro.sunPos(x, pl.lat, pl.lon);
+      sunPath.push({ ...sp, m }); moonPath.push({ ...Astro.moonPos(x, pl.lat, pl.lon), m });
+      maxAlt = Math.max(maxAlt, sp.alt);
     }
+    const sNow = Astro.sunPos(t, pl.lat, pl.lon), mNow = Astro.moonPos(t, pl.lat, pl.lon), cNow = Astro.corePos(t, pl.lat, pl.lon);
     const hMax = horizon ? Math.max(...horizon) : 0;
-    const yMax = Math.min(80, Math.max(20, Math.ceil(Math.max(maxAlt, hMax + 8) / 5) * 5)), yMin = -4;
-    const Y = a => (PH - 24) - ((a - yMin) / (yMax - yMin)) * (PH - 34);
+    const yMax = Math.min(85, Math.max(35, Math.ceil(Math.max(maxAlt, hMax + 10, con ? 45 : 0) / 5) * 5)), yMin = -4;
+    const Y = a => (PH - 26) - ((a - yMin) / (yMax - yMin)) * (PH - 36);
     const X = az => az * PX;
-    // percorso, spezzato quando passa per il nord (0/360) o scende sotto il bordo
     const path = (pts, ok = () => true) => {
       let d = "", pen = false, prev = null;
       for (const p of pts) {
@@ -454,36 +706,79 @@ const Planner = (() => {
       }
       return d;
     };
-    let sky = `M0 ${Y(yMin)}`;
-    for (let i = 0; i <= 720; i++) sky += `L${(i / 2 * PX).toFixed(1)} ${Y(Math.max(yMin, horizon ? horizon[i % 720] : -0.3)).toFixed(1)}`;
-    sky += `L${W} ${Y(yMin)}Z`;
-    const hourDots = sunPath.filter(p => p.m % 60 === 0 && p.alt > yMin).map(p => {
-      const lbl = ctx.fmtT(st + p.m * 60000).slice(0, 2);
-      return `<circle cx="${X(p.az)}" cy="${Y(p.alt)}" r="2.6" fill="${COL.sun}"/><text x="${X(p.az)}" y="${Y(p.alt) - 8}" class="pano-hr">${lbl}</text>`;
-    }).join("");
-    const t = msAt(minute), sNow = Astro.sunPos(t, pl.lat, pl.lon), mNow = Astro.moonPos(t, pl.lat, pl.lon), cNow = Astro.corePos(t, pl.lat, pl.lon);
-    const grid = [0, 10, 20, 30, 40, 50, 60, 70].filter(a => a <= yMax).map(a => `<line x1="0" x2="${W}" y1="${Y(a)}" y2="${Y(a)}" class="pano-grid"/><text x="4" y="${Y(a) - 3}" class="pano-deg">${a}°</text>`).join("");
-    const ticks = Array.from({ length: 24 }, (_, i) => i * 15).map(az => `<line x1="${X(az)}" x2="${X(az)}" y1="${PH - 24}" y2="${PH - (az % 45 ? 19 : 14)}" class="pano-tick"/>${az % 45 === 0 ? `<text x="${X(az)}" y="${PH - 4}" class="pano-card">${compass(az)}</text>` : ""}`).join("");
-    box.innerHTML = `<svg viewBox="0 0 ${W} ${PH}" width="${W}" height="${PH}" role="img" aria-label="Panorama of the skyline with the paths of the sun, moon and Milky Way">
-      <rect width="${W}" height="${PH}" class="pano-bg"/>${grid}
-      <path d="${path(corePath, p => p.dark)}" class="pano-core"/>
+    // colore del cielo secondo l'altezza del sole
+    const sa = sNow.alt;
+    const sky = sa > 6 ? ["#3d78c4", "#9cc4ec"] : sa > -4 ? ["#2a4f8a", "#e7a35a"] : sa > -6 ? ["#132b55", "#4d6fb0"] : sa > -12 ? ["#0a1834", "#1f3b6e"] : sa > -18 ? ["#060f22", "#0f2347"] : ["#02060f", "#06122a"];
+    const dark = sa < -12;
+    let land = `M0 ${Y(yMin)}`;
+    for (let i = 0; i <= 720; i++) land += `L${(i / 2 * PX).toFixed(1)} ${Y(Math.max(yMin, horizon ? horizon[i % 720] : -0.3)).toFixed(1)}`;
+    land += `L${W} ${Y(yMin)}Z`;
+    // Via Lattea
+    let band = "";
+    if (dark) {
+      const pts = [];
+      for (let l = -180; l <= 180; l += 2) { const [ra, dec] = Astro.galToRaDec(l); pts.push({ ...Astro.radecPos(t, pl.lat, pl.lon, ra, dec), l }); }
+      for (let i = 1; i < pts.length; i++) {
+        const p0 = pts[i - 1], p1 = pts[i];
+        if (p0.alt < yMin || p1.alt < yMin || Math.abs(p1.az - p0.az) > 180) continue;
+        const near = Math.max(0, 1 - Math.abs(p1.l) / 60);
+        band += `<line x1="${X(p0.az).toFixed(1)}" y1="${Y(p0.alt).toFixed(1)}" x2="${X(p1.az).toFixed(1)}" y2="${Y(p1.alt).toFixed(1)}" stroke-width="${(16 + near * 34).toFixed(0)}" stroke-opacity="${(0.07 + near * 0.2).toFixed(2)}"/>`;
+      }
+      band = `<g class="pano-band" filter="url(#svBlur)">${band}</g>`;
+    }
+    // costellazione
+    let cons = "";
+    if (con && sa < -6) {
+      const C = CONSTELLATIONS[con], P = C.stars.map(x => Astro.radecPos(t, pl.lat, pl.lon, x[0], x[1]));
+      cons += C.lines.map(([a, b]) => P[a].alt > yMin && P[b].alt > yMin && Math.abs(P[a].az - P[b].az) < 180
+        ? `<line x1="${X(P[a].az)}" y1="${Y(P[a].alt)}" x2="${X(P[b].az)}" y2="${Y(P[b].alt)}" class="pano-conline"/>` : "").join("");
+      cons += P.map((p, i) => p.alt > yMin ? `<circle cx="${X(p.az)}" cy="${Y(p.alt)}" r="${C.labels?.[i] ? 3.4 : 2.5}" class="pano-star"/>${C.labels?.[i] ? `<text x="${X(p.az) + 7}" y="${Y(p.alt) - 6}" class="pano-starname">${C.labels[i]}</text>` : ""}` : "").join("");
+      const c = conPos(con, t);
+      if (c.alt > yMin) cons += `<text x="${X(c.az)}" y="${Y(c.alt) + 30}" class="pano-conname">${C.name.split(" (")[0].toUpperCase()}</text>`;
+    }
+    const hourDots = sunPath.filter(p => p.m % 60 === 0 && p.alt > yMin).map(p =>
+      `<circle cx="${X(p.az)}" cy="${Y(p.alt)}" r="2.4" class="pano-hrdot"/><text x="${X(p.az)}" y="${Y(p.alt) - 8}" class="pano-hr">${ctx.fmtT(st + p.m * 60000).slice(0, 2)}</text>`).join("");
+    const grid = [0, 15, 30, 45, 60, 75].filter(a => a <= yMax).map(a => `<line x1="0" x2="${W}" y1="${Y(a)}" y2="${Y(a)}" class="pano-grid"/><text x="6" y="${Y(a) - 4}" class="pano-deg">${a}°</text>`).join("");
+    const ticks = Array.from({ length: 24 }, (_, i) => i * 15).map(az => `<line x1="${X(az)}" x2="${X(az)}" y1="${PH - 26}" y2="${PH - (az % 45 ? 21 : 15)}" class="pano-tick"/>${az % 45 === 0 ? `<text x="${X(az)}" y="${PH - 5}" class="pano-card">${compass(az)}</text>` : ""}`).join("");
+    const il = Astro.moonIllum(t);
+    const moonSvg = mNow.alt > yMin ? (() => {
+      const r = 11, cx = X(mNow.az), cy = Y(mNow.alt), k = Math.cos(2 * Math.PI * il.phase), waxing = il.phase < 0.5;
+      const outer = waxing ? 1 : 0, inner = waxing ? (k > 0 ? 0 : 1) : (k > 0 ? 1 : 0);
+      const lit = il.fraction < 0.01 ? "" : `<path d="M${cx} ${cy - r}A${r} ${r} 0 0 ${outer} ${cx} ${cy + r}A${Math.abs(r * k).toFixed(2)} ${r} 0 0 ${inner} ${cx} ${cy - r}Z" fill="#f4eedc"/>`;
+      return `<circle cx="${cx}" cy="${cy}" r="${r * 3}" fill="url(#svMoonGlow)" stroke="none" opacity="${(0.3 + il.fraction * 0.7).toFixed(2)}"/><circle cx="${cx}" cy="${cy}" r="${r}" fill="#2a3444" stroke="none"/>${lit}`;
+    })() : "";
+    box.innerHTML = `<svg viewBox="0 0 ${W} ${PH}" width="${W}" height="${PH}" role="img" aria-label="Sky seen from the pin at ${ctx.fmtT(t)}">
+      <defs>
+        <linearGradient id="svSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${sky[0]}"/><stop offset="1" stop-color="${sky[1]}"/></linearGradient>
+        <radialGradient id="svSun"><stop offset="0" stop-color="#fff3c4"/><stop offset=".25" stop-color="rgba(255,200,90,.6)"/><stop offset="1" stop-color="rgba(255,170,60,0)"/></radialGradient>
+        <radialGradient id="svMoonGlow"><stop offset="0" stop-color="rgba(240,236,220,.4)"/><stop offset=".55" stop-color="rgba(240,236,220,.08)"/><stop offset="1" stop-color="rgba(240,236,220,0)"/></radialGradient>
+        <radialGradient id="svCore"><stop offset="0" stop-color="rgba(255,240,220,.95)"/><stop offset=".35" stop-color="rgba(214,190,255,.5)"/><stop offset="1" stop-color="rgba(199,155,255,0)"/></radialGradient>
+        <filter id="svBlur" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur stdDeviation="6"/></filter>
+      </defs>
+      <rect width="${W}" height="${PH}" fill="url(#svSky)"/>${grid}${band}
       <path d="${path(moonPath)}" class="pano-moon"/>
       <path d="${path(sunPath)}" class="pano-sun"/>${hourDots}
-      <path d="${sky}" class="pano-land"/>
+      ${cons}
+      ${dark && cNow.alt > yMin ? `<circle cx="${X(cNow.az)}" cy="${Y(cNow.alt)}" r="30" fill="url(#svCore)" stroke="none"/>` : ""}
+      ${moonSvg}
+      ${sNow.alt > yMin ? `<circle cx="${X(sNow.az)}" cy="${Y(sNow.alt)}" r="60" fill="url(#svSun)" stroke="none"/><circle cx="${X(sNow.az)}" cy="${Y(sNow.alt)}" r="13" class="pano-sunnow"/>` : ""}
+      <path d="${land}" class="pano-land"/>
+      <rect x="0" y="${PH - 26}" width="${W}" height="26" class="pano-foot"/>
       ${ticks}
-      ${cNow.alt > yMin ? `<text x="${X(cNow.az)}" y="${Y(cNow.alt) + 6}" class="pano-corestar">✦</text>` : ""}
-      ${mNow.alt > yMin ? `<circle cx="${X(mNow.az)}" cy="${Y(mNow.alt)}" r="7" class="pano-moonnow"/>` : ""}
-      ${sNow.alt > yMin ? `<circle cx="${X(sNow.az)}" cy="${Y(sNow.alt)}" r="9" class="pano-sunnow"/>` : ""}
     </svg>`;
+    const clk = $p("#plSvClock"); if (clk) clk.textContent = `${ctx.fmtT(t)} · ${phase(sa)}`;
+    if (followSky) centerPanoOn(playing ? "auto" : "smooth");
   }
-  function centerPanoOn() {
+  function centerPanoOn(behavior = "smooth") {
     const wrap = $p("#plPanoWrap");
     if (!wrap || !ctx?.place) return;
     const t = msAt(minute), pl = ctx.place, s = Astro.sunPos(t, pl.lat, pl.lon), m = Astro.moonPos(t, pl.lat, pl.lon), c = Astro.corePos(t, pl.lat, pl.lon);
-    const az = s.alt > -6 ? s.az : m.alt > 0 ? m.az : c.az;
-    wrap.scrollTo({ left: Math.max(0, az * PX - wrap.clientWidth / 2), behavior: "smooth" });
+    const cc = con ? conPos(con, t) : null;
+    const az = s.alt > -6 ? s.az : c.alt > 3 && s.alt < -12 ? c.az : cc && cc.alt > 3 ? cc.az : m.alt > 0 ? m.az : s.az;
+    const left = Math.max(0, az * PX - wrap.clientWidth / 2);
+    if (Math.abs(wrap.scrollLeft - left) > 4) wrap.scrollTo({ left, behavior: behavior === "current" ? "smooth" : behavior });
   }
 
-  return { show };
+  return { show, _debug: () => ({ map, styleReady, minute }) };
 })();
 window.Planner = Planner;

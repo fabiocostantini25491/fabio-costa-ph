@@ -88,7 +88,21 @@ const Astro = (() => {
     return { alt: altitude(H, phi, GC.dec) / rad, az: toBearing(azimuth(H, phi, GC.dec)) };
   }
 
-  return { sunAlt, sunTimes, moonAlt, moonIllum, coreAlt, sunPos, moonPos, corePos };
+  /* qualsiasi stella o punto del cielo, da ascensione retta e declinazione (gradi, J2000) */
+  function radecPos(ms, lat, lon, raDeg, decDeg) {
+    const d = toDays(ms), H = siderealTime(d, rad * -lon) - raDeg * rad, phi = rad * lat, dec = decDeg * rad;
+    return { alt: altitude(H, phi, dec) / rad, az: toBearing(azimuth(H, phi, dec)) };
+  }
+  /* punto del piano della Via Lattea (longitudine galattica l, latitudine b) → RA/Dec in gradi */
+  function galToRaDec(l, b = 0) {
+    const aN = 192.85948 * rad, dN = 27.12825 * rad, lN = 122.93192 * rad;
+    l *= rad; b *= rad;
+    const dec = asin(sin(dN) * sin(b) + cos(dN) * cos(b) * cos(lN - l));
+    const ra = aN + atan(cos(b) * sin(lN - l), cos(dN) * sin(b) - sin(dN) * cos(b) * cos(lN - l));
+    return [((ra / rad) % 360 + 360) % 360, dec / rad];
+  }
+
+  return { sunAlt, sunTimes, moonAlt, moonIllum, coreAlt, sunPos, moonPos, corePos, radecPos, galToRaDec };
 })();
 
 /* =========================================================

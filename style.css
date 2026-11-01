@@ -898,3 +898,33 @@ main > .page{scroll-margin-top:80px}
 .shot-ai{flex-wrap:wrap;text-align:left;border-radius:14px;padding:8px 12px}
 .shot-form label{min-width:0}
 .shot-form input,.shot-form select{width:100%}
+/* planner: cielo 3D e astri sulla mappa */
+.pl-sky{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1}
+.pl-body{pointer-events:none;opacity:var(--a,1);transition:opacity .2s}
+.b-sun{width:26px;height:26px;border-radius:50%;background:radial-gradient(circle,#fff6c8 0,#ffd75a 45%,#ff9a3c 100%);box-shadow:0 0 18px 6px rgba(255,200,80,.65),0 0 46px 14px rgba(255,170,60,.3)}
+.b-moon{width:22px;height:22px;filter:drop-shadow(0 0 8px rgba(240,236,220,.7))}
+.b-moon svg{display:block}
+.b-core{width:34px;height:34px;border-radius:50%;background:radial-gradient(circle,rgba(255,240,220,.95) 0,rgba(214,190,255,.55) 35%,rgba(199,155,255,0) 70%)}
+.b-con{padding:3px 8px;border:1px solid rgba(159,227,255,.6);border-radius:999px;background:rgba(5,11,20,.8);color:#bfeaff;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;white-space:nowrap}
+.pl-con{margin-bottom:18px}
+.pl-con-head{display:flex;justify-content:space-between;align-items:flex-end;gap:14px;flex-wrap:wrap}
+.pl-con-pick select{background:rgba(3,9,18,.7);border:1px solid var(--line-strong);border-radius:999px;color:#fff;padding:10px 16px;font:inherit;font-size:14px;color-scheme:dark;min-height:44px}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+/* sky view */
+.pl-skyview{margin-bottom:18px}
+.pl-sv-head{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
+.pl-follow{display:inline-flex;align-items:center;gap:8px;font-size:13px;color:var(--soft);cursor:pointer}
+.pl-follow input{width:18px;height:18px;accent-color:var(--accent)}
+.pl-skyview .pl-pano-wrap{cursor:grab;touch-action:pan-x pan-y}
+.pano-band line{stroke:#d6c8ff;stroke-linecap:round}
+.pano-conline{stroke:rgba(159,227,255,.75);stroke-width:1.3}
+.pano-star{fill:#fff;filter:drop-shadow(0 0 4px #9fe3ff)}
+.pano-starname{fill:rgba(220,240,255,.85);font-size:11px}
+.pano-conname{fill:#9fe3ff;font-size:12px;font-weight:600;letter-spacing:.14em;text-anchor:middle}
+.pano-hrdot{fill:#ffd27a}
+.pano-clock{fill:#fff;font-size:18px;text-anchor:end;font-variant-numeric:tabular-nums;opacity:.85}
+.pano-land{fill:#01040a;stroke:#7fa3d6;stroke-width:1.2}
+.pano-sunnow{fill:#ffe9a0;stroke:#fff;stroke-width:1.5}
+.pl-sv-box{position:relative}
+.pl-sv-clock{position:absolute;top:10px;left:12px;margin:0;padding:5px 12px;border-radius:999px;background:rgba(2,6,15,.7);border:1px solid var(--line);color:#fff;font-size:13px;font-variant-numeric:tabular-nums;pointer-events:none}
+.pano-foot{fill:#01040a}
