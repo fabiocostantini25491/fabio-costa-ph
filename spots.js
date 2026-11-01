@@ -68,6 +68,7 @@ const Spots = (() => {
   let socialV = true;       // false finché non è stato eseguito supabase-sociale.sql
   let guest = false;        // visitatore senza account: vede solo la selezione pubblica
   let guestLoaded = false, publicTotal = 0, wantLogin = false;
+  let tkV = true;           // false finché non è stato eseguito supabase-trekking.sql
   let wsV = true;           // false finché non è stato eseguito supabase-workshop.sql
   let pubV = true;          // false finché non è stato eseguito supabase-pubblico.sql
   let reports = new Map();  // spot_id → segnalazioni attive
@@ -179,10 +180,11 @@ const Spots = (() => {
     for (let from = 0; ; from += PAGE_SIZE) {
       let data;
       try {
-        ({ data } = await api(`/rest/v1/spots?select=${cols}${schemaV2 ? ",category,starts_on,ends_on,created_by,author_name" : ""}${schemaV2 && socialV ? ",support_local,fragile,best_months" + (pubV ? ",public_pick" : "") : ""}${schemaV2 && wsV ? ",ws_capacity,ws_enrolled,ws_price,ws_currency,ws_link,support_since,ws_offer,ws_offer_until" : ""}&order=list.asc,name.asc`, {
+        ({ data } = await api(`/rest/v1/spots?select=${cols}${schemaV2 ? ",category,starts_on,ends_on,created_by,author_name" : ""}${schemaV2 && socialV ? ",support_local,fragile,best_months" + (pubV ? ",public_pick" : "") : ""}${schemaV2 && wsV ? ",ws_capacity,ws_enrolled,ws_price,ws_currency,ws_link,support_since,ws_offer,ws_offer_until" : ""}${schemaV2 && tkV ? ",tk_difficulty,tk_minutes,tk_km,tk_gain,tk_route,tk_parking,tk_park_lat,tk_park_lon" : ""}&order=list.asc,name.asc`, {
           headers: { "Range-Unit": "items", Range: `${from}-${from + PAGE_SIZE - 1}` } }));
       } catch (err) {
         // database non ancora aggiornato (colonne nuove assenti): funziona come prima
+        if (tkV && schemaV2 && err.status === 400 && from === 0) { tkV = false; from -= PAGE_SIZE; continue; }
         if (wsV && schemaV2 && err.status === 400 && from === 0) { wsV = false; from -= PAGE_SIZE; continue; }
         if (pubV && socialV && schemaV2 && err.status === 400 && from === 0) { pubV = false; from -= PAGE_SIZE; continue; }
         if (socialV && schemaV2 && err.status === 400 && from === 0) { socialV = false; from -= PAGE_SIZE; continue; }
@@ -1087,6 +1089,63 @@ const Spots = (() => {
     </section>`;
   }
 
+  /* ---------- trekking: punto di partenza, difficoltà, tempo, dislivello, parcheggio ---------- */
+  const TK_DIFF = { T: "Easy (T)", E: "Moderate (E)", EE: "Hard (EE)", EEA: "Expert, via ferrata gear (EEA)" };
+  const TK_ROUTE = { loop: "Loop", back: "Out and back", oneway: "One way" };
+  const isTk = s => s.category === "trekking";
+  const fmtDur = m => { const h = Math.floor(m / 60), r = m % 60; return h ? `${h} h${r ? ` ${String(r).padStart(2, "0")}` : ""}` : `${r} min`; };
+  // pendenza media: dislivello in salita sulla parte in salita del percorso (metà, se andata e ritorno o anello)
+  const tkGrade = s => (s.tk_gain && s.tk_km ? Math.round(s.tk_gain / ((s.tk_route === "oneway" ? s.tk_km : s.tk_km / 2) * 1000) * 100) : null);
+  const gradeWord = g => (g < 6 ? "gentle" : g < 12 ? "moderate" : g < 20 ? "steep" : "very steep");
+  function tkBoxHtml(s) {
+    if (!isTk(s)) return "";
+    const chips = [];
+    if (s.tk_difficulty) chips.push(`<span class="ws-chip tk-diff d-${s.tk_difficulty}">⛰️ <b>${esc(TK_DIFF[s.tk_difficulty] || s.tk_difficulty)}</b></span>`);
+    if (s.tk_minutes) chips.push(`<span class="ws-chip">⏱️ <b>${fmtDur(s.tk_minutes)}</b></span>`);
+    if (s.tk_km) chips.push(`<span class="ws-chip">↔ <b>${(+s.tk_km).toLocaleString(window.I18N?.locale || "en-GB")} km</b>${s.tk_route ? ` · ${TK_ROUTE[s.tk_route]}` : ""}</span>`);
+    else if (s.tk_route) chips.push(`<span class="ws-chip">${TK_ROUTE[s.tk_route]}</span>`);
+    if (s.tk_gain != null) chips.push(`<span class="ws-chip">↗ <b>${s.tk_gain} m</b> up</span>`);
+    const g = tkGrade(s);
+    if (g != null) chips.push(`<span class="ws-chip">📐 <b>≈ ${g}%</b> ${gradeWord(g)}</span>`);
+    const park = s.tk_parking || (s.tk_park_lat != null);
+    const parkNav = s.tk_park_lat != null ? `https://www.google.com/maps/dir/?api=1&destination=${(+s.tk_park_lat).toFixed(6)},${(+s.tk_park_lon).toFixed(6)}` : "";
+    return `<div class="tk-box">
+      <p class="tk-start">🚩 <b>Trailhead</b> — the pin marks where the walk starts.</p>
+      ${chips.length ? `<div class="ws-box">${chips.join("")}</div>` : ""}
+      ${park ? `<p class="tk-park">🅿️ <b>Parking</b>${s.tk_parking ? ` — ${esc(s.tk_parking)}` : ""}${parkNav ? ` <a class="text-link" href="${esc(parkNav)}" target="_blank" rel="noopener">${ICON.ext}Directions to parking</a>` : ""}</p>` : ""}
+    </div>`;
+  }
+  function tkFieldsHtml(s, id) {
+    const v = x => (x == null ? "" : esc(String(x)));
+    const h = s.tk_minutes ? Math.floor(s.tk_minutes / 60) : "", m = s.tk_minutes ? s.tk_minutes % 60 : "";
+    const park = s.tk_park_lat != null ? `${(+s.tk_park_lat).toFixed(6)}, ${(+s.tk_park_lon).toFixed(6)}` : "";
+    return `<div class="ws-fields tk-fields">
+      <label>Difficulty<select id="${id}Diff"><option value="">—</option>${Object.entries(TK_DIFF).map(([k, t]) => `<option value="${k}"${s.tk_difficulty === k ? " selected" : ""}>${t}</option>`).join("")}</select></label>
+      <label>Route<select id="${id}Route"><option value="">—</option>${Object.entries(TK_ROUTE).map(([k, t]) => `<option value="${k}"${s.tk_route === k ? " selected" : ""}>${t}</option>`).join("")}</select></label>
+      <label>Total time<span class="pay-row"><input type="number" id="${id}H" min="0" max="300" step="1" inputmode="numeric" value="${h}" placeholder="h" aria-label="Hours">
+        <input type="number" id="${id}M" min="0" max="59" step="5" inputmode="numeric" value="${m}" placeholder="min" aria-label="Minutes"></span></label>
+      <label>Length (km)<input type="number" id="${id}Km" min="0.1" max="9999" step="0.1" inputmode="decimal" value="${v(s.tk_km)}" placeholder="e.g. 8.5"></label>
+      <label>Elevation gain (m)<input type="number" id="${id}Gain" min="0" max="9000" step="10" inputmode="numeric" value="${v(s.tk_gain)}" placeholder="e.g. 650"></label>
+      <label>Average slope<output id="${id}Grade" class="tk-grade">—</output></label>
+      <label class="ws-wide">Where to park<input type="text" id="${id}Park" maxlength="300" value="${v(s.tk_parking)}" placeholder="e.g. Free car park at Malga Zannes, fills up by 8am"></label>
+      <label class="ws-wide">Parking coordinates <small>(optional)</small><input type="text" id="${id}ParkC" value="${park}" placeholder="46.6156, 11.7322" autocomplete="off"></label>
+    </div>
+    <p class="gate-help left">All optional. The slope is worked out from length and elevation gain.</p>`;
+  }
+  function readTk(root, id) {
+    const q = n => root.querySelector(`#${id}${n}`);
+    const num = n => { const x = q(n)?.value; return x === "" || x == null ? null : +x; };
+    const h = num("H") || 0, m = num("M") || 0, pc = (q("ParkC")?.value || "").trim();
+    const c = pc ? parseCoordsInput(pc) : null;
+    return { tk_difficulty: q("Diff")?.value || null, tk_route: q("Route")?.value || null, tk_minutes: h * 60 + m || null,
+      tk_km: num("Km"), tk_gain: num("Gain"), tk_parking: (q("Park")?.value || "").trim() || null,
+      tk_park_lat: c ? c.lat : null, tk_park_lon: c ? c.lon : null, _badPark: !!pc && !c };
+  }
+  function wireTkGrade(root, id) {
+    const upd = () => { const t = readTk(root, id), g = tkGrade(t); const o = root.querySelector(`#${id}Grade`); if (o) o.textContent = g != null ? `≈ ${g}% · ${gradeWord(g)}` : "—"; };
+    ["Km", "Gain", "Route"].forEach(n => root.querySelector(`#${id}${n}`)?.addEventListener("input", upd)); upd();
+  }
+
   function guestPopup(s) {
     const cat = CATS[s.category] || CATS.spot;
     return `<div class="spot-pop">
@@ -1139,6 +1198,9 @@ const Spots = (() => {
       ${localNew(s) ? `<span class="ws-chip new local-chip">🌱 New in Support local</span>` : freshPlace(s) ? `<span class="ws-chip new local-chip">✨ New on the map</span>` : ""}
       ${dates ? `<p class="pop-dates">${ICON.cal}<span>${dates}</span></p>` : ""}
       <div data-wsbox>${wsBoxHtml(s)}</div>
+      ${isTk(s) ? `<div data-tkbox>${tkBoxHtml(s)}</div>` : ""}
+      ${isTk(s) && tkV && canEdit(s) ? `<button type="button" class="pop-btn ws-edit" data-tkedit>⛰️ Edit trail info</button>
+        <form class="pop-review ws-form" data-tkform hidden>${tkFieldsHtml(s, "tk")}<button type="submit" class="pop-btn primary">Save</button></form>` : ""}
       ${isWs(s) && wsV && canEdit(s) ? `<button type="button" class="pop-btn ws-edit" data-wsedit>👥 Update places, price and link</button>
         <form class="pop-review ws-form" data-wsform hidden>${wsFieldsHtml(s, "ws")}<button type="submit" class="pop-btn primary">Save</button></form>` : ""}
       <div class="pop-alerts" data-alerts>${alertsHtml(s)}</div>
@@ -1215,6 +1277,23 @@ const Spots = (() => {
     el.querySelector("[data-rights]")?.addEventListener("click", ev => { ev.preventDefault(); map.closePopup(); $("#photoRights")?.scrollIntoView({ behavior: "smooth", block: "center" }); });
     if (!schemaV2) return;
     if (socialV) wireSocial(popup, s);
+    const tf = el.querySelector("[data-tkform]");
+    if (tf) wireTkGrade(tf, "tk");
+    el.querySelector("[data-tkedit]")?.addEventListener("click", () => { tf.hidden = !tf.hidden; popup.update(); });
+    tf?.addEventListener("submit", async ev => {
+      ev.preventDefault();
+      const t = readTk(tf, "tk");
+      if (t._badPark) return toast("Parking coordinates not recognised. Format: 46.6156, 11.7322", true);
+      delete t._badPark;
+      const btn = tf.querySelector("[type=submit]"); btn.disabled = true;
+      try {
+        await api(`/rest/v1/spots?id=eq.${s.id}`, { method: "PATCH", body: t, headers: { Prefer: "return=minimal" } });
+        Object.assign(s, t);
+        el.querySelector("[data-tkbox]").innerHTML = tkBoxHtml(s);
+        tf.hidden = true; popup.update(); toast("Trail updated.");
+      } catch (err) { toast(`Could not save: ${err.message}`, true); }
+      btn.disabled = false;
+    });
     const wf = el.querySelector("[data-wsform]");
     el.querySelector("[data-wsedit]")?.addEventListener("click", () => { wf.hidden = !wf.hidden; popup.update(); });
     wf?.addEventListener("submit", async ev => {
@@ -1624,7 +1703,8 @@ const Spots = (() => {
         </fieldset>` : ""}
         <label for="addName">Name</label>
         <input id="addName" type="text" maxlength="300" placeholder="e.g. Capo Testa lighthouse" value="${esc(preset.name || "")}" required>
-        <label for="addCoords">Coordinates or Google Maps link</label>
+        <label for="addCoords" id="addCoordsLabel">Coordinates or Google Maps link</label>
+        <p class="tk-hint" id="addTkHint" hidden>🚩 For a trek, use the coordinates of the <b>starting point</b> (trailhead), not the summit or the view.</p>
         <div class="gkey-row">
           <input id="addCoords" type="text" inputmode="text" placeholder="41.902782, 12.496366" value="${esc(c0)}" autocomplete="off" required>
           <button class="text-link" type="button" id="addPaste">Paste</button>
@@ -1637,6 +1717,7 @@ const Spots = (() => {
           <p class="gate-help left">The workshop disappears from the map by itself on the day it starts.</p>
           ${wsV ? wsFieldsHtml({}, "add") : ""}
         </div>` : ""}
+        ${schemaV2 && tkV ? `<fieldset class="soc-add tk-add" id="addTk" hidden><legend>Trail <small>(optional)</small></legend>${tkFieldsHtml({}, "addTk")}</fieldset>` : ""}
         ${schemaV2 && socialV ? `<fieldset class="soc-add"><legend>Community <small>(optional)</small></legend>
           <label class="shot-check"><input type="checkbox" id="addSupport"> 🌱 Support local — this place benefits from visitors</label>
           <input type="text" id="addMonths" maxlength="60" placeholder="Best months to visit, e.g. Oct–Apr">
@@ -1654,7 +1735,14 @@ const Spots = (() => {
       </form>`;
     const f = d.querySelector("form"), ci = d.querySelector("#addCoords"), note = d.querySelector("#addCoordsNote");
     const catVal = () => d.querySelector("[name=addCat]:checked")?.value || "spot";
-    const syncCat = () => { const box = d.querySelector("#addDates"); if (box) box.hidden = catVal() !== "workshop"; };
+    const syncCat = () => {
+      const c = catVal(), box = d.querySelector("#addDates"), tk = d.querySelector("#addTk");
+      if (box) box.hidden = c !== "workshop";
+      if (tk) tk.hidden = c !== "trekking";
+      d.querySelector("#addTkHint").hidden = c !== "trekking";
+      d.querySelector("#addCoordsLabel").textContent = c === "trekking" ? "Trailhead coordinates (where the walk starts)" : "Coordinates or Google Maps link";
+    };
+    if (d.querySelector("#addTk")) wireTkGrade(d, "addTk");
     d.querySelectorAll("[name=addCat]").forEach(r => r.addEventListener("change", syncCat)); syncCat();
     const check = () => {
       const c = parseCoordsInput(ci.value);
@@ -1681,6 +1769,9 @@ const Spots = (() => {
       const from = d.querySelector("#addFrom")?.value || null, to = d.querySelector("#addTo")?.value || null;
       if (cat === "workshop" && from && to && to < from) return warn("The end date is before the start date.", d.querySelector("#addTo"));
       const ws = cat === "workshop" && wsV ? readWs(d, "add") : null;
+      const tk = cat === "trekking" && tkV ? readTk(d, "addTk") : null;
+      if (tk && tk._badPark) return warn("Parking coordinates not recognised. Format: 46.6156, 11.7322", d.querySelector("#addTkParkC"));
+      if (tk) delete tk._badPark;
       if (ws && ws.link && !/^https?:\/\//i.test(ws.link)) return warn("The workshop link must start with https://", d.querySelector("#addLink"));
       if (ws && ws.cap != null && ws.enr != null && ws.enr > ws.cap) return warn("Booked can't be more than the places in total.", d.querySelector("#addEnr"));
       const author = d.querySelector("#addAuthor")?.value.trim() || "";
@@ -1690,6 +1781,7 @@ const Spots = (() => {
       const row = { source_key: `u:${crypto.randomUUID()}`, name: name.slice(0, 300), lat: c.lat, lon: c.lon, list,
         note: d.querySelector("#addNote").value.trim() || null, url: url || null };
       if (schemaV2) Object.assign(row, { category: cat, starts_on: cat === "workshop" ? from : null, ends_on: cat === "workshop" ? (to || from) : null, author_name: author || displayName() });
+      if (tk) Object.assign(row, tk);
       if (ws) Object.assign(row, { ws_capacity: ws.cap || null, ws_enrolled: ws.enr, ws_price: ws.price, ws_currency: ws.price != null ? ws.cur : null, ws_link: ws.link || null, ws_offer: ws.offer || null, ws_offer_until: ws.offerUntil });
       if (schemaV2 && socialV) Object.assign(row, { support_local: !!d.querySelector("#addSupport")?.checked, best_months: d.querySelector("#addMonths")?.value.trim() || null });
       const makeFragile = !!d.querySelector("#addFragile")?.checked;

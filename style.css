@@ -1293,3 +1293,21 @@ main > .page{scroll-margin-top:80px}
 .ws-card-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:2px}
 .ws-card-actions .pop-btn{text-decoration:none}
 .ws-empty{margin:12px 0 0;padding:16px 18px;border:1px dashed var(--line-strong);border-radius:16px;color:var(--soft);font-size:14px}
+
+/* trekking */
+.tk-box{margin:6px 0 2px}
+.tk-start,.tk-park{margin:6px 0;font-size:13px;color:var(--soft);line-height:1.5}
+.tk-start b,.tk-park b{color:#fff;font-weight:500}
+.tk-park .text-link{display:inline-flex;margin-left:4px}
+.tk-diff.d-T{border-color:rgba(126,214,155,.7)}
+.tk-diff.d-E{border-color:rgba(156,200,255,.7)}
+.tk-diff.d-EE{border-color:rgba(255,196,110,.75)}
+.tk-diff.d-EEA{border-color:rgba(255,110,110,.75)}
+.tk-hint{margin:2px 0 4px;padding:10px 12px;border:1px solid rgba(247,166,196,.45);border-radius:12px;font-size:13px;color:var(--soft);line-height:1.5}
+.tk-hint b{color:#fff}
+.tk-grade{display:flex;align-items:center;min-height:42px;padding:0 4px;color:#fff;font-size:14px;letter-spacing:0;text-transform:none}
+.ws-fields .pay-row{display:flex !important;gap:6px;align-items:center}
+.ws-fields .pay-row input{flex:1 1 0;min-width:0;margin-bottom:0}
+.ws-fields input{margin-bottom:0 !important}
+.ws-fields select{appearance:none;-webkit-appearance:none;width:100%;background:rgba(3,9,18,.7) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239cc8ff' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 12px center/14px;border:1px solid var(--line-strong);border-radius:999px;color:#fff;padding:11px 34px 11px 16px;font:inherit;font-size:14px;letter-spacing:0;text-transform:none}
+.ws-fields .pay-row select{width:auto;flex:none}
