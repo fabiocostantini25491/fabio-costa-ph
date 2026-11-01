@@ -24,15 +24,18 @@ function esc(s = "") {
 const norm = s => String(s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").trim();
 const slug = s => norm(s).replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "luogo";
 
-const MONTHS = ["gen", "feb", "mar", "apr", "mag", "giu", "lug", "ago", "set", "ott", "nov", "dic"];
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+/* Le categorie restano in italiano nel pannello, sul sito si leggono in inglese */
+const CATEGORY_EN = { Paesaggi: "Landscapes", Urban: "Urban", Viaggi: "Travel", Fotografia: "Photography", Tecnica: "Technique", Ispirazione: "Inspiration" };
+const catLabel = c => CATEGORY_EN[c] || c || "";
 function parseDate(d) { return d ? new Date(d + "T00:00:00") : null; }
 function fmtDate(d) {
   const x = parseDate(d);
-  return x ? `${x.getDate()} ${MONTHS[x.getMonth()]} ${x.getFullYear()}` : "Data non indicata";
+  return x ? `${x.getDate()} ${MONTHS[x.getMonth()]} ${x.getFullYear()}` : "Date not specified";
 }
 function fmtRange(a, b) {
   const s = parseDate(a), e = parseDate(b || a);
-  if (!s) return "Date non indicate";
+  if (!s) return "Dates not specified";
   if (!e || +s === +e) return fmtDate(a);
   if (s.getFullYear() === e.getFullYear() && s.getMonth() === e.getMonth())
     return `${s.getDate()}–${e.getDate()} ${MONTHS[e.getMonth()]} ${e.getFullYear()}`;
@@ -189,8 +192,8 @@ const gmapsUrl = (lat, lon) => `https://www.google.com/maps/search/?api=1&query=
 function photoCoordsHtml(p) {
   if (!p || !Number.isFinite(+p.lat) || !Number.isFinite(+p.lon)) return "";
   return `<span class="shot-coords">${ICON.pin}<span>${fmtCoord(+p.lat, +p.lon)}</span></span>` +
-    (p.ownCoords ? "" : `<span class="shot-note">posizione del viaggio</span>`) +
-    `<a class="text-link" href="${gmapsUrl(p.lat, p.lon)}" target="_blank" rel="noopener">${ICON.ext}Apri in Google Maps</a>`;
+    (p.ownCoords ? "" : `<span class="shot-note">journey location</span>`) +
+    `<a class="text-link" href="${gmapsUrl(p.lat, p.lon)}" target="_blank" rel="noopener">${ICON.ext}Open in Google Maps</a>`;
 }
 function showPhotoMarker(p) {
   const map = maps.explore;
@@ -199,7 +202,7 @@ function showPhotoMarker(p) {
   const t = tripById(p.trip);
   if (t && distKm(t, p) < 0.05) return;   // coincide con l'astronauta: non serve
   photoMarker = L.marker([p.lat, p.lon], { icon: L.divIcon({ className: "", html: '<div class="shot-pin"></div>', iconSize: [16, 16], iconAnchor: [8, 8] }), interactive: false, keyboard: false })
-    .addTo(map).bindTooltip("Punto dello scatto", { direction: "top", offset: [0, -6] });
+    .addTo(map).bindTooltip("Where this photo was taken", { direction: "top", offset: [0, -6] });
 }
 
 const PIN_SVG = `<svg viewBox="0 0 34 42" aria-hidden="true">
@@ -327,7 +330,7 @@ function createMap(kind) {
     boxZoom: false, keyboard: interactive, minZoom: 1.5, maxZoom: 18, zoomSnap: 0.25,
     maxBounds: [[-62, -200], [86, 200]], maxBoundsViscosity: 0.8
   });
-  if (interactive) L.control.zoom({ position: "topleft", zoomInTitle: "Ingrandisci", zoomOutTitle: "Riduci" }).addTo(map);
+  if (interactive) L.control.zoom({ position: "topleft", zoomInTitle: "Zoom in", zoomOutTitle: "Zoom out" }).addTo(map);
   map.attributionControl.setPrefix(false);
   map.fitBounds([[-50, -165], [75, 175]]);
 
@@ -341,7 +344,7 @@ function createMap(kind) {
   loadLand().then(geo => {
     if (!geo) return;
     landOk = true;
-    L.geoJSON(geo, { interactive: false, style: { color: "#8f7650", weight: 0.6, fillColor: "#bfa077", fillOpacity: 0.88, className: "land" } }).addTo(art);
+    L.geoJSON(geo, { interactive: false, style: { color: "#8f7650", weight: 0.6, fillColor: "#bfa077", fillOpacity: 0.88, className: "land" }, attribution: "Natural Earth" }).addTo(art);
     updateBase();
   });
 
@@ -355,16 +358,16 @@ function createMap(kind) {
     mappa: L.featureGroup([
       L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}", {
         maxZoom: 18, maxNativeZoom: 16, className: "tiles-site",
-        attribution: "Mappa &copy; Esri, HERE, Garmin, &copy; OpenStreetMap e la comunità GIS" }),
+        attribution: "Map &copy; Esri, HERE, Garmin, &copy; OpenStreetMap and the GIS community" }),
       L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}", {
         maxZoom: 18, maxNativeZoom: 16, pane: "labels", className: "tiles-labels" })
     ]),
     satellite: L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
       maxZoom: 18, maxNativeZoom: 18,
-      attribution: "Immagini &copy; Esri, Maxar, Earthstar Geographics e la comunità GIS" }),
+      attribution: "Imagery &copy; Esri, Maxar, Earthstar Geographics and the GIS community" }),
     rilievo: L.tileLayer("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", {
       subdomains: "abc", maxZoom: 18, maxNativeZoom: 17,
-      attribution: `${OSM}, SRTM &middot; stile &copy; <a href="https://opentopomap.org" target="_blank" rel="noopener">OpenTopoMap</a> (CC-BY-SA)` })
+      attribution: `${OSM}, SRTM &middot; style &copy; <a href="https://opentopomap.org" target="_blank" rel="noopener">OpenTopoMap</a> (CC-BY-SA)` })
   };
   let mode = "mappa";
   try { if (bases[localStorage.getItem("fcph-map")]) mode = localStorage.getItem("fcph-map"); } catch {}
@@ -386,14 +389,14 @@ function createMap(kind) {
 
   if (interactive) {
     const Modes = L.Control.extend({
-      options: { position: "bottomright" },
+      options: { position: "bottomleft" },
       onAdd() {
         const box = L.DomUtil.create("div", "map-modes");
         box.innerHTML = `
-          <button type="button" data-mode="mappa" aria-pressed="false">Mappa</button>
+          <button type="button" data-mode="mappa" aria-pressed="false">Map</button>
           <button type="button" data-mode="satellite" aria-pressed="false">Satellite</button>
-          <button type="button" data-mode="rilievo" aria-pressed="false">Rilievo</button>
-          <button type="button" class="fit-all" title="Mostra tutti i miei spot" aria-label="Mostra tutti i miei spot">${ICON.globe}</button>`;
+          <button type="button" data-mode="rilievo" aria-pressed="false">Terrain</button>
+          <button type="button" class="fit-all" title="Show all my spots" aria-label="Show all my spots">${ICON.globe}</button>`;
         L.DomEvent.disableClickPropagation(box);
         L.DomEvent.disableScrollPropagation(box);
         box.querySelectorAll("[data-mode]").forEach(b => b.addEventListener("click", () => {
@@ -482,8 +485,8 @@ function renderPanelIntro() {
     .sort((a, b) => (b.start || "").localeCompare(a.start || ""));
   $("#locationPanel").innerHTML = `
     <span class="eyebrow">SELECT A LOCATION</span>
-    <h2 class="intro-title">Dove sono stato</h2>
-    <p class="trip-desc">${list.length ? "Seleziona un astronauta sulla mappa, oppure scegli un viaggio dall'elenco." : "I primi viaggi arriveranno presto."}</p>
+    <h2 class="intro-title">Where I've been</h2>
+    <p class="trip-desc">${list.length ? "Tap an astronaut on the map, or pick a journey from the list." : "The first journeys are coming soon."}</p>
     <ul class="trip-list">${list.map(t => `
       <li><button type="button" data-trip="${esc(t.id)}"><strong>${esc(t.name)}</strong><small>${esc(fmtRange(t.start, t.end))}</small></button></li>`).join("")}
     </ul>`;
@@ -503,25 +506,25 @@ function openTrip(id, photoId) {
   $("#locationPanel").innerHTML = `
     <div class="panel-head">
       <div><span class="eyebrow">PHOTO LOCATION</span><h2>${esc(t.name)}</h2></div>
-      <button class="panel-close" type="button" id="closeLocation" aria-label="Chiudi viaggio">${ICON.close}</button>
+      <button class="panel-close" type="button" id="closeLocation" aria-label="Close journey">${ICON.close}</button>
     </div>
     <p class="coords">${ICON.pin}${fmtCoord(t.lat, t.lon)}</p>
     <div class="carousel">
       <img id="carouselImg" alt="" data-cat="">
-      ${items.length > 1 ? `<button class="nav-arrow prev" type="button" id="carPrev" aria-label="Foto precedente">${ICON.prev}</button>
-      <button class="nav-arrow next" type="button" id="carNext" aria-label="Foto successiva">${ICON.next}</button>` : ""}
+      ${items.length > 1 ? `<button class="nav-arrow prev" type="button" id="carPrev" aria-label="Previous photo">${ICON.prev}</button>
+      <button class="nav-arrow next" type="button" id="carNext" aria-label="Next photo">${ICON.next}</button>` : ""}
     </div>
     <div class="thumbs">${items.slice(0, 8).map((p, i) => `
-      <button type="button" data-i="${i}" aria-label="Mostra ${esc(p.title)}"><img src="${esc(p.src)}" alt="" data-cat="${esc(p.category)}" loading="lazy"></button>`).join("")}
+      <button type="button" data-i="${i}" aria-label="Show ${esc(p.title)}"><img src="${esc(p.src)}" alt="" data-cat="${esc(p.category)}" loading="lazy"></button>`).join("")}
     </div>
     <p class="shot-row" id="shotRow"></p>
-    <p class="trip-facts"><span>${ICON.cal}${esc(fmtRange(t.start, t.end))}</span><span>${ICON.img}${items.length} ${items.length === 1 ? "foto" : "foto"}</span></p>
-    <p class="trip-desc">${esc(t.description || "Un luogo del mio archivio fotografico.")}</p>
+    <p class="trip-facts"><span>${ICON.cal}${esc(fmtRange(t.start, t.end))}</span><span>${ICON.img}${items.length} ${items.length === 1 ? "photo" : "photos"}</span></p>
+    <p class="trip-desc">${esc(t.description || "A place from my photographic archive.")}</p>
     <div class="panel-actions">
-      <button class="outline-link" type="button" id="viewPlacePhotos">VEDI LE FOTO <span aria-hidden="true">→</span></button>
+      <button class="outline-link" type="button" id="viewPlacePhotos">VIEW PHOTOS <span aria-hidden="true">→</span></button>
       <div class="panel-links">
-        ${article ? `<a class="text-link" href="#art-${esc(article.id)}">${ICON.book}Leggi il racconto</a>` : ""}
-        <a class="text-link" href="${gmaps}" target="_blank" rel="noopener">${ICON.ext}Apri in Google Maps</a>
+        ${article ? `<a class="text-link" href="#art-${esc(article.id)}">${ICON.book}Read the story</a>` : ""}
+        <a class="text-link" href="${gmaps}" target="_blank" rel="noopener">${ICON.ext}Open in Google Maps</a>
       </div>
     </div>`;
 
@@ -534,7 +537,7 @@ function openTrip(id, photoId) {
     img.alt = p.title;
     img.src = p.src;
     $$("#locationPanel .thumbs button").forEach((b, k) => b.classList.toggle("is-current", k === carouselIndex));
-    $("#shotRow").innerHTML = `<span class="shot-label">Questa foto</span>` + photoCoordsHtml(p);
+    $("#shotRow").innerHTML = `<span class="shot-label">This photo</span>` + photoCoordsHtml(p);
     showPhotoMarker(p);
   };
   show(carouselIndex);
@@ -577,14 +580,14 @@ function renderGallery() {
   const chip = $("#tripChip"), t = gallery.trip && tripById(gallery.trip);
   chip.hidden = !t;
   if (t) {
-    chip.innerHTML = `${esc(t.name)} <button type="button" aria-label="Mostra tutti i luoghi">${ICON.close}</button>`;
+    chip.innerHTML = `${esc(t.name)} <button type="button" aria-label="Show all places">${ICON.close}</button>`;
     chip.querySelector("button").addEventListener("click", () => { gallery.trip = null; renderGallery(); });
   }
-  $("#photoCount").textContent = `${items.length} ${items.length === 1 ? "fotografia" : "fotografie"}`;
+  $("#photoCount").textContent = `${items.length} ${items.length === 1 ? "photograph" : "photographs"}`;
   $("#photoGrid").innerHTML = items.map(p => `
     <button class="photo-card" type="button" data-id="${esc(p.id)}">
       <img src="${esc(p.src)}" alt="${esc(p.title)}" data-cat="${esc(p.category)}" loading="lazy">
-      <span class="photo-info"><h3>${esc(p.title)}</h3><small>${esc(tripById(p.trip)?.name || "")} · ${esc(p.category)}</small></span>
+      <span class="photo-info"><h3>${esc(p.title)}</h3><small>${esc(tripById(p.trip)?.name || "")} · ${esc(catLabel(p.category))}</small></span>
     </button>`).join("");
   $("#galleryEmpty").hidden = items.length > 0;
   $$("#photoGrid .photo-card").forEach(el => el.addEventListener("click", () => openPhoto(el.dataset.id, items)));
@@ -600,9 +603,9 @@ function setupLightbox() {
   const tools = document.createElement("div");
   tools.className = "lightbox-tools";
   tools.innerHTML = `<span class="lightbox-count" id="dialogCount"></span>
-    <button class="lightbox-btn" type="button" id="dialogInfo" aria-label="Nascondi informazioni" title="Mostra/nascondi informazioni (I)">
+    <button class="lightbox-btn" type="button" id="dialogInfo" aria-label="Hide details" title="Show/hide details (I)">
       <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5M12 8h.01"/></svg></button>
-    <button class="lightbox-btn" type="button" id="dialogFull" aria-label="Schermo intero" title="Schermo intero (F)">
+    <button class="lightbox-btn" type="button" id="dialogFull" aria-label="Full screen" title="Full screen (F)">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>`;
   d.prepend(tools);
   const close = $("#dialogClose");
@@ -613,7 +616,7 @@ function toggleInfo(force) {
   const d = $("#photoDialog");
   const hide = force ?? !d.classList.contains("info-hidden");
   d.classList.toggle("info-hidden", hide);
-  $("#dialogInfo").setAttribute("aria-label", hide ? "Mostra informazioni" : "Nascondi informazioni");
+  $("#dialogInfo").setAttribute("aria-label", hide ? "Show details" : "Hide details");
 }
 function isFullscreen() { return !!(document.fullscreenElement || document.webkitFullscreenElement); }
 function toggleFullscreen() {
@@ -641,7 +644,7 @@ function showLightbox() {
   img.alt = p.title;
   img.src = p.src;
   $("#dialogTitle").textContent = p.title;
-  $("#dialogCategory").textContent = p.category;
+  $("#dialogCategory").textContent = catLabel(p.category);
   $("#dialogMeta").textContent = [tripById(p.trip)?.name, p.date ? fmtDate(p.date) : ""].filter(Boolean).join(" · ");
   $("#dialogCoords").innerHTML = photoCoordsHtml(p);
   $("#dialogCount").textContent = lightboxList.length > 1 ? `${lightboxIndex + 1} / ${lightboxList.length}` : "";
@@ -658,26 +661,26 @@ function stepLightbox(d) {
    7. JOURNAL
    ========================================================= */
 function articleMeta(a, withIcons = true) {
-  return `<span>${withIcons ? ICON.cal : ""}${esc(fmtDate(a.date))}</span>${a.minutes ? `<span>${withIcons ? ICON.clock : ""}${a.minutes} min di lettura</span>` : ""}`;
+  return `<span>${withIcons ? ICON.cal : ""}${esc(fmtDate(a.date))}</span>${a.minutes ? `<span>${withIcons ? ICON.clock : ""}${a.minutes} min read</span>` : ""}`;
 }
 function renderJournal() {
-  if (!articles.length) { $("#journalLayout").innerHTML = `<p class="empty-state">Non ci sono ancora articoli.</p>`; return; }
+  if (!articles.length) { $("#journalLayout").innerHTML = `<p class="empty-state">No articles yet.</p>`; return; }
   const [first, ...rest] = [...articles].sort((a, b) => (b.date || "").localeCompare(a.date || ""));
   $("#journalLayout").innerHTML = `
     <article class="featured-article">
       <img src="${esc(first.cover)}" alt="${esc(first.title)}" data-cat="Paesaggi">
       <div class="article-copy">
-        <span class="eyebrow">${esc(first.category)}</span>
+        <span class="eyebrow">${esc(catLabel(first.category))}</span>
         <h2>${esc(first.title)}</h2>
         <p class="meta-row">${articleMeta(first)}</p>
         <p>${esc(first.excerpt)}</p>
-        <a class="outline-link" href="#art-${esc(first.id)}">LEGGI L'ARTICOLO <span aria-hidden="true">→</span></a>
+        <a class="outline-link" href="#art-${esc(first.id)}">READ THE ARTICLE <span aria-hidden="true">→</span></a>
       </div>
     </article>
     <div class="article-list">${rest.map(a => `
       <a class="article-card" href="#art-${esc(a.id)}">
         <img src="${esc(a.cover)}" alt="" data-cat="Paesaggi" loading="lazy">
-        <div><span class="eyebrow">${esc(a.category)}</span><h3>${esc(a.title)}</h3>
+        <div><span class="eyebrow">${esc(catLabel(a.category))}</span><h3>${esc(a.title)}</h3>
           <p class="meta-row"><span>${ICON.cal}${esc(fmtDate(a.date))}</span>${a.minutes ? `<span>${a.minutes} min</span>` : ""}</p></div>
       </a>`).join("")}
     </div>`;
@@ -687,14 +690,14 @@ function renderArticle(id) {
   if (!a) { reader.hidden = true; return; }
   const t = a.trip && tripById(a.trip);
   reader.innerHTML = `
-    <span class="eyebrow">DAL JOURNAL · ${esc(a.category)}</span>
+    <span class="eyebrow">FROM THE JOURNAL · ${esc(catLabel(a.category))}</span>
     <h2>${esc(a.title)}</h2>
     <p class="meta-row">${articleMeta(a)}</p>
     <img src="${esc(a.cover)}" alt="${esc(a.title)}" data-cat="Paesaggi">
     <div class="rich">${md(a.text)}</div>
     <div class="article-actions">
-      ${t ? `<button class="outline-link" type="button" id="articleTrip">VEDI IL VIAGGIO SULLA MAPPA <span aria-hidden="true">→</span></button>` : ""}
-      <a class="text-link" href="#journal">${ICON.prev}Torna al Journal</a>
+      ${t ? `<button class="outline-link" type="button" id="articleTrip">VIEW THE JOURNEY ON THE MAP <span aria-hidden="true">→</span></button>` : ""}
+      <a class="text-link" href="#journal">${ICON.prev}Back to the Journal</a>
     </div>`;
   reader.hidden = false;
   $("#articleTrip")?.addEventListener("click", () => { location.hash = "explore"; setTimeout(() => openTrip(t.id), 60); });
@@ -727,20 +730,20 @@ function localMatches(q) {
 function renderLocalResults(q) {
   const r = localMatches(q), box = $("#searchResults");
   let html = "";
-  if (r.trips.length) html += `<div class="result-group">${q ? "I miei luoghi" : "Viaggi"}</div>` + r.trips.map(t => `
+  if (r.trips.length) html += `<div class="result-group">${q ? "My places" : "Journeys"}</div>` + r.trips.map(t => `
     <button class="result" type="button" data-kind="trip" data-id="${esc(t.id)}"><span class="result-icon">${ICON.pin}</span>
-      <span><strong>${esc(t.name)}</strong><small>${esc(fmtRange(t.start, t.end))} · ${photosOfTrip(t.id).length} foto</small></span></button>`).join("");
-  if (r.photos.length) html += `<div class="result-group">Fotografie</div>` + r.photos.map(p => `
+      <span><strong>${esc(t.name)}</strong><small>${esc(fmtRange(t.start, t.end))} · ${photosOfTrip(t.id).length} ${photosOfTrip(t.id).length === 1 ? "photo" : "photos"}</small></span></button>`).join("");
+  if (r.photos.length) html += `<div class="result-group">Photographs</div>` + r.photos.map(p => `
     <button class="result" type="button" data-kind="photo" data-id="${esc(p.id)}"><img src="${esc(p.src)}" alt="" data-cat="${esc(p.category)}">
       <span><strong>${esc(p.title)}</strong><small>${esc(tripById(p.trip)?.name || "")} · ${esc(fmtDate(p.date))}</small></span></button>`).join("");
   if (r.articles.length) html += `<div class="result-group">Journal</div>` + r.articles.map(a => `
     <button class="result" type="button" data-kind="article" data-id="${esc(a.id)}"><span class="result-icon">${ICON.book}</span>
-      <span><strong>${esc(a.title)}</strong><small>${esc(a.category)} · ${a.minutes} min</small></span></button>`).join("");
-  if (q.trim().length >= 2) html += `<div class="result-group">Nel mondo</div>
+      <span><strong>${esc(a.title)}</strong><small>${esc(catLabel(a.category))}${a.minutes ? ` · ${a.minutes} min` : ""}</small></span></button>`).join("");
+  if (q.trim().length >= 2) html += `<div class="result-group">Around the world</div>
     <button class="result" type="button" data-kind="world" data-q="${esc(q.trim())}"><span class="result-icon">${ICON.globe}</span>
-      <span><strong>Cerca «${esc(q.trim())}» sulla mappa</strong><small>Qualsiasi città, montagna o luogo · OpenStreetMap</small></span></button>
+      <span><strong>Find “${esc(q.trim())}” on the map</strong><small>Any city, mountain or place · OpenStreetMap</small></span></button>
     <div id="worldResults"></div>`;
-  if (!html) html = `<p class="search-note">Scrivi il nome di un luogo, di un viaggio o di una foto.</p>`;
+  if (!html) html = `<p class="search-note">Type the name of a place, a journey or a photo.</p>`;
   box.innerHTML = html;
   $$(".result", box).forEach(b => b.addEventListener("click", () => pickResult(b)));
 }
@@ -760,7 +763,7 @@ async function geocode(q, limit = 5) {
   worldController = new AbortController();
   const timer = setTimeout(() => worldController.abort(), 9000);
   try {
-    const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=${limit}&accept-language=it&q=${encodeURIComponent(q)}`;
+    const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=${limit}&accept-language=en&q=${encodeURIComponent(q)}`;
     const res = await fetch(url, { signal: worldController.signal, headers: { Accept: "application/json" } });
     if (!res.ok) throw new Error("HTTP " + res.status);
     return (await res.json()).map(r => ({ lat: +r.lat, lon: +r.lon, name: r.name || r.display_name.split(",")[0], full: r.display_name }));
@@ -770,17 +773,17 @@ async function geocode(q, limit = 5) {
 async function searchWorld(q) {
   const box = $("#worldResults");
   if (!box) return;
-  box.innerHTML = `<p class="search-note">Cerco «${esc(q)}»…</p>`;
+  box.innerHTML = `<p class="search-note">Searching for “${esc(q)}”…</p>`;
   try {
     const found = await geocode(q);
-    if (!found.length) { box.innerHTML = `<p class="search-note">Nessun luogo trovato con questo nome. Prova ad aggiungere la nazione, es. «Bracciano, Italia».</p>`; return; }
+    if (!found.length) { box.innerHTML = `<p class="search-note">No place found with this name. Try adding the country, e.g. “Bracciano, Italy”.</p>`; return; }
     box.innerHTML = found.map(r => `
       <button class="result" type="button" data-kind="place" data-lat="${r.lat}" data-lon="${r.lon}" data-name="${esc(r.name)}" data-full="${esc(r.full)}">
         <span class="result-icon">${ICON.map}</span><span><strong>${esc(r.name)}</strong><small>${esc(r.full)}</small></span></button>`).join("");
     $$(".result", box).forEach(b => b.addEventListener("click", () => pickResult(b)));
   } catch (err) {
     if (err.name === "AbortError" && !box.isConnected) return;
-    box.innerHTML = `<p class="search-note">La ricerca nel mondo non è raggiungibile da qui. Sul sito pubblicato funziona normalmente; intanto puoi cercare tra i tuoi luoghi.</p>`;
+    box.innerHTML = `<p class="search-note">Worldwide search is not available right now. You can still search the places on this site.</p>`;
   }
 }
 
@@ -792,11 +795,11 @@ function flyToPlace(lat, lon, name, full) {
     searchMarker?.remove();
     const near = trips.filter(t => photosOfTrip(t.id).length).map(t => ({ t, d: distKm(t, { lat, lon }) })).sort((a, b) => a.d - b.d)[0];
     const nearHtml = near && near.d < 300
-      ? `<br><button class="text-link" type="button" data-near="${esc(near.t.id)}">Vicino: ${esc(near.t.name)} (${Math.round(near.d)} km) →</button>`
+      ? `<br><button class="text-link" type="button" data-near="${esc(near.t.id)}">Nearby: ${esc(near.t.name)} (${Math.round(near.d)} km) →</button>`
       : "";
     searchMarker = L.marker([lat, lon], { icon: L.divIcon({ className: "", html: '<div class="search-pin"></div>', iconSize: [22, 22], iconAnchor: [11, 11] }) })
       .addTo(map)
-      .bindPopup(`<strong>${esc(name)}</strong>${esc(full && full !== name ? full.split(",").slice(1, 3).join(",") : "")}<br><span class="muted">Ancora nessuna foto qui.</span>${nearHtml}`)
+      .bindPopup(`<strong>${esc(name)}</strong>${esc(full && full !== name ? full.split(",").slice(1, 3).join(",") : "")}<br><span class="muted">No photos here yet.</span>${nearHtml}`)
       .openPopup();
     map.flyTo([lat, lon], 11, { duration: 1.1 });
     searchMarker.getPopup().getElement()?.querySelector("[data-near]")?.addEventListener("click", e => openTrip(e.currentTarget.dataset.near));
@@ -941,7 +944,7 @@ function bindEvents() {
   bindEvents();
   await loadContent();          // legge content/viaggi.json, articoli.json, chi-sono.json
   if (contentFailed)
-    toast("Non riesco a leggere i contenuti del sito. Se hai aperto il file dal computer, usa la versione pubblicata su Netlify.", true);
+    toast("The site content could not be loaded. Please reload the page.", true);
   renderAll();
   route();
 })();

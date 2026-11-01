@@ -392,7 +392,7 @@ dialog::backdrop{background:rgba(1,8,13,.82)}
 .tiles-labels{filter:sepia(.7) saturate(1.3) brightness(1.05);opacity:.85}
 .map-explore[data-base="satellite"],.map-explore[data-base="rilievo"]{background:#0b2635}
 .map-modes{display:flex;gap:2px;padding:3px;border:1px solid var(--line-strong);border-radius:8px;background:rgba(7,28,41,.92);
-  margin-right:max(12px,env(safe-area-inset-right,0px))!important;margin-bottom:22px!important;box-shadow:0 4px 18px rgba(0,0,0,.35)}
+  margin-left:max(12px,env(safe-area-inset-left,0px))!important;margin-bottom:22px!important;box-shadow:0 4px 18px rgba(0,0,0,.35)}
 .map-modes button{border:0;background:none;color:var(--soft);font:400 12.5px var(--sans);letter-spacing:.4px;padding:7px 11px;border-radius:5px;cursor:pointer}
 .map-modes button:hover{color:var(--cream);background:rgba(233,210,181,.08)}
 .map-modes button[aria-pressed="true"]{background:var(--cream);color:var(--navy)}
@@ -414,3 +414,5 @@ dialog::backdrop{background:rgba(1,8,13,.82)}
 .leaflet-tile-loaded{visibility:inherit}
 .leaflet-fade-anim .leaflet-tile{will-change:opacity}
 .leaflet-tile-container{pointer-events:none}
+
+.explore-stage .compass-small{bottom:84px}
