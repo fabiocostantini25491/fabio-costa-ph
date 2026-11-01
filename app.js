@@ -1166,6 +1166,8 @@ function route() {
   let hash = decodeURIComponent(location.hash.slice(1));
   let page = hash, article = null;
   if (hash.startsWith("art-")) { page = "journal"; article = hash.slice(4); }
+  const join = hash === "join";
+  if (join) page = "spots";
   if (!PAGES.includes(page)) page = "home";
 
   const changed = document.body.dataset.page !== page;
@@ -1192,7 +1194,7 @@ function route() {
     if (!activeTripId) renderPanelIntro();
   }
   if (page === "gallery") renderGallery();
-  if (page === "spots") window.Spots?.show();
+  if (page === "spots") window.Spots?.show(join);
   if (page === "tools") window.Tools?.show();
   if (page === "journal") {
     if (article) renderArticle(article);

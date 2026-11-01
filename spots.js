@@ -38,6 +38,9 @@ const Spots = (() => {
   const myUid = () => (session && jwtClaims().sub) || "";
   function displayName() {
     try { const n = localStorage.getItem(NAME_KEY); if (n) return n; } catch {}
+    const meta = session ? jwtMeta(session.access_token) : {};
+    const full = (meta.full_name || [meta.first_name, meta.last_name].filter(Boolean).join(" ")).trim();
+    if (full) return full;
     const e = session ? jwtEmail(session.access_token) : "";
     const base = e.split("@")[0].replace(/[._-]+/g, " ").replace(/\d+/g, "").trim();
     return base ? base.replace(/\b\w/g, c => c.toUpperCase()) : "Member";
@@ -72,6 +75,10 @@ const Spots = (() => {
   let query = "";
   let notice = "";          // messaggio da mostrare nella schermata di accesso
   let loaded = false;
+  let memberStatus = "approved";   // approved | pending | rejected — chi si iscrive dal sito aspetta l'approvazione
+  let memberName = "";
+  let wantJoin = false;            // mostra il modulo di iscrizione invece dell'accesso
+  let pendingMembers = [];         // solo admin: richieste da approvare
 
   /* ---------- sessione ---------- */
   function updateNav() {
@@ -80,6 +87,10 @@ const Spots = (() => {
   }
   function saveSession(s) { session = s; updateNav(); try { s ? localStorage.setItem(SESSION_KEY, JSON.stringify(s)) : localStorage.removeItem(SESSION_KEY); } catch {} }
   function loadSession() { try { session = JSON.parse(localStorage.getItem(SESSION_KEY) || "null"); } catch { session = null; } updateNav(); }
+  function jwtPayload(token) {
+    try { return JSON.parse(decodeURIComponent(escape(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/"))))); } catch { return {}; }
+  }
+  const jwtMeta = token => jwtPayload(token).user_metadata || {};
   function jwtEmail(token) {
     try { return JSON.parse(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/"))).email || ""; } catch { return ""; }
   }
@@ -125,9 +136,38 @@ const Spots = (() => {
     const { data } = await api("/auth/v1/token?grant_type=password", { method: "POST", auth: false, body: { email, password } });
     saveSession({ access_token: data.access_token, refresh_token: data.refresh_token, expires_at: Date.now() + data.expires_in * 1000 });
   }
+  /* Iscrizione dal sito: nome, cognome, email, password. L'account entra «in attesa» finché non lo approvi */
+  async function signUp(first, last, email, password) {
+    const { data } = await api("/auth/v1/signup", { method: "POST", auth: false,
+      body: { email, password, data: { first_name: first, last_name: last, full_name: `${first} ${last}`.trim() } } });
+    if (data && data.access_token) {
+      saveSession({ access_token: data.access_token, refresh_token: data.refresh_token, expires_at: Date.now() + data.expires_in * 1000 });
+      return "session";
+    }
+    // se su Supabase è attiva la conferma via email, la sessione arriva dopo il clic sul link
+    if (data && (data.id || data.user) && !(data.identities && data.identities.length === 0)) return "confirm";
+    throw new Error("already registered");
+  }
+  async function fetchMemberStatus() {
+    const uid = session ? jwtPayload(session.access_token).sub : "";
+    try {
+      const { data } = await api(`/rest/v1/members?select=status,first_name,last_name&user_id=eq.${encodeURIComponent(uid)}`);
+      const row = (data || [])[0];
+      memberName = row ? [row.first_name, row.last_name].filter(Boolean).join(" ") : "";
+      return row ? row.status : "pending";
+    } catch (err) {
+      return "approved";   // tabella «members» non ancora creata (supabase-iscrizioni.sql non eseguito): come prima
+    }
+  }
+  async function fetchPending() {
+    try {
+      const { data } = await api("/rest/v1/members?select=user_id,email,first_name,last_name,status,created_at&status=eq.pending&order=created_at.asc");
+      pendingMembers = data || [];
+    } catch { pendingMembers = []; }
+  }
   async function logout() {
     try { await api("/auth/v1/logout", { method: "POST" }); } catch {}
-    saveSession(null); spots = []; loaded = false; admin = false; guestLoaded = false; activeCats = null;
+    saveSession(null); spots = []; loaded = false; admin = false; guestLoaded = false; activeCats = null; memberStatus = "approved"; pendingMembers = [];
     render();
   }
 
@@ -192,7 +232,8 @@ const Spots = (() => {
   const LIST_COLORS = ["#9cc8ff", "#ffbe7a", "#9fe3c8", "#f7a6c4", "#d2b8ff", "#ffe08a", "#8fd3ff", "#ffa98f"];
   const listColor = name => { const lists = [...new Set(spots.map(s => s.list))].sort(); return LIST_COLORS[Math.max(0, lists.indexOf(name)) % LIST_COLORS.length]; };
 
-  function show() {
+  function show(join) {
+    if (join && !session) { wantJoin = true; wantLogin = false; }
     render();
     if (map) setTimeout(() => { map.invalidateSize(); drawClusters(); }, 40);
   }
@@ -205,7 +246,7 @@ const Spots = (() => {
       return;
     }
     if (!(await ensureSession())) {
-      if (wantLogin || notice) return renderGate();
+      if (wantLogin || wantJoin || notice) return renderGate();
       if (await loadPublic()) { renderApp(); return; }
       renderGate(); return;
     }
@@ -213,8 +254,17 @@ const Spots = (() => {
     if (!loaded) {
       el.innerHTML = gateHtml(`<p class="gate-note">Loading the map…</p>`);
       try {
-        [spots, admin] = await Promise.all([fetchSpots(), checkAdmin()]);
-        await fetchReports();
+        admin = await checkAdmin();
+        memberStatus = admin ? "approved" : await fetchMemberStatus();
+        if (memberStatus !== "approved") {
+          // in attesa di approvazione: vede la mappa pubblica, come un visitatore
+          wantLogin = false; wantJoin = false;
+          if (await loadPublic()) { renderApp(); return; }
+          el.innerHTML = gateHtml(`<p class="gate-note">${esc(pendingText())}</p>`);
+          return;
+        }
+        spots = await fetchSpots();
+        await Promise.all([fetchReports(), admin ? fetchPending() : null]);
         loaded = true;
       } catch (err) {
         if (err.status === 401) { saveSession(null); notice = "Please log in again."; return renderGate(); }
@@ -229,7 +279,7 @@ const Spots = (() => {
     return `<div class="spots-gate">
       <div class="gate-icon" aria-hidden="true">${LOCK_SVG}</div>
       <h2>Members only</h2>
-      <p>Photo spots, places to eat and stay, workshops and trails — collected over the years and shared by members. Membership is free: I create the accounts personally.</p>
+      <p>Photo spots, places to eat and stay, workshops and trails — collected over the years and shared by members. Membership is free: sign up in a minute, and I approve every account personally.</p>
       ${inner}
     </div>`;
   }
@@ -252,20 +302,77 @@ const Spots = (() => {
   }
 
   function renderGate() {
+    const join = wantJoin;
     root().innerHTML = gateHtml(`
       ${notice ? `<p class="gate-note warn">${esc(notice)}</p>` : ""}
-      <form class="gate-form" id="gateForm" novalidate>
+      <div class="gate-tabs" role="tablist">
+        <button type="button" role="tab" class="${join ? "" : "on"}" aria-selected="${!join}" data-gtab="login">Log in</button>
+        <button type="button" role="tab" class="${join ? "on" : ""}" aria-selected="${join}" data-gtab="join">Join — it's free</button>
+      </div>
+      ${join ? `<form class="gate-form" id="joinForm" novalidate>
+        <div class="gate-row">
+          <div><label for="joinFirst">First name</label>
+            <input id="joinFirst" type="text" autocomplete="given-name" maxlength="60" required></div>
+          <div><label for="joinLast">Last name</label>
+            <input id="joinLast" type="text" autocomplete="family-name" maxlength="60" required></div>
+        </div>
+        <label for="joinEmail">Email</label>
+        <input id="joinEmail" type="email" autocomplete="email" placeholder="you@example.com" required>
+        <label for="joinPassword">Password</label>
+        <input id="joinPassword" type="password" autocomplete="new-password" minlength="8" placeholder="At least 8 characters" required>
+        <label class="gate-check"><input type="checkbox" id="joinCode"> <span>I accept the <button type="button" class="text-link" id="joinShowCode">community code</button> and the terms below the map.</span></label>
+        <button class="outline-link" type="submit" id="joinSend">JOIN <span aria-hidden="true">→</span></button>
+        <p class="gate-note" id="gateMsg" role="status"></p>
+        <p class="gate-help">I approve every request personally, usually within a day. Until then you can browse the public map.</p>
+      </form>` : `<form class="gate-form" id="gateForm" novalidate>
         <label for="gateEmail">Email</label>
         <input id="gateEmail" type="email" autocomplete="username" placeholder="you@example.com" required>
         <label for="gatePassword">Password</label>
         <input id="gatePassword" type="password" autocomplete="current-password" required>
         <button class="outline-link" type="submit" id="gateSend">LOG IN <span aria-hidden="true">→</span></button>
         <p class="gate-note" id="gateMsg" role="status"></p>
-        <p class="gate-help">No account yet, or forgot your password? <a href="#about">Contact me</a> and I will set it up for you — it's free.</p>
-        ${guestLoaded ? `<button type="button" class="text-link gate-back" id="gateBack">← Back to the public map</button>` : ""}
-      </form>`);
-    $("#gateBack")?.addEventListener("click", () => { wantLogin = false; notice = ""; render(); });
-    $("#gateForm").addEventListener("submit", async e => {
+        <p class="gate-help">Forgot your password? <a href="#about">Contact me</a> and I will reset it.</p>
+      </form>`}
+      ${guestLoaded ? `<button type="button" class="text-link gate-back" id="gateBack">← Back to the public map</button>` : ""}`);
+    $("#gateBack")?.addEventListener("click", () => { wantLogin = false; wantJoin = false; notice = ""; render(); });
+    $$("[data-gtab]").forEach(b => b.addEventListener("click", () => {
+      wantJoin = b.dataset.gtab === "join"; wantLogin = !wantJoin; notice = ""; renderGate();
+      (wantJoin ? $("#joinFirst") : $("#gateEmail"))?.focus();
+    }));
+    $("#joinShowCode")?.addEventListener("click", () => showConduct());
+    $("#joinForm")?.addEventListener("submit", async e => {
+      e.preventDefault();
+      const first = $("#joinFirst").value.trim(), last = $("#joinLast").value.trim(), email = $("#joinEmail").value.trim(),
+        password = $("#joinPassword").value, msg = $("#gateMsg"), btn = $("#joinSend");
+      msg.className = "gate-note warn";
+      if (!first || !last) { msg.textContent = "Please enter your first and last name."; return; }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { msg.textContent = "Please enter a valid email address."; return; }
+      if (password.length < 8) { msg.textContent = "The password needs at least 8 characters."; return; }
+      if (!$("#joinCode").checked) { msg.textContent = "Please accept the community code."; return; }
+      btn.disabled = true; msg.className = "gate-note"; msg.textContent = "Sending your request…";
+      try {
+        const how = await signUp(first, last, email, password);
+        window.fcTrack?.("Spots: signed up");
+        try { localStorage.setItem(CONDUCT_KEY, "1"); } catch {}
+        wantJoin = false; wantLogin = false; notice = ""; loaded = false; guestLoaded = false;
+        if (how === "confirm") {
+          msg.className = "gate-note ok";
+          msg.textContent = "Almost done: check your inbox and click the link to confirm your email.";
+          return;
+        }
+        await render();
+        setTimeout(() => (document.querySelector(".pending-banner") || root()).scrollIntoView({ behavior: "smooth", block: "center" }), 400);
+      } catch (err) {
+        msg.className = "gate-note warn";
+        msg.textContent = /already|registered|exists/i.test(err.message) ? "This email is already registered. Log in instead."
+          : /not allowed|disabled|signups/i.test(err.message) ? "Sign-ups are closed right now. Please contact me."
+          : /password/i.test(err.message) ? "Please choose a stronger password."
+          : /rate|too many|seconds/i.test(err.message) ? "Too many attempts. Please wait a few minutes and try again."
+          : `Sign-up failed (${err.message}).`;
+        btn.disabled = false;
+      }
+    });
+    $("#gateForm")?.addEventListener("submit", async e => {
       e.preventDefault();
       const email = $("#gateEmail").value.trim(), password = $("#gatePassword").value, msg = $("#gateMsg"), btn = $("#gateSend");
       msg.className = "gate-note warn";
@@ -280,11 +387,18 @@ const Spots = (() => {
       } catch (err) {
         msg.className = "gate-note warn";
         msg.textContent = /invalid|credentials|grant/i.test(err.message) ? "Wrong email or password."
+          : /not confirmed/i.test(err.message) ? "Please confirm your email first: check your inbox."
           : /rate|too many|seconds/i.test(err.message) ? "Too many attempts. Please wait a few minutes and try again."
           : `Login failed (${err.message}).`;
         btn.disabled = false;
       }
     });
+  }
+
+  function pendingText() {
+    return memberStatus === "rejected"
+      ? "Your request to join was not approved. If you think this is a mistake, contact me."
+      : "Thanks for joining! Your request is waiting for my approval — usually within a day. Until then, here is the public map.";
   }
 
   function renderApp() {
@@ -305,7 +419,10 @@ const Spots = (() => {
         </div>
         <p class="spots-count" id="spotsCount"></p>
         <div class="spots-user">
-          ${guest ? `<button class="outline-link spots-add" type="button" id="spotsLogin">${LOCK_SVG}Members: log in</button>` : `
+          ${guest && session ? `<span class="spots-email">${esc(memberName || email)}</span>
+          <button class="text-link" type="button" id="spotsLogout">Log out</button>` : guest ? `<button class="text-link" type="button" id="spotsLogin">Log in</button>
+          <button class="outline-link spots-add" type="button" id="spotsJoin">${LOCK_SVG}Join free</button>` : `
+          ${admin ? `<button class="outline-link spots-add req-btn${pendingMembers.length ? " has" : ""}" type="button" id="spotsRequests">Requests <b>${pendingMembers.length}</b></button>` : ""}
           ${schemaV2 || admin ? `<button class="outline-link spots-add" type="button" id="spotsAdd">${ICON_PLUS}Add a place</button>` : ""}
           ${admin ? `<button class="text-link" type="button" id="spotsImport">${ICON_UPLOAD}Importa da Google Maps</button>` : ""}
           <span class="spots-email">${esc(email)}</span>
@@ -317,14 +434,15 @@ const Spots = (() => {
         ${CAT_KEYS.map(k => `<button class="filter cat-filter${activeCats.has(k) && activeCats.size !== CAT_KEYS.length ? " active" : ""}" type="button" data-cat="${k}" style="--c:${CATS[k].color}">
           ${CATS[k].icon}${CATS[k].label} <small>${spots.filter(s => s.category === k).length}</small></button>`).join("")}
       </div>` : ""}
-      ${guest ? `<div class="guest-banner">${LOCK_SVG}<p>${(() => {
+      ${guest && session ? `<div class="guest-banner pending-banner">${LOCK_SVG}<p>${esc(pendingText())}</p></div>` : ""}
+      ${guest && !session ? `<div class="guest-banner">${LOCK_SVG}<p>${(() => {
           const tr = window.I18N ? I18N.t("GUEST_BANNER") : "GUEST_BANNER";
           const tpl = tr !== "GUEST_BANNER" ? tr : `<strong>You're seeing {n} of {total} spots</strong>, in approximate positions.
           Members see every spot with its exact location, photos, reviews, prices and live alerts — and can add their own.
-          <em>Membership is free:</em> <a href="#about">ask me for an account</a>.`;
+          <em>Membership is free:</em> <a href="#join">join in a minute</a>.`;
           return tpl.replace("{n}", fmtN(spots.length)).replace("{total}", fmtN(Math.max(publicTotal, spots.length)));
         })()}</p>
-          <button type="button" class="outline-link" id="guestJoin">LOG IN <span aria-hidden="true">→</span></button></div>` : ""}
+          <button type="button" class="outline-link" id="guestJoin">JOIN FREE <span aria-hidden="true">→</span></button></div>` : ""}
       ${schemaV2 && socialV && !guest ? `<div class="spots-social" role="group" aria-label="Alerts and community">
         <label class="soc-pick">${ICON_ALERT}<span class="sr-only">Alerts</span>
           <select id="alertMode">
@@ -396,7 +514,9 @@ const Spots = (() => {
       renderApp();
     }));
     $("#spotsLogout")?.addEventListener("click", logout);
-    [$("#spotsLogin"), $("#guestJoin")].forEach(b => b?.addEventListener("click", () => { wantLogin = true; render(); root().scrollIntoView({ behavior: "smooth" }); }));
+    $("#spotsLogin")?.addEventListener("click", () => { wantLogin = true; wantJoin = false; render(); root().scrollIntoView({ behavior: "smooth" }); });
+    [$("#spotsJoin"), $("#guestJoin")].forEach(b => b?.addEventListener("click", () => { wantJoin = true; render(); root().scrollIntoView({ behavior: "smooth" }); }));
+    $("#spotsRequests")?.addEventListener("click", openRequests);
     $("#spotsImport")?.addEventListener("click", openImport);
     $("#spotsAdd")?.addEventListener("click", () => withConduct(() => openAdd()));
     $("#alertMode")?.addEventListener("change", e => { alertMode = e.target.value; drawClusters(); renderNear(); });
@@ -882,7 +1002,11 @@ const Spots = (() => {
       { maxWidth: 320, minWidth: 260, className: "spot-popup" });
     m.on("popupopen", e => {
       openId = s.id;
-      if (guest) { node.querySelector("[data-login]")?.addEventListener("click", () => { map.closePopup(); wantLogin = true; render(); }); return; }
+      if (guest) {
+        node.querySelector("[data-login]")?.addEventListener("click", () => { map.closePopup(); wantLogin = true; wantJoin = false; render(); });
+        node.querySelector("[data-join]")?.addEventListener("click", () => { map.closePopup(); wantJoin = true; render(); });
+        return;
+      }
       if (!node.dataset.wired) { node.dataset.wired = "1"; wirePopup(e.popup, s); } else if (schemaV2) loadExtras(e.popup, s);
     });
     m.on("popupclose", () => { if (openId === s.id) { openId = null; setTimeout(drawClusters, 0); } });
@@ -896,8 +1020,9 @@ const Spots = (() => {
       ${s.avg_rating ? `<p class="pop-rating"><span class="stars-static" style="--v:${(s.avg_rating / 5 * 100).toFixed(0)}%">★★★★★</span> <b>${(+s.avg_rating).toFixed(1)}</b> · ${s.reviews} review${s.reviews > 1 ? "s" : ""}</p>` : ""}
       ${s.support_local ? `<p class="soc-note">🌱 Support local — your visit helps this place</p>` : ""}
       <p class="spot-coords">${ICON.pin}<span>Approximate area (about 1 km)</span></p>
-      <div class="guest-cta">${LOCK_SVG}<p><b>Members see more:</b> exact location and directions, photos, reviews, prices, live alerts and all the other spots nearby. Membership is free — <a href="#about">ask me for an account</a>.</p>
-        <button type="button" class="pop-btn primary" data-login>Log in</button></div>
+      ${session ? `<div class="guest-cta">${LOCK_SVG}<p><b>Members see more.</b> You'll see the exact location, photos, reviews and alerts as soon as your account is approved.</p></div>`
+      : `<div class="guest-cta">${LOCK_SVG}<p><b>Members see more:</b> exact location and directions, photos, reviews, prices, live alerts and all the other spots nearby. Membership is free.</p>
+        <button type="button" class="pop-btn primary" data-join>Join free</button> <button type="button" class="pop-btn" data-login>Log in</button></div>`}
     </div>`;
   }
 
@@ -1157,6 +1282,42 @@ const Spots = (() => {
       nb.querySelectorAll("[data-goto]").forEach(b => b.addEventListener("click", () => { const x = spots.find(y => String(y.id) === b.dataset.goto); if (x) { map.closePopup(); focusSpot(x); } }));
       popup.update();
     }
+  }
+
+  /* ---------- richieste di iscrizione (solo admin) ---------- */
+  function openRequests() {
+    let d = $("#requestsDialog");
+    if (!d) { d = document.createElement("dialog"); d.id = "requestsDialog"; d.className = "import-dialog"; document.body.appendChild(d); }
+    const row = m => `<li class="req-row" data-uid="${esc(m.user_id)}">
+        <div><b>${esc([m.first_name, m.last_name].filter(Boolean).join(" ") || "—")}</b>
+          <span>${esc(m.email || "")} · ${fmtDay(String(m.created_at).slice(0, 10))}</span></div>
+        <button type="button" class="pop-btn primary" data-decide="approved">Approva</button>
+        <button type="button" class="pop-btn" data-decide="rejected">Rifiuta</button>
+      </li>`;
+    d.innerHTML = `<button class="dialog-close" type="button" data-close aria-label="Close">${ICON.close}</button>
+      <div class="import-body" data-no-i18n>
+        <span class="eyebrow">Spots · solo per te</span>
+        <h2>Richieste di iscrizione</h2>
+        ${pendingMembers.length ? `<ul class="req-list">${pendingMembers.map(row).join("")}</ul>`
+          : `<p class="gate-help left">Nessuna richiesta in attesa.</p>`}
+        <p class="gate-help left">Chi approvi vede subito tutta la mappa, compresi i luoghi Fragile. Chi rifiuti continua a vedere solo la mappa pubblica.</p>
+      </div>`;
+    d.querySelector("[data-close]").onclick = () => d.close();
+    d.querySelectorAll("[data-decide]").forEach(b => b.addEventListener("click", async () => {
+      const li = b.closest(".req-row"), uid = li.dataset.uid;
+      li.querySelectorAll("button").forEach(x => (x.disabled = true));
+      try {
+        await api("/rest/v1/rpc/decide_member", { method: "POST", body: { p_user: uid, p_status: b.dataset.decide } });
+        pendingMembers = pendingMembers.filter(m => m.user_id !== uid);
+        li.innerHTML = `<p class="gate-help left">${b.dataset.decide === "approved" ? "✓ Approvato" : "Rifiutato"}</p>`;
+        const btn = $("#spotsRequests");
+        if (btn) { btn.querySelector("b").textContent = pendingMembers.length; btn.classList.toggle("has", pendingMembers.length > 0); }
+      } catch (err) {
+        toast(`Non riuscito (${err.message}).`, true);
+        li.querySelectorAll("button").forEach(x => (x.disabled = false));
+      }
+    }));
+    if (!d.open) d.showModal();
   }
 
   /* ---------- codice della community: si accetta una volta prima di contribuire ---------- */
