@@ -195,7 +195,8 @@ const Spots = (() => {
     const today = new Date().toISOString().slice(0, 10);
     return all
       .filter(s => Number.isFinite(+s.lat) && Number.isFinite(+s.lon))
-      .filter(s => !(s.ends_on || s.starts_on) || (s.ends_on || s.starts_on) >= today)   // eventi finiti: spariscono da soli
+      .filter(s => s.category === "workshop" && s.starts_on ? s.starts_on > today                      // workshop: spariscono il giorno della partenza
+        : !(s.ends_on || s.starts_on) || (s.ends_on || s.starts_on) >= today)                          // altri eventi: spariscono quando finiscono
       .map(s => ({ ...s, lat: +s.lat, lon: +s.lon, list: s.list || "Spots", category: CATS[s.category] ? s.category : "spot" }));
   }
   const ALERTS = {
@@ -1586,7 +1587,7 @@ const Spots = (() => {
         ${schemaV2 ? `<div class="add-dates" id="addDates" hidden>
           <div><label for="addFrom">From</label><input id="addFrom" type="date"></div>
           <div><label for="addTo">To</label><input id="addTo" type="date"></div>
-          <p class="gate-help left">The workshop disappears from the map by itself once it's over.</p>
+          <p class="gate-help left">The workshop disappears from the map by itself on the day it starts.</p>
           ${wsV ? wsFieldsHtml({}, "add") : ""}
         </div>` : ""}
         ${schemaV2 && socialV ? `<fieldset class="soc-add"><legend>Community <small>(optional)</small></legend>
