@@ -919,7 +919,6 @@ function renderAbout() {
   $("#aboutQuote").textContent = about.citazione ? `“${about.citazione}”` : "";
   $("#aboutQuote").hidden = !about.citazione;
   $("#aboutGear").innerHTML = md(about.attrezzatura);
-  $("#aboutApproach").innerHTML = md(about.approccio);
   const img = $("#aboutImage");
   $("#aboutPhoto").hidden = !about.immagine;
   if (about.immagine) { delete img.dataset.fallback; img.src = mediaUrl(about.immagine); }

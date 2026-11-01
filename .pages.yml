@@ -211,11 +211,6 @@ content:
         type: rich-text
         options:
           format: markdown
-      - name: approccio
-        label: My Approach
-        type: rich-text
-        options:
-          format: markdown
       - name: partenza
         label: Punto di partenza delle rotte sulla mappa
         type: object
