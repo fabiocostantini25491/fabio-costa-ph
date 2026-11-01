@@ -7,6 +7,7 @@
    ========================================================= */
 let HOME_BASE = { name: "Roma", lat: 41.9028, lon: 12.4964 }; // da qui partono le rotte tratteggiate
 let trips = [];      // { id, name, country, lat, lon, start, end, description, article }
+let addedOn = { articoli: {}, foto: {} };   // content/novita.json: quando è comparso ogni articolo e ogni foto (lo scrive GitHub)
 let photos = [];     // { id, trip, title, src, date, category, lat, lon, description }
 let articles = [];   // { id, title, category, date, minutes, cover, trip, excerpt, text }
 let about = {};
@@ -119,9 +120,10 @@ async function getJSON(path) {
 }
 
 async function loadContent() {
-  const [v, a, c] = await Promise.allSettled([
-    getJSON("content/viaggi.json"), getJSON("content/articoli.json"), getJSON("content/chi-sono.json")
+  const [v, a, c, nv] = await Promise.allSettled([
+    getJSON("content/viaggi.json"), getJSON("content/articoli.json"), getJSON("content/chi-sono.json"), getJSON("content/novita.json")
   ]);
+  addedOn = nv.status === "fulfilled" && nv.value ? nv.value : { articoli: {}, foto: {} };
   [v, a, c].forEach(r => r.status === "rejected" && console.error("[contenuti]", r.reason));
   contentFailed = [v, a, c].every(r => r.status === "rejected");
 
@@ -137,7 +139,7 @@ async function loadContent() {
     trips.push(trip);
     (Array.isArray(t.foto) ? t.foto : []).forEach((f, fi) => {
       if (!f || !f.immagine) return;
-      photos.push({ id: `${id}-${fi}`, trip: id, title: f.titolo || trip.name, src: mediaUrl(f.immagine),
+      photos.push({ id: `${id}-${fi}`, trip: id, raw: f.immagine, title: f.titolo || trip.name, src: mediaUrl(f.immagine),
         date: f.data || trip.start, category: f.categoria || "Paesaggi",
         lat: num(f.lat, trip.lat), lon: num(f.lon, trip.lon), description: f.descrizione || "",
         ownCoords: Number.isFinite(parseFloat(f.lat)) && Number.isFinite(parseFloat(f.lon)) });
@@ -512,6 +514,85 @@ function drawHomePins() {
     });
   });
   startHomeCycle(spots);
+  drawHomeNews();
+}
+
+/* ---------- Novità: astronavi con la scia sulla mappa della home, per 5 giorni dall'inserimento ---------- */
+const NEWS_DAYS = 5;
+const SHIP_SVG = `<svg viewBox="0 0 32 16" aria-hidden="true"><path d="M2 8c3-3.6 9-5.4 17-5.4 5 0 9 2.4 11 5.4-2 3-6 5.4-11 5.4C11 13.4 5 11.6 2 8z" fill="#0b1626"/><path d="M2 8c3-3.6 9-5.4 17-5.4 5 0 9 2.4 11 5.4-2 3-6 5.4-11 5.4C11 13.4 5 11.6 2 8z" fill="none" stroke="currentColor" stroke-width="1.3"/><circle cx="21" cy="8" r="2.2" fill="currentColor"/><path d="M8 3.6 5 0.8M8 12.4 5 15.2" stroke="currentColor" stroke-width="1.2"/></svg>`;
+let homeWorkshops = null;
+const isFresh = iso => { const t = Date.parse(iso || ""); return Number.isFinite(t) && Date.now() - t <= NEWS_DAYS * 864e5 && t <= Date.now() + 864e5; };
+async function loadHomeWorkshops() {
+  if (homeWorkshops) return homeWorkshops;
+  homeWorkshops = [];
+  try {
+    if (typeof SPOTS_CONFIG === "undefined" || !SPOTS_CONFIG.url) return homeWorkshops;
+    const res = await fetch(`${SPOTS_CONFIG.url.replace(/\/$/, "")}/rest/v1/public_workshops?select=id,name,lat,lon,starts_on,ends_on,ws_price,ws_currency,places_left,offer,ws_link,created_at`,
+      { headers: { apikey: SPOTS_CONFIG.anonKey } });
+    if (res.ok) homeWorkshops = await res.json();
+  } catch {}
+  return homeWorkshops;
+}
+function newsItems() {
+  const items = [];
+  articles.forEach(a => {
+    const when = addedOn.articoli?.[a.id] || (a.date ? a.date + "T12:00:00" : "");
+    if (!isFresh(when)) return;
+    const t = a.trip && tripById(a.trip);
+    const pos = t || (HOME_BASE && Number.isFinite(HOME_BASE.lat) ? HOME_BASE : null);
+    if (pos) items.push({ kind: "article", when, lat: pos.lat, lon: pos.lon, label: `New in the Journal`, title: a.title, go: () => { location.hash = `art-${a.id}`; } });
+  });
+  trips.forEach(t => {
+    const fresh = photos.filter(p => p.trip === t.id && isFresh(addedOn.foto?.[p.raw]));
+    if (!fresh.length) return;
+    const when = fresh.map(p => addedOn.foto[p.raw]).sort().pop();
+    items.push({ kind: "photos", when, lat: t.lat, lon: t.lon, label: fresh.length === 1 ? "New photo" : `${fresh.length} new photos`, title: t.name,
+      go: () => { location.hash = "explore"; setTimeout(() => openTrip(t.id), 120); } });
+  });
+  (homeWorkshops || []).forEach(w => {
+    if (!isFresh(w.created_at)) return;
+    const date = w.starts_on ? fmtDate(w.starts_on) : "";
+    items.push({ kind: "workshop", when: w.created_at, lat: +w.lat, lon: +w.lon, label: w.offer ? `Workshop offer · ${w.offer}` : "New workshop",
+      title: `${w.name}${date ? ` · ${date}` : ""}${w.places_left != null ? ` · ${w.places_left} places left` : ""}`,
+      go: () => { if (w.ws_link && /^https?:\/\//.test(w.ws_link)) window.open(w.ws_link, "_blank", "noopener"); else location.hash = "spots"; } });
+  });
+  return items.filter(i => Number.isFinite(i.lat) && Number.isFinite(i.lon)).sort((a, b) => String(b.when).localeCompare(String(a.when)));
+}
+async function drawHomeNews() {
+  const map = homeMap;
+  if (!map) return;
+  if (!homeWorkshops) { await loadHomeWorkshops(); }
+  if (!map._news) map._news = L.layerGroup().addTo(map);
+  map._news.clearLayers();
+  const items = newsItems();
+  items.forEach((it, i) => {
+    const m = L.marker([it.lat, it.lon], { zIndexOffset: 2000, keyboard: true, title: `${it.label}: ${it.title}`,
+      icon: L.divIcon({ className: "", iconSize: [64, 64], iconAnchor: [32, 32], tooltipAnchor: [0, -26],
+        html: `<div class="ship ship-${it.kind}" style="--d:${-i * 2.3}s;--r:${22 + (i % 3) * 5}px"><div class="ship-orbit"><span class="ship-craft"><span class="ship-trail"></span>${SHIP_SVG}</span></div><span class="ship-dot"></span></div>` })
+    }).addTo(map._news);
+    m.bindTooltip(`<b class="news-kind">${esc(it.label)}</b><br>${esc(it.title)}`, { direction: "top", className: "news-tip" });
+    m.on("click", () => { window.fcTrack?.(`Home news: ${it.kind}`); it.go(); });
+  });
+  renderNewsTicker(items);
+}
+let newsTimer = 0;
+function renderNewsTicker(items) {
+  const box = $("#heroNews"), tags = $(".hero-tags");
+  clearInterval(newsTimer);
+  if (!box) return;
+  box.hidden = !items.length;
+  if (tags) tags.hidden = !!items.length;
+  if (!items.length) return;
+  let i = 0;
+  const show = () => {
+    const it = items[i % items.length];
+    box.innerHTML = `<span class="news-badge"><span class="news-pulse" aria-hidden="true"></span>New</span>
+      <button type="button" class="news-item news-${it.kind}"><small>${esc(it.label)}</small><b>${esc(it.title)}</b></button>`;
+    box.querySelector("button").addEventListener("click", () => { window.fcTrack?.(`Home news: ${it.kind}`); it.go(); });
+    i++;
+  };
+  show();
+  if (items.length > 1) newsTimer = setInterval(show, 5000);
 }
 
 /* In basso a sinistra scorrono nome e coordinate degli spot, come nel mockup */
