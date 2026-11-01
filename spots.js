@@ -11,7 +11,8 @@
    ========================================================= */
 const SPOTS_CONFIG = {
   url: "",        // es. "https://abcdefghijkl.supabase.co"
-  anonKey: ""     // es. "eyJhbGciOi..."
+  anonKey: "",    // es. "eyJhbGciOi..."
+  showInMenu: false   // false = la voce SPOTS compare nel menu solo a chi ha fatto l'accesso (ora: solo tu)
 };
 
 const Spots = (() => {
@@ -30,8 +31,12 @@ const Spots = (() => {
   let loaded = false;
 
   /* ---------- sessione ---------- */
-  function saveSession(s) { session = s; try { s ? localStorage.setItem(SESSION_KEY, JSON.stringify(s)) : localStorage.removeItem(SESSION_KEY); } catch {} }
-  function loadSession() { try { session = JSON.parse(localStorage.getItem(SESSION_KEY) || "null"); } catch { session = null; } }
+  function updateNav() {
+    const link = document.querySelector(".nav-spots");
+    if (link) link.hidden = !(configured() && (SPOTS_CONFIG.showInMenu || session));
+  }
+  function saveSession(s) { session = s; updateNav(); try { s ? localStorage.setItem(SESSION_KEY, JSON.stringify(s)) : localStorage.removeItem(SESSION_KEY); } catch {} }
+  function loadSession() { try { session = JSON.parse(localStorage.getItem(SESSION_KEY) || "null"); } catch { session = null; } updateNav(); }
   function jwtEmail(token) {
     try { return JSON.parse(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/"))).email || ""; } catch { return ""; }
   }
@@ -531,7 +536,7 @@ const LOCK_SVG = '<svg viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" heigh
 const ICON_UPLOAD = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V4M7.5 8.5 12 4l4.5 4.5M5 15v3.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V15"/></svg>';
 
 /* subito, prima che app.js legga l'indirizzo */
-if (!(SPOTS_CONFIG.url && SPOTS_CONFIG.anonKey)) document.querySelector(".nav-spots")?.setAttribute("hidden", "");   // voce nascosta finché Supabase non è collegato
+document.querySelector(".nav-spots")?.setAttribute("hidden", "");   // nascosta finché non si sa chi sta guardando
 Spots.loadSession();
 Spots.handleCallback();
 window.Spots = Spots;
