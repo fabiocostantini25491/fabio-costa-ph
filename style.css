@@ -673,3 +673,85 @@ main > .page{scroll-margin-top:80px}
   .tools-date{width:100%}
   .tools-date input{flex:1;min-width:0}
 }
+
+/* =========================================================
+   SPOTS — categorie, schede con foto e recensioni
+   ========================================================= */
+.spots-add{padding:8px 16px;font-size:11.5px;gap:7px}
+.spots-add svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
+.spots-cats{margin:0 0 10px}
+.cat-filter{gap:7px}
+.cat-filter svg,.sg-cat svg{width:15px;height:15px;fill:none;stroke:var(--c);stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.cat-filter.active{border-color:var(--c);box-shadow:0 0 0 1px var(--c) inset}
+.sg-cat{display:grid;place-items:center;width:26px;height:26px;border-radius:50%;border:1.5px solid var(--c);background:#06101d;flex:none}
+.sg-cat svg{width:14px;height:14px}
+.spot-pin{width:28px;height:28px;display:grid;place-items:center;border-radius:50%;background:#06101d;border:2px solid var(--c);
+  box-shadow:0 0 0 1.5px rgba(255,255,255,.75),0 0 14px var(--c);cursor:pointer;transition:transform .15s}
+.spot-pin:hover{transform:scale(1.18)}
+.spot-pin svg{width:15px;height:15px;fill:none;stroke:var(--c);stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.spot-cat{display:inline-flex;align-items:center;gap:6px;font-size:10px;letter-spacing:1.6px;text-transform:uppercase;color:var(--c)}
+.spot-cat svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.spot-cat em{font-style:normal;color:var(--muted);margin-left:4px}
+.spot-cat em::before{content:"· ";}
+.spot-popup .leaflet-popup-content{max-height:min(62vh,520px);overflow:auto}
+.pop-rating{display:flex;align-items:center;gap:6px;color:var(--soft)!important}
+.pop-rating strong{color:#fff}
+.stars-static{position:relative;display:inline-block;color:rgba(255,255,255,.18);letter-spacing:1px}
+.stars-static::before{content:"★★★★★";position:absolute;inset:0;width:var(--v);overflow:hidden;color:#ffd27a;letter-spacing:1px}
+.pop-dates{display:flex;align-items:center;gap:6px;color:#9fe3c8!important}
+.pop-dates svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.6}
+.pop-photos{display:flex;gap:6px;overflow-x:auto}
+.pop-photos:empty{display:none}
+.pop-thumb{flex:none;width:76px;height:76px;padding:0;border:1px solid var(--line-strong);border-radius:8px;overflow:hidden;background:#0b1626;cursor:zoom-in}
+.pop-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.pop-uploading{font-size:11.5px;color:var(--muted);align-self:center}
+.pop-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
+.pop-btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line-strong);background:none;color:var(--accent);border-radius:999px;padding:5px 12px;font-size:11.5px;cursor:pointer}
+.pop-btn:hover{border-color:var(--accent)}
+.pop-btn svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linejoin:round}
+.pop-btn.primary{justify-self:start;background:rgba(156,200,255,.12)}
+.pop-review{display:grid;gap:8px;padding:10px;border:1px solid var(--line);border-radius:10px;background:rgba(255,255,255,.03)}
+.pop-review textarea,.add-form textarea{width:100%;background:rgba(3,9,18,.7);border:1px solid var(--line-strong);border-radius:12px;color:#fff;padding:10px 12px;font:inherit;font-size:13.5px;resize:vertical;outline:none}
+.pop-review textarea:focus,.add-form textarea:focus{border-color:var(--accent)}
+.stars{display:flex;gap:2px}
+.stars button{border:0;background:none;color:rgba(255,255,255,.22);font-size:22px;line-height:1;padding:2px;cursor:pointer}
+.stars button.on{color:#ffd27a}
+.pop-reviews{display:grid;gap:8px}
+.pop-reviews:empty{display:none}
+.pop-rev{border-top:1px solid var(--line);padding-top:8px}
+.rev-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.rev-head b{color:#fff;font-weight:500;font-size:12.5px}
+.rev-head time{color:var(--muted);font-size:11px}
+.rev-stars{color:#ffd27a;font-size:12px;letter-spacing:1px}
+.rev-stars i{font-style:normal;color:rgba(255,255,255,.18)}
+.rev-del{margin-left:auto;width:22px;height:22px;display:grid;place-items:center;border:0;background:none;color:var(--muted);cursor:pointer}
+.rev-del svg{width:12px;height:12px;stroke:currentColor;stroke-width:2}
+.pop-author{font-size:11.5px!important;color:var(--muted)!important}
+.cat-pick{border:0;margin:0 0 8px;padding:0;display:flex;flex-wrap:wrap;gap:8px}
+.cat-pick legend{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--accent);margin-bottom:8px;padding:0}
+.cat-opt{position:relative;display:inline-flex!important;align-items:center;gap:7px;padding:8px 14px;border:1px solid var(--line-strong);border-radius:999px;cursor:pointer;
+  font-size:13px!important;letter-spacing:0!important;text-transform:none!important;color:var(--soft)!important}
+.cat-opt input{position:absolute;opacity:0;width:1px;height:1px;margin:0}
+.cat-opt svg{width:16px;height:16px;fill:none;stroke:var(--c);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.cat-opt:has(input:checked){border-color:var(--c);background:color-mix(in srgb,var(--c) 14%,transparent);color:#fff!important}
+.cat-opt:has(input:focus-visible){outline:2px solid var(--c);outline-offset:2px}
+.add-form label small{letter-spacing:0;text-transform:none;color:var(--muted);font-size:11px}
+.add-form input[type=file]{border-radius:12px;padding:10px 12px;font-size:13px}
+.add-dates{display:grid;grid-template-columns:1fr 1fr;gap:4px 12px}
+.add-dates .gate-help{grid-column:1/-1}
+.add-dates input{color-scheme:dark}
+.photo-dialog{width:min(1100px,96vw);max-height:94vh;padding:0;border:1px solid var(--line-strong);border-radius:var(--radius);background:#040a14;color:#fff}
+.photo-dialog::backdrop{background:rgba(2,6,12,.85)}
+.photo-dialog img{display:block;max-width:100%;max-height:80vh;margin:0 auto;object-fit:contain}
+.photo-meta{display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px;padding:12px 18px;margin:0;color:var(--soft);font-size:13px}
+.photo-nav{display:inline-flex;align-items:center;gap:8px}
+.photo-nav button{width:30px;height:30px;display:grid;place-items:center;border:1px solid var(--line-strong);border-radius:50%;background:none;color:#fff;cursor:pointer}
+.photo-nav svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2}
+.photo-dialog .spot-delete{margin:0 0 0 auto}
+.photo-dialog .dialog-close{position:absolute;top:10px;right:10px;z-index:2}
+.add-form{grid-template-columns:minmax(0,1fr)}
+.add-form > *{min-width:0}
+.add-form input{max-width:100%}
+.add-dates{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+.add-dates input{width:100%;padding-inline:12px}
+.add-dialog{overflow-x:hidden}
