@@ -68,20 +68,24 @@
       ]
     },
     {
-      "nome": "Tempio di Esculapio (Roma)",
+      "nome": "Roma",
       "id": "Roma",
-      "lat": "41.91472294276338",
-      "lon": "12.483363211194078",
+      "lat": "41.89078521973111",
+      "lon": "12.490868334333522",
       "foto": [
         {
           "titolo": "Tempio di Esculapio",
           "immagine": "/img/foto/fb-untitled-2-2025-11-30t18-03-23-337-2026-09-27t12-10-52-173-1.jpg",
-          "categoria": "Urban"
+          "categoria": "Urban",
+          "lat": "41.914986406133764",
+          "lon": "12.483406126535264"
         },
         {
           "titolo": "Tempio di Esculapio",
           "immagine": "/img/foto/fb-untitled-4-2026-10-01t19-30-17-349.jpg",
-          "categoria": "Urban"
+          "categoria": "Urban",
+          "lat": "41.91458721878449",
+          "lon": "12.483620703241188"
         }
       ]
     }
