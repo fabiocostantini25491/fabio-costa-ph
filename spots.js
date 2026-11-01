@@ -581,6 +581,7 @@ const Spots = (() => {
     return "attraction";
   }
   const osmCache = new Map();
+  const OVERPASS = ["https://overpass-api.de/api/interpreter", "https://overpass.private.coffee/api/interpreter", "https://maps.mail.ru/osm/tools/overpass/api/interpreter"];
   async function scanOsm(o, extent) {
     const seq = ++osmSeq;
     let r = Math.min(25000, o.radius || nearKm * 1000);   // OpenStreetMap: al massimo 25 km per non sovraccaricarlo
@@ -599,14 +600,24 @@ const Spots = (() => {
       nwr["amenity"="place_of_worship"]["historic"]${A};
       nwr["boundary"="protected_area"]["name"]${A};
       nwr["leisure"="nature_reserve"]["name"]${A};
-    );out center tags meta 300;`;
+    );out center meta 300;`;
     try {
       let data = osmCache.get(key);
       if (!data) {
-        const res = await fetch("https://overpass-api.de/api/interpreter", { method: "POST", body: "data=" + encodeURIComponent(q),
-          headers: { "Content-Type": "application/x-www-form-urlencoded" } });
-        if (!res.ok) throw new Error(res.status === 429 ? "busy" : `HTTP ${res.status}`);
-        data = await res.json();
+        // più server pubblici di Overpass: se uno è occupato o non risponde, si prova il successivo
+        let lastErr = null;
+        for (const url of OVERPASS) {
+          try {
+            const ctl = new AbortController(), tm = setTimeout(() => ctl.abort(), 30000);
+            const res = await fetch(url, { method: "POST", body: "data=" + encodeURIComponent(q), signal: ctl.signal,
+              headers: { "Content-Type": "application/x-www-form-urlencoded" } });
+            clearTimeout(tm);
+            if (!res.ok) throw new Error(res.status === 429 || res.status === 504 ? "busy" : `HTTP ${res.status}`);
+            data = await res.json();
+            break;
+          } catch (err) { lastErr = err; }
+        }
+        if (!data) throw lastErr || new Error("no answer");
         osmCache.set(key, data);
       }
       if (seq !== osmSeq) return;
