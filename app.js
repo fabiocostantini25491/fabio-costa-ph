@@ -135,7 +135,8 @@ async function loadContent() {
       if (!f || !f.immagine) return;
       photos.push({ id: `${id}-${fi}`, trip: id, title: f.titolo || trip.name, src: mediaUrl(f.immagine),
         date: f.data || trip.start, category: f.categoria || "Paesaggi",
-        lat: num(f.lat, trip.lat), lon: num(f.lon, trip.lon), description: f.descrizione || "" });
+        lat: num(f.lat, trip.lat), lon: num(f.lon, trip.lon), description: f.descrizione || "",
+        ownCoords: Number.isFinite(parseFloat(f.lat)) && Number.isFinite(parseFloat(f.lon)) });
     });
     // se le date del viaggio mancano, le ricavo dalle foto
     const dates = photos.filter(p => p.trip === id && p.date).map(p => p.date).sort();
@@ -181,6 +182,25 @@ const maps = {};          // home, explore
 const pinLayers = {};
 let activeTripId = null;
 let searchMarker = null;
+let photoMarker = null;   // punto esatto dello scatto mostrato sulla mappa di Explore
+
+const gmapsUrl = (lat, lon) => `https://www.google.com/maps/search/?api=1&query=${(+lat).toFixed(6)},${(+lon).toFixed(6)}`;
+/* Riga con le coordinate della singola foto + link a Google Maps */
+function photoCoordsHtml(p) {
+  if (!p || !Number.isFinite(+p.lat) || !Number.isFinite(+p.lon)) return "";
+  return `<span class="shot-coords">${ICON.pin}<span>${fmtCoord(+p.lat, +p.lon)}</span></span>` +
+    (p.ownCoords ? "" : `<span class="shot-note">posizione del viaggio</span>`) +
+    `<a class="text-link" href="${gmapsUrl(p.lat, p.lon)}" target="_blank" rel="noopener">${ICON.ext}Apri in Google Maps</a>`;
+}
+function showPhotoMarker(p) {
+  const map = maps.explore;
+  photoMarker?.remove(); photoMarker = null;
+  if (!map || !p || !p.ownCoords) return;
+  const t = tripById(p.trip);
+  if (t && distKm(t, p) < 0.05) return;   // coincide con l'astronauta: non serve
+  photoMarker = L.marker([p.lat, p.lon], { icon: L.divIcon({ className: "", html: '<div class="shot-pin"></div>', iconSize: [16, 16], iconAnchor: [8, 8] }), interactive: false, keyboard: false })
+    .addTo(map).bindTooltip("Punto dello scatto", { direction: "top", offset: [0, -6] });
+}
 
 const PIN_SVG = `<svg viewBox="0 0 34 42" aria-hidden="true">
   <path class="pin-body" d="M17 41C17 41 3 25.5 3 16a14 14 0 0 1 28 0c0 9.5-14 25-14 25z" fill="#0b2635" stroke="currentColor" stroke-width="1.6"/>
@@ -400,6 +420,7 @@ function openTrip(id, photoId) {
     <div class="thumbs">${items.slice(0, 8).map((p, i) => `
       <button type="button" data-i="${i}" aria-label="Mostra ${esc(p.title)}"><img src="${esc(p.src)}" alt="" data-cat="${esc(p.category)}" loading="lazy"></button>`).join("")}
     </div>
+    <p class="shot-row" id="shotRow"></p>
     <p class="trip-facts"><span>${ICON.cal}${esc(fmtRange(t.start, t.end))}</span><span>${ICON.img}${items.length} ${items.length === 1 ? "foto" : "foto"}</span></p>
     <p class="trip-desc">${esc(t.description || "Un luogo del mio archivio fotografico.")}</p>
     <div class="panel-actions">
@@ -419,13 +440,15 @@ function openTrip(id, photoId) {
     img.alt = p.title;
     img.src = p.src;
     $$("#locationPanel .thumbs button").forEach((b, k) => b.classList.toggle("is-current", k === carouselIndex));
+    $("#shotRow").innerHTML = `<span class="shot-label">Questa foto</span>` + photoCoordsHtml(p);
+    showPhotoMarker(p);
   };
   show(carouselIndex);
   $("#carPrev")?.addEventListener("click", () => show(carouselIndex - 1));
   $("#carNext")?.addEventListener("click", () => show(carouselIndex + 1));
   $$("#locationPanel .thumbs button").forEach(b => b.addEventListener("click", () => show(+b.dataset.i)));
   $("#carouselImg").addEventListener("click", () => items[carouselIndex] && openPhoto(items[carouselIndex].id, items));
-  $("#closeLocation").addEventListener("click", renderPanelIntro);
+  $("#closeLocation").addEventListener("click", () => { photoMarker?.remove(); photoMarker = null; renderPanelIntro(); });
   $("#viewPlacePhotos").addEventListener("click", () => {
     gallery.trip = id; gallery.category = "Tutte";
     location.hash = "gallery";
@@ -473,12 +496,46 @@ function renderGallery() {
 }
 
 let lightboxList = [], lightboxIndex = 0;
+
+/* Aggiunge al riquadro della foto: coordinate, contatore e pulsante schermo intero */
+function setupLightbox() {
+  const d = $("#photoDialog");
+  d.classList.add("lightbox-full");
+  $("#dialogMeta").insertAdjacentHTML("afterend", `<p class="lightbox-coords" id="dialogCoords"></p>`);
+  const tools = document.createElement("div");
+  tools.className = "lightbox-tools";
+  tools.innerHTML = `<span class="lightbox-count" id="dialogCount"></span>
+    <button class="lightbox-btn" type="button" id="dialogInfo" aria-label="Nascondi informazioni" title="Mostra/nascondi informazioni (I)">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5M12 8h.01"/></svg></button>
+    <button class="lightbox-btn" type="button" id="dialogFull" aria-label="Schermo intero" title="Schermo intero (F)">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>`;
+  d.prepend(tools);
+  const close = $("#dialogClose");
+  tools.appendChild(close);   // tutti i pulsanti in alto a destra, in fila
+  if (!(d.requestFullscreen || d.webkitRequestFullscreen)) $("#dialogFull").hidden = true;
+}
+function toggleInfo(force) {
+  const d = $("#photoDialog");
+  const hide = force ?? !d.classList.contains("info-hidden");
+  d.classList.toggle("info-hidden", hide);
+  $("#dialogInfo").setAttribute("aria-label", hide ? "Mostra informazioni" : "Nascondi informazioni");
+}
+function isFullscreen() { return !!(document.fullscreenElement || document.webkitFullscreenElement); }
+function toggleFullscreen() {
+  const d = $("#photoDialog");
+  try {
+    if (isFullscreen()) (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+    else (d.requestFullscreen || d.webkitRequestFullscreen).call(d)?.catch?.(() => {});
+  } catch {}
+}
 function openPhoto(id, list = photos) {
   lightboxList = list;
   lightboxIndex = Math.max(0, list.findIndex(p => p.id === id));
   showLightbox();
   const d = $("#photoDialog");
+  toggleInfo(false);
   if (!d.open) d.showModal();
+  document.documentElement.classList.add("no-scroll");
 }
 function showLightbox() {
   const p = lightboxList[lightboxIndex];
@@ -490,7 +547,9 @@ function showLightbox() {
   img.src = p.src;
   $("#dialogTitle").textContent = p.title;
   $("#dialogCategory").textContent = p.category;
-  $("#dialogMeta").textContent = `${tripById(p.trip)?.name || ""} · ${fmtDate(p.date)} · ${(+p.lat).toFixed(4)}, ${(+p.lon).toFixed(4)}`;
+  $("#dialogMeta").textContent = [tripById(p.trip)?.name, p.date ? fmtDate(p.date) : ""].filter(Boolean).join(" · ");
+  $("#dialogCoords").innerHTML = photoCoordsHtml(p);
+  $("#dialogCount").textContent = lightboxList.length > 1 ? `${lightboxIndex + 1} / ${lightboxList.length}` : "";
   $("#dialogDescription").textContent = p.description || "";
   const many = lightboxList.length > 1;
   $("#dialogPrev").hidden = $("#dialogNext").hidden = !many;
@@ -721,13 +780,32 @@ function bindEvents() {
   });
 
   const dlg = $("#photoDialog");
+  setupLightbox();
   $("#dialogClose").addEventListener("click", () => dlg.close());
+  $("#dialogFull").addEventListener("click", toggleFullscreen);
+  $("#dialogInfo").addEventListener("click", () => toggleInfo());
+  $("#dialogImage").addEventListener("click", () => toggleInfo());          // clic sulla foto: solo immagine
+  dlg.addEventListener("close", () => {
+    document.documentElement.classList.remove("no-scroll");
+    if (isFullscreen()) try { (document.exitFullscreen || document.webkitExitFullscreen).call(document); } catch {}
+  });
+  // scorrimento col dito sul telefono
+  let touchX = null;
+  dlg.addEventListener("touchstart", e => { touchX = e.touches.length === 1 ? e.touches[0].clientX : null; }, { passive: true });
+  dlg.addEventListener("touchend", e => {
+    if (touchX === null || lightboxList.length < 2) return;
+    const dx = e.changedTouches[0].clientX - touchX;
+    if (Math.abs(dx) > 50) stepLightbox(dx < 0 ? 1 : -1);
+    touchX = null;
+  });
   $("#dialogPrev").addEventListener("click", () => stepLightbox(-1));
   $("#dialogNext").addEventListener("click", () => stepLightbox(1));
   dlg.addEventListener("click", e => { if (e.target === dlg) dlg.close(); });
   dlg.addEventListener("keydown", e => {
     if (e.key === "ArrowLeft") stepLightbox(-1);
     if (e.key === "ArrowRight") stepLightbox(1);
+    if (e.key === "f" || e.key === "F") toggleFullscreen();
+    if (e.key === "i" || e.key === "I") toggleInfo();
   });
   $("#dialogMapButton").addEventListener("click", () => {
     const p = lightboxList[lightboxIndex];

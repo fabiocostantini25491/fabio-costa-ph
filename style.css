@@ -345,3 +345,44 @@ dialog::backdrop{background:rgba(1,8,13,.82)}
 .rich img{width:100%;border-radius:4px;margin:1.2em 0}
 .portrait-placeholder{overflow:hidden}
 .portrait-placeholder img{width:100%;height:100%;object-fit:cover}
+
+/* ---------- Foto a tutto schermo ---------- */
+.no-scroll{overflow:hidden}
+.lightbox-full[open]{width:100vw;height:100vh;height:100dvh;max-width:none;max-height:none;margin:0;padding:0;border:0;border-radius:0;
+  background:#02080d;display:flex;flex-direction:column;overflow:hidden}
+.lightbox-full::backdrop{background:#02080d}
+.lightbox-full .lightbox-stage{flex:1;min-height:0;position:relative;display:flex;align-items:center;justify-content:center;background:transparent}
+.lightbox-full .lightbox-stage img{width:100%;height:100%;max-height:none;object-fit:contain;cursor:pointer}
+.lightbox-full .nav-arrow{width:48px;height:48px;background:rgba(4,19,29,.55)}
+.lightbox-full .nav-arrow svg{width:26px;height:26px}
+.lightbox-full .nav-arrow.prev{left:max(14px,env(safe-area-inset-left,0px))}
+.lightbox-full .nav-arrow.next{right:max(14px,env(safe-area-inset-right,0px))}
+.lightbox-full .lightbox-info{flex:none;max-height:42vh;overflow:auto;background:rgba(7,28,41,.94);border-top:1px solid var(--line);
+  padding:16px max(24px,env(safe-area-inset-right,0px)) calc(18px + env(safe-area-inset-bottom,0px)) max(24px,env(safe-area-inset-left,0px))}
+.lightbox-full .lightbox-info h2{font-size:24px;margin:4px 0}
+.lightbox-full.info-hidden .lightbox-info{display:none}
+.lightbox-full.info-hidden .lightbox-tools{opacity:.55}
+.lightbox-full.info-hidden .lightbox-tools:hover{opacity:1}
+.lightbox-tools{position:absolute;z-index:3;top:calc(12px + env(safe-area-inset-top,0px));right:max(12px,env(safe-area-inset-right,0px));
+  display:flex;align-items:center;gap:8px;transition:opacity .2s}
+.lightbox-tools .dialog-close{position:static}
+.lightbox-btn{width:38px;height:38px;display:grid;place-items:center;border-radius:50%;border:1px solid var(--line-strong);background:rgba(7,28,41,.85);color:var(--cream)}
+.lightbox-btn:hover,.lightbox-tools .dialog-close:hover{border-color:var(--gold);background:rgba(11,38,53,.95)}
+.lightbox-btn svg{width:18px;height:18px}
+.lightbox-count{font-size:12.5px;letter-spacing:1px;color:var(--soft);background:rgba(7,28,41,.85);border-radius:20px;padding:5px 12px;font-variant-numeric:tabular-nums}
+.lightbox-count:empty{display:none}
+
+/* ---------- Coordinate della singola foto ---------- */
+.lightbox-coords,.shot-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px 16px;font-size:13px;color:var(--soft);margin:0 0 8px}
+.lightbox-coords:empty,.shot-row:empty{display:none}
+.shot-coords{display:inline-flex;align-items:center;gap:6px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.shot-coords svg{width:15px;height:15px;color:var(--gold);flex:none}
+.shot-note{font-size:11px;color:var(--muted);border:1px solid var(--line);border-radius:20px;padding:1px 9px}
+.shot-row{font-size:12.5px;margin:-4px 0 14px;padding:10px 12px;border:1px solid var(--line);border-radius:6px;background:rgba(7,28,41,.5)}
+.shot-label{width:100%;font-size:10px;font-weight:500;letter-spacing:2px;color:var(--gold);text-transform:uppercase}
+.shot-pin{width:16px;height:16px;border-radius:50%;background:var(--cream);border:3px solid #0b2635;box-shadow:0 0 0 2px var(--gold),0 0 12px rgba(213,170,118,.9)}
+@media (max-width:560px){
+  .lightbox-full .nav-arrow{width:40px;height:40px}
+  .lightbox-full .lightbox-info{max-height:48vh}
+  .shot-coords{white-space:normal}
+}
