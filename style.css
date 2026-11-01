@@ -406,3 +406,10 @@ dialog::backdrop{background:rgba(1,8,13,.82)}
 @media (max-width:560px){
   .map-modes button{padding:6px 8px;font-size:12px}
 }
+
+/* Tessere della mappa: non devono seguire la regola generale delle immagini (max-width:100%) */
+.leaflet-container .leaflet-tile-pane img,.leaflet-container img.leaflet-tile,.leaflet-container .leaflet-marker-pane img,.leaflet-container .leaflet-shadow-pane img{max-width:none!important;max-height:none!important;padding:0}
+.leaflet-tile{display:block;visibility:hidden;width:256px;height:256px}
+.leaflet-tile-loaded{visibility:inherit}
+.leaflet-fade-anim .leaflet-tile{will-change:opacity}
+.leaflet-tile-container{pointer-events:none}
