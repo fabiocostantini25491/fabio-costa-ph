@@ -24,7 +24,10 @@ const Spots = (() => {
   let session = null;       // { access_token, refresh_token, expires_at }
   let spots = [];
   let admin = false;
-  let map = null, layer = null, satLabels = null;
+  let map = null, layer = null, satLabels = null, originLayer = null;
+  let markerById = new Map();   // marker singoli disegnati ora (per aprire il popup da ricerca/vicini)
+  let origin = null;            // { lat, lon, label, kind: "me" | "place", acc } — punto da cui calcolare i vicini
+  let placeResults = [], placeTimer = 0, placeSeq = 0, suggestIdx = -1;
   let activeLists = null;   // Set delle liste visibili (null = tutte)
   let query = "";
   let notice = "";          // messaggio da mostrare nella schermata di accesso
@@ -191,9 +194,12 @@ const Spots = (() => {
     const email = session ? jwtEmail(session.access_token) : "";
     root().innerHTML = `
       <div class="spots-toolbar">
-        <div class="spots-search">
+        <div class="spots-search" id="spotsSearch">
           <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 21 21"/></svg>
-          <input id="spotsQuery" type="search" placeholder="Search a spot…" value="${esc(query)}" aria-label="Search a spot" autocomplete="off">
+          <input id="spotsQuery" type="search" placeholder="Search a spot or a place…" value="${esc(query)}" aria-label="Search a spot or a place"
+            autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="spotsSuggest">
+          <button type="button" class="spots-locate" id="spotsLocate" title="Spots near me" aria-label="Find spots near me">${ICON_LOCATE}<span>Near me</span></button>
+          <div class="spots-suggest" id="spotsSuggest" role="listbox" hidden></div>
         </div>
         <p class="spots-count" id="spotsCount"></p>
         <div class="spots-user">
@@ -211,6 +217,7 @@ const Spots = (() => {
       <div class="spots-stage">
         <div id="spotsMap" class="map map-spots" aria-label="Members map of photo spots"></div>
         <span class="hud-frame" aria-hidden="true"></span>
+        <section class="spots-near" id="spotsNear" aria-live="polite" hidden></section>
       </div>
       <aside class="spots-disclaimer" role="note">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 2 21h20L12 3zm0 6v6m0 3v.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -223,12 +230,7 @@ const Spots = (() => {
       </aside>
       ${spots.length ? "" : `<p class="empty-state">No spots yet.${admin ? " Use «Importa da Google Maps» to add them." : ""}</p>`}`;
 
-    $("#spotsQuery").addEventListener("input", e => { query = e.target.value; drawClusters(); });
-    $("#spotsQuery").addEventListener("keydown", e => {
-      if (e.key !== "Enter") return;
-      const hits = visibleSpots();
-      if (hits.length) map.flyToBounds(L.latLngBounds(hits.map(s => [s.lat, s.lon])).pad(0.2), { maxZoom: 15, duration: 1 });
-    });
+    wireSearch();
     $$(".spots-lists [data-list]").forEach(b => b.addEventListener("click", () => {
       const l = b.dataset.list;
       if (l === "__all") activeLists = new Set(lists);
@@ -240,6 +242,199 @@ const Spots = (() => {
     $("#spotsImport")?.addEventListener("click", openImport);
     $("#spotsAdd")?.addEventListener("click", () => openAdd());
     buildMap();
+    if (origin) renderNear();
+  }
+
+  /* ---------- ricerca: spot per nome + luoghi (città, laghi, zone) ---------- */
+  function wireSearch() {
+    const input = $("#spotsQuery"), box = $("#spotsSuggest");
+    input.addEventListener("input", () => {
+      query = input.value; drawClusters();
+      if (origin) renderNear();
+      const q = query.trim();
+      placeResults = []; clearTimeout(placeTimer);
+      if (q.length >= 3) placeTimer = setTimeout(() => searchPlaces(q).then(r => { if (input.value.trim() === q) { placeResults = r; renderSuggest(); } }), 380);
+      renderSuggest();
+    });
+    input.addEventListener("focus", () => { if (input.value.trim()) renderSuggest(); });
+    input.addEventListener("keydown", async e => {
+      const items = $$("#spotsSuggest [data-i]");
+      if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+        if (!items.length) return;
+        e.preventDefault();
+        suggestIdx = (suggestIdx + (e.key === "ArrowDown" ? 1 : -1) + items.length) % items.length;
+        items.forEach((el, i) => el.setAttribute("aria-selected", i === suggestIdx ? "true" : "false"));
+        items[suggestIdx].scrollIntoView({ block: "nearest" });
+      } else if (e.key === "Escape") { closeSuggest(); }
+      else if (e.key === "Enter") {
+        e.preventDefault();
+        if (suggestIdx >= 0 && items[suggestIdx]) return items[suggestIdx].click();
+        const q = input.value.trim();
+        if (!q) return;
+        const hits = visibleSpots();
+        if (hits.length) { closeSuggest(); return map.flyToBounds(L.latLngBounds(hits.map(s => [s.lat, s.lon])).pad(0.2), { maxZoom: 15, duration: 1 }); }
+        const places = placeResults.length ? placeResults : await searchPlaces(q);
+        if (places.length) pickPlace(places[0]);
+        else toast(`Nothing found for “${q}”.`, true);
+      }
+    });
+    input.addEventListener("search", () => { if (!input.value) { query = ""; drawClusters(); closeSuggest(); if (origin) renderNear(); } });
+    box.addEventListener("mousedown", e => e.preventDefault());   // non perdere il focus prima del clic
+    if (!wireSearch.doc) { wireSearch.doc = true; document.addEventListener("click", e => { if (!e.target.closest("#spotsSearch")) closeSuggest(); }); }
+    $("#spotsLocate").addEventListener("click", locateMe);
+  }
+
+  async function searchPlaces(q) {
+    const seq = ++placeSeq;
+    try {
+      const c = map ? map.getCenter() : null;
+      const bias = c ? `&lat=${c.lat.toFixed(3)}&lon=${L.Util.wrapNum(c.lng, [-180, 180], true).toFixed(3)}` : "";
+      const r = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=5${bias}`);
+      if (!r.ok) throw new Error(r.status);
+      const j = await r.json();
+      if (seq !== placeSeq) return placeResults;
+      return (j.features || []).map(f => {
+        const p = f.properties || {}, [lon, lat] = f.geometry.coordinates;
+        const ctx = [p.city !== p.name ? p.city : "", p.state, p.country].filter(Boolean);
+        return { lat, lon, name: p.name || p.city || p.country || q, context: [...new Set(ctx)].join(", "), extent: p.extent };
+      });
+    } catch {
+      try {   // riserva: OpenStreetMap Nominatim
+        const r = await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=5&q=${encodeURIComponent(q)}`, { headers: { "Accept-Language": "en" } });
+        const j = await r.json();
+        return j.map(p => ({ lat: +p.lat, lon: +p.lon, name: p.name || p.display_name.split(",")[0], context: p.display_name.split(",").slice(1, 4).join(",").trim(),
+          extent: p.boundingbox ? [+p.boundingbox[2], +p.boundingbox[1], +p.boundingbox[3], +p.boundingbox[0]] : null }));
+      } catch { return []; }
+    }
+  }
+
+  function renderSuggest() {
+    const box = $("#spotsSuggest"), input = $("#spotsQuery");
+    if (!box) return;
+    const q = norm(input.value.trim());
+    suggestIdx = -1;
+    if (!q) return closeSuggest();
+    const spotHits = q.length >= 2 ? visibleSpots().slice(0, 6) : [];
+    let i = 0, html = "";
+    if (spotHits.length) html += `<p class="sg-head">Spots</p>` + spotHits.map(s =>
+      `<button type="button" role="option" class="sg-item" data-i="${i++}" data-spot="${s.id}">
+        <span class="list-dot" style="--c:${listColor(s.list)}"></span><span class="sg-text"><strong>${esc(s.name)}</strong><small>${esc(s.list)}</small></span></button>`).join("");
+    if (placeResults.length) html += `<p class="sg-head">Places</p>` + placeResults.map((p, k) =>
+      `<button type="button" role="option" class="sg-item" data-i="${i++}" data-place="${k}">
+        ${ICON.pin}<span class="sg-text"><strong>${esc(p.name)}</strong><small>${esc(p.context)}</small></span></button>`).join("");
+    else if (q.length >= 3) html += `<p class="sg-head sg-wait">Places · searching…</p>`;
+    box.innerHTML = html;
+    box.hidden = !html;
+    input.setAttribute("aria-expanded", html ? "true" : "false");
+    box.querySelectorAll("[data-spot]").forEach(b => b.addEventListener("click", () => {
+      const s = spots.find(x => String(x.id) === b.dataset.spot);
+      if (!s) return;
+      input.value = s.name; query = ""; drawClusters(); closeSuggest(); focusSpot(s);
+    }));
+    box.querySelectorAll("[data-place]").forEach(b => b.addEventListener("click", () => pickPlace(placeResults[+b.dataset.place])));
+  }
+  function closeSuggest() {
+    const box = $("#spotsSuggest");
+    if (box) { box.hidden = true; box.innerHTML = ""; }
+    $("#spotsQuery")?.setAttribute("aria-expanded", "false");
+    suggestIdx = -1;
+  }
+
+  function pickPlace(p) {
+    if (!p) return;
+    const input = $("#spotsQuery");
+    input.value = p.name; query = ""; closeSuggest(); input.blur();
+    setOrigin({ lat: p.lat, lon: p.lon, label: p.name, kind: "place" }, p.extent);
+  }
+
+  function locateMe() {
+    const btn = $("#spotsLocate");
+    if (!navigator.geolocation) return toast("Your browser can't share its location.", true);
+    btn.classList.add("busy"); btn.disabled = true;
+    navigator.geolocation.getCurrentPosition(pos => {
+      btn.classList.remove("busy"); btn.disabled = false;
+      const { latitude: lat, longitude: lon, accuracy: acc } = pos.coords;
+      const input = $("#spotsQuery");
+      if (input) input.value = ""; query = ""; drawClusters(); closeSuggest();
+      setOrigin({ lat, lon, label: "your position", kind: "me", acc });
+    }, err => {
+      btn.classList.remove("busy"); btn.disabled = false;
+      toast(err.code === 1 ? "Location access was blocked. Allow it in your browser settings and try again." : "Couldn't find your position. Try again in a moment.", true);
+    }, { enableHighAccuracy: true, timeout: 12000, maximumAge: 60000 });
+  }
+
+  function setOrigin(o, extent) {
+    origin = o;
+    drawOrigin();
+    renderNear();
+    map.invalidateSize();   // sul telefono il pannello cambia l'altezza della mappa
+    const near = nearestSpots(5).filter(n => n.d <= 60);
+    if (extent && extent.length === 4 && Math.abs(extent[2] - extent[0]) > 0.05) {
+      // area grande (regione, lago, parco): mostra tutta l'area
+      map.flyToBounds([[extent[3], extent[0]], [extent[1], extent[2]]], { maxZoom: 13, duration: 1 });
+    } else if (near.length) {
+      map.flyToBounds(L.latLngBounds([[o.lat, o.lon], ...near.map(n => [n.s.lat, n.s.lon])]).pad(0.25), { maxZoom: 14, duration: 1 });
+    } else map.flyTo([o.lat, o.lon], 11, { duration: 1 });
+  }
+
+  function drawOrigin() {
+    if (!originLayer) return;
+    originLayer.clearLayers();
+    if (!origin) return;
+    if (origin.kind === "me" && origin.acc && origin.acc < 3000)
+      L.circle([origin.lat, origin.lon], { radius: origin.acc, color: "#6fb4ff", weight: 1, opacity: .6, fillOpacity: .08, interactive: false }).addTo(originLayer);
+    L.marker([origin.lat, origin.lon], { interactive: false, keyboard: false, zIndexOffset: 1000,
+      icon: L.divIcon({ className: "", iconSize: [22, 22], iconAnchor: [11, 11],
+        html: `<div class="origin-dot ${origin.kind}"></div>` }) }).addTo(originLayer);
+  }
+
+  const distKm = (a, b) => {
+    const R = 6371, rad = Math.PI / 180, dLat = (b.lat - a.lat) * rad, dLon = (b.lon - a.lon) * rad;
+    const h = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * rad) * Math.cos(b.lat * rad) * Math.sin(dLon / 2) ** 2;
+    return 2 * R * Math.asin(Math.min(1, Math.sqrt(h)));
+  };
+  const fmtKm = d => d < 1 ? `${Math.round(d * 1000 / 10) * 10} m` : d < 10 ? `${d.toFixed(1)} km` : `${Math.round(d)} km`;
+  function nearestSpots(n) {
+    if (!origin) return [];
+    return visibleSpots().map(s => ({ s, d: distKm(origin, s) })).sort((a, b) => a.d - b.d).slice(0, n);
+  }
+
+  function renderNear() {
+    const el = $("#spotsNear");
+    if (!el) return;
+    if (!origin) { el.hidden = true; el.innerHTML = ""; return; }
+    const all = visibleSpots().map(s => distKm(origin, s));
+    const in10 = all.filter(d => d <= 10).length, in50 = all.filter(d => d <= 50).length;
+    const top = nearestSpots(8);
+    const where = origin.kind === "me" ? "you" : esc(origin.label);
+    el.hidden = false;
+    el.innerHTML = `
+      <header class="near-head">
+        <div><span class="eyebrow">${origin.kind === "me" ? "Near you" : "Near"}</span>
+          <h3>${origin.kind === "me" ? "Spots around you" : esc(origin.label)}</h3></div>
+        <button type="button" class="near-close" id="nearClose" aria-label="Close">${ICON.close}</button>
+      </header>
+      <p class="near-sum">${!top.length ? "No spots match the current filters."
+        : in50 ? `<strong>${in10}</strong> within 10 km · <strong>${in50}</strong> within 50 km`
+        : `No spots within 50 km of ${where}. The nearest is <strong>${fmtKm(top[0].d)}</strong> away.`}</p>
+      <ol class="near-list">${top.map(({ s, d }) => `
+        <li><button type="button" data-near="${s.id}">
+          <span class="list-dot" style="--c:${listColor(s.list)}"></span>
+          <span class="sg-text"><strong>${esc(s.name)}</strong><small>${esc(s.list)}</small></span>
+          <span class="near-d">${fmtKm(d)}</span></button></li>`).join("")}</ol>`;
+    el.querySelectorAll("[data-near]").forEach(b => b.addEventListener("click", () => {
+      const s = spots.find(x => String(x.id) === b.dataset.near);
+      if (s) focusSpot(s);
+    }));
+    $("#nearClose").addEventListener("click", () => { origin = null; drawOrigin(); renderNear(); map.invalidateSize(); drawClusters(); });
+  }
+
+  function focusSpot(s) {
+    let done = false;
+    const open = () => { if (done) return; const m = markerById.get(s.id); if (m) { done = true; m.openPopup(); } };
+    map.once("moveend", () => setTimeout(open, 60));
+    map.flyTo([s.lat, s.lon], Math.max(16, map.getZoom()), { duration: .9 });
+    setTimeout(() => { drawClusters(); open(); }, 1300);
   }
 
   /* ---------- mappa satellite con raggruppamento ---------- */
@@ -260,6 +455,8 @@ const Spots = (() => {
     satLabels = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}", {
       maxZoom: 19, maxNativeZoom: 18, pane: "spotLabels", opacity: .9 }).addTo(map);
     layer = L.layerGroup().addTo(map);
+    originLayer = L.layerGroup().addTo(map);
+    drawOrigin();
     map.on("moveend zoomend", drawClusters);
     if (admin) map.on("contextmenu", e => openAdd({ lat: e.latlng.lat, lon: L.Util.wrapNum(e.latlng.lng, [-180, 180], true) }));
     const pts = visibleSpots().map(s => [s.lat, s.lon]);
@@ -272,7 +469,7 @@ const Spots = (() => {
   /* raggruppa gli spot vicini (griglia in pixel), solo quelli nell'area visibile */
   function drawClusters() {
     if (!map || !layer) return;
-    layer.clearLayers();
+    layer.clearLayers(); markerById = new Map();
     const list = visibleSpots();
     const count = $("#spotsCount");
     if (count) count.textContent = `${list.length} ${list.length === 1 ? "spot" : "spots"}`;
@@ -300,6 +497,7 @@ const Spots = (() => {
     const m = L.marker([s.lat, s.lon], { keyboard: true, title: s.name, riseOnHover: true,
       icon: L.divIcon({ className: "", iconSize: [18, 18], iconAnchor: [9, 9], tooltipAnchor: [0, -10],
         html: `<div class="spot-dot" style="--c:${listColor(s.list)}"></div>` }) }).addTo(layer);
+    markerById.set(s.id, m);
     m.bindTooltip(esc(s.name), { direction: "top" });
     m.bindPopup(() => popupHtml(s), { maxWidth: 300, minWidth: 220 });
     m.on("popupopen", e => {
@@ -761,6 +959,7 @@ const Spots = (() => {
 
 const LOCK_SVG = '<svg viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/><circle cx="12" cy="15.5" r="1.3"/></svg>';
 const ICON_PLUS = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>';
+const ICON_LOCATE = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/><circle cx="12" cy="12" r="7.5"/><path d="M12 1.5v3M12 19.5v3M1.5 12h3M19.5 12h3"/></svg>';
 const ICON_UPLOAD = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V4M7.5 8.5 12 4l4.5 4.5M5 15v3.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V15"/></svg>';
 
 /* subito, prima che app.js legga l'indirizzo */
