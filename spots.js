@@ -10,8 +10,8 @@
    la protezione vera sono le regole del database.
    ========================================================= */
 const SPOTS_CONFIG = {
-  url: "",        // es. "https://abcdefghijkl.supabase.co"
-  anonKey: "",    // es. "eyJhbGciOi..."
+  url: "https://hfidpbssartkmjlqcqvz.supabase.co",
+  anonKey: "sb_publishable_5vB1AGpYjMyh2Kv5TgPD0w_xfFzUdXV",   // chiave pubblica (publishable): la protezione la fanno le regole del database
   showInMenu: false   // false = la voce SPOTS compare nel menu solo a chi ha fatto l'accesso (ora: solo tu)
 };
 
