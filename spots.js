@@ -346,8 +346,8 @@ const Spots = (() => {
           <li><strong>Veloce:</strong> carica direttamente i file <em>.csv</em> delle liste di Takeout (o <em>.json</em>/<em>.geojson</em>). Dove il link contiene le coordinate le uso subito; per gli altri posso cercarle per nome.</li>
         </ol>
         <label class="import-drop" for="importFiles">
-          <input id="importFiles" type="file" accept=".kml,.csv,.json,.geojson" multiple>
-          <span>Trascina qui i file o <u>sceglili</u> · KML, CSV, JSON</span>
+          <input id="importFiles" type="file" accept=".kml,.kmz,.csv,.json,.geojson,application/vnd.google-earth.kml+xml,application/vnd.google-earth.kmz" multiple>
+          <span>Trascina qui i file o <u>sceglili</u> · KML, KMZ, CSV, JSON</span>
         </label>
         <div id="importSummary"></div>
       </div>`;
@@ -360,22 +360,53 @@ const Spots = (() => {
     if (!d.open) d.showModal();
   }
 
+  /* Legge un .kmz (zip) e restituisce il testo del primo .kml contenuto */
+  async function kmlFromKmz(file) {
+    const buf = new Uint8Array(await file.arrayBuffer()), dv = new DataView(buf.buffer);
+    for (let i = 0; i + 30 < buf.length; ) {
+      if (dv.getUint32(i, true) !== 0x04034b50) break;                 // intestazione di un file nello zip
+      const method = dv.getUint16(i + 8, true), size = dv.getUint32(i + 18, true);
+      const nameLen = dv.getUint16(i + 26, true), extraLen = dv.getUint16(i + 28, true);
+      const name = new TextDecoder().decode(buf.subarray(i + 30, i + 30 + nameLen));
+      const start = i + 30 + nameLen + extraLen, data = buf.subarray(start, start + size);
+      if (/\.kml$/i.test(name)) {
+        if (method === 0) return new TextDecoder().decode(data);
+        const stream = new Blob([data]).stream().pipeThrough(new DecompressionStream("deflate-raw"));
+        return await new Response(stream).text();
+      }
+      i = start + size;
+    }
+    throw new Error("nessun file KML dentro il KMZ");
+  }
+
   async function readFiles(files) {
-    const out = [];
+    const out = [], report = [];
+    const box = $("#importSummary");
+    box.innerHTML = `<p class="gate-note">Leggo ${files.length} ${files.length === 1 ? "file" : "file"}…</p>`;
     for (const f of [...files]) {
-      const text = await f.text();
       const base = f.name.replace(/\.[^.]+$/, "");
       try {
-        if (/\.kml$/i.test(f.name)) out.push(...fromKML(text, base));
-        else if (/\.(geo)?json$/i.test(f.name)) out.push(...fromGeoJSON(JSON.parse(text), base));
-        else if (/\.csv$/i.test(f.name)) out.push(...fromCSV(text, base));
-      } catch (err) { toast(`Non riesco a leggere ${f.name}: ${err.message}`, true); }
+        let found = [];
+        if (/\.kmz$/i.test(f.name)) found = fromKML(await kmlFromKmz(f), base);
+        else {
+          const text = await f.text(), head = text.slice(0, 600).trim();
+          if (/\.kml$/i.test(f.name) || /<kml[\s>]/i.test(head)) found = fromKML(text, base);
+          else if (/\.(geo)?json$/i.test(f.name) || /^[{[]/.test(head)) found = fromGeoJSON(JSON.parse(text), base);
+          else if (/\.csv$/i.test(f.name) || /^\uFEFF?[^\n]*,/.test(head)) found = fromCSV(text, base);
+          else throw new Error("formato non riconosciuto (servono .kml, .kmz, .csv o .json)");
+        }
+        out.push(...found);
+        report.push(`<li><strong>${esc(f.name)}</strong>: ${found.length} spot, ${found.filter(s => s.lat != null).length} con coordinate</li>`);
+      } catch (err) {
+        report.push(`<li class="warn"><strong>${esc(f.name)}</strong>: non letto (${esc(err.message)})</li>`);
+      }
     }
-    // niente doppioni (stessa chiave)
     const seen = new Map();
     out.forEach(s => seen.set(s.source_key, s));
     pending = [...seen.values()];
     renderSummary();
+    box.insertAdjacentHTML("afterbegin", `<ul class="import-report">${report.join("")}</ul>`);
+    $("#importFiles").value = "";   // si può riscegliere lo stesso file
   }
 
   function renderSummary() {

@@ -537,3 +537,6 @@ main > .page{scroll-margin-top:80px}
 .import-missing strong{color:#fff;font-weight:500}
 .import-missing .outline-link{margin-bottom:4px}
 .import-or{margin:14px 0 8px!important;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted)}
+.import-report{list-style:none;margin:16px 0 0;padding:10px 14px;border:1px solid var(--line);border-radius:10px;font-size:12.5px;color:var(--soft);display:grid;gap:4px}
+.import-report strong{color:#fff;font-weight:500}
+.import-report .warn{color:var(--danger)}
