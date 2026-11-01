@@ -691,12 +691,17 @@ function renderGallery() {
   }
   $("#photoCount").textContent = `${items.length} ${items.length === 1 ? "photograph" : "photographs"}`;
   $("#photoGrid").innerHTML = items.map(p => `
-    <button class="photo-card" type="button" data-id="${esc(p.id)}">
-      <img src="${esc(p.src)}" alt="${esc(p.title)}" data-cat="${esc(p.category)}" loading="lazy">
-      <span class="photo-info"><h3>${esc(p.title)}</h3><small>${esc(tripById(p.trip)?.name || "")} · ${esc(catLabel(p.category))}</small></span>
-    </button>`).join("");
+    <div class="photo-cell">
+      <button class="photo-card" type="button" data-id="${esc(p.id)}">
+        <img src="${esc(p.src)}" alt="${esc(p.title)}" data-cat="${esc(p.category)}" loading="lazy">
+        <span class="photo-info"><h3>${esc(p.title)}</h3><small>${esc(tripById(p.trip)?.name || "")} · ${esc(catLabel(p.category))}</small></span>
+      </button>
+      <button class="photo-pick" type="button" data-pick="${esc(p.id)}" aria-pressed="${picks.has(p.id)}" aria-label="Add “${esc(p.title)}” to your selection" title="Add to your selection">${ICON_PICK}</button>
+    </div>`).join("");
   $("#galleryEmpty").hidden = items.length > 0;
   $$("#photoGrid .photo-card").forEach(el => el.addEventListener("click", () => openPhoto(el.dataset.id, items)));
+  $$("#photoGrid [data-pick]").forEach(el => el.addEventListener("click", () => togglePick(el.dataset.pick)));
+  renderPickBar();
 }
 
 let lightboxList = [], lightboxIndex = 0;
@@ -741,6 +746,7 @@ function openPhoto(id, list = photos) {
   toggleInfo(false);
   if (!d.open) d.showModal();
   document.documentElement.classList.add("no-scroll");
+  renderPickBar();
 }
 function showLightbox() {
   const p = lightboxList[lightboxIndex];
@@ -773,7 +779,10 @@ function renderInterest(p) {
   box.hidden = false;
   box.classList.remove("open");
   box.innerHTML = `
-    <button type="button" class="pi-toggle" aria-expanded="false">${ICON_SPARK}<span>Interested in this photo?</span></button>
+    <div class="pi-row">
+      <button type="button" class="pi-toggle" aria-expanded="false">${ICON_SPARK}<span>Interested in this photo?</span></button>
+      <button type="button" class="pi-pick" data-pick-lb="${esc(p.id)}" aria-pressed="${picks.has(p.id)}">${ICON_PICK}<span>${picks.has(p.id) ? "In your selection" : "Add to selection"}</span></button>
+    </div>
     <div class="pi-panel">
       <p><strong>Prints, licensing or a special use?</strong> Get in touch and tell me what you have in mind.</p>
       <div class="pi-actions">
@@ -792,7 +801,91 @@ function renderInterest(p) {
     e.stopPropagation();
     trackEvent(a.href.startsWith("mailto:") ? "Gallery: photo enquiry by email" : "Gallery: photo enquiry on Instagram");
   }));
+  box.querySelector("[data-pick-lb]").addEventListener("click", e => { e.stopPropagation(); togglePick(p.id); renderInterest(p); });
   box.addEventListener("click", e => e.stopPropagation());   // non chiude la foto né cambia immagine
+}
+
+/* =========================================================
+   SELEZIONE DI FOTO: chi visita sceglie più foto e manda un'unica richiesta (licenza o stampa)
+   ========================================================= */
+const PICK_KEY = "fcph-photo-selection";
+const picks = new Set((() => { try { return JSON.parse(localStorage.getItem(PICK_KEY) || "[]"); } catch { return []; } })());
+const savePicks = () => { try { localStorage.setItem(PICK_KEY, JSON.stringify([...picks])); } catch {} };
+function togglePick(id) {
+  if (picks.has(id)) picks.delete(id); else { picks.add(id); trackEvent("Gallery: photo added to selection"); }
+  savePicks();
+  $$(`[data-pick="${CSS.escape(id)}"]`).forEach(b => b.setAttribute("aria-pressed", String(picks.has(id))));
+  renderPickBar();
+}
+function pickedPhotos() { return [...picks].map(id => photos.find(p => p.id === id)).filter(Boolean); }
+function renderPickBar() {
+  let bar = $("#pickBar");
+  if (!bar) {
+    bar = document.createElement("div");
+    bar.id = "pickBar"; bar.className = "pick-bar"; bar.setAttribute("role", "region"); bar.setAttribute("aria-label", "Your photo selection");
+    document.body.appendChild(bar);
+  }
+  const list = pickedPhotos();
+  const show = list.length > 0 && (document.body.dataset.page === "gallery" || $("#photoDialog")?.open);
+  bar.hidden = !show;
+  if (!show) return;
+  bar.innerHTML = `
+    <div class="pick-thumbs">${list.slice(0, 4).map(p => `<img src="${esc(p.src)}" alt="">`).join("")}</div>
+    <p><strong>${list.length} photo${list.length > 1 ? "s" : ""}</strong> in your selection</p>
+    <button type="button" class="text-link" id="pickClear">Clear</button>
+    <button type="button" class="outline-link pick-go" id="pickSend">REQUEST LICENCE OR PRINTS <span aria-hidden="true">→</span></button>`;
+  $("#pickClear").onclick = () => { picks.clear(); savePicks(); $$("[data-pick]").forEach(b => b.setAttribute("aria-pressed", "false")); renderPickBar(); };
+  $("#pickSend").onclick = openPickRequest;
+}
+function openPickRequest() {
+  let d = $("#pickDialog");
+  if (!d) {
+    d = document.createElement("dialog"); d.id = "pickDialog"; d.className = "pick-dialog";
+    document.body.appendChild(d);
+    d.addEventListener("click", e => { if (e.target === d) d.close(); });
+  }
+  const list = pickedPhotos();
+  const ig = String(about.instagram || "").trim().replace(/^@/, "").replace(/^https?:\/\/(www\.)?instagram\.com\//i, "").replace(/\/.*$/, "");
+  const mail = String(about.email || "").trim(), okMail = /^[^\s@]+@[^\s@]+$/.test(mail);
+  d.innerHTML = `
+    <button class="dialog-close" type="button" data-close aria-label="Close">${ICON.close}</button>
+    <form class="pick-form" novalidate>
+      <span class="eyebrow">Licensing &amp; prints</span>
+      <h2>Your selection</h2>
+      <ul class="pick-list">${list.map(p => `<li><img src="${esc(p.src)}" alt=""><span><strong>${esc(p.title)}</strong><small>${esc([tripById(p.trip)?.name, catLabel(p.category)].filter(Boolean).join(" · "))}</small></span>
+        <button type="button" class="pick-remove" data-unpick="${esc(p.id)}" aria-label="Remove ${esc(p.title)}">${ICON.close}</button></li>`).join("")}</ul>
+      <fieldset class="pick-use"><legend>What would you like?</legend>
+        ${["Fine-art prints", "Editorial licence", "Commercial licence", "Not sure yet"].map((u, i) => `<label><input type="checkbox" name="use" value="${u}"${i === 0 ? "" : ""}> ${u}</label>`).join("")}
+      </fieldset>
+      <label class="pick-msg">Anything else? <small>(sizes, quantity, where you'd use them…)</small>
+        <textarea name="msg" rows="3" maxlength="1200"></textarea></label>
+      <div class="pick-actions">
+        ${okMail ? `<button type="submit" class="outline-link" data-via="email">${ICON_MAIL}<span>Send by email</span></button>` : ""}
+        ${ig ? `<button type="button" class="outline-link" data-via="instagram">${ICON_IG}<span>Send on Instagram</span></button>` : ""}
+      </div>
+      <p class="pick-note" role="status"></p>
+    </form>`;
+  d.querySelector("[data-close]").onclick = () => d.close();
+  d.querySelectorAll("[data-unpick]").forEach(b => b.addEventListener("click", () => { togglePick(b.dataset.unpick); if (picks.size) openPickRequest(); else d.close(); }));
+  const f = d.querySelector("form");
+  const compose = () => {
+    const uses = [...f.querySelectorAll("[name=use]:checked")].map(x => x.value);
+    return `Hi Fabio,\n\nI'm interested in these photographs from fabiocostaph.com:\n\n${list.map((p, i) => `${i + 1}. ${p.title}${tripById(p.trip)?.name ? ` (${tripById(p.trip).name})` : ""}`).join("\n")}\n\n`
+      + (uses.length ? `For: ${uses.join(", ")}\n\n` : "") + (f.msg.value.trim() ? f.msg.value.trim() + "\n\n" : "") + "Thanks!";
+  };
+  f.addEventListener("submit", e => {
+    e.preventDefault();
+    trackEvent("Gallery: selection sent by email", { photos: list.length });
+    location.href = `mailto:${mail}?subject=${encodeURIComponent(`Photo request — ${list.length} photo${list.length > 1 ? "s" : ""}`)}&body=${encodeURIComponent(compose())}`;
+  });
+  d.querySelector("[data-via=instagram]")?.addEventListener("click", async () => {
+    const note = d.querySelector(".pick-note");
+    try { await navigator.clipboard.writeText(compose()); note.textContent = "Your request is copied: paste it in the Instagram chat that just opened."; }
+    catch { note.textContent = "Open the chat and list the photo titles in your message."; }
+    trackEvent("Gallery: selection sent on Instagram", { photos: list.length });
+    window.open(`https://ig.me/m/${encodeURIComponent(ig)}`, "_blank", "noopener");
+  });
+  if (!d.open) d.showModal();
 }
 function stepLightbox(d) {
   lightboxIndex = (lightboxIndex + d + lightboxList.length) % lightboxList.length;
@@ -948,6 +1041,7 @@ function flyToPlace(lat, lon, name, full) {
    9. PAGINA CHI SONO
    ========================================================= */
 const ICON_IG = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.3" cy="6.7" r="1" fill="currentColor" stroke="none"/></svg>';
+const ICON_PICK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.5s-7.5-4.4-7.5-10.1A4.4 4.4 0 0 1 12 7.6a4.4 4.4 0 0 1 7.5 2.8c0 5.7-7.5 10.1-7.5 10.1z"/></svg>';
 const ICON_SPARK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/></svg>';
 const ICON_MAIL = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5.5" width="18" height="13" rx="2"/><path d="m3.5 7 8.5 6 8.5-6"/></svg>';
 function renderContacts() {
@@ -1051,6 +1145,7 @@ function route() {
 
   const changed = document.body.dataset.page !== page;
   document.body.dataset.page = page;
+  setTimeout(renderPickBar, 0);
   const trackKey = page + (article ? "/" + article : "");
   if (trackKey !== route.lastTracked) { route.lastTracked = trackKey; trackPage(page, article ? "/" + article : ""); }
   $$("main > .page").forEach(s => (s.hidden = s.dataset.page !== page));
@@ -1107,6 +1202,7 @@ function bindEvents() {
   $("#dialogImage").addEventListener("click", () => toggleInfo());          // clic sulla foto: solo immagine
   dlg.addEventListener("close", () => {
     document.documentElement.classList.remove("no-scroll");
+    renderPickBar();
     if (isFullscreen()) try { (document.exitFullscreen || document.webkitExitFullscreen).call(document); } catch {}
   });
   // scorrimento col dito sul telefono
