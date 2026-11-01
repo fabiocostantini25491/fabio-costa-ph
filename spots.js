@@ -589,18 +589,18 @@ const Spots = (() => {
     const key = `${o.lat.toFixed(3)},${o.lon.toFixed(3)},${r}`;
     osmState = "loading"; renderOsm();
     const A = `(around:${r},${o.lat.toFixed(5)},${o.lon.toFixed(5)})`;
-    const q = `[out:json][timeout:25];(
-      nwr["tourism"~"^(viewpoint|attraction|museum|artwork|alpine_hut|wilderness_hut)$"]${A};
-      nwr["natural"~"^(peak|volcano|waterfall|cave_entrance|arch|cliff|glacier|hot_spring|beach|rock|stone)$"]["name"]${A};
-      nwr["natural"="peak"]["ele"]${A};
-      nwr["waterway"="waterfall"]${A};
-      nwr["historic"~"^(castle|fort|palace|manor|tower|city_gate|ruins|archaeological_site|aqueduct|monastery|lighthouse)$"]${A};
-      nwr["man_made"~"^(lighthouse|observatory|windmill|watermill)$"]${A};
-      nwr["tower:type"="observation"]${A};
-      nwr["amenity"="place_of_worship"]["historic"]${A};
-      nwr["boundary"="protected_area"]["name"]${A};
-      nwr["leisure"="nature_reserve"]["name"]${A};
-    );out center meta 300;`;
+    // richiesta leggera: niente relazioni grandi (parchi) nella ricerca a raggio, quelle si chiedono con «is_in» (solo il punto)
+    const q = `[out:json][timeout:40];(
+      nw["tourism"~"^(viewpoint|attraction|museum|alpine_hut|wilderness_hut)$"]${A};
+      node["natural"~"^(peak|volcano)$"]["name"]${A};
+      node["natural"~"^(cave_entrance|arch|hot_spring|waterfall)$"]${A};
+      nw["waterway"="waterfall"]${A};
+      nw["historic"~"^(castle|fort|palace|tower|city_gate|ruins|archaeological_site|aqueduct|monastery)$"]${A};
+      nw["man_made"~"^(lighthouse|observatory|windmill|watermill)$"]${A};
+      nw["tower:type"="observation"]${A};
+    );out center meta 200;
+    is_in(${o.lat.toFixed(5)},${o.lon.toFixed(5)})->.a;
+    (area.a["boundary"~"^(protected_area|national_park)$"]; area.a["leisure"="nature_reserve"];);out tags;`;
     try {
       let data = osmCache.get(key);
       if (!data) {
@@ -625,8 +625,9 @@ const Spots = (() => {
       osmProtected = [];
       osmItems = (data.elements || []).map(e => {
         const t = e.tags || {}, lat = e.lat ?? e.center?.lat, lon = e.lon ?? e.center?.lon;
+        if (e.type === "area" || t.boundary === "protected_area" || t.boundary === "national_park" || t.leisure === "nature_reserve") {
+          if (t.name && !osmProtected.includes(t.name)) osmProtected.push(t.name); return null; }
         if (lat == null) return null;
-        if (t.boundary === "protected_area" || t.leisure === "nature_reserve") { if (!osmProtected.includes(t.name)) osmProtected.push(t.name); return null; }
         const type = osmType(t), name = t["name:en"] || t.name || OSM_TYPES[type].label;
         const k = `${name}|${lat.toFixed(3)}|${lon.toFixed(3)}`;
         if (seen.has(k)) return null; seen.add(k);
@@ -639,6 +640,7 @@ const Spots = (() => {
     } catch (err) {
       if (seq !== osmSeq) return;
       osmItems = []; osmState = err.message === "busy" ? "busy" : "error";
+      if (!o._retried) { o._retried = true; setTimeout(() => { if (origin === o) scanOsm(o, extent); }, 9000); osmState = "retry"; }
     }
     drawOsm(); renderOsm();
     flashTop();
@@ -730,10 +732,11 @@ const Spots = (() => {
       <label class="osm-toggle"><input type="checkbox" id="osmShow"${showOsm ? " checked" : ""}> on map</label></h3>`;
     const body = osmState === "loading" ? `<p class="near-sum">Looking for viewpoints, waterfalls, castles and more…</p>`
       : osmState === "error" ? `<p class="near-sum">OpenStreetMap didn't answer. <button type="button" class="text-link" id="osmRetry">Try again</button></p>`
+      : osmState === "retry" ? `<p class="near-sum">OpenStreetMap is slow right now: trying again in a few seconds…</p>`
       : osmState === "busy" ? `<p class="near-sum">OpenStreetMap is busy right now. <button type="button" class="text-link" id="osmRetry">Try again</button> in a minute.</p>`
       : osmState === "empty" ? `<p class="near-sum">Nothing notable found on OpenStreetMap here.</p>`
       : `<p class="near-sum"><strong>${osmItems.length}</strong> places${fresh ? ` · <span class="osm-fresh-n">⚡ ${fresh} updated in the last 30 days</span>` : ""}</p>
-        ${osmProtected.length ? `<p class="osm-protected">🌲 Protected area: <strong>${osmProtected.slice(0, 3).map(esc).join(", ")}</strong> — check local rules (drones, camping, night access).</p>` : ""}
+        ${osmProtected.length ? `<p class="osm-protected">🌲 You are inside a protected area: <strong>${osmProtected.slice(0, 3).map(esc).join(", ")}</strong> — check local rules (drones, camping, night access).</p>` : ""}
         <ol class="near-list">${osmItems.slice(0, 12).map((it, i) => `
           <li><button type="button" data-osmi="${i}">
             <span class="sg-cat osm-ico${it.fresh ? " fresh" : ""}" style="--c:#e6edf7">${OSM_TYPES[it.type].icon}</span>
