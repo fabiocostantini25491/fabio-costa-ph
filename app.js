@@ -921,40 +921,65 @@ function articleMeta(a, withIcons = true) {
   return `<span>${withIcons ? ICON.cal : ""}${esc(fmtDate(a.date))}</span>${a.minutes ? `<span>${withIcons ? ICON.clock : ""}${a.minutes} min read</span>` : ""}`;
 }
 function renderJournal() {
-  if (!articles.length) { $("#journalLayout").innerHTML = `<p class="empty-state">No articles yet.</p>`; return; }
+  const layout = $("#journalLayout");
+  layout.hidden = false;
+  const issue = $("#magIssue");
   const list = [...articles].sort((a, b) => (b.date || "").localeCompare(a.date || ""));
-  $("#journalLayout").innerHTML = list.map(a => {
-    const t = a.trip && tripById(a.trip);
-    return `
-    <a class="log-card" href="#art-${esc(a.id)}">
-      <img src="${esc(a.cover)}" alt="" data-cat="Paesaggi" loading="lazy">
-      <div class="log-body">
-        <p class="meta-row"><span>${ICON.cal}${esc(fmtDate(a.date))}</span>${a.minutes ? `<span>${a.minutes} min</span>` : ""}<span>${esc(catLabel(a.category))}</span></p>
-        <h3>${esc(a.title)}</h3>
-        ${a.excerpt ? `<p class="log-excerpt">${esc(a.excerpt)}</p>` : ""}
-        ${t ? `<span class="log-coords">${ICON.pin}${fmtCoord(t.lat, t.lon).replace("  |  ", ", ")}</span>` : "<span></span>"}
-        <span class="log-arrow" aria-hidden="true">${ICON.next}</span>
+  if (issue) issue.textContent = `No. ${String(Math.max(1, list.length)).padStart(2, "0")} · ${new Intl.DateTimeFormat(window.I18N?.locale || "en-GB", { month: "long", year: "numeric" }).format(list[0]?.date ? new Date(list[0].date + "T12:00:00") : new Date())}`;
+  if (!list.length) {
+    layout.innerHTML = `<div class="mag-empty"><p class="mag-kicker">Coming soon</p><h2>The first issue is being written.</h2>
+      <p>Practical guides from the field: when to go, where to park, how long the walk is, the settings I used and the mistakes to avoid.</p></div>`;
+    return;
+  }
+  const by = a => `<p class="mag-byline">By <b data-owner>Fabio Costantini</b> · ${esc(fmtDate(a.date))}${a.minutes ? ` · ${a.minutes} min read` : ""}</p>`;
+  const [lead, ...rest] = list;
+  const second = rest.slice(0, 2), more = rest.slice(2);
+  layout.innerHTML = `
+    <a class="mag-cover" href="#art-${esc(lead.id)}">
+      <figure><img src="${esc(lead.cover)}" alt="" data-cat="Paesaggi" loading="lazy"></figure>
+      <div class="mag-cover-text">
+        <p class="mag-kicker">${esc(catLabel(lead.category))} · Cover story</p>
+        <h2>${esc(lead.title)}</h2>
+        ${lead.excerpt ? `<p class="mag-deck">${esc(lead.excerpt)}</p>` : ""}
+        ${by(lead)}
       </div>
-    </a>`;
-  }).join("");
+    </a>
+    ${second.length ? `<div class="mag-row">${second.map(a => `
+      <a class="mag-story" href="#art-${esc(a.id)}">
+        <figure><img src="${esc(a.cover)}" alt="" data-cat="Paesaggi" loading="lazy"></figure>
+        <p class="mag-kicker">${esc(catLabel(a.category))}</p>
+        <h3>${esc(a.title)}</h3>
+        ${a.excerpt ? `<p class="mag-deck">${esc(a.excerpt)}</p>` : ""}
+        ${by(a)}
+      </a>`).join("")}</div>` : ""}
+    ${more.length ? `<p class="mag-section">Also in this issue</p><div class="mag-index">${more.map(a => `
+      <a class="mag-brief" href="#art-${esc(a.id)}">
+        <img src="${esc(a.cover)}" alt="" data-cat="Paesaggi" loading="lazy">
+        <div><p class="mag-kicker">${esc(catLabel(a.category))}</p><h4>${esc(a.title)}</h4>${by(a)}</div>
+      </a>`).join("")}</div>` : ""}`;
 }
 function renderArticle(id) {
   const reader = $("#articleReader"), a = articles.find(x => x.id === id);
   if (!a) { reader.hidden = true; return; }
   const t = a.trip && tripById(a.trip);
+  $("#journalLayout").hidden = true;
   reader.innerHTML = `
-    <span class="eyebrow">FROM THE JOURNAL · ${esc(catLabel(a.category))}</span>
+    <a class="text-link mag-back" href="#journal">${ICON.prev}All stories</a>
+    <p class="mag-kicker">${esc(catLabel(a.category))}</p>
     <h2>${esc(a.title)}</h2>
-    <p class="meta-row">${articleMeta(a)}</p>
-    <img src="${esc(a.cover)}" alt="${esc(a.title)}" data-cat="Paesaggi">
-    <div class="rich">${md(a.text)}</div>
+    ${a.excerpt ? `<p class="mag-deck">${esc(a.excerpt)}</p>` : ""}
+    <p class="mag-byline">Text and photographs by <b data-owner>Fabio Costantini</b> · ${esc(fmtDate(a.date))}${a.minutes ? ` · ${a.minutes} min read` : ""}</p>
+    <figure class="mag-hero"><img src="${esc(a.cover)}" alt="${esc(a.title)}" data-cat="Paesaggi">
+      ${t ? `<figcaption>${esc(t.name || "")} · ${fmtCoord(t.lat, t.lon).replace("  |  ", ", ")}</figcaption>` : ""}</figure>
+    <div class="rich mag-body">${md(a.text)}</div>
+    <p class="mag-end" aria-hidden="true">■</p>
     <div class="article-actions">
       ${t ? `<button class="outline-link" type="button" id="articleTrip">VIEW THE JOURNEY ON THE MAP <span aria-hidden="true">→</span></button>` : ""}
       <a class="text-link" href="#journal">${ICON.prev}Back to the Journal</a>
     </div>`;
   reader.hidden = false;
   $("#articleTrip")?.addEventListener("click", () => { location.hash = "explore"; setTimeout(() => openTrip(t.id), 60); });
-  requestAnimationFrame(() => reader.scrollIntoView({ behavior: "smooth", block: "start" }));
+  requestAnimationFrame(() => $("#journalMag").scrollIntoView({ behavior: "smooth", block: "start" }));
 }
 
 /* =========================================================
@@ -1200,7 +1225,7 @@ function route() {
   if (page === "tools") window.Tools?.show();
   if (page === "journal") {
     if (article) renderArticle(article);
-    else { $("#articleReader").hidden = true; }
+    else { $("#articleReader").hidden = true; renderJournal(); }
   }
   if (guideAnchor) setTimeout(() => document.getElementById(guideAnchor)?.scrollIntoView({ behavior: "smooth", block: "start" }), 60);
   else if (changed && !article) window.scrollTo(0, 0);
