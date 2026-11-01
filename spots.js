@@ -294,11 +294,6 @@ const Spots = (() => {
         <button type="button" class="filter soc-support${onlySupport ? " active" : ""}" id="onlySupport" aria-pressed="${onlySupport}">🌱 Support local <small>${spots.filter(x => x.support_local).length}</small></button>
         <button type="button" class="text-link" id="openConduct">Community code</button>
       </div>` : ""}
-      <div class="filters spots-lists" role="group" aria-label="Lists">
-        <button class="filter${activeLists.size === lists.length ? " active" : ""}" type="button" data-list="__all">All</button>
-        ${lists.map(l => `<button class="filter${activeLists.has(l) && activeLists.size !== lists.length ? " active" : ""}" type="button" data-list="${esc(l)}">
-          ${esc(l)} <small>${spots.filter(s => s.list === l).length}</small></button>`).join("")}
-      </div>
       <div class="spots-stage">
         <div id="spotsMap" class="map map-spots" aria-label="Members map of photo spots"></div>
         <span class="hud-frame" aria-hidden="true"></span>
@@ -352,13 +347,6 @@ const Spots = (() => {
       const r = Math.min(15000, map.distance(c, b.getNorthEast()) * 0.8);
       setOriginScan({ lat: c.lat, lon: L.Util.wrapNum(c.lng, [-180, 180], true), label: "This area", kind: "scan", radius: Math.min(r, nearKm * 1000) });
     });
-    $$(".spots-lists [data-list]").forEach(b => b.addEventListener("click", () => {
-      const l = b.dataset.list;
-      if (l === "__all") activeLists = new Set(lists);
-      else if (activeLists.size === lists.length) activeLists = new Set([l]);
-      else { activeLists.has(l) ? activeLists.delete(l) : activeLists.add(l); if (!activeLists.size) activeLists = new Set(lists); }
-      renderApp();
-    }));
     $$(".spots-cats [data-cat]").forEach(b => b.addEventListener("click", () => {
       const k = b.dataset.cat;
       if (k === "__all") activeCats = new Set(CAT_KEYS);
@@ -449,7 +437,7 @@ const Spots = (() => {
     let i = 0, html = "";
     if (spotHits.length) html += `<p class="sg-head">Spots</p>` + spotHits.map(s =>
       `<button type="button" role="option" class="sg-item" data-i="${i++}" data-spot="${s.id}">
-        <span class="sg-cat" style="--c:${(CATS[s.category] || CATS.spot).color}">${(CATS[s.category] || CATS.spot).icon}</span><span class="sg-text"><strong>${esc(s.name)}</strong><small>${esc(s.list)}</small></span></button>`).join("");
+        <span class="sg-cat" style="--c:${(CATS[s.category] || CATS.spot).color}">${(CATS[s.category] || CATS.spot).icon}</span><span class="sg-text"><strong>${esc(s.name)}</strong><small>${(CATS[s.category] || CATS.spot).label}</small></span></button>`).join("");
     if (placeResults.length) html += `<p class="sg-head">Places</p>` + placeResults.map((p, k) =>
       `<button type="button" role="option" class="sg-item" data-i="${i++}" data-place="${k}">
         ${ICON.pin}<span class="sg-text"><strong>${esc(p.name)}</strong><small>${esc(p.context)}</small></span></button>`).join("");
@@ -555,7 +543,7 @@ const Spots = (() => {
       <ol class="near-list">${top.map(({ s, d }) => `
         <li><button type="button" data-near="${s.id}">
           <span class="sg-cat" style="--c:${(CATS[s.category] || CATS.spot).color}">${(CATS[s.category] || CATS.spot).icon}</span>
-          <span class="sg-text"><strong>${esc(s.name)}</strong><small>${esc(s.list)}</small></span>
+          <span class="sg-text"><strong>${esc(s.name)}</strong><small>${(CATS[s.category] || CATS.spot).label}</small></span>
           <span class="near-d">${fmtKm(d)}</span></button></li>`).join("")}</ol>`;
     el.querySelectorAll("[data-near]").forEach(b => b.addEventListener("click", () => {
       const s = spots.find(x => String(x.id) === b.dataset.near);
@@ -762,7 +750,7 @@ const Spots = (() => {
   /* ---------- mappa satellite con raggruppamento ---------- */
   function visibleSpots() {
     const q = norm(query);
-    return spots.filter(s => activeLists.has(s.list) && (!activeCats || activeCats.has(s.category))
+    return spots.filter(s => (!activeCats || activeCats.has(s.category))
       && (!onlySupport || s.support_local)
       && (alertMode === "show" || (alertMode === "hide" ? !alertsOf(s).length : alertsOf(s).length > 0))
       && (!q || norm(s.name).includes(q) || norm(s.note).includes(q) || norm(s.list).includes(q) || norm(CATS[s.category].label).includes(q)));
@@ -853,7 +841,7 @@ const Spots = (() => {
     const gm = s.url && /^https?:\/\//.test(s.url) ? s.url : `https://www.google.com/maps/search/?api=1&query=${s.lat.toFixed(6)},${s.lon.toFixed(6)}`;
     const dates = datesText(s);
     return `<div class="spot-pop">
-      <span class="spot-cat" style="--c:${cat.color}">${cat.icon}${cat.label}<em>${esc(s.list)}</em></span>
+      <span class="spot-cat" style="--c:${cat.color}">${cat.icon}${cat.label}</span>
       <strong>${esc(s.name)}</strong>
       <div class="pop-alerts" data-alerts>${alertsHtml(s)}</div>
       <p class="pop-rating" data-rating hidden></p>
@@ -1302,9 +1290,6 @@ const Spots = (() => {
           <p class="gate-help left">Only upload photos you took yourself. You keep all rights: see the <a href="#photoRights" data-rights>photo terms</a> under the map.</p>
           <label for="addAuthor">Your name <small>(shown to members)</small></label>
           <input id="addAuthor" type="text" maxlength="60" value="${esc(displayName())}" autocomplete="nickname">` : ""}
-        ${admin ? `<label for="addList">Lista <small>(solo tu)</small></label>
-          <input id="addList" type="text" maxlength="120" list="addLists" value="${esc(lastList || COMMUNITY)}" autocomplete="off">
-          <datalist id="addLists">${lists.map(l => `<option value="${esc(l)}">`).join("")}</datalist>` : ""}
         <button class="outline-link" type="submit" id="addSave">SAVE PLACE <span aria-hidden="true">→</span></button>
         <p class="gate-note" id="addStatus" role="status"></p>
       </form>`;
