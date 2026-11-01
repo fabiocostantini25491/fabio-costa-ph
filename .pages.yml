@@ -129,12 +129,23 @@ content:
             type: string
             required: true
             description: "Breve, minuscolo, senza spazi né accenti (es. islanda). Diventa il link: tuosito.it/#art-islanda"
-          - name: categoria
-            label: Categoria
+          - name: tipo
+            label: Tipo di articolo
             type: select
-            default: Viaggi
+            default: Guida pratica
             options:
-              values: [Viaggi, Fotografia, Tecnica, Ispirazione]
+              values: [Reportage, Guida pratica]
+            description: "Reportage = il racconto (stile Epoca/Bonatti): foto a tutta pagina, testo in una colonna. Guida pratica = due colonne e il riquadro «In breve»."
+          - name: categoria
+            label: Tema
+            type: select
+            default: Luoghi
+            options:
+              values: [Attualità, Luoghi, Viaggi, Persone, Natura, Fotografia, Tecnica, Guide pratiche, Ispirazione]
+          - name: luogo
+            label: Luogo e periodo (facoltativo)
+            type: string
+            description: "Compare sotto il titolo come nei vecchi reportage, es. «Patagonia, febbraio 2026»."
           - name: data
             label: Data di pubblicazione
             type: date
@@ -161,6 +172,19 @@ content:
             options:
               format: markdown
               rename: true
+          - name: in_breve
+            label: In breve — informazioni pratiche (tutto facoltativo)
+            type: object
+            description: "Compare come riquadro «At a glance». Lascia vuoto quello che non serve."
+            fields:
+              - { name: periodo, label: Periodo e ora migliori, type: string }
+              - { name: arrivare, label: Come arrivare, type: string }
+              - { name: parcheggio, label: Dove parcheggiare, type: string }
+              - { name: camminata, label: Camminata (tempo, dislivello), type: string }
+              - { name: difficolta, label: Difficoltà, type: string }
+              - { name: permessi, label: Permessi e regole (drone, ZTL, accessi), type: string }
+              - { name: attrezzatura, label: Attrezzatura, type: string }
+              - { name: impostazioni, label: Impostazioni di scatto, type: string }
           - name: viaggio
             label: Viaggio collegato (facoltativo)
             type: string

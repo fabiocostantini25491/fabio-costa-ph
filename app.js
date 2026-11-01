@@ -26,7 +26,8 @@ const slug = s => norm(s).replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "
 
 const MONTHS = Array.from({ length: 12 }, (_, i) => new Intl.DateTimeFormat(window.I18N?.locale || "en-GB", { month: "short" }).format(new Date(2026, i, 15)));
 /* Le categorie restano in italiano nel pannello, sul sito si leggono in inglese */
-const CATEGORY_EN = { Paesaggi: "Landscapes", Urban: "Urban", Viaggi: "Travel", Fotografia: "Photography", Tecnica: "Technique", Ispirazione: "Inspiration" };
+const CATEGORY_EN = { Paesaggi: "Landscapes", Urban: "Urban", Viaggi: "Travel", Fotografia: "Photography", Tecnica: "Technique", Ispirazione: "Inspiration",
+  "Attualità": "Current affairs", Luoghi: "Places", "Guide pratiche": "Field guides", Persone: "People", Natura: "Nature" };
 const catLabel = c => (window.I18N?.t || (x => x))(CATEGORY_EN[c] || c || "");
 function parseDate(d) { return d ? new Date(d + "T00:00:00") : null; }
 function fmtDate(d) {
@@ -150,7 +151,8 @@ async function loadContent() {
   articles = rawArticles.filter(x => x && x.titolo).map(x => ({
     id: slug(x.slug || x.titolo), title: x.titolo, category: x.categoria || "Viaggi", date: x.data || "",
     minutes: num(x.minuti, 0), cover: mediaUrl(x.copertina), trip: slug(x.viaggio || ""),
-    excerpt: x.estratto || "", text: x.testo || "" }));
+    excerpt: x.estratto || "", text: x.testo || "",
+    type: /reportage/i.test(x.tipo || "") ? "reportage" : "guide", place: x.luogo || "", glance: x.in_breve && typeof x.in_breve === "object" ? x.in_breve : {} }));
 
   about = c.status === "fulfilled" && c.value ? c.value : {};
   if (about.partenza && Number.isFinite(parseFloat(about.partenza.lat)))
@@ -928,17 +930,23 @@ function renderJournal() {
   if (issue) issue.textContent = `No. ${String(Math.max(1, list.length)).padStart(2, "0")} · ${new Intl.DateTimeFormat(window.I18N?.locale || "en-GB", { month: "long", year: "numeric" }).format(list[0]?.date ? new Date(list[0].date + "T12:00:00") : new Date())}`;
   if (!list.length) {
     layout.innerHTML = `<div class="mag-empty"><p class="mag-kicker">Coming soon</p><h2>The first issue is being written.</h2>
-      <p>Practical guides from the field: when to go, where to park, how long the walk is, the settings I used and the mistakes to avoid.</p></div>`;
+      <p>Reportage, places, current affairs, photography and technique — and practical guides: when to go, where to park, how long the walk is and the mistakes to avoid.</p></div>`;
     return;
   }
+  const kind = a => (a.type === "reportage" ? "Reportage" : "Field guide");
+  const topics = [...new Set(list.map(a => a.category))];
+  const cur = renderJournal.topic && topics.includes(renderJournal.topic) ? renderJournal.topic : "";
+  const shown = cur ? list.filter(a => a.category === cur) : list;
   const by = a => `<p class="mag-byline">By <b data-owner>Fabio Costantini</b> · ${esc(fmtDate(a.date))}${a.minutes ? ` · ${a.minutes} min read` : ""}</p>`;
-  const [lead, ...rest] = list;
+  const [lead, ...rest] = shown;
   const second = rest.slice(0, 2), more = rest.slice(2);
   layout.innerHTML = `
+    ${topics.length > 1 ? `<nav class="mag-topics" aria-label="Topics"><button type="button" data-topic=""${cur ? "" : ' class="on"'}>All</button>${topics.map(t =>
+      `<button type="button" data-topic="${esc(t)}"${t === cur ? ' class="on"' : ""}>${esc(catLabel(t))}</button>`).join("")}</nav>` : ""}
     <a class="mag-cover" href="#art-${esc(lead.id)}">
       <figure><img src="${esc(lead.cover)}" alt="" data-cat="Paesaggi" loading="lazy"></figure>
       <div class="mag-cover-text">
-        <p class="mag-kicker">${esc(catLabel(lead.category))} · Cover story</p>
+        <p class="mag-kicker">${kind(lead)} · Cover story</p>
         <h2>${esc(lead.title)}</h2>
         ${lead.excerpt ? `<p class="mag-deck">${esc(lead.excerpt)}</p>` : ""}
         ${by(lead)}
@@ -947,7 +955,7 @@ function renderJournal() {
     ${second.length ? `<div class="mag-row">${second.map(a => `
       <a class="mag-story" href="#art-${esc(a.id)}">
         <figure><img src="${esc(a.cover)}" alt="" data-cat="Paesaggi" loading="lazy"></figure>
-        <p class="mag-kicker">${esc(catLabel(a.category))}</p>
+        <p class="mag-kicker">${kind(a)} · ${esc(catLabel(a.category))}</p>
         <h3>${esc(a.title)}</h3>
         ${a.excerpt ? `<p class="mag-deck">${esc(a.excerpt)}</p>` : ""}
         ${by(a)}
@@ -955,28 +963,84 @@ function renderJournal() {
     ${more.length ? `<p class="mag-section">Also in this issue</p><div class="mag-index">${more.map(a => `
       <a class="mag-brief" href="#art-${esc(a.id)}">
         <img src="${esc(a.cover)}" alt="" data-cat="Paesaggi" loading="lazy">
-        <div><p class="mag-kicker">${esc(catLabel(a.category))}</p><h4>${esc(a.title)}</h4>${by(a)}</div>
+        <div><p class="mag-kicker">${kind(a)}</p><h4>${esc(a.title)}</h4>${by(a)}</div>
       </a>`).join("")}</div>` : ""}`;
+  layout.querySelectorAll("[data-topic]").forEach(b => b.addEventListener("click", () => { renderJournal.topic = b.dataset.topic; renderJournal(); }));
+}
+const GLANCE = [["periodo", "Best time"], ["arrivare", "Getting there"], ["parcheggio", "Parking"], ["camminata", "The walk"],
+  ["difficolta", "Difficulty"], ["permessi", "Permits & rules"], ["attrezzatura", "Gear"], ["impostazioni", "Settings"]];
+function glanceHtml(g) {
+  const rows = GLANCE.filter(([k]) => g[k] && String(g[k]).trim());
+  if (!rows.length) return "";
+  return `<aside class="mag-glance"><p class="mag-glance-title">At a glance</p><dl>${rows.map(([k, l]) => `<div><dt>${l}</dt><dd>${esc(g[k])}</dd></div>`).join("")}</dl></aside>`;
+}
+/* immagini nel testo: la descrizione diventa didascalia; due o più foto di fila diventano una doppia pagina */
+function magBody(html) {
+  const tpl = document.createElement("template");
+  tpl.innerHTML = html;
+  const fig = img => {
+    const f = document.createElement("figure");
+    f.className = "mag-fig";
+    const pic = img.cloneNode(true);
+    pic.loading = "lazy";
+    f.appendChild(pic);
+    if (img.alt && img.alt.trim()) { const c = document.createElement("figcaption"); c.textContent = img.alt.trim(); f.appendChild(c); }
+    return f;
+  };
+  // paragrafi fatti solo di foto (anche più foto una sotto l'altra): diventano figure con didascalia
+  tpl.content.querySelectorAll("p").forEach(p => {
+    const imgs = p.querySelectorAll("img");
+    if (imgs.length && p.textContent.trim() === "") p.replaceWith(...[...imgs].map(fig));
+  });
+  tpl.content.querySelectorAll("img:not(.mag-fig img)").forEach(img => { if (!img.closest(".mag-fig")) img.replaceWith(fig(img)); });
+  [...tpl.content.children].forEach(el => {
+    if (!el.classList.contains("mag-fig") || el.parentElement?.classList?.contains("mag-spread")) return;
+    const run = [el];
+    let n = el.nextElementSibling;
+    while (n && n.classList.contains("mag-fig")) { run.push(n); n = n.nextElementSibling; }
+    if (run.length > 1) {
+      const sp = document.createElement("div");
+      sp.className = `mag-spread n${Math.min(run.length, 3)}`;
+      el.before(sp); run.forEach(f => sp.appendChild(f));
+    }
+  });
+  return tpl.innerHTML;
 }
 function renderArticle(id) {
   const reader = $("#articleReader"), a = articles.find(x => x.id === id);
   if (!a) { reader.hidden = true; return; }
   const t = a.trip && tripById(a.trip);
+  const rep = a.type === "reportage";
   $("#journalLayout").hidden = true;
-  reader.innerHTML = `
+  const byline = `<p class="mag-byline">Text and photographs by <b data-owner>Fabio Costantini</b> · ${esc(fmtDate(a.date))}${a.minutes ? ` · ${a.minutes} min read` : ""}</p>`;
+  const caption = t ? `<figcaption>${esc(t.name || "")} · ${fmtCoord(t.lat, t.lon).replace("  |  ", ", ")}</figcaption>` : "";
+  reader.className = `full-article mag-article ${rep ? "is-reportage" : "is-guide"}`;
+  reader.innerHTML = rep ? `
     <a class="text-link mag-back" href="#journal">${ICON.prev}All stories</a>
-    <p class="mag-kicker">${esc(catLabel(a.category))}</p>
+    <figure class="mag-opening"><img src="${esc(a.cover)}" alt="${esc(a.title)}" data-cat="Paesaggi">
+      <div class="mag-opening-text"><p class="mag-kicker">Reportage${a.place ? ` · ${esc(a.place)}` : ""}</p><h2>${esc(a.title)}</h2></div></figure>
+    <div class="mag-lede">
+      ${a.excerpt ? `<p class="mag-deck">${esc(a.excerpt)}</p>` : ""}
+      ${byline}
+    </div>
+    <div class="rich mag-body mag-prose">${magBody(md(a.text))}</div>
+    ${glanceHtml(a.glance) ? `<div class="mag-after">${glanceHtml(a.glance)}</div>` : ""}
+    <p class="mag-end" aria-hidden="true">■</p>` : `
+    <a class="text-link mag-back" href="#journal">${ICON.prev}All stories</a>
+    <p class="mag-kicker">Field guide · ${esc(catLabel(a.category))}${a.place ? ` · ${esc(a.place)}` : ""}</p>
     <h2>${esc(a.title)}</h2>
     ${a.excerpt ? `<p class="mag-deck">${esc(a.excerpt)}</p>` : ""}
-    <p class="mag-byline">Text and photographs by <b data-owner>Fabio Costantini</b> · ${esc(fmtDate(a.date))}${a.minutes ? ` · ${a.minutes} min read` : ""}</p>
-    <figure class="mag-hero"><img src="${esc(a.cover)}" alt="${esc(a.title)}" data-cat="Paesaggi">
-      ${t ? `<figcaption>${esc(t.name || "")} · ${fmtCoord(t.lat, t.lon).replace("  |  ", ", ")}</figcaption>` : ""}</figure>
-    <div class="rich mag-body">${md(a.text)}</div>
-    <p class="mag-end" aria-hidden="true">■</p>
-    <div class="article-actions">
+    ${byline}
+    <figure class="mag-hero"><img src="${esc(a.cover)}" alt="${esc(a.title)}" data-cat="Paesaggi">${caption}</figure>
+    <div class="mag-guide${glanceHtml(a.glance) ? " has-glance" : ""}">
+      ${glanceHtml(a.glance)}
+      <div class="rich mag-body">${magBody(md(a.text))}</div>
+    </div>
+    <p class="mag-end" aria-hidden="true">■</p>`;
+  reader.insertAdjacentHTML("beforeend", `<div class="article-actions">
       ${t ? `<button class="outline-link" type="button" id="articleTrip">VIEW THE JOURNEY ON THE MAP <span aria-hidden="true">→</span></button>` : ""}
       <a class="text-link" href="#journal">${ICON.prev}Back to the Journal</a>
-    </div>`;
+    </div>`);
   reader.hidden = false;
   $("#articleTrip")?.addEventListener("click", () => { location.hash = "explore"; setTimeout(() => openTrip(t.id), 60); });
   requestAnimationFrame(() => $("#journalMag").scrollIntoView({ behavior: "smooth", block: "start" }));
