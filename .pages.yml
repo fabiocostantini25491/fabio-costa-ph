@@ -48,17 +48,13 @@ content:
             required: true
             description: "Il SECONDO numero (es. -19.0208). A ovest di Greenwich e a sud dell'equatore il numero ha il segno meno."
           - name: inizio
-            label: Data di inizio
-            type: date
-            default: ""
-            options:
-              format: yyyy-MM-dd
+            label: Data di inizio (facoltativa)
+            type: string
+            description: "Formato anno-mese-giorno, es. 2026-10-31. Puoi lasciarla vuota."
           - name: fine
-            label: Data di fine
-            type: date
-            default: ""
-            options:
-              format: yyyy-MM-dd
+            label: Data di fine (facoltativa)
+            type: string
+            description: "Formato anno-mese-giorno, es. 2026-10-31. Puoi lasciarla vuota."
           - name: descrizione
             label: Descrizione breve
             type: text
@@ -87,11 +83,9 @@ content:
                   extensions: [jpg, jpeg, png, webp]
                   rename: true
               - name: data
-                label: Data dello scatto
-                type: date
-                default: ""
-                options:
-                  format: yyyy-MM-dd
+                label: Data dello scatto (facoltativa)
+                type: string
+                description: "Formato anno-mese-giorno, es. 2026-10-31. Puoi lasciarla vuota."
               - name: categoria
                 label: Categoria
                 type: select
