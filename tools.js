@@ -71,7 +71,24 @@ const Astro = (() => {
     return altitude(siderealTime(d, rad * -lon) - GC.ra, rad * lat, GC.dec) / rad;
   }
 
-  return { sunAlt, sunTimes, moonAlt, moonIllum, coreAlt };
+  /* posizione: altezza sull'orizzonte e azimut da nord in senso orario (gradi) */
+  const azimuth = (H, phi, dec) => atan(sin(H), cos(H) * sin(phi) - tan(dec) * cos(phi));
+  const toBearing = a => ((a / rad) + 180 + 360) % 360;
+  function sunPos(ms, lat, lon) {
+    const d = toDays(ms), c = sunCoords(d), H = siderealTime(d, rad * -lon) - c.ra, phi = rad * lat;
+    return { alt: altitude(H, phi, c.dec) / rad, az: toBearing(azimuth(H, phi, c.dec)) };
+  }
+  function moonPos(ms, lat, lon) {
+    const d = toDays(ms), c = moonCoords(d), H = siderealTime(d, rad * -lon) - c.ra, phi = rad * lat;
+    const h = altitude(H, phi, c.dec);
+    return { alt: (h + refraction(h)) / rad, az: toBearing(azimuth(H, phi, c.dec)) };
+  }
+  function corePos(ms, lat, lon) {
+    const d = toDays(ms), H = siderealTime(d, rad * -lon) - GC.ra, phi = rad * lat;
+    return { alt: altitude(H, phi, GC.dec) / rad, az: toBearing(azimuth(H, phi, GC.dec)) };
+  }
+
+  return { sunAlt, sunTimes, moonAlt, moonIllum, coreAlt, sunPos, moonPos, corePos };
 })();
 
 /* =========================================================
@@ -248,14 +265,27 @@ const Tools = (() => {
       wired = true;
       el.innerHTML = shellHtml();
       wire();
+      setTab(tab);
       place = store.get() || DEFAULT_PLACE;
       await setPlace(place, { keepDay: false, save: false });
     }
   }
 
+  const TABS = [
+    { id: "sun", label: "Sun & Moon", icon: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"/></svg>' },
+    { id: "planner", label: "Planner", icon: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 20 6-11 4 6 2.5-3.5L21 20z"/><path d="M12 3v3M16.5 4.5l-1.5 2.5M7.5 4.5 9 7"/></svg>' },
+    { id: "shot", label: "Analyze your shot", icon: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8.5h3.2l1.8-2.5h6l1.8 2.5H20V19H4z"/><circle cx="12" cy="13" r="3.4"/></svg>' }
+  ];
+  const TAB_KEY = "fcph-tools-tab";
+  let tab = (() => { try { return localStorage.getItem(TAB_KEY) || "sun"; } catch { return "sun"; } })();
+  const listeners = [];
+
   function shellHtml() {
     return `
-      <div class="tools-bar">
+      <nav class="tools-tabs" role="tablist" aria-label="Tools">
+        ${TABS.map(t => `<button type="button" role="tab" id="tab-${t.id}" aria-controls="panel-${t.id}" data-tab="${t.id}">${t.icon}<span>${t.label}</span></button>`).join("")}
+      </nav>
+      <div class="tools-bar" id="toolsBar">
         <div class="spots-search tools-search" id="toolsSearch">
           <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 21 21"/></svg>
           <input id="toolsQuery" type="search" placeholder="Search a place…" aria-label="Search a place" autocomplete="off"
@@ -271,10 +301,44 @@ const Tools = (() => {
         </div>
       </div>
       <p class="tools-place" id="toolsPlace" aria-live="polite"></p>
-      <div class="tools-grid" id="toolsGrid"><p class="gate-note">Calculating…</p></div>`;
+      <section class="tools-panel" id="panel-sun" role="tabpanel" aria-labelledby="tab-sun">
+        <div class="tools-grid" id="toolsGrid"><p class="gate-note">Calculating…</p></div>
+      </section>
+      <section class="tools-panel" id="panel-planner" role="tabpanel" aria-labelledby="tab-planner" hidden><div id="plannerRoot"></div></section>
+      <section class="tools-panel" id="panel-shot" role="tabpanel" aria-labelledby="tab-shot" hidden><div id="shotRoot"></div></section>`;
+  }
+
+  function setTab(id) {
+    if (!TABS.some(t => t.id === id)) id = "sun";
+    tab = id;
+    try { localStorage.setItem(TAB_KEY, id); } catch {}
+    root().querySelectorAll("[data-tab]").forEach(b => { const on = b.dataset.tab === id; b.setAttribute("aria-selected", on ? "true" : "false"); b.tabIndex = on ? 0 : -1; });
+    TABS.forEach(t => (document.getElementById(`panel-${t.id}`).hidden = t.id !== id));
+    const usesPlace = id !== "shot";
+    document.getElementById("toolsBar").hidden = !usesPlace;
+    document.getElementById("toolsPlace").hidden = !usesPlace;
+    if (id === "planner") loadScript("planner.js").then(() => window.Planner?.show(ctx)).catch(() => toast("The planner could not be loaded. Check your connection.", true));
+    if (id === "shot") loadScript("analyzer.js").then(() => window.Analyzer?.show()).catch(() => toast("The analyzer could not be loaded. Check your connection.", true));
+  }
+
+  const scripts = {};
+  function loadScript(src) {
+    const v = document.querySelector('script[src^="tools.js"]')?.src.split("?")[1] || "";
+    return scripts[src] ||= new Promise((ok, ko) => {
+      const el = document.createElement("script");
+      el.src = /^https?:/.test(src) ? src : `${src}${v ? "?" + v : ""}`;
+      el.onload = ok; el.onerror = () => { delete scripts[src]; ko(new Error(src)); };
+      document.head.appendChild(el);
+    });
   }
 
   function wire() {
+    root().querySelectorAll("[data-tab]").forEach(b => b.addEventListener("click", () => setTab(b.dataset.tab)));
+    root().querySelector(".tools-tabs").addEventListener("keydown", e => {
+      if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
+      const i = TABS.findIndex(t => t.id === tab), n = TABS[(i + (e.key === "ArrowRight" ? 1 : -1) + TABS.length) % TABS.length].id;
+      setTab(n); document.getElementById(`tab-${n}`).focus();
+    });
     const input = document.getElementById("toolsQuery"), box = document.getElementById("toolsSuggest");
     input.addEventListener("input", () => {
       const q = input.value.trim();
@@ -376,6 +440,7 @@ const Tools = (() => {
       <span class="tp-meta">${fmtCoord(place.lat, place.lon).replace("  |  ", " · ")} · ${esc(tzApprox ? `${tz} (your device)` : tz)} ${offTxt}</span>`;
     document.getElementById("toolsGrid").innerHTML = sunCard(today) + moonCard() + nightCard() + calendarCard();
     wireCalendar();
+    listeners.forEach(fn => { try { fn(); } catch (err) { console.error(err); } });
   }
 
   function sunCard(today) {
@@ -516,6 +581,17 @@ const Tools = (() => {
     }));
   }
 
-  return { show };
+  /* ---------- contesto condiviso con planner.js ---------- */
+  const ctx = {
+    get place() { return place; }, get tz() { return tz; }, get day() { return day; },
+    localToUtc: (...a) => localToUtc(...a), addDays, partsIn: ms => partsIn(ms, tz), fmtT, fmtDate, fmtDur,
+    sunDay: () => sunDay(day), night: () => night(day), moonRiseSet: () => moonRiseSet(day), isToday: () => sameDay(day, todayIn(tz)),
+    setPlace: p => setPlace(p, { keepDay: true }),
+    reverseName,
+    onUpdate: fn => listeners.push(fn),
+    loadScript
+  };
+
+  return { show, ctx };
 })();
 window.Tools = Tools;
