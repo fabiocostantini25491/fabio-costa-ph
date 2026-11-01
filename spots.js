@@ -92,7 +92,7 @@ const Spots = (() => {
   async function fetchSpots() {
     const all = [];
     for (let from = 0; ; from += PAGE_SIZE) {
-      const { data } = await api(`/rest/v1/spots?select=id,name,lat,lon,list,note,url&order=list.asc,name.asc`, {
+      const { data } = await api(`/rest/v1/spots?select=id,source_key,name,lat,lon,list,note,url&order=list.asc,name.asc`, {
         headers: { "Range-Unit": "items", Range: `${from}-${from + PAGE_SIZE - 1}` }
       });
       all.push(...(data || []));
@@ -325,6 +325,7 @@ const Spots = (() => {
   /* =========================================================
      IMPORTAZIONE DA GOOGLE MAPS (solo admin)
      ========================================================= */
+  let alreadyThere = 0;  // spot dei file già presenti sulla mappa
   let pending = [];   // spot letti dai file, pronti da caricare
 
   function openImport() {
@@ -335,7 +336,7 @@ const Spots = (() => {
       document.body.appendChild(d);
       d.addEventListener("click", e => { if (e.target === d) d.close(); });
     }
-    pending = [];
+    pending = []; alreadyThere = 0;
     d.innerHTML = `
       <button class="dialog-close" type="button" data-close aria-label="Chiudi">${ICON.close}</button>
       <div class="import-body">
@@ -404,7 +405,12 @@ const Spots = (() => {
     }
     const seen = new Map();
     out.forEach(s => seen.set(s.source_key, s));
-    pending = [...seen.values()];
+    // salta gli spot già presenti sulla mappa: si cercano (e si pagano) solo quelli nuovi
+    const known = new Set(spots.map(s => s.source_key).filter(Boolean));
+    const fresh = [...seen.values()];
+    pending = fresh.filter(s => !known.has(s.source_key));
+    alreadyThere = fresh.length - pending.length;
+    if (alreadyThere) report.push(`<li><strong>${alreadyThere}</strong> spot sono già sulla mappa e vengono saltati: restano solo quelli nuovi.</li>`);
     renderSummary();
     box.insertAdjacentHTML("afterbegin", `<ul class="import-report">${report.join("")}</ul>`);
     $("#importFiles").value = "";   // si può riscegliere lo stesso file
@@ -415,7 +421,7 @@ const Spots = (() => {
     const ok = pending.filter(s => s.lat != null), missing = pending.filter(s => s.lat == null), withPid = missing.filter(s => s.placeId);
     const byList = {};
     pending.forEach(s => { (byList[s.list] ||= { tot: 0, ok: 0 }).tot++; if (s.lat != null) byList[s.list].ok++; });
-    box.innerHTML = !pending.length ? `<p class="gate-note warn">Nessuno spot trovato nei file scelti.</p>` : `
+    box.innerHTML = !pending.length ? (alreadyThere ? `<p class="gate-note">Nessuno spot nuovo: sono già tutti sulla mappa.</p>` : `<p class="gate-note warn">Nessuno spot trovato nei file scelti.</p>`) : `
       <table class="import-table"><thead><tr><th>Lista</th><th>Spot</th><th>Con coordinate</th></tr></thead><tbody>
         ${Object.entries(byList).map(([l, v]) => `<tr><td>${esc(l)}</td><td>${v.tot}</td><td>${v.ok}</td></tr>`).join("")}
       </tbody></table>
