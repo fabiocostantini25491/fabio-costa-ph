@@ -68,6 +68,9 @@ const Spots = (() => {
   let socialV = true;       // false finché non è stato eseguito supabase-sociale.sql
   let guest = false;        // visitatore senza account: vede solo la selezione pubblica
   let guestLoaded = false, publicTotal = 0, wantLogin = false;
+  let commV = true;         // false finché non è stato eseguito supabase-community2.sql
+  let meetups = [], meetupJoins = new Map(), favs = new Set(), profiles = [], openFlags = 0;
+  let onlyFavs = false, showPhotographers = false, commLayer = null;
   let tkV = true;           // false finché non è stato eseguito supabase-trekking.sql
   let wsV = true;           // false finché non è stato eseguito supabase-workshop.sql
   let pubV = true;          // false finché non è stato eseguito supabase-pubblico.sql
@@ -150,6 +153,19 @@ const Spots = (() => {
     if (data && (data.id || data.user) && !(data.identities && data.identities.length === 0)) return "confirm";
     throw new Error("already registered");
   }
+  /* Accesso con Google: il pulsante compare solo se Google è attivo su Supabase (Authentication → Providers) */
+  let googleOn = null;
+  async function checkGoogle() {
+    if (googleOn !== null) return googleOn;
+    try { const { data } = await api("/auth/v1/settings", { auth: false }); googleOn = !!data?.external?.google; } catch { googleOn = false; }
+    return googleOn;
+  }
+  function signInGoogle() {
+    window.fcTrack?.("Spots: Google sign-in");
+    const back = `${location.origin}${location.pathname}#spots`;
+    location.href = `${SPOTS_CONFIG.url.replace(/\/$/, "")}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(back)}`;
+  }
+  const GOOGLE_G = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#EA4335" d="M12 10.2v3.9h5.4c-.2 1.3-1.6 3.9-5.4 3.9-3.3 0-5.9-2.7-5.9-6s2.7-6 5.9-6c1.9 0 3.1.8 3.8 1.5l2.6-2.5C16.8 3.4 14.6 2.4 12 2.4 6.7 2.4 2.4 6.7 2.4 12s4.3 9.6 9.6 9.6c5.5 0 9.2-3.9 9.2-9.4 0-.6-.1-1.1-.2-1.6H12z"/></svg>';
   async function fetchMemberStatus() {
     const uid = session ? jwtPayload(session.access_token).sub : "";
     try {
@@ -269,7 +285,7 @@ const Spots = (() => {
           return;
         }
         spots = await fetchSpots();
-        await Promise.all([fetchReports(), admin ? fetchPending() : null]);
+        await Promise.all([fetchReports(), admin ? fetchPending() : null, fetchCommunity()]);
         loaded = true;
       } catch (err) {
         if (err.status === 401) { saveSession(null); notice = "Please log in again."; return renderGate(); }
@@ -338,7 +354,12 @@ const Spots = (() => {
         <p class="gate-note" id="gateMsg" role="status"></p>
         <p class="gate-help">Forgot your password? <a href="#about">Contact me</a> and I will reset it.</p>
       </form>`}
+      <div class="gate-google" id="gateGoogle" hidden><p class="gate-or"><span>or</span></p>
+        <button type="button" class="google-btn" id="googleBtn">${GOOGLE_G}<span>Continue with Google</span></button>
+        <p class="gate-help">${join ? "Your Google name and email are used to create the request — I still approve it personally." : "Works for accounts created with Google."}</p></div>
       ${guestLoaded ? `<button type="button" class="text-link gate-back" id="gateBack">← Back to the public map</button>` : ""}`);
+    checkGoogle().then(on => { const g = $("#gateGoogle"); if (g) g.hidden = !on; });
+    $("#googleBtn")?.addEventListener("click", signInGoogle);
     $("#gateBack")?.addEventListener("click", () => { wantLogin = false; wantJoin = false; notice = ""; render(); });
     $$("[data-gtab]").forEach(b => b.addEventListener("click", () => {
       wantJoin = b.dataset.gtab === "join"; wantLogin = !wantJoin; notice = ""; renderGate();
@@ -401,6 +422,7 @@ const Spots = (() => {
   }
 
   function pendingText() {
+    if (memberStatus === "suspended") return "Your account is suspended. If you think this is a mistake, contact me.";
     return memberStatus === "rejected"
       ? "Your request to join was not approved. If you think this is a mistake, contact me."
       : "Thanks for joining! Your request is waiting for my approval — usually within a day. Until then, here is the public map.";
@@ -427,7 +449,7 @@ const Spots = (() => {
           ${guest && session ? `<span class="spots-email">${esc(memberName || email)}</span>
           <button class="text-link" type="button" id="spotsLogout">Log out</button>` : guest ? `<button class="text-link" type="button" id="spotsLogin">Log in</button>
           <button class="outline-link spots-add" type="button" id="spotsJoin">${LOCK_SVG}Join free</button>` : `
-          ${admin ? `<button class="outline-link spots-add req-btn${pendingMembers.length ? " has" : ""}" type="button" id="spotsRequests">Requests <b>${pendingMembers.length}</b></button>` : ""}
+          ${admin ? `<button class="outline-link spots-add req-btn${pendingMembers.length + openFlags ? " has" : ""}" type="button" id="spotsRequests">Admin <b>${pendingMembers.length + openFlags}</b></button>` : ""}
           ${schemaV2 || admin ? `<button class="outline-link spots-add" type="button" id="spotsAdd">${ICON_PLUS}Add a place</button>` : ""}
           ${admin ? `<button class="text-link" type="button" id="spotsImport">${ICON_UPLOAD}Importa da Google Maps</button>` : ""}
           <span class="spots-email">${esc(email)}</span>
@@ -459,6 +481,13 @@ const Spots = (() => {
         <button type="button" class="filter soc-support${onlySupport ? " active" : ""}" id="onlySupport" aria-pressed="${onlySupport}">🌱 Support local <small>${spots.filter(x => x.support_local).length}</small></button>
         <button type="button" class="text-link" id="openConduct">Community code</button>
         <a class="text-link" href="#guide-spots">How Spots works</a>
+      </div>` : ""}
+      ${commV && !guest ? `<div class="spots-community" role="group" aria-label="Community">
+        <button type="button" class="filter comm-btn${onlyFavs ? " active" : ""}" id="onlyFavs" aria-pressed="${onlyFavs}">♥ My spots <small>${favs.size}</small></button>
+        <button type="button" class="filter comm-btn" id="meetList">👥 Meetups <small>${upcomingMeetups().length}</small></button>
+        <button type="button" class="filter comm-btn" id="meetAdd">＋ Meetup</button>
+        <button type="button" class="filter comm-btn${showPhotographers ? " active" : ""}" id="showPh" aria-pressed="${showPhotographers}">📷 Photographers <small>${profiles.filter(p => p.visible && p.lat != null).length}</small></button>
+        <button type="button" class="text-link" id="myProfile">${profiles.some(p => p.user_id === myUid()) ? "My photographer profile" : "Join the photographers' map"}</button>
       </div>` : ""}
       <div class="spots-stage">
         <div id="spotsMap" class="map map-spots" aria-label="Members map of photo spots"></div>
@@ -538,6 +567,20 @@ const Spots = (() => {
     $("#alertMode")?.addEventListener("change", e => { alertMode = e.target.value; drawClusters(); renderNear(); });
     $("#onlySupport")?.addEventListener("click", () => { onlySupport = !onlySupport; renderApp(); });
     $("#openConduct")?.addEventListener("click", () => showConduct());
+    $("#onlyFavs")?.addEventListener("click", () => {
+      if (!favs.size && !onlyFavs) return toast("Tap ♡ Save on any place to add it to your spots.");
+      onlyFavs = !onlyFavs; renderApp();
+    });
+    $("#meetList")?.addEventListener("click", openMeetupList);
+    $("#meetAdd")?.addEventListener("click", () => withConduct(() => openMeetup(map ? { lat: map.getCenter().lat, lon: L.Util.wrapNum(map.getCenter().lng, [-180, 180], true) } : null)));
+    $("#showPh")?.addEventListener("click", () => {
+      showPhotographers = !showPhotographers;
+      $("#showPh").classList.toggle("active", showPhotographers);
+      $("#showPh").setAttribute("aria-pressed", showPhotographers);
+      drawCommunity();
+      if (showPhotographers) { const pts = profiles.filter(p => p.visible && p.lat != null).map(p => [p.lat, p.lon]); if (pts.length) map.flyToBounds(L.latLngBounds(pts).pad(0.3), { maxZoom: 8, duration: .8 }); else toast("No photographers on the map yet: be the first!"); }
+    });
+    $("#myProfile")?.addEventListener("click", openProfile);
     buildMap();
     if (origin) renderNear();
   }
@@ -942,7 +985,7 @@ const Spots = (() => {
   /* ---------- mappa satellite con raggruppamento ---------- */
   function visibleSpots() {
     const q = norm(query);
-    return spots.filter(s => (!activeCats || activeCats.has(s.category))
+    return spots.filter(s => (!onlyFavs || favs.has(s.id)) && (!activeCats || activeCats.has(s.category))
       && (!onlySupport || s.support_local)
       && (alertMode === "show" || (alertMode === "hide" ? !alertsOf(s).length : alertsOf(s).length > 0))
       && (!q || norm(s.name).includes(q) || norm(s.note).includes(q) || norm(s.list).includes(q) || norm(CATS[s.category].label).includes(q)));
@@ -962,6 +1005,7 @@ const Spots = (() => {
     layer = L.layerGroup().addTo(map);
     originLayer = L.layerGroup().addTo(map);
     osmLayer = L.layerGroup().addTo(map);
+    commLayer = L.layerGroup().addTo(map);
     drawOsm();
     drawOrigin();
     map.on("moveend zoomend", drawClusters);
@@ -1003,6 +1047,7 @@ const Spots = (() => {
         .addTo(layer)
         .on("click", () => map.flyToBounds(L.latLngBounds(group.map(s => [s.lat, s.lon])).pad(0.3), { maxZoom: Math.min(19, z + 4), duration: .8 }));
     });
+    drawCommunity();
   }
 
   function addSpotMarker(s, front) {
@@ -1047,7 +1092,7 @@ const Spots = (() => {
     const color = plane ? "#ffc46e" : shineLocal ? "#7ed69b" : cat.color;
     const alert = alertsOf(s).length ? `<span class="alert-dot" title="${esc(ALERTS[alertsOf(s)[0].kind].label)}"></span>` : "";
     return L.divIcon({ className: "", iconSize: [28, 28], iconAnchor: [14, 14], tooltipAnchor: [0, -14], popupAnchor: [0, -12],
-      html: `<div class="${cls}" style="--c:${color}">${icon}${offer ? `<span class="offer-tag" aria-hidden="true">%</span>` : ""}${alert}</div>` });
+      html: `<div class="${cls}" style="--c:${color}">${icon}${offer ? `<span class="offer-tag" aria-hidden="true">%</span>` : ""}${favs.has(s.id) ? `<span class="fav-dot" aria-hidden="true">♥</span>` : ""}${alert}</div>` });
   }
   const fmtMoneyWs = (v, cur) => { try { return new Intl.NumberFormat(window.I18N?.locale || "en-GB", { style: "currency", currency: cur || "EUR", maximumFractionDigits: v % 1 ? 2 : 0 }).format(v); } catch { return `${v} ${cur || ""}`; } };
   function wsBoxHtml(s) {
@@ -1216,6 +1261,7 @@ const Spots = (() => {
       ${schemaV2 ? `<div class="pop-actions">
           <button type="button" class="pop-btn" data-addphoto>${ICON.img}Add photo</button>
           <button type="button" class="pop-btn" data-review>${ICON_STAR}Review</button>
+          ${commV ? `<button type="button" class="pop-btn fav-btn${favs.has(s.id) ? " on" : ""}" data-fav>${favs.has(s.id) ? "♥ Saved" : "♡ Save"}</button>` : ""}
           <input type="file" accept="image/*" multiple hidden data-photofile>
         </div>
         <p class="pop-rights">By adding a photo you confirm it's yours and accept the <a href="#photoRights" data-rights>photo terms</a>.</p>
@@ -1239,6 +1285,8 @@ const Spots = (() => {
       ${schemaV2 && socialV ? `<div class="pop-actions">
           <button type="button" class="pop-btn" data-report>${ICON_ALERT}Report</button>
           ${canEdit(s) ? `<button type="button" class="pop-btn" data-social>Community settings</button>` : ""}
+          ${commV ? `<button type="button" class="pop-btn" data-meethere>👥 Meet here</button>` : ""}
+          ${commV && !canEdit(s) ? `<button type="button" class="text-link pop-flag" data-flagspot>⚑ Flag</button>` : ""}
         </div>
         <form class="pop-review pop-reportform" data-reportform hidden>
           <label>What's going on?
@@ -1277,6 +1325,9 @@ const Spots = (() => {
     el.querySelector("[data-rights]")?.addEventListener("click", ev => { ev.preventDefault(); map.closePopup(); $("#photoRights")?.scrollIntoView({ behavior: "smooth", block: "center" }); });
     if (!schemaV2) return;
     if (socialV) wireSocial(popup, s);
+    el.querySelector("[data-fav]")?.addEventListener("click", ev => toggleFav(s, ev.currentTarget));
+    el.querySelector("[data-meethere]")?.addEventListener("click", () => { map.closePopup(); withConduct(() => openMeetup({ lat: s.lat, lon: s.lon, spot: s })); });
+    el.querySelector("[data-flagspot]")?.addEventListener("click", () => openFlag("spot", String(s.id), s.name));
     const tf = el.querySelector("[data-tkform]");
     if (tf) wireTkGrade(tf, "tk");
     el.querySelector("[data-tkedit]")?.addEventListener("click", () => { tf.hidden = !tf.hidden; popup.update(); });
@@ -1492,6 +1543,7 @@ const Spots = (() => {
         <button type="button" class="pop-btn primary" data-decide="approved">Approva</button>
         <button type="button" class="pop-btn" data-decide="rejected">Rifiuta</button>
       </li>`;
+    if (commV) return openAdmin();
     d.innerHTML = `<button class="dialog-close" type="button" data-close aria-label="Close">${ICON.close}</button>
       <div class="import-body" data-no-i18n>
         <span class="eyebrow">Spots · solo per te</span>
@@ -1516,6 +1568,352 @@ const Spots = (() => {
       }
     }));
     if (!d.open) d.showModal();
+  }
+
+  /* =================== COMMUNITY: preferiti, ritrovi, fotografi, moderazione =================== */
+  const todayISO = () => new Date().toISOString().slice(0, 10);
+  const upcomingMeetups = () => meetups.filter(m => m.meet_on > todayISO());          // spariscono il giorno del ritrovo
+  async function fetchCommunity() {
+    if (!commV || guest) return;
+    const uid = myUid();
+    try {
+      const [mu, jo, fa, pr] = await Promise.all([
+        api(`/rest/v1/meetups?select=id,title,note,meet_on,meet_time,lat,lon,spot_id,created_by,author_name&meet_on=gt.${todayISO()}&order=meet_on.asc&limit=500`),
+        api("/rest/v1/meetup_joins?select=meetup_id,user_id,name&limit=5000"),
+        api(`/rest/v1/spot_favorites?select=spot_id&user_id=eq.${encodeURIComponent(uid)}&limit=10000`),
+        api("/rest/v1/member_profiles?select=user_id,display_name,instagram,website,bio,base_name,lat,lon,visible&limit=2000")
+      ]);
+      meetups = mu.data || [];
+      meetupJoins = new Map();
+      (jo.data || []).forEach(j => (meetupJoins.get(j.meetup_id) || meetupJoins.set(j.meetup_id, []).get(j.meetup_id)).push(j));
+      favs = new Set((fa.data || []).map(f => f.spot_id));
+      profiles = pr.data || [];
+      if (admin) { try { const { res } = await api("/rest/v1/content_flags?select=id&resolved=eq.false", { headers: { Prefer: "count=exact", Range: "0-0" } }); openFlags = +(res.headers.get("content-range") || "").split("/")[1] || 0; } catch { openFlags = 0; } }
+    } catch (err) { commV = false; }
+  }
+
+  /* --- preferiti --- */
+  async function toggleFav(s, btn) {
+    const on = !favs.has(s.id);
+    btn.disabled = true;
+    try {
+      if (on) await api("/rest/v1/spot_favorites", { method: "POST", body: { spot_id: s.id }, headers: { Prefer: "return=minimal,resolution=ignore-duplicates" } });
+      else await api(`/rest/v1/spot_favorites?spot_id=eq.${s.id}&user_id=eq.${encodeURIComponent(myUid())}`, { method: "DELETE" });
+      on ? favs.add(s.id) : favs.delete(s.id);
+      btn.classList.toggle("on", on); btn.textContent = on ? "♥ Saved" : "♡ Save";
+      markerById.get(s.id)?.setIcon(pinIcon(s));
+      const fb = $("#onlyFavs"); if (fb) fb.querySelector("small").textContent = favs.size;
+      window.fcTrack?.(on ? "Spots: saved a place" : "Spots: unsaved a place");
+    } catch (err) { toast(`Could not save: ${err.message}`, true); }
+    btn.disabled = false;
+  }
+
+  /* --- disegno: ritrovi e fotografi --- */
+  const MEET_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="8.5" cy="8" r="3"/><circle cx="16.5" cy="9" r="2.5"/><path d="M3 19c.6-3.4 2.8-5.2 5.5-5.2s4.9 1.8 5.5 5.2M14 14.4c.8-.4 1.6-.6 2.5-.6 2.3 0 4 1.5 4.5 4.7"/></svg>';
+  const PH_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8.5h3.2l1.8-2.5h6l1.8 2.5H20V19H4z"/><circle cx="12" cy="13" r="3.4"/></svg>';
+  const shortDay = d => new Date(d + "T12:00:00").toLocaleDateString(window.I18N?.locale || "en-GB", { day: "numeric", month: "short" });
+  function drawCommunity() {
+    if (!commLayer || !map) return;
+    commLayer.clearLayers();
+    if (guest || !commV) return;
+    upcomingMeetups().forEach(m => {
+      const mk = L.marker([m.lat, m.lon], { zIndexOffset: 1200, keyboard: true, title: m.title,
+        icon: L.divIcon({ className: "", iconSize: [34, 44], iconAnchor: [17, 17], popupAnchor: [0, -14],
+          html: `<div class="meet-pin">${MEET_ICON}<span class="meet-date">${shortDay(m.meet_on)}</span></div>` }) }).addTo(commLayer);
+      mk.bindTooltip(`${esc(m.title)} · ${shortDay(m.meet_on)}`, { direction: "top" });
+      let node = null;
+      mk.bindPopup(() => node || (node = Object.assign(document.createElement("div"), { innerHTML: meetupHtml(m) }).firstElementChild), { maxWidth: 300, minWidth: 240, className: "spot-popup" });
+      mk.on("popupopen", e => wireMeetup(e.popup, m, () => { node = null; }));
+    });
+    if (showPhotographers) profiles.filter(p => p.visible && p.lat != null).forEach(p => {
+      const mk = L.marker([p.lat, p.lon], { zIndexOffset: 1100, keyboard: true, title: p.display_name,
+        icon: L.divIcon({ className: "", iconSize: [30, 30], iconAnchor: [15, 15], popupAnchor: [0, -12],
+          html: `<div class="ph-pin">${PH_ICON}</div>` }) }).addTo(commLayer);
+      mk.bindTooltip(esc(p.display_name), { direction: "top" });
+      mk.bindPopup(() => profileHtml(p), { maxWidth: 300, minWidth: 220, className: "spot-popup" });
+      mk.on("popupopen", e => e.popup.getElement()?.querySelector("[data-flagprofile]")?.addEventListener("click", () => openFlag("profile", p.user_id, p.display_name)));
+    });
+  }
+  function meetupHtml(m) {
+    const who = meetupJoins.get(m.id) || [], mine = who.some(j => j.user_id === myUid());
+    const own = m.created_by === myUid();
+    return `<div class="spot-pop">
+      <span class="spot-cat" style="--c:#ffd166">${MEET_ICON}Meetup</span>
+      <strong>${esc(m.title)}</strong>
+      <p class="pop-dates">${ICON.cal}<span>${fmtDay(m.meet_on)}${m.meet_time ? ` · ${esc(m.meet_time)}` : ""}</span></p>
+      ${m.note ? `<p class="pop-desc">${esc(m.note)}</p>` : ""}
+      <p class="pop-author">Organised by ${esc(m.author_name || "a member")}</p>
+      <p class="meet-who" data-who>${who.length ? `👥 ${who.length} going: ${who.map(j => esc(j.name || "Member")).join(", ")}` : "Nobody has joined yet."}</p>
+      <div class="pop-actions">
+        ${own ? "" : `<button type="button" class="pop-btn${mine ? "" : " primary"}" data-join>${mine ? "Leave" : "I'm in"}</button>`}
+        <a class="pop-btn" href="https://www.google.com/maps/dir/?api=1&destination=${m.lat.toFixed(6)},${m.lon.toFixed(6)}" target="_blank" rel="noopener">${ICON.ext}Directions</a>
+        ${own || admin ? `<button type="button" class="pop-btn" data-delmeet>Delete</button>` : `<button type="button" class="text-link pop-flag" data-flagmeet>⚑ Flag</button>`}
+      </div>
+      <p class="gate-help left">The meetup disappears from the map on the day it takes place.</p>
+    </div>`;
+  }
+  function wireMeetup(popup, m, reset) {
+    const el = popup.getElement();
+    if (!el || el.dataset.wired === String(m.id) + (meetupJoins.get(m.id) || []).length) return;
+    el.querySelector("[data-join]")?.addEventListener("click", async ev => {
+      const b = ev.currentTarget, mine = (meetupJoins.get(m.id) || []).some(j => j.user_id === myUid());
+      b.disabled = true;
+      try {
+        if (mine) await api(`/rest/v1/meetup_joins?meetup_id=eq.${m.id}&user_id=eq.${encodeURIComponent(myUid())}`, { method: "DELETE" });
+        else await api("/rest/v1/meetup_joins", { method: "POST", body: { meetup_id: m.id, name: displayName() }, headers: { Prefer: "return=minimal" } });
+        const list = (meetupJoins.get(m.id) || []).filter(j => j.user_id !== myUid());
+        if (!mine) list.push({ meetup_id: m.id, user_id: myUid(), name: displayName() });
+        meetupJoins.set(m.id, list);
+        reset(); popup.setContent(Object.assign(document.createElement("div"), { innerHTML: meetupHtml(m) }).firstElementChild);
+        wireMeetup(popup, m, reset);
+        window.fcTrack?.(mine ? "Spots: left a meetup" : "Spots: joined a meetup");
+      } catch (err) { toast(`Could not update: ${err.message}`, true); b.disabled = false; }
+    });
+    el.querySelector("[data-delmeet]")?.addEventListener("click", async ev => {
+      const b = ev.currentTarget;
+      if (b.dataset.confirm !== "1") { b.dataset.confirm = "1"; b.textContent = "Confirm delete"; return; }
+      try { await api(`/rest/v1/meetups?id=eq.${m.id}`, { method: "DELETE" }); meetups = meetups.filter(x => x.id !== m.id); map.closePopup(); drawCommunity(); toast("Meetup deleted."); }
+      catch (err) { toast(`Could not delete: ${err.message}`, true); }
+    });
+    el.querySelector("[data-flagmeet]")?.addEventListener("click", () => openFlag("meetup", String(m.id), m.title));
+  }
+  function profileHtml(p) {
+    const ig = p.instagram ? `https://www.instagram.com/${encodeURIComponent(p.instagram)}/` : "";
+    return `<div class="spot-pop">
+      <span class="spot-cat" style="--c:#c9a7ff">${PH_ICON}Photographer</span>
+      <strong>${esc(p.display_name)}</strong>
+      ${p.base_name ? `<p class="pop-dates">${ICON.pin}<span>${esc(p.base_name)}</span></p>` : ""}
+      ${p.bio ? `<p class="pop-desc">${esc(p.bio)}</p>` : ""}
+      <div class="pop-actions">
+        ${ig ? `<a class="pop-btn primary" href="${esc(ig)}" target="_blank" rel="noopener">Instagram @${esc(p.instagram)}</a>` : ""}
+        ${p.website ? `<a class="pop-btn" href="${esc(p.website)}" target="_blank" rel="noopener">${ICON.ext}Website</a>` : ""}
+        ${p.user_id !== myUid() ? `<button type="button" class="text-link pop-flag" data-flagprofile>⚑ Flag</button>` : ""}
+      </div>
+    </div>`;
+  }
+
+  /* --- finestre --- */
+  function dlg(id, html) {
+    let d = $(`#${id}`);
+    if (!d) { d = document.createElement("dialog"); d.id = id; d.className = "import-dialog"; document.body.appendChild(d); d.addEventListener("click", e => { if (e.target === d) d.close(); }); }
+    d.innerHTML = `<button class="dialog-close" type="button" data-close aria-label="Close">${ICON.close}</button>${html}`;
+    d.querySelector("[data-close]").onclick = () => d.close();
+    if (!d.open) d.showModal();
+    return d;
+  }
+  function openMeetup(pre) {
+    const tomorrow = new Date(Date.now() + 864e5).toISOString().slice(0, 10);
+    const d = dlg("meetDialog", `<form class="import-body gate-form" novalidate>
+      <span class="eyebrow">Members only</span><h2>Plan a meetup</h2>
+      <label for="mtTitle">What</label>
+      <input id="mtTitle" maxlength="120" placeholder="e.g. Sunrise at Seceda, then breakfast" value="${pre?.spot ? esc(`Meetup at ${pre.spot.name}`) : ""}" required>
+      <div class="ws-fields">
+        <label>Day<input type="date" id="mtDay" min="${tomorrow}" value="${tomorrow}" required></label>
+        <label>Time <small>(optional)</small><input type="text" id="mtTime" maxlength="20" placeholder="e.g. 5:30"></label>
+      </div>
+      <label for="mtCoords">Where (coordinates)</label>
+      <input id="mtCoords" value="${pre ? `${pre.lat.toFixed(5)}, ${pre.lon.toFixed(5)}` : ""}" placeholder="46.6013, 11.7246" autocomplete="off" required>
+      <label for="mtNote">Details <small>(optional)</small></label>
+      <textarea id="mtNote" rows="3" maxlength="1000" placeholder="Where to park, what to bring, how to recognise the group…"></textarea>
+      <button class="outline-link" type="submit">CREATE MEETUP <span aria-hidden="true">→</span></button>
+      <p class="gate-note" id="mtMsg" role="status"></p>
+      <p class="gate-help left">Only members see meetups. It disappears from the map on the day it takes place.</p>
+    </form>`);
+    d.querySelector("form").addEventListener("submit", async e => {
+      e.preventDefault();
+      const msg = d.querySelector("#mtMsg"), warn = t => { msg.className = "gate-note warn"; msg.textContent = t; };
+      const title = d.querySelector("#mtTitle").value.trim(), day = d.querySelector("#mtDay").value, c = parseCoordsInput(d.querySelector("#mtCoords").value);
+      if (title.length < 2) return warn("Give the meetup a short title.");
+      if (!day || day <= todayISO()) return warn("Pick a day from tomorrow on.");
+      if (!c) return warn("Coordinates not recognised. Format: 46.6013, 11.7246");
+      const row = { title, meet_on: day, meet_time: d.querySelector("#mtTime").value.trim() || null, lat: c.lat, lon: c.lon,
+        note: d.querySelector("#mtNote").value.trim() || null, spot_id: pre?.spot?.id || null, author_name: displayName() };
+      try {
+        const { data } = await api("/rest/v1/meetups", { method: "POST", body: row, headers: { Prefer: "return=representation" } });
+        meetups.push(Array.isArray(data) ? data[0] : data);
+        d.close(); renderApp(); map.flyTo([c.lat, c.lon], Math.max(map.getZoom(), 12), { duration: .8 });
+        toast("Meetup created: members can now join."); window.fcTrack?.("Spots: created a meetup");
+      } catch (err) { warn(`Could not save: ${err.message}`); }
+    });
+  }
+  function openMeetupList() {
+    const list = upcomingMeetups();
+    const d = dlg("meetListDialog", `<div class="import-body">
+      <span class="eyebrow">Members only</span><h2>Upcoming meetups</h2>
+      ${list.length ? `<ul class="req-list">${list.map(m => `<li class="req-row"><div><b>${esc(m.title)}</b>
+        <span>${fmtDay(m.meet_on)}${m.meet_time ? ` · ${esc(m.meet_time)}` : ""} · ${(meetupJoins.get(m.id) || []).length} going · by ${esc(m.author_name || "a member")}</span></div>
+        <button type="button" class="pop-btn" data-goto="${m.id}">${ICON.pin}Show</button></li>`).join("")}</ul>`
+        : `<p class="gate-help left">No meetups planned yet. Use «＋ Meetup» or «Meet here» on any place.</p>`}
+    </div>`);
+    d.querySelectorAll("[data-goto]").forEach(b => b.addEventListener("click", () => {
+      const m = meetups.find(x => x.id === +b.dataset.goto); d.close();
+      if (!m) return;
+      $("#spotsMap").scrollIntoView({ behavior: "smooth", block: "center" });
+      map.flyTo([m.lat, m.lon], Math.max(map.getZoom(), 13), { duration: .9 });
+      map.once("moveend", () => commLayer.eachLayer(l => { const ll = l.getLatLng?.(); if (ll && Math.abs(ll.lat - m.lat) < 1e-9 && Math.abs(ll.lng - m.lon) < 1e-9) l.openPopup(); }));
+    }));
+  }
+  function openProfile() {
+    const me = profiles.find(p => p.user_id === myUid()) || {};
+    const v = x => (x == null ? "" : esc(String(x)));
+    const d = dlg("profileDialog", `<form class="import-body gate-form" novalidate>
+      <span class="eyebrow">Photographers' map</span><h2>${me.user_id ? "Your profile" : "Join the map"}</h2>
+      <label for="pfName">Name</label><input id="pfName" maxlength="60" value="${v(me.display_name || displayName())}" required>
+      <div class="ws-fields">
+        <label>Instagram<input id="pfIg" maxlength="31" value="${v(me.instagram)}" placeholder="username (no @)"></label>
+        <label>Website<input id="pfWeb" type="url" maxlength="300" value="${v(me.website)}" placeholder="https://…"></label>
+      </div>
+      <label for="pfBio">About you <small>(optional)</small></label>
+      <textarea id="pfBio" rows="2" maxlength="300" placeholder="Landscape and night photographer, Dolomites guide…">${v(me.bio)}</textarea>
+      <label for="pfBase">Where you're based</label>
+      <div class="gkey-row"><input id="pfBase" maxlength="80" value="${v(me.base_name)}" placeholder="Town or area, e.g. Bolzano"><button class="text-link" type="button" id="pfHere">Use my location</button></div>
+      <input id="pfCoords" value="${me.lat != null ? `${(+me.lat).toFixed(2)}, ${(+me.lon).toFixed(2)}` : ""}" placeholder="Coordinates of your area, e.g. 46.50, 11.35" autocomplete="off">
+      <p class="gate-help left">For privacy your pin is placed only roughly (about 5 km), never at your address.</p>
+      <label class="shot-check"><input type="checkbox" id="pfVisible"${me.user_id ? (me.visible ? " checked" : "") : " checked"}> Show me on the photographers' map</label>
+      <button class="outline-link" type="submit">SAVE PROFILE <span aria-hidden="true">→</span></button>
+      ${me.user_id ? `<button class="text-link" type="button" id="pfDelete">Remove my profile</button>` : ""}
+      <p class="gate-note" id="pfMsg" role="status"></p>
+    </form>`);
+    d.querySelector("#pfHere").addEventListener("click", () => {
+      if (!navigator.geolocation) return toast("Your browser can't share its location.", true);
+      navigator.geolocation.getCurrentPosition(p => { d.querySelector("#pfCoords").value = `${p.coords.latitude.toFixed(2)}, ${p.coords.longitude.toFixed(2)}`; },
+        () => toast("Location not available.", true), { timeout: 10000 });
+    });
+    d.querySelector("#pfDelete")?.addEventListener("click", async ev => {
+      const b = ev.currentTarget;
+      if (b.dataset.confirm !== "1") { b.dataset.confirm = "1"; b.textContent = "Click again to remove your profile"; return; }
+      try { await api(`/rest/v1/member_profiles?user_id=eq.${encodeURIComponent(myUid())}`, { method: "DELETE" }); profiles = profiles.filter(p => p.user_id !== myUid()); d.close(); renderApp(); toast("Profile removed."); }
+      catch (err) { toast(`Could not remove: ${err.message}`, true); }
+    });
+    d.querySelector("form").addEventListener("submit", async e => {
+      e.preventDefault();
+      const msg = d.querySelector("#pfMsg"), warn = t => { msg.className = "gate-note warn"; msg.textContent = t; };
+      const name = d.querySelector("#pfName").value.trim(), ig = d.querySelector("#pfIg").value.trim().replace(/^@/, "").replace(/^https?:\/\/(www\.)?instagram\.com\//i, "").replace(/\/.*$/, "");
+      const web = d.querySelector("#pfWeb").value.trim(), cTxt = d.querySelector("#pfCoords").value.trim(), c = cTxt ? parseCoordsInput(cTxt) : null;
+      if (name.length < 2) return warn("Please enter your name.");
+      if (ig && !/^[A-Za-z0-9._]{1,30}$/.test(ig)) return warn("Instagram: just the username, e.g. fabiocostaph");
+      if (web && !/^https?:\/\//i.test(web)) return warn("The website must start with https://");
+      if (cTxt && !c) return warn("Coordinates not recognised. Format: 46.50, 11.35");
+      const round = x => Math.round(x * 20) / 20;   // ~5 km
+      const row = { user_id: myUid(), display_name: name, instagram: ig || null, website: web || null, bio: d.querySelector("#pfBio").value.trim() || null,
+        base_name: d.querySelector("#pfBase").value.trim() || null, lat: c ? round(c.lat) : null, lon: c ? round(c.lon) : null,
+        visible: d.querySelector("#pfVisible").checked, updated_at: new Date().toISOString() };
+      try {
+        await api("/rest/v1/member_profiles?on_conflict=user_id", { method: "POST", body: row, headers: { Prefer: "return=minimal,resolution=merge-duplicates" } });
+        profiles = profiles.filter(p => p.user_id !== row.user_id).concat(row);
+        d.close(); showPhotographers = true; renderApp(); toast(row.lat == null ? "Profile saved. Add your area to appear on the map." : "Profile saved: you're on the photographers' map.");
+        window.fcTrack?.("Spots: saved photographer profile");
+      } catch (err) { warn(`Could not save: ${err.message}`); }
+    });
+  }
+  const FLAG_REASONS = { spam: "Spam or advertising", offensive: "Offensive or abusive", wrong: "Wrong or misleading", not_theirs: "Not their photo / copyright", danger: "Dangerous or illegal", other: "Something else" };
+  function openFlag(kind, targetId, label) {
+    const d = dlg("flagDialog", `<form class="import-body gate-form" novalidate>
+      <span class="eyebrow">Moderation</span><h2>Flag this content</h2>
+      <p class="gate-help left">«${esc(label || "")}» — only Fabio sees flags. Thanks for keeping the map clean.</p>
+      <label for="flReason">Why?</label>
+      <select id="flReason" class="flag-select">${Object.entries(FLAG_REASONS).map(([k, t]) => `<option value="${k}">${t}</option>`).join("")}</select>
+      <label for="flNote">Details <small>(optional)</small></label>
+      <textarea id="flNote" rows="2" maxlength="600"></textarea>
+      <button class="outline-link" type="submit">SEND <span aria-hidden="true">→</span></button>
+    </form>`);
+    d.querySelector("form").addEventListener("submit", async e => {
+      e.preventDefault();
+      try {
+        await api("/rest/v1/content_flags", { method: "POST", headers: { Prefer: "return=minimal" },
+          body: { kind, target_id: String(targetId), label: (label || "").slice(0, 200), reason: d.querySelector("#flReason").value, note: d.querySelector("#flNote").value.trim() || null } });
+        d.close(); toast("Thanks: Fabio will review it."); window.fcTrack?.(`Spots: flagged ${kind}`);
+      } catch (err) { toast(`Could not send: ${err.message}`, true); }
+    });
+  }
+
+  /* --- pannello admin: richieste, membri, segnalazioni --- */
+  async function openAdmin(tab = "requests") {
+    const d = dlg("adminDialog", `<div class="import-body" data-no-i18n>
+      <span class="eyebrow">Spots · solo per te</span><h2>Amministrazione</h2>
+      <div class="gate-tabs adm-tabs" role="tablist">
+        <button type="button" data-atab="requests" class="${tab === "requests" ? "on" : ""}">Richieste <b>${pendingMembers.length}</b></button>
+        <button type="button" data-atab="members" class="${tab === "members" ? "on" : ""}">Membri</button>
+        <button type="button" data-atab="flags" class="${tab === "flags" ? "on" : ""}">Segnalazioni <b>${openFlags}</b></button>
+      </div>
+      <div class="adm-body"><p class="gate-help left">Caricamento…</p></div>
+    </div>`);
+    d.querySelectorAll("[data-atab]").forEach(b => b.addEventListener("click", () => openAdmin(b.dataset.atab)));
+    const body = d.querySelector(".adm-body");
+    const refreshBadge = () => { const b = $("#spotsRequests"); if (b) { b.querySelector("b").textContent = pendingMembers.length + openFlags; b.classList.toggle("has", pendingMembers.length + openFlags > 0); } };
+    const decide = async (uid, status, li, doneText) => {
+      li.querySelectorAll("button").forEach(x => (x.disabled = true));
+      try {
+        await api("/rest/v1/rpc/decide_member", { method: "POST", body: { p_user: uid, p_status: status } });
+        pendingMembers = pendingMembers.filter(m => m.user_id !== uid);
+        li.innerHTML = `<p class="gate-help left">${doneText}</p>`; refreshBadge();
+      } catch (err) { toast(`Non riuscito (${err.message}).`, true); li.querySelectorAll("button").forEach(x => (x.disabled = false)); }
+    };
+    try {
+      if (tab === "requests") {
+        await fetchPending();
+        body.innerHTML = pendingMembers.length ? `<ul class="req-list">${pendingMembers.map(m => `<li class="req-row" data-uid="${esc(m.user_id)}">
+            <div><b>${esc([m.first_name, m.last_name].filter(Boolean).join(" ") || "—")}</b><span>${esc(m.email || "")} · ${fmtDay(String(m.created_at).slice(0, 10))}</span></div>
+            <button type="button" class="pop-btn primary" data-st="approved">Approva</button><button type="button" class="pop-btn" data-st="rejected">Rifiuta</button></li>`).join("")}</ul>`
+          : `<p class="gate-help left">Nessuna richiesta in attesa.</p>`;
+        body.querySelectorAll("[data-st]").forEach(b => b.addEventListener("click", () => { const li = b.closest(".req-row"); decide(li.dataset.uid, b.dataset.st, li, b.dataset.st === "approved" ? "✓ Approvato" : "Rifiutato"); }));
+      } else if (tab === "members") {
+        const { data } = await api("/rest/v1/members?select=user_id,email,first_name,last_name,status,created_at&status=in.(approved,suspended,rejected)&order=created_at.desc&limit=2000");
+        const label = { approved: "Attivo", suspended: "Sospeso", rejected: "Rifiutato" };
+        body.innerHTML = `<input type="search" class="adm-search" placeholder="Cerca per nome o email" aria-label="Cerca membro">
+          <ul class="req-list adm-members">${(data || []).map(m => `<li class="req-row" data-uid="${esc(m.user_id)}" data-q="${esc(`${m.first_name || ""} ${m.last_name || ""} ${m.email || ""}`.toLowerCase())}">
+            <div><b>${esc([m.first_name, m.last_name].filter(Boolean).join(" ") || "—")}</b><span>${esc(m.email || "")} · ${label[m.status] || m.status}</span></div>
+            ${m.status === "approved" ? `<button type="button" class="pop-btn" data-st="suspended">Sospendi</button>` : `<button type="button" class="pop-btn primary" data-st="approved">Riattiva</button>`}</li>`).join("")}</ul>
+          <p class="gate-help left">Chi sospendi non vede più gli spot e non può scrivere nulla. Puoi riattivarlo quando vuoi.</p>`;
+        body.querySelector(".adm-search").addEventListener("input", e => { const q = e.target.value.toLowerCase(); body.querySelectorAll(".adm-members li").forEach(li => { li.hidden = q && !li.dataset.q.includes(q); }); });
+        body.querySelectorAll("[data-st]").forEach(b => b.addEventListener("click", () => {
+          if (b.dataset.st === "suspended" && b.dataset.confirm !== "1") { b.dataset.confirm = "1"; b.textContent = "Conferma"; return; }
+          const li = b.closest(".req-row"); decide(li.dataset.uid, b.dataset.st, li, b.dataset.st === "suspended" ? "Sospeso" : "✓ Riattivato");
+        }));
+      } else {
+        const { data } = await api("/rest/v1/content_flags?select=id,kind,target_id,label,reason,note,created_at&resolved=eq.false&order=created_at.desc&limit=500");
+        const KIND = { spot: "Posto", review: "Recensione", photo: "Foto", meetup: "Ritrovo", profile: "Profilo" };
+        const REASON = { spam: "Spam", offensive: "Offensivo", wrong: "Sbagliato", not_theirs: "Foto non sua", danger: "Pericoloso", other: "Altro" };
+        openFlags = (data || []).length; refreshBadge();
+        body.innerHTML = (data || []).length ? `<ul class="req-list">${data.map(f => `<li class="req-row" data-flag="${f.id}" data-kind="${f.kind}" data-target="${esc(f.target_id)}">
+            <div><b>${KIND[f.kind] || f.kind} · ${REASON[f.reason] || f.reason}</b><span>${esc(f.label || "")}${f.note ? ` — “${esc(f.note)}”` : ""} · ${fmtDay(String(f.created_at).slice(0, 10))}</span></div>
+            ${["spot", "meetup", "profile"].includes(f.kind) || f.kind === "review" || f.kind === "photo" ? `<button type="button" class="pop-btn" data-act="show">Mostra</button>` : ""}
+            <button type="button" class="pop-btn" data-act="remove">Elimina contenuto</button>
+            <button type="button" class="pop-btn" data-act="dismiss">Ignora</button></li>`).join("")}</ul>`
+          : `<p class="gate-help left">Nessuna segnalazione aperta.</p>`;
+        const resolve = id => api(`/rest/v1/content_flags?id=eq.${id}`, { method: "PATCH", body: { resolved: true }, headers: { Prefer: "return=minimal" } });
+        body.querySelectorAll("[data-act]").forEach(b => b.addEventListener("click", async () => {
+          const li = b.closest(".req-row"), kind = li.dataset.kind, target = li.dataset.target, id = li.dataset.flag;
+          if (b.dataset.act === "show") {
+            d.close();
+            if (kind === "spot") { const s = spots.find(x => String(x.id) === target); if (s) focusSpot(s); }
+            else if (kind === "meetup") { const m = meetups.find(x => String(x.id) === target); if (m) map.flyTo([m.lat, m.lon], 14); }
+            else if (kind === "profile") { const p = profiles.find(x => x.user_id === target); if (p && p.lat != null) { showPhotographers = true; drawCommunity(); map.flyTo([p.lat, p.lon], 10); } }
+            else {
+              const table = kind === "review" ? "spot_reviews" : "spot_photos";
+              try { const { data: r } = await api(`/rest/v1/${table}?select=spot_id&id=eq.${encodeURIComponent(target)}`); const s = spots.find(x => x.id === r?.[0]?.spot_id); if (s) focusSpot(s); else toast("Contenuto già eliminato."); } catch {}
+            }
+            return;
+          }
+          if (b.dataset.act === "remove" && b.dataset.confirm !== "1") { b.dataset.confirm = "1"; b.textContent = "Conferma eliminazione"; return; }
+          li.querySelectorAll("button").forEach(x => (x.disabled = true));
+          try {
+            if (b.dataset.act === "remove") {
+              const path = { spot: `spots?id=eq.${encodeURIComponent(target)}`, review: `spot_reviews?id=eq.${encodeURIComponent(target)}`, photo: `spot_photos?id=eq.${encodeURIComponent(target)}`,
+                meetup: `meetups?id=eq.${encodeURIComponent(target)}`, profile: `member_profiles?user_id=eq.${encodeURIComponent(target)}` }[kind];
+              await api(`/rest/v1/${path}`, { method: "DELETE" });
+              if (kind === "spot") spots = spots.filter(x => String(x.id) !== target);
+              if (kind === "meetup") meetups = meetups.filter(x => String(x.id) !== target);
+              if (kind === "profile") profiles = profiles.filter(x => x.user_id !== target);
+            }
+            await resolve(id);
+            openFlags = Math.max(0, openFlags - 1); refreshBadge();
+            li.innerHTML = `<p class="gate-help left">${b.dataset.act === "remove" ? "Contenuto eliminato." : "Ignorata."}</p>`;
+            drawClusters();
+          } catch (err) { toast(`Non riuscito (${err.message}).`, true); li.querySelectorAll("button").forEach(x => (x.disabled = false)); }
+        }));
+      }
+    } catch (err) { body.innerHTML = `<p class="gate-note warn">Non disponibile (${esc(err.message)}). Hai eseguito supabase-community2.sql?</p>`; }
   }
 
   /* ---------- codice della community: si accetta una volta prima di contribuire ---------- */
@@ -1557,10 +1955,10 @@ const Spots = (() => {
         fetchReviews(s.id)
       ]);
       const urls = photos.length ? await signPhotos(photos.map(p => p.path)) : {};
-      const pbox = el.querySelector("[data-photos]");
+      const pbox = el.querySelector("[data-photos]"), uid0 = myUid();
       pbox.innerHTML = photos.map((p, i) => urls[p.path] ? `<figure class="pop-fig">
         <button type="button" class="pop-thumb" data-photo="${i}" aria-label="Open photo ${i + 1} by ${esc(p.author_name || "a member")}">
-        <img src="${esc(urls[p.path])}" alt="" loading="lazy"></button><figcaption>© ${esc(p.author_name || "Member")}</figcaption></figure>` : "").join("");
+        <img src="${esc(urls[p.path])}" alt="" loading="lazy"></button><figcaption>© ${esc(p.author_name || "Member")}${commV && p.user_id !== uid0 ? ` <button type="button" class="rev-flag" data-flagphoto="${p.id}" title="Flag this photo" aria-label="Flag this photo">⚑</button>` : ""}</figcaption></figure>` : "").join("");
       pbox.querySelectorAll("[data-photo]").forEach(b => b.addEventListener("click", () => openPhotos(photos, urls, +b.dataset.photo, s)));
       const rated = reviews.filter(r => r.rating);
       const rbox = el.querySelector("[data-rating]");
@@ -1576,9 +1974,11 @@ const Spots = (() => {
       el.querySelector("[data-reviews]").innerHTML = reviews.map(r => `<div class="pop-rev">
         <p class="rev-head">${r.rating ? `<span class="rev-stars">${"★".repeat(r.rating)}<i>${"★".repeat(5 - r.rating)}</i></span>` : ""}
           <b>${esc(r.author_name || "Member")}</b><time>${fmtDay(r.created_at.slice(0, 10))}</time>
-          ${r.user_id === uid || admin ? `<button type="button" class="rev-del" data-delrev="${r.id}" aria-label="Delete review">${ICON.close}</button>` : ""}</p>
+          ${r.user_id === uid || admin ? `<button type="button" class="rev-del" data-delrev="${r.id}" aria-label="Delete review">${ICON.close}</button>` : commV ? `<button type="button" class="rev-flag" data-flagrev="${r.id}" title="Flag this review" aria-label="Flag this review">⚑</button>` : ""}</p>
         ${r.body ? `<p>${esc(r.body)}</p>` : ""}
         ${r.paid != null ? `<p class="rev-paid">💶 Paid ${fmtMoney(r.paid, r.currency)}${r.people ? ` for ${r.people} ${r.people > 1 ? "people" : "person"}` : ""}${r.nights ? `, ${r.nights} night${r.nights > 1 ? "s" : ""}` : ""}${r.stay_type ? ` · ${esc(r.stay_type)}` : ""}</p>` : ""}</div>`).join("");
+      el.querySelectorAll("[data-flagrev]").forEach(b => b.addEventListener("click", () => openFlag("review", b.dataset.flagrev, `Review on «${s.name}»`)));
+      el.querySelectorAll("[data-flagphoto]").forEach(b => b.addEventListener("click", () => openFlag("photo", b.dataset.flagphoto, `Photo on «${s.name}»`)));
       el.querySelectorAll("[data-delrev]").forEach(b => b.addEventListener("click", async () => {
         try { await api(`/rest/v1/spot_reviews?id=eq.${b.dataset.delrev}`, { method: "DELETE" }); loadExtras(popup, s); }
         catch (err) { toast(`Could not delete: ${err.message}`, true); }
