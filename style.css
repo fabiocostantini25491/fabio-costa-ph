@@ -1292,3 +1292,4 @@ main > .page{scroll-margin-top:80px}
 .ws-card-offer{width:max-content;max-width:100%}
 .ws-card-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:2px}
 .ws-card-actions .pop-btn{text-decoration:none}
+.ws-empty{margin:12px 0 0;padding:16px 18px;border:1px dashed var(--line-strong);border-radius:16px;color:var(--soft);font-size:14px}

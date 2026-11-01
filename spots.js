@@ -531,6 +531,7 @@ const Spots = (() => {
       focusSpot(s);
     }));
     $("#spotsImport")?.addEventListener("click", openImport);
+    $("[data-addws]")?.addEventListener("click", () => withConduct(() => openAdd(null, { category: "workshop" })));
     $("#spotsAdd")?.addEventListener("click", () => withConduct(() => openAdd()));
     $("#alertMode")?.addEventListener("change", e => { alertMode = e.target.value; drawClusters(); renderNear(); });
     $("#onlySupport")?.addEventListener("click", () => { onlySupport = !onlySupport; renderApp(); });
@@ -1061,7 +1062,6 @@ const Spots = (() => {
 
   function workshopsHtml() {
     const list = spots.filter(isWs).sort((a, b) => String(a.starts_on || "9999").localeCompare(String(b.starts_on || "9999")) || a.name.localeCompare(b.name));
-    if (!list.length) return "";
     const card = s => {
       const left = wsLeft(s), d = datesText(s);
       return `<li class="ws-card${wsPlane(s) ? " hot" : ""}${wsOffer(s) ? " has-offer" : ""}">
@@ -1082,7 +1082,8 @@ const Spots = (() => {
     };
     return `<section class="spots-ws" id="spotsWorkshops">
       <header class="around-head"><div><span class="eyebrow">Members' calendar</span><h2>Upcoming workshops <small>${list.length}</small></h2></div></header>
-      <ul class="ws-list">${list.map(card).join("")}</ul>
+      ${list.length ? `<ul class="ws-list">${list.map(card).join("")}</ul>`
+        : `<p class="ws-empty">No upcoming workshops yet. Running one? <button type="button" class="text-link" data-addws>Add it to the map</button> — with dates, places, price and booking link.</p>`}
     </section>`;
   }
 
