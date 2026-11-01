@@ -445,7 +445,8 @@ const Spots = (() => {
           <em>Membership is free:</em> <a href="#join">join in a minute</a>.`;
           return tpl.replace("{n}", fmtN(spots.length)).replace("{total}", fmtN(Math.max(publicTotal, spots.length)));
         })()}</p>
-          <button type="button" class="outline-link" id="guestJoin">JOIN FREE <span aria-hidden="true">→</span></button></div>` : ""}
+          <button type="button" class="outline-link" id="guestJoin">JOIN FREE <span aria-hidden="true">→</span></button>
+          <a class="text-link guest-guide" href="#guide-spots">How Spots works</a></div>` : ""}
       ${schemaV2 && socialV && !guest ? `<div class="spots-social" role="group" aria-label="Alerts and community">
         <label class="soc-pick">${ICON_ALERT}<span class="sr-only">Alerts</span>
           <select id="alertMode">
@@ -455,6 +456,7 @@ const Spots = (() => {
           </select></label>
         <button type="button" class="filter soc-support${onlySupport ? " active" : ""}" id="onlySupport" aria-pressed="${onlySupport}">🌱 Support local <small>${spots.filter(x => x.support_local).length}</small></button>
         <button type="button" class="text-link" id="openConduct">Community code</button>
+        <a class="text-link" href="#guide-spots">How Spots works</a>
       </div>` : ""}
       <div class="spots-stage">
         <div id="spotsMap" class="map map-spots" aria-label="Members map of photo spots"></div>

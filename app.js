@@ -1114,7 +1114,7 @@ function renderAbout() {
 /* =========================================================
    10. NAVIGAZIONE
    ========================================================= */
-const PAGES = ["home", "explore", "gallery", "journal", "tools", "spots", "about"];
+const PAGES = ["home", "explore", "gallery", "journal", "tools", "spots", "about", "guide"];
 
 /* =========================================================
    STATISTICHE (Umami, anonime e senza cookie)
@@ -1167,6 +1167,8 @@ function route() {
   let page = hash, article = null;
   if (hash.startsWith("art-")) { page = "journal"; article = hash.slice(4); }
   const join = hash === "join";
+  const guideAnchor = hash.startsWith("guide-") ? hash : null;
+  if (guideAnchor) page = "guide";
   if (join) page = "spots";
   if (!PAGES.includes(page)) page = "home";
 
@@ -1200,7 +1202,8 @@ function route() {
     if (article) renderArticle(article);
     else { $("#articleReader").hidden = true; }
   }
-  if (changed && !article) window.scrollTo(0, 0);
+  if (guideAnchor) setTimeout(() => document.getElementById(guideAnchor)?.scrollIntoView({ behavior: "smooth", block: "start" }), 60);
+  else if (changed && !article) window.scrollTo(0, 0);
 }
 
 function renderAll() {

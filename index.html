@@ -43,7 +43,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,500&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap">
-  <link rel="stylesheet" href="style.css?v=20261102u">
+  <link rel="stylesheet" href="style.css?v=20261102v">
   <!-- statistiche anonime, senza cookie (Umami): le pagine e i clic li segnala app.js -->
   <script defer src="https://cloud.umami.is/script.js" data-website-id="2ca8d3a5-91c1-4544-a327-d8469e3e4313" data-auto-track="false" data-domains="fabiocostaph.com,www.fabiocostaph.com"></script>
 </head>
@@ -174,6 +174,109 @@
       <div id="spotsRoot"></div>
     </section>
 
+    <!-- GUIDA: come funziona il sito -->
+    <section class="page content-page" id="guide" data-page="guide" hidden>
+      <div class="section-heading">
+        <div><span class="eyebrow">FIELD MANUAL</span><h1>How it works</h1></div>
+        <p>Fabio Costa Ph is three things: a portfolio of my photographs, free tools to plan the light, and SPOTS — a members' map of places worth the trip. Here's how to get the most out of it.</p>
+      </div>
+      <nav class="guide-toc" aria-label="Guide sections">
+        <a href="#guide-explore">Explore</a><a href="#guide-gallery">Gallery</a><a href="#guide-journal">Journal</a>
+        <a href="#guide-tools">Tools</a><a href="#guide-spots">Spots</a><a href="#guide-app">App &amp; languages</a>
+      </nav>
+      <div class="guide">
+        <article class="guide-card" id="guide-explore">
+          <span class="guide-num">01</span><h2>Explore</h2>
+          <p>An interactive map of my journeys. Every astronaut is a place I've photographed.</p>
+          <ul>
+            <li>Tap an astronaut to open the place: photos, notes and the story behind it.</li>
+            <li>Use the <b>search</b> (magnifier, top right) to find places, photos and articles.</li>
+          </ul>
+        </article>
+        <article class="guide-card" id="guide-gallery">
+          <span class="guide-num">02</span><h2>Gallery</h2>
+          <p>All my photographs, filterable by category.</p>
+          <ul>
+            <li>Tap a photo to open it full screen. On a phone, turn it sideways or use the rotate button.</li>
+            <li>Tap the <b>heart</b> on the photos you like to build a selection, then send it to me in one message.</li>
+            <li>Every photo is available for <b>licensing</b> (editorial and commercial) and as a <b>fine-art print</b>.</li>
+          </ul>
+        </article>
+        <article class="guide-card" id="guide-journal">
+          <span class="guide-num">03</span><h2>Journal</h2>
+          <p>Practical articles, not poetry: when to go, where to park, how long the walk is, what settings I used and the mistakes to avoid.</p>
+        </article>
+        <article class="guide-card" id="guide-tools">
+          <span class="guide-num">04</span><h2>Tools</h2>
+          <p>Free tools to plan a shoot, wherever you are or wherever you're going.</p>
+          <ul>
+            <li><b>Sun &amp; Moon</b> — search a place or tap <b>Near me</b>, pick a date: sunrise and sunset, golden and blue hour, twilight, moon phase and the Milky Way core.</li>
+            <li><b>Planner</b> — a 3D map with the real terrain: see where the sun, the moon and the Milky Way rise and set behind the mountains. Drag to rotate, move the time and follow them across the sky.</li>
+            <li><b>Analyze your shot</b> — load a test shot and get a shooting plan: exposure, maximum shutter speed for sharp stars, bracketing and stacking. The photo never leaves your device.</li>
+          </ul>
+        </article>
+        <article class="guide-card wide" id="guide-spots">
+          <span class="guide-num">05</span><h2>Spots</h2>
+          <p>A satellite map of 7,500+ photo spots and points of interest, plus places to eat and sleep, workshops and trails shared by the community.</p>
+          <div class="guide-cols">
+            <div>
+              <h3>Visitors and members</h3>
+              <ul>
+                <li><b>Everyone</b> sees a free preview: one spot every ~15 km, in an approximate position.</li>
+                <li><b>Members</b> see every spot with its exact location, photos, reviews, real prices and live alerts — and can add their own.</li>
+                <li><b>Joining is free:</b> go to <a href="#join">fabiocostaph.com/#join</a>, enter your name, email and a password. I approve every request personally, usually within a day.</li>
+              </ul>
+              <h3>Finding places</h3>
+              <ul>
+                <li>Search a spot or a town, or tap <b>Near me</b> and choose the radius (1–50 km).</li>
+                <li><b>Scan this area</b> adds what OpenStreetMap knows around you: viewpoints, huts, parking, water, protected areas.</li>
+                <li>Filter by category, show or hide places with alerts, or only Support local.</li>
+              </ul>
+              <h3>Adding and updating</h3>
+              <ul>
+                <li><b>Add a place</b>: only category, name and coordinates are required. Photos, description and community notes are optional.</li>
+                <li><b>Workshops</b>: add dates, places in total, booked so far, price and a link. Update the bookings any time from the workshop's card. It disappears from the map on the day it starts.</li>
+                <li>On any place you can add photos, write a review (with what you paid for food and stays) or report a problem.</li>
+              </ul>
+            </div>
+            <div>
+              <h3>Categories</h3>
+              <ul class="guide-legend"><li><span class="spot-pin " style="--c:#9cc8ff"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8.5h3.2l1.8-2.5h6l1.8 2.5H20V19H4z"/><circle cx="12" cy="13" r="3.4"/></svg></span><span>Photo spots</span></li><li><span class="spot-pin " style="--c:#ffbe7a"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 3v18M4 3v5.5a2.5 2.5 0 0 0 5 0V3M17.5 21V3c-2.2 1.2-3.5 4-3.5 7.5V13h3.5"/></svg></span><span>Food &amp; drink</span></li><li><span class="spot-pin " style="--c:#d2b8ff"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5v15M21 20v-6.5a3 3 0 0 0-3-3h-7.5V14M3 14h18M3 17.5h18"/><circle cx="7" cy="11.2" r="1.7"/></svg></span><span>Places to stay</span></li><li><span class="spot-pin " style="--c:#9fe3c8"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="1.8"/><path d="M3.5 10h17M8 3v4M16 3v4M12 12.6l1 2 2.2.3-1.6 1.5.4 2.2-2-1-2 1 .4-2.2-1.6-1.5 2.2-.3z"/></svg></span><span>Workshops</span></li><li><span class="spot-pin " style="--c:#f7a6c4"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m2.5 20 6.5-11 4 6.5 2.5-3.5 6 8z"/><path d="M8 13.5l1.6 1.2M14.5 16l1.5-1"/><circle cx="17" cy="5.5" r="1.8"/></svg></span><span>Trekking</span></li></ul>
+              <h3>Signs on the map</h3>
+              <ul class="guide-legend"><li><span class="spot-pin " style="--c:#9cc8ff"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8.5h3.2l1.8-2.5h6l1.8 2.5H20V19H4z"/><circle cx="12" cy="13" r="3.4"/></svg><span class="alert-dot"></span></span><span><b>Red dot</b> — live alert from members: closed, works or landslide, event, very crowded, danger.</span></li>
+<li><span class="spot-pin local" style="--c:#ffbe7a"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 3v18M4 3v5.5a2.5 2.5 0 0 0 5 0V3M17.5 21V3c-2.2 1.2-3.5 4-3.5 7.5V13h3.5"/></svg></span><span><b>Green ring</b> — Support local: villages and small businesses that live on visitors.</span></li>
+<li><span class="spot-pin shine-local" style="--c:#7ed69b"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21v-8"/><path d="M12 13c0-4 2.6-7 7.5-7.2C19.4 10.6 16.6 13 12 13z"/><path d="M12 15.5c0-3-2-5.3-6.5-5.5.1 3.7 2.3 5.5 6.5 5.5z"/></svg></span><span><b>Glowing leaf</b> — new in Support local (first month).</span></li>
+<li><span class="spot-pin shine" style="--c:#9fe3c8"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="1.8"/><path d="M3.5 10h17M8 3v4M16 3v4M12 12.6l1 2 2.2.3-1.6 1.5.4 2.2-2-1-2 1 .4-2.2-1.6-1.5 2.2-.3z"/></svg></span><span><b>Glowing workshop</b> — just added (first 7 days).</span></li>
+<li><span class="spot-pin plane" style="--c:#ffc46e"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 19h19"/><path d="M3.8 13.6 6 15.4l12.3-3.3c1.2-.3 2-1.6 1.6-2.7-.3-.9-1.3-1.3-2.2-1.1l-3.6 1-5.4-4.6-2 .5 3 5.3-3.5 1-1.8-1.4-1.6.4z"/></svg></span><span><b>Plane</b> — workshop almost full: fewer than 3 places left.</span></li>
+<li><span class="spot-pin fragile" style="--c:#9cc8ff"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8.5h3.2l1.8-2.5h6l1.8 2.5H20V19H4z"/><circle cx="12" cy="13" r="3.4"/></svg></span><span><b>Dashed border</b> — Fragile place: leave no trace, no geotags.</span></li></ul>
+              <p class="guide-note">Many spots are places I've saved but not visited myself: always check access, rules and conditions before you go. Read the full notes below the map.</p>
+            </div>
+          </div>
+        </article>
+        <article class="guide-card wide" id="guide-app">
+          <span class="guide-num">06</span><h2>App &amp; languages</h2>
+          <div class="guide-cols">
+            <div>
+              <h3>Put it on your home screen</h3>
+              <ul>
+                <li><b>iPhone</b>: open the site in Safari, tap <b>Share</b>, then <b>Add to Home Screen</b>.</li>
+                <li><b>Android</b>: open the site in Chrome, tap <b>⋮</b>, then <b>Install app</b>.</li>
+                <li>It opens full screen and the Tools work offline — handy in the mountains with no signal.</li>
+              </ul>
+            </div>
+            <div>
+              <h3>Your language</h3>
+              <ul>
+                <li>Tap the <b>globe</b> at the top to switch between English, Italiano, Español, Français and Deutsch.</li>
+              </ul>
+              <h3>Questions?</h3>
+              <ul><li>Write to me — the contacts are at the bottom of every page.</li></ul>
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+
     <!-- ABOUT (testi modificabili dal pannello: content/chi-sono.json) -->
     <section class="page content-page" id="about" data-page="about" hidden>
       <div class="section-heading"><div><span class="eyebrow">BEHIND THE LENS</span><h1>About Me</h1></div></div>
@@ -203,7 +306,7 @@
   <footer class="site-footer">
     <span>© <span id="year"></span> <span class="owner-name" data-owner>Fabio Costantini</span> · FABIO COSTA PH</span>
     <span class="contact-links footer-contact" data-contact aria-label="Contacts"></span>
-    <span>PHOTOGRAPHY · TRAVEL · EXPLORATION</span>
+    <span><a class="footer-guide" href="#guide">How it works</a> · PHOTOGRAPHY · TRAVEL · EXPLORATION</span>
   </footer>
 
   <!-- Lightbox -->
@@ -246,10 +349,10 @@
 <!--BODY-END-->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
-  <script src="i18n.js?v=20261102u"></script>
-  <script src="app.js?v=20261102u"></script>
-  <script src="spots.js?v=20261102u"></script>
-  <script src="tools.js?v=20261102u"></script>
-  <script src="pwa.js?v=20261102u"></script>
+  <script src="i18n.js?v=20261102v"></script>
+  <script src="app.js?v=20261102v"></script>
+  <script src="spots.js?v=20261102v"></script>
+  <script src="tools.js?v=20261102v"></script>
+  <script src="pwa.js?v=20261102v"></script>
 </body>
 </html>

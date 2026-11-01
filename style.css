@@ -1248,3 +1248,26 @@ main > .page{scroll-margin-top:80px}
 .ws-fields input,.ws-fields select{width:100%;min-width:0}
 .ws-fields .pay-row{display:flex;gap:6px}
 .ws-fields .pay-row select{width:auto}
+
+/* guida: come funziona il sito */
+.guide-toc{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 26px}
+.guide-toc a{padding:8px 16px;border:1px solid var(--line-strong);border-radius:999px;color:var(--soft);text-decoration:none;font-size:13.5px;transition:border-color .2s,color .2s}
+.guide-toc a:hover{border-color:var(--accent);color:#fff}
+.guide{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+.guide-card{position:relative;padding:26px 28px 24px;border:1px solid var(--line-strong);border-radius:var(--radius);background:var(--glass);scroll-margin-top:96px}
+.guide-card.wide{grid-column:1/-1}
+.guide-num{position:absolute;top:22px;right:26px;font-family:var(--serif, "Cormorant Garamond", serif);font-size:30px;color:rgba(156,200,255,.35)}
+.guide-card h2{margin:0 0 8px;font-family:var(--serif, "Cormorant Garamond", serif);font-weight:500;font-size:30px;letter-spacing:.04em}
+.guide-card h3{margin:18px 0 8px;font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);font-weight:600}
+.guide-card p{margin:0 0 10px;color:var(--soft);line-height:1.65}
+.guide-card ul{margin:0;padding-left:18px;display:grid;gap:7px;color:var(--soft);line-height:1.6;font-size:14.5px}
+.guide-card b{color:#fff;font-weight:500}
+.guide-card a{color:var(--accent)}
+.guide-cols{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:28px}
+.guide-legend{list-style:none;padding:0 !important;gap:10px !important}
+.guide-legend li{display:flex;align-items:center;gap:12px}
+.guide-legend .spot-pin{flex:none;cursor:default}
+.guide-note{margin-top:14px !important;font-size:13px;color:var(--muted) !important}
+.footer-guide{color:inherit;text-decoration:none;border-bottom:1px solid currentColor}
+.guest-guide{margin-left:4px}
+@media (max-width:760px){.guide,.guide-cols{grid-template-columns:1fr}.guide-card{padding:22px 18px}}
