@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,500&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap">
-  <link rel="stylesheet" href="style.css?v=20261101h">
+  <link rel="stylesheet" href="style.css?v=20261101i">
 </head>
 <body>
 <!--BODY-START-->
@@ -25,6 +25,7 @@
       <a href="#explore" data-page="explore">EXPLORE</a>
       <a href="#gallery" data-page="gallery">GALLERY</a>
       <a href="#journal" data-page="journal">JOURNAL</a>
+      <a href="#spots" data-page="spots" class="nav-spots"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></svg>SPOTS</a>
       <a href="#about" data-page="about">ABOUT</a>
     </nav>
     <div class="header-actions">
@@ -117,6 +118,15 @@
       <article class="full-article" id="articleReader" hidden></article>
     </section>
 
+    <!-- SPOTS (solo membri: i dati arrivano da Supabase, vedi spots.js) -->
+    <section class="page content-page" id="spots" data-page="spots" hidden>
+      <div class="section-heading">
+        <div><span class="eyebrow">MEMBERS ONLY</span><h1>Spots</h1></div>
+        <p>Every photo spot and point of interest I have saved, on one satellite map.</p>
+      </div>
+      <div id="spotsRoot"></div>
+    </section>
+
     <!-- ABOUT (testi modificabili dal pannello: content/chi-sono.json) -->
     <section class="page content-page" id="about" data-page="about" hidden>
       <div class="section-heading"><div><span class="eyebrow">BEHIND THE LENS</span><h1>About Me</h1></div></div>
@@ -186,6 +196,7 @@
 <!--BODY-END-->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
-  <script src="app.js?v=20261101h"></script>
+  <script src="app.js?v=20261101i"></script>
+  <script src="spots.js?v=20261101i"></script>
 </body>
 </html>

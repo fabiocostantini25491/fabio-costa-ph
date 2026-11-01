@@ -938,7 +938,7 @@ function renderAbout() {
 /* =========================================================
    10. NAVIGAZIONE
    ========================================================= */
-const PAGES = ["home", "explore", "gallery", "journal", "about"];
+const PAGES = ["home", "explore", "gallery", "journal", "spots", "about"];
 
 function route() {
   let hash = decodeURIComponent(location.hash.slice(1));
@@ -967,6 +967,7 @@ function route() {
     if (!activeTripId) renderPanelIntro();
   }
   if (page === "gallery") renderGallery();
+  if (page === "spots") window.Spots?.show();
   if (page === "journal") {
     if (article) renderArticle(article);
     else { $("#articleReader").hidden = true; }
