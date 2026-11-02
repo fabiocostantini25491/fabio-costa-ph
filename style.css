@@ -1648,3 +1648,29 @@ body[data-page="home"] .crew-band{margin-top:30px}
 .adm-preview{margin-top:16px;max-height:70vh;overflow:auto}
 .adm-mag{padding:20px !important}
 .adm-mag .mag-opening,.adm-mag .mag-hero{margin-left:-20px !important;margin-right:-20px !important}
+
+/* The crew */
+.crew-filters{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 18px}
+.crew-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:16px}
+.crew-card{display:grid;gap:8px;align-content:start;padding:22px 20px;border:1px solid var(--line-strong);border-radius:var(--radius);background:var(--glass);text-align:center;justify-items:center}
+.crew-card.is-co{border-color:rgba(255,196,110,.5);box-shadow:0 0 30px rgba(255,196,110,.08)}
+.crew-card.is-dev{border-color:rgba(127,216,255,.5)}
+.crew-avatar{width:76px;height:76px;border-radius:50%;display:grid;place-items:center;border:2px solid var(--line-strong);background:#081322}
+.is-co .crew-avatar{border:2px solid transparent;background:linear-gradient(#1a1405,#1a1405) padding-box,conic-gradient(#ffc46e,#f7a6c4,#ffc46e) border-box;box-shadow:0 0 22px rgba(255,196,110,.35)}
+.is-dev .crew-avatar{border-color:#7fd8ff;box-shadow:0 0 22px rgba(127,216,255,.3)}
+.crew-avatar svg{width:38px;height:38px;fill:none;stroke:#ffc46e;stroke-width:1.6;stroke-linecap:round}
+.is-dev .crew-avatar svg{stroke:#7fd8ff}
+.crew-avatar span{font:500 26px var(--display);color:#fff}
+.crew-card h3{margin:4px 0 0;font:500 24px/1.15 var(--display);color:var(--head)}
+.crew-badges{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin:0}
+.crew-badges .co-badge,.crew-badges .xp-badge{margin:0}
+.crew-badges svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:1.8;vertical-align:-2px}
+.crew-base{display:inline-flex;align-items:center;gap:5px;margin:0;font-size:13px;color:var(--soft)}
+.crew-base svg{width:14px;height:14px;color:var(--accent)}
+.crew-bio{margin:0;font-size:14px;line-height:1.6;color:var(--soft)}
+.crew-links{display:flex;flex-wrap:wrap;justify-content:center;gap:6px 14px;margin:4px 0 0;font-size:13px}
+.crew-links a{color:var(--accent);text-decoration:none;display:inline-flex;align-items:center;gap:4px}
+.crew-links a:hover{text-decoration:underline}
+.crew-links svg{width:13px;height:13px}
+.crew-join{margin:26px 0 0;text-align:center;color:var(--soft)}
+.crew-meet{display:inline-block;margin:10px 0 0 14px}

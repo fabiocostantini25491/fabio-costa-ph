@@ -1235,6 +1235,45 @@ async function loadCommunityArticles() {
     if (document.body.dataset.page === "journal") route();
   } catch {}
 }
+/* ---------- THE CREW: schede di contributor, developer e local expert ---------- */
+let crewData = null, crewFilter = "all";
+const CREW_AP = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3l3.6 6.3M21 12l-7.3 0M16.5 19.8 12.8 13.5M7.5 19.8l3.7-6.3M3 12h7.3M7.5 4.2l3.7 6.3"/></svg>';
+const CREW_DEV = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8.5 7-5 5 5 5M15.5 7l5 5-5 5M13.5 4.5l-3 15"/></svg>';
+async function renderCrew() {
+  const grid = $("#crewGrid"), filters = $("#crewFilters");
+  if (!crewData) {
+    try {
+      if (typeof SPOTS_CONFIG === "undefined") throw new Error("not configured");
+      const res = await fetch(`${SPOTS_CONFIG.url.replace(/\/$/, "")}/rest/v1/public_crew?select=*&order=articles.desc,since.asc`, { headers: { apikey: SPOTS_CONFIG.anonKey } });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      crewData = await res.json();
+    } catch { grid.innerHTML = `<p class="empty-state">The crew is being assembled. Come back soon.</p>`; return; }
+  }
+  const isCo = c => (c.roles || []).some(r => r !== "developer"), isDev = c => (c.roles || []).includes("developer"), isXp = c => !!c.expert_area;
+  const F = { all: ["Everyone", () => true], contributors: ["Contributors", isCo], experts: ["Local experts", isXp], developers: ["Developers", isDev] };
+  filters.innerHTML = Object.entries(F).map(([k, [l, fn]]) => `<button type="button" class="filter${crewFilter === k ? " active" : ""}" data-crew="${k}">${l} <small>${crewData.filter(fn).length}</small></button>`).join("");
+  filters.querySelectorAll("[data-crew]").forEach(b => b.addEventListener("click", () => { crewFilter = b.dataset.crew; renderCrew(); }));
+  const list = crewData.filter(F[crewFilter][1]);
+  if (!list.length) { grid.innerHTML = `<p class="empty-state">${crewData.length ? "Nobody in this group yet." : "The crew is being assembled: be the first to join."}</p>`; return; }
+  const ini = n => String(n || "?").trim().split(/\s+/).map(w => w[0]).slice(0, 2).join("").toUpperCase();
+  grid.innerHTML = list.map(c => {
+    const site = /^https?:\/\//.test(c.website || "") ? c.website : "";
+    return `<article class="crew-card${isCo(c) ? " is-co" : ""}${isDev(c) && !isCo(c) ? " is-dev" : ""}">
+      <div class="crew-avatar" aria-hidden="true">${isCo(c) ? CREW_AP : isDev(c) ? CREW_DEV : `<span>${esc(ini(c.name))}</span>`}</div>
+      <h3>${esc(c.name)}</h3>
+      <p class="crew-badges">${isCo(c) ? `<span class="co-badge">${CREW_AP}Contributor</span>` : ""}${isDev(c) ? `<span class="co-badge dev-badge">${CREW_DEV}Developer</span>` : ""}${isXp(c) ? `<span class="xp-badge">🧭 ${esc(c.expert_area)}</span>` : ""}</p>
+      ${c.base_name ? `<p class="crew-base">${ICON.pin}${esc(c.base_name)}</p>` : ""}
+      ${c.bio ? `<p class="crew-bio">${esc(c.bio)}</p>` : ""}
+      <p class="crew-links">
+        ${c.instagram ? `<a href="https://www.instagram.com/${encodeURIComponent(c.instagram)}/" target="_blank" rel="noopener">Instagram @${esc(c.instagram)}</a>` : ""}
+        ${site ? `<a href="${esc(site)}" target="_blank" rel="noopener">${ICON.ext}Website</a>` : ""}
+        ${c.articles ? `<a href="#author-${esc(slug(c.name))}">${c.articles} ${c.articles === 1 ? "story" : "stories"} in the Journal →</a>` : ""}
+        ${c.on_map ? `<a href="#spots">On the Spots map</a>` : ""}
+      </p>
+    </article>`;
+  }).join("");
+}
+
 window.FCJournal = { articleHtml: (a, t) => articleHtml(a, t, false), fromSubmission: submissionToArticle, reload: loadCommunityArticles };
 window.addEventListener("load", () => setTimeout(loadCommunityArticles, 50));
 
@@ -1395,7 +1434,7 @@ function renderAbout() {
 /* =========================================================
    10. NAVIGAZIONE
    ========================================================= */
-const PAGES = ["home", "explore", "gallery", "journal", "tools", "spots", "about", "guide", "privacy", "terms"];
+const PAGES = ["home", "explore", "gallery", "journal", "tools", "spots", "about", "guide", "privacy", "terms", "crew"];
 
 /* =========================================================
    STATISTICHE (Umami, anonime e senza cookie)
@@ -1481,6 +1520,7 @@ function route() {
     if (!activeTripId) renderPanelIntro();
   }
   if (page === "gallery") renderGallery();
+  if (page === "crew") renderCrew();
   if (page === "spots") window.Spots?.show(join);
   if (page === "tools") window.Tools?.show();
   if (page === "journal") {
