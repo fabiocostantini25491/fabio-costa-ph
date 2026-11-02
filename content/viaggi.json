@@ -130,6 +130,22 @@
           "categoria": "Paesaggi"
         }
       ]
+    },
+    {
+      "nome": "Firenze",
+      "id": "Firenze",
+      "paese": "Italia",
+      "lat": "43.77893702238663 ",
+      "lon": "11.247830983178837",
+      "foto": [
+        {
+          "titolo": "Terrazza Michelangelo",
+          "immagine": "/img/foto/img-3676-2026-10-16t17-06-28-329-1.jpg",
+          "categoria": "Paesaggi",
+          "lat": "43.763177445490285",
+          "lon": "11.26428772722712"
+        }
+      ]
     }
   ]
 }
