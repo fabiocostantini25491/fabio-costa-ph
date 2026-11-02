@@ -1841,6 +1841,7 @@ const Spots = (() => {
         <button type="button" data-atab="requests" class="${tab === "requests" ? "on" : ""}">Richieste <b>${pendingMembers.length}</b></button>
         <button type="button" data-atab="members" class="${tab === "members" ? "on" : ""}">Membri</button>
         <button type="button" data-atab="flags" class="${tab === "flags" ? "on" : ""}">Segnalazioni <b>${openFlags}</b></button>
+        <button type="button" data-atab="feedback" class="${tab === "feedback" ? "on" : ""}">Feedback</button>
       </div>
       <div class="adm-body"><p class="gate-help left">Caricamento…</p></div>
     </div>`);
@@ -1875,6 +1876,35 @@ const Spots = (() => {
         body.querySelectorAll("[data-st]").forEach(b => b.addEventListener("click", () => {
           if (b.dataset.st === "suspended" && b.dataset.confirm !== "1") { b.dataset.confirm = "1"; b.textContent = "Conferma"; return; }
           const li = b.closest(".req-row"); decide(li.dataset.uid, b.dataset.st, li, b.dataset.st === "suspended" ? "Sospeso" : "✓ Riattivato");
+        }));
+      } else if (tab === "feedback") {
+        const { data } = await api("/rest/v1/feedback?select=id,answers,rating,message,email,lang,page,device,created_at&order=created_at.desc&limit=1000");
+        const list = data || [];
+        const LBL = { came: "Cosa li ha portati qui", interest: "Cosa interessa di più", spots: "Come usano Spots", often: "Quanto spesso tornerebbero", missing: "Cosa vorrebbero" };
+        const OPT = { photos: "Le foto", spots: "La mappa Spots", tools: "I Tools", journal: "Articoli e guide", workshops: "Workshop e ritrovi", social: "Instagram o un amico",
+          locations: "Spot e luoghi", light: "Pianificare la luce", guides: "Guide pratiche", stories: "Reportage e storie", community: "Workshop e altri fotografi", prints: "Stampe e licenze",
+          trip: "Pianificare un viaggio", near: "Spot vicino a me", add: "Aggiungono posti", reviews: "Recensioni e prezzi", meet: "Ritrovi", notyet: "Non l'hanno ancora provato",
+          weekly: "Ogni settimana", monthly: "Ogni mese", trips: "Prima di un viaggio", rarely: "Raramente",
+          offline: "Mappe offline", conditions: "Meteo e condizioni dal vivo", routes: "Percorsi GPX", app: "App negli store", videos: "Video", newsletter: "Newsletter mensile" };
+        const rated = list.filter(f => f.rating), avg = rated.length ? rated.reduce((a, f) => a + f.rating, 0) / rated.length : 0;
+        const block = key => {
+          const counts = {};
+          list.forEach(f => [].concat(f.answers?.[key] || []).forEach(v => { counts[v] = (counts[v] || 0) + 1; }));
+          const rows = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+          if (!rows.length) return "";
+          const max = rows[0][1];
+          return `<div class="fb-sum"><p class="fb-sum-t">${LBL[key]}</p>${rows.map(([k, n]) => `<div class="fb-row"><span>${esc(OPT[k] || k)}</span><i style="--w:${(n / max * 100).toFixed(0)}%"></i><b>${n}</b></div>`).join("")}</div>`;
+        };
+        body.innerHTML = list.length ? `<p class="gate-help left"><b>${list.length}</b> risposte${rated.length ? ` · voto medio <b>${avg.toFixed(1)}</b> ★ su ${rated.length}` : ""}</p>
+            ${Object.keys(LBL).map(block).join("")}
+            <p class="fb-sum-t">Commenti</p>
+            <ul class="req-list">${list.filter(f => f.message || f.email).map(f => `<li class="req-row" data-fb="${f.id}"><div><b>${f.rating ? "★".repeat(f.rating) + " · " : ""}${esc(f.message || "(nessun commento)")}</b>
+              <span>${fmtDay(String(f.created_at).slice(0, 10))} · ${esc(f.lang || "")} · ${esc(f.device || "")}${f.email ? ` · <a href="mailto:${esc(f.email)}">${esc(f.email)}</a>` : ""}</span></div>
+              <button type="button" class="pop-btn" data-delfb>Elimina</button></li>`).join("") || `<li class="gate-help left">Nessun commento scritto.</li>`}</ul>`
+          : `<p class="gate-help left">Ancora nessun feedback. L'avviso compare ai visitatori dopo 30 secondi sul sito.</p>`;
+        body.querySelectorAll("[data-delfb]").forEach(b => b.addEventListener("click", async () => {
+          const li = b.closest("[data-fb]");
+          try { await api(`/rest/v1/feedback?id=eq.${li.dataset.fb}`, { method: "DELETE" }); li.remove(); } catch (err) { toast(`Non riuscito (${err.message}).`, true); }
         }));
       } else {
         const { data } = await api("/rest/v1/content_flags?select=id,kind,target_id,label,reason,note,created_at&resolved=eq.false&order=created_at.desc&limit=500");
