@@ -1499,3 +1499,4 @@ body.map-full-open .site-header,body.map-full-open .pick-bar,body.map-full-open 
   .map-full .location-panel{position:absolute;left:10px;right:10px;bottom:calc(74px + env(safe-area-inset-bottom));top:auto;width:auto;margin:0;max-height:34vh;overflow:auto;z-index:950}
 }
 .map-full-ctrl{border:1px solid var(--line-strong) !important;border-radius:12px !important;overflow:hidden;box-shadow:0 0 14px rgba(80,140,230,.25) !important}.map-full-ctrl a{border-radius:0 !important;border:0 !important}
+.inapp-note{margin-top:10px;font-size:13px;line-height:1.5}.inapp-note b{color:#fff}

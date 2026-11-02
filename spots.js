@@ -155,6 +155,9 @@ const Spots = (() => {
   }
   /* Accesso con Google: il pulsante compare solo se Google è attivo su Supabase (Authentication → Providers) */
   let googleOn = null;
+  // browser interni delle app (Instagram, Facebook, TikTok…): Google spesso vi blocca l'accesso
+  const IN_APP = (ua => /Instagram/i.test(ua) ? "Instagram" : /FBAN|FBAV|FB_IAB|FBIOS/i.test(ua) ? "Facebook" : /musical_ly|TikTok|BytedanceWebview/i.test(ua) ? "TikTok"
+    : /LinkedInApp/i.test(ua) ? "LinkedIn" : /Line\//.test(ua) ? "LINE" : "")(navigator.userAgent || "");
   async function checkGoogle() {
     if (googleOn !== null) return googleOn;
     try { const { data } = await api("/auth/v1/settings", { auth: false }); googleOn = !!data?.external?.google; } catch { googleOn = false; }
@@ -356,7 +359,8 @@ const Spots = (() => {
       </form>`}
       <div class="gate-google" id="gateGoogle" hidden><p class="gate-or"><span>or</span></p>
         <button type="button" class="google-btn" id="googleBtn">${GOOGLE_G}<span>Continue with Google</span></button>
-        <p class="gate-help">${join ? "Your Google name and email are used to create the request — I still approve it personally." : "Works for accounts created with Google."}</p></div>
+        <p class="gate-help">${join ? "Your Google name and email are used to create the request — I still approve it personally." : "Works for accounts created with Google."}</p>
+        ${IN_APP ? `<p class="gate-note warn inapp-note">You're browsing inside ${IN_APP}: Google often blocks sign-in here. Tap <b>⋯</b> (top right) → <b>Open in browser</b>, then come back to this page. Email and password work fine here.</p>` : ""}</div>
       ${guestLoaded ? `<button type="button" class="text-link gate-back" id="gateBack">← Back to the public map</button>` : ""}`);
     checkGoogle().then(on => { const g = $("#gateGoogle"); if (g) g.hidden = !on; });
     $("#googleBtn")?.addEventListener("click", signInGoogle);
