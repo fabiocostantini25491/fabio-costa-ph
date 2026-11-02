@@ -154,12 +154,22 @@ async function loadContent() {
     id: slug(x.slug || x.titolo), title: x.titolo, category: x.categoria || "Viaggi", date: x.data || "",
     minutes: num(x.minuti, 0), cover: mediaUrl(x.copertina), trip: slug(x.viaggio || ""),
     excerpt: x.estratto || "", text: x.testo || "",
-    type: /reportage/i.test(x.tipo || "") ? "reportage" : "guide", place: x.luogo || "", glance: x.in_breve && typeof x.in_breve === "object" ? x.in_breve : {} }));
+    type: /reportage/i.test(x.tipo || "") ? "reportage" : "guide", place: x.luogo || "", glance: x.in_breve && typeof x.in_breve === "object" ? x.in_breve : {},
+    author: authorOf(x.autore) }));
 
   about = c.status === "fulfilled" && c.value ? c.value : {};
   if (about.partenza && Number.isFinite(parseFloat(about.partenza.lat)))
     HOME_BASE = { name: about.partenza.nome || "", lat: num(about.partenza.lat), lon: num(about.partenza.lon) };
 }
+
+/* Autore di un articolo: tu, oppure un contributor (campo «Autore» del pannello) */
+function authorOf(a) {
+  const nm = a && typeof a === "object" && String(a.nome || "").trim();
+  if (!nm) return { name: about?.proprietario || "Fabio Costantini", slug: "fabio", own: true };
+  return { name: nm, slug: slug(nm), own: false, instagram: String(a.instagram || "").replace(/^@/, "").trim(),
+    site: /^https?:\/\//.test(a.sito || "") ? a.sito : "", bio: a.bio || "", photo: a.foto ? mediaUrl(a.foto) : "" };
+}
+const authorLink = a => `<a class="mag-author" href="#author-${esc(a.author.slug)}">${esc(a.author.name)}</a>`;
 
 /* Testo con formattazione (grassetto, titoletti, elenchi, link) scritto nel pannello */
 function md(text) {
@@ -1068,7 +1078,7 @@ function renderJournal() {
   const topics = [...new Set(list.map(a => a.category))];
   const cur = renderJournal.topic && topics.includes(renderJournal.topic) ? renderJournal.topic : "";
   const shown = cur ? list.filter(a => a.category === cur) : list;
-  const by = a => `<p class="mag-byline">By <b data-owner>Fabio Costantini</b> · ${esc(fmtDate(a.date))}${a.minutes ? ` · ${a.minutes} min read` : ""}</p>`;
+  const by = a => `<p class="mag-byline">By <b>${authorLink(a)}</b> · ${esc(fmtDate(a.date))}${a.minutes ? ` · ${a.minutes} min read` : ""}</p>`;
   const [lead, ...rest] = shown;
   const second = rest.slice(0, 2), more = rest.slice(2);
   layout.innerHTML = `
@@ -1137,13 +1147,35 @@ function magBody(html) {
   });
   return tpl.innerHTML;
 }
+function authorBox(au) {
+  return `<aside class="mag-authorbox">
+    ${au.photo ? `<img src="${esc(au.photo)}" alt="" loading="lazy">` : `<span class="mag-ap" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 3l3.6 6.3M21 12l-7.3 0M16.5 19.8 12.8 13.5M7.5 19.8l3.7-6.3M3 12h7.3M7.5 4.2l3.7 6.3"/></svg></span>`}
+    <div><p class="mag-kicker">Contributor</p><b>${esc(au.name)}</b>${au.bio ? `<p>${esc(au.bio)}</p>` : ""}
+      <p class="mag-author-links">${au.instagram ? `<a href="https://www.instagram.com/${encodeURIComponent(au.instagram)}/" target="_blank" rel="noopener">Instagram @${esc(au.instagram)}</a>` : ""}${au.site ? `<a href="${esc(au.site)}" target="_blank" rel="noopener">Website</a>` : ""}<a href="#author-${esc(au.slug)}">All stories →</a></p></div>
+  </aside>`;
+}
+function renderAuthor(authorSlug) {
+  const reader = $("#articleReader"), list = articles.filter(a => a.author.slug === authorSlug).sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+  if (!list.length) { location.hash = "journal"; return; }
+  const au = list[0].author;
+  $("#journalLayout").hidden = true;
+  reader.className = "full-article mag-article is-author";
+  reader.innerHTML = `<a class="text-link mag-back" href="#journal">${ICON.prev}All stories</a>
+    <p class="mag-kicker">${au.own ? "Editor" : "Contributor"}</p><h2>${esc(au.name)}</h2>
+    ${au.own ? "" : authorBox(au)}
+    <p class="mag-section">${list.length} ${list.length === 1 ? "story" : "stories"}</p>
+    <div class="mag-index">${list.map(a => `<a class="mag-brief" href="#art-${esc(a.id)}"><img src="${esc(a.cover)}" alt="" data-cat="Paesaggi" loading="lazy">
+      <div><p class="mag-kicker">${a.type === "reportage" ? "Reportage" : "Field guide"}</p><h4>${esc(a.title)}</h4><p class="mag-byline">${esc(fmtDate(a.date))}</p></div></a>`).join("")}</div>`;
+  reader.hidden = false;
+  requestAnimationFrame(() => $("#journalMag").scrollIntoView({ behavior: "smooth", block: "start" }));
+}
 function renderArticle(id) {
   const reader = $("#articleReader"), a = articles.find(x => x.id === id);
   if (!a) { reader.hidden = true; return; }
   const t = a.trip && tripById(a.trip);
   const rep = a.type === "reportage";
   $("#journalLayout").hidden = true;
-  const byline = `<p class="mag-byline">Text and photographs by <b data-owner>Fabio Costantini</b> · ${esc(fmtDate(a.date))}${a.minutes ? ` · ${a.minutes} min read` : ""}</p>`;
+  const byline = `<p class="mag-byline">Text and photographs by <b>${authorLink(a)}</b> · ${esc(fmtDate(a.date))}${a.minutes ? ` · ${a.minutes} min read` : ""}</p>`;
   const caption = t ? `<figcaption>${esc(t.name || "")} · ${fmtCoord(t.lat, t.lon).replace("  |  ", ", ")}</figcaption>` : "";
   reader.className = `full-article mag-article ${rep ? "is-reportage" : "is-guide"}`;
   reader.innerHTML = rep ? `
@@ -1168,6 +1200,7 @@ function renderArticle(id) {
       <div class="rich mag-body">${magBody(md(a.text))}</div>
     </div>
     <p class="mag-end" aria-hidden="true">■</p>`;
+  if (!a.author.own) reader.insertAdjacentHTML("beforeend", authorBox(a.author));
   reader.insertAdjacentHTML("beforeend", `<div class="article-actions">
       ${t ? `<button class="outline-link" type="button" id="articleTrip">VIEW THE JOURNEY ON THE MAP <span aria-hidden="true">→</span></button>` : ""}
       <a class="text-link" href="#journal">${ICON.prev}Back to the Journal</a>
@@ -1386,6 +1419,8 @@ function route() {
   let hash = decodeURIComponent(location.hash.slice(1));
   let page = hash, article = null;
   if (hash.startsWith("art-")) { page = "journal"; article = hash.slice(4); }
+  let authorSlug = null;
+  if (hash.startsWith("author-")) { page = "journal"; authorSlug = hash.slice(7); }
   const join = hash === "join";
   const guideAnchor = hash.startsWith("guide-") ? hash : null;
   if (guideAnchor) page = "guide";
@@ -1419,7 +1454,8 @@ function route() {
   if (page === "spots") window.Spots?.show(join);
   if (page === "tools") window.Tools?.show();
   if (page === "journal") {
-    if (article) renderArticle(article);
+    if (authorSlug) renderAuthor(authorSlug);
+    else if (article) renderArticle(article);
     else { $("#articleReader").hidden = true; renderJournal(); }
   }
   if (guideAnchor) setTimeout(() => document.getElementById(guideAnchor)?.scrollIntoView({ behavior: "smooth", block: "start" }), 60);

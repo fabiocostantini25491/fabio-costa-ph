@@ -172,6 +172,16 @@ content:
             options:
               format: markdown
               rename: true
+          - name: autore
+            label: Autore (lascia vuoto se sei tu)
+            type: object
+            description: "Per gli articoli dei contributor: nome, Instagram, sito e due righe di bio. Compare nella firma e nella pagina autore."
+            fields:
+              - { name: nome, label: Nome e cognome, type: string }
+              - { name: instagram, label: Instagram (solo il nome utente), type: string }
+              - { name: sito, label: Sito web, type: string }
+              - { name: bio, label: Bio breve, type: text }
+              - { name: foto, label: Foto dell'autore, type: image }
           - name: in_breve
             label: In breve — informazioni pratiche (tutto facoltativo)
             type: object

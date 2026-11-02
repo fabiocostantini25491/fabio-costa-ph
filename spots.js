@@ -69,6 +69,7 @@ const Spots = (() => {
   let guest = false;        // visitatore senza account: vede solo la selezione pubblica
   let guestLoaded = false, publicTotal = 0, wantLogin = false;
   let nodiV = true;          // false finché non è stato eseguito supabase-nodi.sql
+  let contribs = new Map();  // user_id → { display_name, roles } — contributor del Journal
   let experts = new Map();   // user_id → { area_name, lat, lon, radius_km, display_name }
   let commV = true;         // false finché non è stato eseguito supabase-community2.sql
   let meetups = [], meetupJoins = new Map(), favs = new Set(), profiles = [], openFlags = 0;
@@ -495,6 +496,7 @@ const Spots = (() => {
         <button type="button" class="filter comm-btn" id="meetList">👥 Meetups <small>${upcomingMeetups().length}</small></button>
         <button type="button" class="filter comm-btn" id="meetAdd">＋ Meetup</button>
         <button type="button" class="filter comm-btn${showPhotographers ? " active" : ""}" id="showPh" aria-pressed="${showPhotographers}">📷 Photographers <small>${profiles.filter(p => p.visible && p.lat != null).length}</small></button>
+        <button type="button" class="text-link" id="phList">List</button>
         ${nodiV ? `<button type="button" class="filter comm-btn" id="expList">🧭 Local experts <small>${experts.size}</small></button>` : ""}
         ${nodiV && myExpert() ? `<button type="button" class="filter comm-btn xp-mine" id="myArea">🧭 My area</button>` : ""}
         ${nodiV && profiles.some(p => p.user_id === myUid()) ? `<button type="button" class="filter comm-btn" id="iPosted">📣 I just posted</button>` : ""}
@@ -593,6 +595,7 @@ const Spots = (() => {
     });
     $("#myProfile")?.addEventListener("click", openProfile);
     $("#expList")?.addEventListener("click", openExperts);
+    $("#phList")?.addEventListener("click", () => openPhotographers(false));
     $("#myArea")?.addEventListener("click", openMyArea);
     $("#iPosted")?.addEventListener("click", openPosted);
     buildMap();
@@ -1607,6 +1610,8 @@ const Spots = (() => {
       favs = new Set((fa.data || []).map(f => f.spot_id));
       profiles = pr.data || [];
       experts = new Map();
+      contribs = new Map();
+      try { const { data: co } = await api("/rest/v1/contributors?select=user_id,display_name,roles&limit=1000"); (co || []).forEach(c => contribs.set(c.user_id, c)); } catch {}
       if (nodiV) { try { const { data: ex } = await api("/rest/v1/local_experts?select=user_id,display_name,area_name,lat,lon,radius_km&limit=1000"); (ex || []).forEach(e => experts.set(e.user_id, e)); } catch { nodiV = false; } }
       if (admin) { try { const { res } = await api("/rest/v1/content_flags?select=id&resolved=eq.false", { headers: { Prefer: "count=exact", Range: "0-0" } }); openFlags = +(res.headers.get("content-range") || "").split("/")[1] || 0; } catch { openFlags = 0; } }
     } catch (err) { commV = false; }
@@ -1616,8 +1621,17 @@ const Spots = (() => {
   const kmBetween = (a, b, c, d) => { const R = 6371, r = x => x * Math.PI / 180; const h = Math.sin(r(c - a) / 2) ** 2 + Math.cos(r(a)) * Math.cos(r(c)) * Math.sin(r(d - b) / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(h)); };
   const myExpert = () => experts.get(myUid());
   const canCurate = s => admin || (!!myExpert() && kmBetween(myExpert().lat, myExpert().lon, s.lat, s.lon) <= +myExpert().radius_km);
-  const xpBadge = uid => { const e = uid && experts.get(uid); return e ? ` <span class="xp-badge" title="Local expert">🧭 ${esc(e.area_name)}</span>` : ""; };
-  const postFresh = p => p && p.last_post_at && Date.now() - Date.parse(p.last_post_at) < 864e5;
+  // icona dei contributor: un diaframma (6 lamelle), diverso dalla fotocamera dei membri
+  const ICON_APERTURE = '<svg class="ap-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3l3.6 6.3M21 12l-7.3 0M16.5 19.8 12.8 13.5M7.5 19.8l3.7-6.3M3 12h7.3M7.5 4.2l3.7 6.3"/></svg>';
+  const ICON_DEV = '<svg class="ap-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="m8.5 7-5 5 5 5M15.5 7l5 5-5 5M13.5 4.5l-3 15"/></svg>';
+  const rolesOf = uid => (contribs.get(uid)?.roles || ["photographer"]);
+  const isDev = uid => contribs.has(uid) && rolesOf(uid).includes("developer");
+  const isCo = uid => contribs.has(uid) && rolesOf(uid).some(r => r !== "developer");
+  const coBadge = uid => (uid && isCo(uid) ? ` <span class="co-badge" title="Fabio Costa Ph contributor">${ICON_APERTURE}Contributor</span>` : "")
+    + (uid && isDev(uid) ? ` <span class="co-badge dev-badge" title="Helps build Spots">${ICON_DEV}Developer</span>` : "");
+  const xpBadge = uid => { const e = uid && experts.get(uid); return (e ? ` <span class="xp-badge" title="Local expert">🧭 ${esc(e.area_name)}</span>` : "") + coBadge(uid); };
+  // il post brilla 24 ore per tutti, 3 giorni per i contributor
+  const postFresh = p => p && p.last_post_at && Date.now() - Date.parse(p.last_post_at) < (contribs.has(p.user_id) ? 3 : 1) * 864e5;
   function verifyHtml(s) {
     if (!nodiV) return "";
     if (s.outdated) return `<p class="vf vf-out">⚠️ <b>Marked as outdated by a local</b>${s.verified_name ? ` · ${esc(s.verified_name)}` : ""}${s.verified_at ? ` · ${fmtDay(String(s.verified_at).slice(0, 10))}` : ""}</p>`;
@@ -1709,6 +1723,21 @@ const Spots = (() => {
       }));
     } catch { fb.innerHTML = `<p class="gate-help left">Flags not available.</p>`; }
   }
+  function openPhotographers(onlyCo) {
+    const list = profiles.filter(p => p.visible).sort((a, b) => (contribs.has(b.user_id) - contribs.has(a.user_id)) || a.display_name.localeCompare(b.display_name))
+      .filter(p => !onlyCo || contribs.has(p.user_id));
+    const d = dlg("phListDialog", `<div class="import-body"><span class="eyebrow">Spots community</span><h2>📷 Photographers</h2>
+      <div class="gate-tabs"><button type="button" class="${onlyCo ? "" : "on"}" data-co="0">All</button><button type="button" class="${onlyCo ? "on" : ""}" data-co="1">${ICON_APERTURE} Contributors</button></div>
+      <ul class="req-list">${list.map(p => `<li class="req-row${contribs.has(p.user_id) ? " co-row" : ""}"><div><b>${esc(p.display_name)}${coBadge(p.user_id)}${experts.has(p.user_id) ? ` <span class="xp-badge">🧭 ${esc(experts.get(p.user_id).area_name)}</span>` : ""}</b>
+        <span>${p.base_name ? esc(p.base_name) : ""}${p.instagram ? ` · <a href="https://www.instagram.com/${encodeURIComponent(p.instagram)}/" target="_blank" rel="noopener">@${esc(p.instagram)}</a>` : ""}${p.website ? ` · <a href="${esc(p.website)}" target="_blank" rel="noopener">website</a>` : ""}${postFresh(p) ? ` · <a href="${esc(p.last_post_url)}" target="_blank" rel="noopener">📣 new post</a>` : ""}</span></div>
+        ${p.lat != null ? `<button type="button" class="pop-btn" data-ph="${esc(p.user_id)}">${ICON.pin}Map</button>` : ""}</li>`).join("") || `<li class="gate-help left">Nobody here yet.</li>`}</ul></div>`);
+    d.querySelectorAll("[data-co]").forEach(b => b.addEventListener("click", () => openPhotographers(b.dataset.co === "1")));
+    d.querySelectorAll("[data-ph]").forEach(b => b.addEventListener("click", () => {
+      const p = profiles.find(x => x.user_id === b.dataset.ph); d.close(); if (!p) return;
+      showPhotographers = true; drawCommunity(); $("#spotsMap").scrollIntoView({ behavior: "smooth", block: "center" }); map.flyTo([p.lat, p.lon], 10, { duration: .8 });
+    }));
+  }
+  const slugify = t => String(t || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
   function openExperts() {
     const list = [...experts.values()].sort((a, b) => a.area_name.localeCompare(b.area_name));
     const d = dlg("expertsDialog", `<div class="import-body"><span class="eyebrow">Spots community</span><h2>🧭 Local experts</h2>
@@ -1777,11 +1806,11 @@ const Spots = (() => {
       mk.on("popupopen", e => wireMeetup(e.popup, m, () => { node = null; }));
     });
     const zoomOk = map.getZoom() >= 5;
-    profiles.filter(p => p.visible && p.lat != null && (showPhotographers || (postFresh(p) && zoomOk))).forEach(p => {
-      const fresh = postFresh(p), xp = experts.has(p.user_id);
-      const mk = L.marker([p.lat, p.lon], { zIndexOffset: fresh ? 1300 : 1100, keyboard: true, title: p.display_name,
-        icon: L.divIcon({ className: "", iconSize: [xp ? 36 : 30, xp ? 36 : 30], iconAnchor: [xp ? 18 : 15, xp ? 18 : 15], popupAnchor: [0, -12],
-          html: `<div class="ph-pin${fresh ? " posted" : ""}${xp ? " expert" : ""}">${PH_ICON}${fresh ? `<span class="ph-new">NEW POST</span>` : ""}</div>` }) }).addTo(commLayer);
+    profiles.filter(p => p.visible && p.lat != null && (showPhotographers || (postFresh(p) && (zoomOk || isCo(p.user_id))))).forEach(p => {
+      const fresh = postFresh(p), xp = experts.has(p.user_id), co = isCo(p.user_id), dev = isDev(p.user_id), big = xp || co || dev;
+      const mk = L.marker([p.lat, p.lon], { zIndexOffset: (fresh ? 1300 : 1100) + (co ? 50 : 0), keyboard: true, title: p.display_name,
+        icon: L.divIcon({ className: "", iconSize: [big ? 36 : 30, big ? 36 : 30], iconAnchor: [big ? 18 : 15, big ? 18 : 15], popupAnchor: [0, -12],
+          html: `<div class="ph-pin${fresh ? " posted" : ""}${xp ? " expert" : ""}${co ? " contrib" : ""}${dev && !co ? " dev" : ""}">${co ? ICON_APERTURE : dev ? ICON_DEV : PH_ICON}${fresh ? `<span class="ph-new">NEW POST</span>` : ""}</div>` }) }).addTo(commLayer);
       mk.bindTooltip(esc(p.display_name), { direction: "top" });
       mk.bindPopup(() => profileHtml(p), { maxWidth: 300, minWidth: 220, className: "spot-popup" });
       mk.on("popupopen", e => e.popup.getElement()?.querySelector("[data-flagprofile]")?.addEventListener("click", () => openFlag("profile", p.user_id, p.display_name)));
@@ -1833,9 +1862,11 @@ const Spots = (() => {
   function profileHtml(p) {
     const ig = p.instagram ? `https://www.instagram.com/${encodeURIComponent(p.instagram)}/` : "";
     return `<div class="spot-pop">
-      <span class="spot-cat" style="--c:#c9a7ff">${PH_ICON}Photographer</span>
+      <span class="spot-cat" style="--c:${isCo(p.user_id) ? "#ffc46e" : isDev(p.user_id) ? "#7fd8ff" : "#c9a7ff"}">${isCo(p.user_id) ? ICON_APERTURE : isDev(p.user_id) ? ICON_DEV : PH_ICON}${isCo(p.user_id) ? "Contributor" : isDev(p.user_id) ? "Developer" : "Photographer"}</span>
+      ${isDev(p.user_id) ? `<p class="pop-dates co-line dev-line">${ICON_DEV}<span>Helps build Spots${p.website ? ` — <a href="${esc(p.website)}" target="_blank" rel="noopener">see their work</a>` : ""}</span></p>` : ""}
       <strong>${esc(p.display_name)}</strong>
       ${p.base_name ? `<p class="pop-dates">${ICON.pin}<span>${esc(p.base_name)}</span></p>` : ""}
+      ${isCo(p.user_id) ? `<p class="pop-dates co-line">${ICON_APERTURE}<span>Contributor of Fabio Costa Ph — <a href="#author-${encodeURIComponent(slugify(p.display_name))}">see their work</a></span></p>` : ""}
       ${experts.has(p.user_id) ? `<p class="pop-dates">🧭 <span>Local expert · ${esc(experts.get(p.user_id).area_name)}</span></p>` : ""}
       ${p.bio ? `<p class="pop-desc">${esc(p.bio)}</p>` : ""}
       ${postFresh(p) && p.last_post_url ? `<a class="pop-btn primary ig-new" href="${esc(p.last_post_url)}" target="_blank" rel="noopener">📣 See the new post</a>` : ""}
@@ -2020,9 +2051,26 @@ const Spots = (() => {
         body.innerHTML = `<input type="search" class="adm-search" placeholder="Cerca per nome o email" aria-label="Cerca membro">
           <ul class="req-list adm-members">${(data || []).map(m => `<li class="req-row" data-uid="${esc(m.user_id)}" data-q="${esc(`${m.first_name || ""} ${m.last_name || ""} ${m.email || ""}`.toLowerCase())}">
             <div><b>${esc([m.first_name, m.last_name].filter(Boolean).join(" ") || "—")}</b><span>${esc(m.email || "")} · ${label[m.status] || m.status}</span></div>
+            ${m.status === "approved" ? `<button type="button" class="pop-btn${isCo(m.user_id) ? " on" : ""}" data-contrib="photographer">${isCo(m.user_id) ? "✓ Contributor" : "Contributor"}</button>
+              <button type="button" class="pop-btn${isDev(m.user_id) ? " on" : ""}" data-contrib="developer">${isDev(m.user_id) ? "✓ Developer" : "Developer"}</button>` : ""}
             ${m.status === "approved" && nodiV ? `<button type="button" class="pop-btn${experts.has(m.user_id) ? " on" : ""}" data-node>${experts.has(m.user_id) ? `🧭 ${esc(experts.get(m.user_id).area_name)}` : "🧭 Nomina nodo"}</button>` : ""}
             ${m.status === "approved" ? `<button type="button" class="pop-btn" data-st="suspended">Sospendi</button>` : `<button type="button" class="pop-btn primary" data-st="approved">Riattiva</button>`}</li>`).join("")}</ul>
           <p class="gate-help left">Chi sospendi non vede più gli spot e non può scrivere nulla. Puoi riattivarlo quando vuoi.</p>`;
+        body.querySelectorAll("[data-contrib]").forEach(b => b.addEventListener("click", async () => {
+          const li = b.closest(".req-row"), uid = li.dataset.uid, nm = li.querySelector("b").textContent.trim(), role = b.dataset.contrib;
+          const label = role === "developer" ? "Developer" : "Contributor";
+          const cur = contribs.has(uid) ? rolesOf(uid) : [];
+          const has = role === "developer" ? cur.includes("developer") : cur.some(r => r !== "developer");
+          const next = has ? cur.filter(r => (role === "developer" ? r !== "developer" : r === "developer")) : [...new Set([...cur, role])];
+          b.disabled = true;
+          try {
+            if (!next.length) { await api(`/rest/v1/contributors?user_id=eq.${encodeURIComponent(uid)}`, { method: "DELETE" }); contribs.delete(uid); }
+            else { await api("/rest/v1/contributors?on_conflict=user_id", { method: "POST", body: { user_id: uid, display_name: nm, roles: next }, headers: { Prefer: "return=minimal,resolution=merge-duplicates" } }); contribs.set(uid, { user_id: uid, display_name: nm, roles: next }); }
+            b.classList.toggle("on", !has); b.textContent = !has ? `✓ ${label}` : label;
+            toast(!has ? `${nm}: badge ${label} attivo. Per comparire sulla mappa deve creare il profilo su Spots.` : `${nm}: badge ${label} tolto.`);
+          } catch (err) { toast(`Non riuscito (${err.message}). Hai eseguito supabase-contributor-ruolo.sql?`, true); }
+          b.disabled = false;
+        }));
         body.querySelectorAll("[data-node]").forEach(b => b.addEventListener("click", () => {
           const li = b.closest(".req-row"), uid = li.dataset.uid, cur = experts.get(uid), nm = li.querySelector("b").textContent;
           const c = map ? map.getCenter() : { lat: 46.5, lng: 11.8 };
