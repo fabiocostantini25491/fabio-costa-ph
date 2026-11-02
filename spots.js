@@ -1842,6 +1842,7 @@ const Spots = (() => {
         <button type="button" data-atab="members" class="${tab === "members" ? "on" : ""}">Membri</button>
         <button type="button" data-atab="flags" class="${tab === "flags" ? "on" : ""}">Segnalazioni <b>${openFlags}</b></button>
         <button type="button" data-atab="feedback" class="${tab === "feedback" ? "on" : ""}">Feedback</button>
+        <button type="button" data-atab="crew" class="${tab === "crew" ? "on" : ""}">Contributor</button>
       </div>
       <div class="adm-body"><p class="gate-help left">Caricamento…</p></div>
     </div>`);
@@ -1876,6 +1877,22 @@ const Spots = (() => {
         body.querySelectorAll("[data-st]").forEach(b => b.addEventListener("click", () => {
           if (b.dataset.st === "suspended" && b.dataset.confirm !== "1") { b.dataset.confirm = "1"; b.textContent = "Conferma"; return; }
           const li = b.closest(".req-row"); decide(li.dataset.uid, b.dataset.st, li, b.dataset.st === "suspended" ? "Sospeso" : "✓ Riattivato");
+        }));
+      } else if (tab === "crew") {
+        const { data } = await api("/rest/v1/contributor_requests?select=id,roles,name,email,links,message,lang,status,created_at&status=neq.archived&order=created_at.desc&limit=500");
+        const RL = { writer: "Writer", photographer: "Fotografo", local: "Esperto locale", spots: "Cura spot", developer: "Sviluppatore", translator: "Traduttore", other: "Altro" };
+        body.innerHTML = (data || []).length ? `<ul class="req-list">${data.map(c => `<li class="req-row" data-ct="${c.id}"><div>
+            <b>${esc(c.name)} · ${(c.roles || []).map(r => RL[r] || r).join(", ") || "—"}${c.status === "contacted" ? " · ✓ contattato" : ""}</b>
+            <span><a href="mailto:${esc(c.email)}?subject=${encodeURIComponent("Fabio Costa Ph — contributor")}">${esc(c.email)}</a> · ${fmtDay(String(c.created_at).slice(0, 10))}${c.links ? ` · ${esc(c.links)}` : ""}</span>
+            ${c.message ? `<span class="ct-msg">“${esc(c.message)}”</span>` : ""}</div>
+            ${c.status === "new" ? `<button type="button" class="pop-btn" data-cst="contacted">Contattato</button>` : ""}
+            <button type="button" class="pop-btn" data-cst="archived">Archivia</button></li>`).join("")}</ul>`
+          : `<p class="gate-help left">Nessuna candidatura per ora. La fascia «Join the crew» è in fondo a ogni pagina.</p>`;
+        body.querySelectorAll("[data-cst]").forEach(b => b.addEventListener("click", async () => {
+          const li = b.closest("[data-ct]");
+          try { await api(`/rest/v1/contributor_requests?id=eq.${li.dataset.ct}`, { method: "PATCH", body: { status: b.dataset.cst }, headers: { Prefer: "return=minimal" } });
+            if (b.dataset.cst === "archived") li.remove(); else { b.remove(); li.querySelector("b").insertAdjacentText("beforeend", " · ✓ contattato"); } }
+          catch (err) { toast(`Non riuscito (${err.message}).`, true); }
         }));
       } else if (tab === "feedback") {
         const { data } = await api("/rest/v1/feedback?select=id,answers,rating,message,email,lang,page,device,created_at&order=created_at.desc&limit=1000");

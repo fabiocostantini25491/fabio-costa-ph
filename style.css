@@ -1538,3 +1538,18 @@ body.map-full-open .fb-tip{display:none}
 .fb-row{display:grid;grid-template-columns:minmax(140px,1.2fr) 2fr 34px;align-items:center;gap:10px;font-size:13px;color:var(--soft);margin:4px 0}
 .fb-row i{display:block;height:8px;border-radius:4px;background:linear-gradient(90deg,#9cc8ff var(--w),rgba(255,255,255,.06) var(--w))}
 .fb-row b{color:#fff;text-align:right;font-weight:500}
+
+/* fascia «Join the crew» in fondo alle pagine */
+.crew-band{position:relative;z-index:2;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:28px;align-items:center;
+  width:min(1180px,calc(100% - 48px));margin:60px auto 0;padding:28px 32px;border:1px solid var(--line-strong);border-radius:var(--radius);
+  background:linear-gradient(135deg,rgba(255,196,110,.07),rgba(156,200,255,.05));box-shadow:0 0 40px rgba(80,140,230,.12)}
+.crew-copy h2{margin:6px 0 8px;font:500 clamp(26px,3vw,34px)/1.1 var(--display);color:var(--head)}
+.crew-copy p{margin:0;color:var(--soft);line-height:1.65;font-size:14.5px}
+.crew-roles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.crew-role{display:grid;gap:4px;align-content:start;text-align:left;padding:14px;border:1px solid var(--line-strong);border-radius:14px;background:rgba(3,9,18,.55);color:var(--soft);font:inherit;font-size:12.5px;line-height:1.45;cursor:pointer;transition:border-color .2s,transform .2s}
+.crew-role b{color:#fff;font-weight:500;font-size:14px}
+.crew-role:hover{border-color:#ffc46e;transform:translateY(-2px)}
+.crew-cta{grid-column:1/-1;justify-self:start}
+body[data-page="home"] .crew-band{margin-top:30px}
+.ct-msg{display:block;margin-top:4px;font-style:italic;color:var(--soft) !important}
+@media (max-width:860px){.crew-band{grid-template-columns:1fr;padding:22px 18px;width:calc(100% - 32px)}.crew-roles{grid-template-columns:1fr}.crew-cta{justify-self:stretch;text-align:center;justify-content:center}}

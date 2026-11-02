@@ -112,7 +112,63 @@
     window.fcTrack?.("Feedback: form opened");
   }
 
-  window.FCFeedback = { open: openForm, tip: showTip };
+  /* ---------- Diventa contributor (writer, fotografi, guide, sviluppatori…) ---------- */
+  const ROLES = { writer: "Writer for the Journal", photographer: "Photographer (reportage, photo essays)", local: "Local expert / mountain guide",
+    spots: "Curating spots in my area", developer: "Developer (help build Spots)", translator: "Translator", other: "Something else" };
+  function openContribute(pre) {
+    let d = document.getElementById("contribDialog");
+    if (!d) { d = document.createElement("dialog"); d.id = "contribDialog"; d.className = "import-dialog fb-dialog"; document.body.appendChild(d); d.addEventListener("click", e => { if (e.target === d) d.close(); }); }
+    d.innerHTML = `<button class="dialog-close" type="button" data-close aria-label="${esc(t("Close"))}">×</button>
+      <form class="import-body gate-form fb-form" novalidate>
+        <span class="eyebrow">${esc(t("Join the crew"))}</span>
+        <h2>${esc(t("Become a contributor"))}</h2>
+        <p class="gate-help left">${esc(t("Spots and the Journal grow with the people who love these places. Tell me how you'd like to help: I read every message and reply personally."))}</p>
+        <fieldset class="fb-q"><legend>${esc(t("How would you like to contribute?"))} <small>${esc(t("(choose any)"))}</small></legend>
+          <div class="fb-opts">${Object.entries(ROLES).map(([k, l]) => `<label class="fb-opt"><input type="checkbox" name="role" value="${k}"${pre === k ? " checked" : ""}><span>${esc(t(l))}</span></label>`).join("")}</div>
+        </fieldset>
+        <div class="ws-fields">
+          <label>${esc(t("Name"))}<input id="ctName" maxlength="80" autocomplete="name" required></label>
+          <label>Email<input id="ctMail" type="email" maxlength="200" autocomplete="email" required></label>
+        </div>
+        <label for="ctLinks">${esc(t("Your work: Instagram, portfolio, articles, GitHub…"))} <small>(${esc(t("optional"))})</small></label>
+        <input id="ctLinks" maxlength="500" placeholder="https://…">
+        <label for="ctMsg">${esc(t("A few words about you and your idea"))} <small>(${esc(t("optional"))})</small></label>
+        <textarea id="ctMsg" rows="4" maxlength="3000"></textarea>
+        <button class="outline-link" type="submit">${esc(t("SEND"))} <span aria-hidden="true">→</span></button>
+        <p class="gate-note" id="ctStatus" role="status"></p>
+        <p class="gate-help left">${esc(t("Your details are used only to reply to you. See the"))} <a href="#privacy">${esc(t("privacy page"))}</a>.</p>
+      </form>`;
+    d.querySelector("[data-close]").onclick = () => d.close();
+    d.querySelector("form").addEventListener("submit", async e => {
+      e.preventDefault();
+      const f = e.target, st = d.querySelector("#ctStatus"), btn = f.querySelector("[type=submit]");
+      const warn = m => { st.className = "gate-note warn"; st.textContent = m; };
+      const roles = [...f.querySelectorAll("[name=role]:checked")].map(i => i.value);
+      const name = d.querySelector("#ctName").value.trim(), email = d.querySelector("#ctMail").value.trim();
+      if (name.length < 2) return warn(t("Please enter your name."));
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return warn(t("Please enter a valid email address."));
+      btn.disabled = true; st.className = "gate-note"; st.textContent = t("Sending…");
+      try {
+        const cfg = typeof SPOTS_CONFIG !== "undefined" ? SPOTS_CONFIG : null;
+        if (!cfg) throw new Error("not configured");
+        let auth = {};
+        try { const s = JSON.parse(localStorage.getItem("fcph-session") || "null"); if (s?.access_token && s.expires_at > Date.now()) auth = { Authorization: `Bearer ${s.access_token}` }; } catch {}
+        const res = await fetch(`${cfg.url.replace(/\/$/, "")}/rest/v1/contributor_requests`, { method: "POST",
+          headers: { apikey: cfg.anonKey, "Content-Type": "application/json", Prefer: "return=minimal", ...auth },
+          body: JSON.stringify({ roles, name, email, links: d.querySelector("#ctLinks").value.trim() || null, message: d.querySelector("#ctMsg").value.trim() || null, lang: (window.I18N?.lang || "en").slice(0, 10) }) });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        window.fcTrack?.(`Contributor: request sent (${roles.join(",") || "none"})`);
+        f.innerHTML = `<span class="eyebrow">${esc(t("Join the crew"))}</span><h2>${esc(t("Thank you!"))}</h2>
+          <p class="gate-help left">${esc(t("I'll get back to you by email soon."))}</p>`;
+        setTimeout(() => d.open && d.close(), 3000);
+      } catch (err) { btn.disabled = false; warn(`${t("Could not send, please try again later")} (${err.message}).`); }
+    });
+    if (!d.open) d.showModal();
+    window.fcTrack?.("Contributor: form opened");
+  }
+  document.addEventListener("click", e => { const a = e.target.closest?.("[data-contribute]"); if (a) { e.preventDefault(); openContribute(a.dataset.contribute || ""); } });
+
+  window.FCFeedback = { open: openForm, tip: showTip, contribute: openContribute };
   // l'avviso compare dopo 30 secondi di visita (mai durante la prima mezz'ora dopo averlo chiuso, mai dopo aver risposto)
   setTimeout(showTip, 30000);
   document.addEventListener("click", e => { const a = e.target.closest?.("[data-feedback]"); if (a) { e.preventDefault(); openForm(); } });
