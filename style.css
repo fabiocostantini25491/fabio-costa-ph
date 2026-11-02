@@ -1500,3 +1500,5 @@ body.map-full-open .site-header,body.map-full-open .pick-bar,body.map-full-open 
 }
 .map-full-ctrl{border:1px solid var(--line-strong) !important;border-radius:12px !important;overflow:hidden;box-shadow:0 0 14px rgba(80,140,230,.25) !important}.map-full-ctrl a{border-radius:0 !important;border:0 !important}
 .inapp-note{margin-top:10px;font-size:13px;line-height:1.5}.inapp-note b{color:#fff}
+.google-domain{margin:8px 0 0;padding:10px 12px;border:1px solid var(--line-strong);border-radius:12px;font-size:12.5px;line-height:1.5;color:var(--soft);text-align:left;word-break:break-word}
+.google-domain b{color:#fff;font-weight:500}
