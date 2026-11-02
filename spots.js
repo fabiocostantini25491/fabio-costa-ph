@@ -68,6 +68,8 @@ const Spots = (() => {
   let socialV = true;       // false finché non è stato eseguito supabase-sociale.sql
   let guest = false;        // visitatore senza account: vede solo la selezione pubblica
   let guestLoaded = false, publicTotal = 0, wantLogin = false;
+  let nodiV = true;          // false finché non è stato eseguito supabase-nodi.sql
+  let experts = new Map();   // user_id → { area_name, lat, lon, radius_km, display_name }
   let commV = true;         // false finché non è stato eseguito supabase-community2.sql
   let meetups = [], meetupJoins = new Map(), favs = new Set(), profiles = [], openFlags = 0;
   let onlyFavs = false, showPhotographers = false, commLayer = null;
@@ -199,10 +201,11 @@ const Spots = (() => {
     for (let from = 0; ; from += PAGE_SIZE) {
       let data;
       try {
-        ({ data } = await api(`/rest/v1/spots?select=${cols}${schemaV2 ? ",category,starts_on,ends_on,created_by,author_name" : ""}${schemaV2 && socialV ? ",support_local,fragile,best_months" + (pubV ? ",public_pick" : "") : ""}${schemaV2 && wsV ? ",ws_capacity,ws_enrolled,ws_price,ws_currency,ws_link,support_since,ws_offer,ws_offer_until" : ""}${schemaV2 && tkV ? ",tk_difficulty,tk_minutes,tk_km,tk_gain,tk_route,tk_parking,tk_park_lat,tk_park_lon" : ""}&order=list.asc,name.asc`, {
+        ({ data } = await api(`/rest/v1/spots?select=${cols}${schemaV2 ? ",category,starts_on,ends_on,created_by,author_name" : ""}${schemaV2 && socialV ? ",support_local,fragile,best_months" + (pubV ? ",public_pick" : "") : ""}${schemaV2 && wsV ? ",ws_capacity,ws_enrolled,ws_price,ws_currency,ws_link,support_since,ws_offer,ws_offer_until" : ""}${schemaV2 && tkV ? ",tk_difficulty,tk_minutes,tk_km,tk_gain,tk_route,tk_parking,tk_park_lat,tk_park_lon" : ""}${schemaV2 && nodiV ? ",verified_at,verified_name,outdated" : ""}&order=list.asc,name.asc`, {
           headers: { "Range-Unit": "items", Range: `${from}-${from + PAGE_SIZE - 1}` } }));
       } catch (err) {
         // database non ancora aggiornato (colonne nuove assenti): funziona come prima
+        if (nodiV && schemaV2 && err.status === 400 && from === 0) { nodiV = false; from -= PAGE_SIZE; continue; }
         if (tkV && schemaV2 && err.status === 400 && from === 0) { tkV = false; from -= PAGE_SIZE; continue; }
         if (wsV && schemaV2 && err.status === 400 && from === 0) { wsV = false; from -= PAGE_SIZE; continue; }
         if (pubV && socialV && schemaV2 && err.status === 400 && from === 0) { pubV = false; from -= PAGE_SIZE; continue; }
@@ -492,6 +495,9 @@ const Spots = (() => {
         <button type="button" class="filter comm-btn" id="meetList">👥 Meetups <small>${upcomingMeetups().length}</small></button>
         <button type="button" class="filter comm-btn" id="meetAdd">＋ Meetup</button>
         <button type="button" class="filter comm-btn${showPhotographers ? " active" : ""}" id="showPh" aria-pressed="${showPhotographers}">📷 Photographers <small>${profiles.filter(p => p.visible && p.lat != null).length}</small></button>
+        ${nodiV ? `<button type="button" class="filter comm-btn" id="expList">🧭 Local experts <small>${experts.size}</small></button>` : ""}
+        ${nodiV && myExpert() ? `<button type="button" class="filter comm-btn xp-mine" id="myArea">🧭 My area</button>` : ""}
+        ${nodiV && profiles.some(p => p.user_id === myUid()) ? `<button type="button" class="filter comm-btn" id="iPosted">📣 I just posted</button>` : ""}
         <button type="button" class="text-link" id="myProfile">${profiles.some(p => p.user_id === myUid()) ? "My photographer profile" : "Join the photographers' map"}</button>
       </div>` : ""}
       <div class="spots-stage">
@@ -586,6 +592,9 @@ const Spots = (() => {
       if (showPhotographers) { const pts = profiles.filter(p => p.visible && p.lat != null).map(p => [p.lat, p.lon]); if (pts.length) map.flyToBounds(L.latLngBounds(pts).pad(0.3), { maxZoom: 8, duration: .8 }); else toast("No photographers on the map yet: be the first!"); }
     });
     $("#myProfile")?.addEventListener("click", openProfile);
+    $("#expList")?.addEventListener("click", openExperts);
+    $("#myArea")?.addEventListener("click", openMyArea);
+    $("#iPosted")?.addEventListener("click", openPosted);
     buildMap();
     if (origin) renderNear();
   }
@@ -1093,12 +1102,12 @@ const Spots = (() => {
   function pinIcon(s) {
     const cat = CATS[s.category] || CATS.spot;
     const plane = wsPlane(s), offer = wsOffer(s) && !plane, shineLocal = localNew(s) && !isWs(s), shineWs = (wsNew(s) || freshPlace(s)) && !plane && !offer && !shineLocal;
-    const cls = ["spot-pin", s.support_local ? "local" : "", s.fragile ? "fragile" : "", plane ? "plane" : "", offer ? "offer" : "", shineWs ? "shine" : "", shineLocal ? "shine-local" : ""].filter(Boolean).join(" ");
+    const cls = ["spot-pin", s.outdated ? "outdated" : "", s.support_local ? "local" : "", s.fragile ? "fragile" : "", plane ? "plane" : "", offer ? "offer" : "", shineWs ? "shine" : "", shineLocal ? "shine-local" : ""].filter(Boolean).join(" ");
     const icon = plane ? ICON_PLANE : shineLocal ? ICON_LOCAL : cat.icon;
     const color = plane ? "#ffc46e" : shineLocal ? "#7ed69b" : cat.color;
     const alert = alertsOf(s).length ? `<span class="alert-dot" title="${esc(ALERTS[alertsOf(s)[0].kind].label)}"></span>` : "";
     return L.divIcon({ className: "", iconSize: [28, 28], iconAnchor: [14, 14], tooltipAnchor: [0, -14], popupAnchor: [0, -12],
-      html: `<div class="${cls}" style="--c:${color}">${icon}${offer ? `<span class="offer-tag" aria-hidden="true">%</span>` : ""}${favs.has(s.id) ? `<span class="fav-dot" aria-hidden="true">♥</span>` : ""}${alert}</div>` });
+      html: `<div class="${cls}" style="--c:${color}">${icon}${offer ? `<span class="offer-tag" aria-hidden="true">%</span>` : ""}${favs.has(s.id) ? `<span class="fav-dot" aria-hidden="true">♥</span>` : ""}${s.verified_at && !s.outdated ? `<span class="vf-dot" aria-hidden="true">✓</span>` : ""}${alert}</div>` });
   }
   const fmtMoneyWs = (v, cur) => { try { return new Intl.NumberFormat(window.I18N?.locale || "en-GB", { style: "currency", currency: cur || "EUR", maximumFractionDigits: v % 1 ? 2 : 0 }).format(v); } catch { return `${v} ${cur || ""}`; } };
   function wsBoxHtml(s) {
@@ -1248,6 +1257,7 @@ const Spots = (() => {
       <strong>${esc(s.name)}</strong>
       ${localNew(s) ? `<span class="ws-chip new local-chip">🌱 New in Support local</span>` : freshPlace(s) ? `<span class="ws-chip new local-chip">✨ New on the map</span>` : ""}
       ${dates ? `<p class="pop-dates">${ICON.cal}<span>${dates}</span></p>` : ""}
+      <div data-vfbox>${verifyHtml(s)}</div>
       <div data-wsbox>${wsBoxHtml(s)}</div>
       ${isTk(s) ? `<div data-tkbox>${tkBoxHtml(s)}</div>` : ""}
       ${isTk(s) && tkV && canEdit(s) ? `<button type="button" class="pop-btn ws-edit" data-tkedit>⛰️ Edit trail info</button>
@@ -1290,7 +1300,7 @@ const Spots = (() => {
         <div class="pop-reviews" data-reviews></div>` : ""}
       ${schemaV2 && socialV ? `<div class="pop-actions">
           <button type="button" class="pop-btn" data-report>${ICON_ALERT}Report</button>
-          ${canEdit(s) ? `<button type="button" class="pop-btn" data-social>Community settings</button>` : ""}
+          ${canEdit(s) || canCurate(s) ? `<button type="button" class="pop-btn" data-social>Community settings</button>` : ""}
           ${commV ? `<button type="button" class="pop-btn" data-meethere>👥 Meet here</button>` : ""}
           ${commV && !canEdit(s) ? `<button type="button" class="text-link pop-flag" data-flagspot>⚑ Flag</button>` : ""}
         </div>
@@ -1303,7 +1313,7 @@ const Spots = (() => {
           <label class="pay-row">Valid until <input type="date" name="until"> <small>(empty = 14 days)</small></label>
           <button type="submit" class="pop-btn primary">Send report</button>
         </form>
-        ${canEdit(s) ? `<form class="pop-review" data-socialform hidden>
+        ${canEdit(s) || canCurate(s) ? `<form class="pop-review" data-socialform hidden>
           <label class="shot-check"><input type="checkbox" name="support"${s.support_local ? " checked" : ""}> 🌱 Support local — this place benefits from visitors</label>
           <input type="text" name="months" maxlength="60" placeholder="Best months, e.g. Oct–Apr (optional)" value="${esc(s.best_months || "")}">
           <label class="shot-check"><input type="checkbox" name="fragile"${s.fragile ? " checked" : ""}> 🛡️ Fragile — hide it from the public map, ask members not to geotag it</label>
@@ -1313,7 +1323,8 @@ const Spots = (() => {
               <option value="no"${s.public_pick === false ? " selected" : ""}>Never show to visitors</option></select></label>` : ""}
           <button type="submit" class="pop-btn primary">Save</button>
         </form>` : ""}` : ""}
-      <p class="pop-author">Added by ${esc(s.author_name || OWNER)}</p>
+      <p class="pop-author">Added by ${esc(s.author_name || OWNER)}${xpBadge(s.created_by)}</p>
+      <div data-curate>${curateHtml(s)}</div>
       ${canEdit(s) ? `<button type="button" class="spot-delete" data-delete>Delete</button>` : ""}
     </div>`;
   }
@@ -1332,6 +1343,7 @@ const Spots = (() => {
     if (!schemaV2) return;
     if (socialV) wireSocial(popup, s);
     el.querySelector("[data-fav]")?.addEventListener("click", ev => toggleFav(s, ev.currentTarget));
+    wireCurate(popup, s);
     el.querySelector("[data-meethere]")?.addEventListener("click", () => { map.closePopup(); withConduct(() => openMeetup({ lat: s.lat, lon: s.lon, spot: s })); });
     el.querySelector("[data-flagspot]")?.addEventListener("click", () => openFlag("spot", String(s.id), s.name));
     const tf = el.querySelector("[data-tkform]");
@@ -1587,15 +1599,148 @@ const Spots = (() => {
         api(`/rest/v1/meetups?select=id,title,note,meet_on,meet_time,lat,lon,spot_id,created_by,author_name&meet_on=gt.${todayISO()}&order=meet_on.asc&limit=500`),
         api("/rest/v1/meetup_joins?select=meetup_id,user_id,name&limit=5000"),
         api(`/rest/v1/spot_favorites?select=spot_id&user_id=eq.${encodeURIComponent(uid)}&limit=10000`),
-        api("/rest/v1/member_profiles?select=user_id,display_name,instagram,website,bio,base_name,lat,lon,visible&limit=2000")
+        api(`/rest/v1/member_profiles?select=user_id,display_name,instagram,website,bio,base_name,lat,lon,visible${nodiV ? ",last_post_url,last_post_at" : ""}&limit=2000`).catch(err => { if (nodiV && err.status === 400) { nodiV = false; return api("/rest/v1/member_profiles?select=user_id,display_name,instagram,website,bio,base_name,lat,lon,visible&limit=2000"); } throw err; })
       ]);
       meetups = mu.data || [];
       meetupJoins = new Map();
       (jo.data || []).forEach(j => (meetupJoins.get(j.meetup_id) || meetupJoins.set(j.meetup_id, []).get(j.meetup_id)).push(j));
       favs = new Set((fa.data || []).map(f => f.spot_id));
       profiles = pr.data || [];
+      experts = new Map();
+      if (nodiV) { try { const { data: ex } = await api("/rest/v1/local_experts?select=user_id,display_name,area_name,lat,lon,radius_km&limit=1000"); (ex || []).forEach(e => experts.set(e.user_id, e)); } catch { nodiV = false; } }
       if (admin) { try { const { res } = await api("/rest/v1/content_flags?select=id&resolved=eq.false", { headers: { Prefer: "count=exact", Range: "0-0" } }); openFlags = +(res.headers.get("content-range") || "").split("/")[1] || 0; } catch { openFlags = 0; } }
     } catch (err) { commV = false; }
+  }
+
+  /* --- nodi (local experts) --- */
+  const kmBetween = (a, b, c, d) => { const R = 6371, r = x => x * Math.PI / 180; const h = Math.sin(r(c - a) / 2) ** 2 + Math.cos(r(a)) * Math.cos(r(c)) * Math.sin(r(d - b) / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(h)); };
+  const myExpert = () => experts.get(myUid());
+  const canCurate = s => admin || (!!myExpert() && kmBetween(myExpert().lat, myExpert().lon, s.lat, s.lon) <= +myExpert().radius_km);
+  const xpBadge = uid => { const e = uid && experts.get(uid); return e ? ` <span class="xp-badge" title="Local expert">🧭 ${esc(e.area_name)}</span>` : ""; };
+  const postFresh = p => p && p.last_post_at && Date.now() - Date.parse(p.last_post_at) < 864e5;
+  function verifyHtml(s) {
+    if (!nodiV) return "";
+    if (s.outdated) return `<p class="vf vf-out">⚠️ <b>Marked as outdated by a local</b>${s.verified_name ? ` · ${esc(s.verified_name)}` : ""}${s.verified_at ? ` · ${fmtDay(String(s.verified_at).slice(0, 10))}` : ""}</p>`;
+    if (s.verified_at) return `<p class="vf">✓ <b>Verified by a local</b>${s.verified_name ? ` · ${esc(s.verified_name)}` : ""} · ${new Date(s.verified_at).toLocaleDateString(window.I18N?.locale || "en-GB", { month: "short", year: "numeric" })}</p>`;
+    return "";
+  }
+  function curateHtml(s) {
+    if (!nodiV || !canCurate(s)) return "";
+    return `<div class="pop-actions curate">
+        <span class="curate-t">🧭 ${admin && !myExpert() ? "Admin" : "Your area"}</span>
+        <button type="button" class="pop-btn${s.verified_at && !s.outdated ? " on" : ""}" data-vf="verified">✓ Verify</button>
+        <button type="button" class="pop-btn${s.outdated ? " on" : ""}" data-vf="outdated">⚠️ Outdated</button>
+        ${s.verified_at || s.outdated ? `<button type="button" class="text-link" data-vf="clear">Clear</button>` : ""}
+        <button type="button" class="pop-btn" data-xedit>✎ Edit info</button>
+      </div>
+      <form class="pop-review" data-xform hidden>
+        <input name="name" maxlength="300" value="${esc(s.name)}" aria-label="Name">
+        <select name="cat" aria-label="Category">${CAT_KEYS.map(k => `<option value="${k}"${s.category === k ? " selected" : ""}>${CATS[k].label}</option>`).join("")}</select>
+        <textarea name="note" rows="3" maxlength="2000" placeholder="Description, access, tips…">${esc(s.note || "")}</textarea>
+        ${s.fragile ? "" : `<input name="coords" value="${s.lat.toFixed(6)}, ${s.lon.toFixed(6)}" aria-label="Coordinates">`}
+        <button type="submit" class="pop-btn primary">Save changes</button>
+      </form>`;
+  }
+  function wireCurate(popup, s) {
+    const el = popup.getElement();
+    if (!el) return;
+    el.querySelectorAll("[data-vf]").forEach(b => b.addEventListener("click", async () => {
+      b.disabled = true;
+      try {
+        await api("/rest/v1/rpc/expert_verify", { method: "POST", body: { p_spot: s.id, p_state: b.dataset.vf } });
+        const who = myExpert()?.display_name || displayName();
+        if (b.dataset.vf === "verified") Object.assign(s, { verified_at: new Date().toISOString(), verified_name: who, outdated: false });
+        else if (b.dataset.vf === "outdated") Object.assign(s, { verified_at: new Date().toISOString(), verified_name: who, outdated: true });
+        else Object.assign(s, { verified_at: null, verified_name: null, outdated: false });
+        el.querySelector("[data-vfbox]").innerHTML = verifyHtml(s);
+        const box = el.querySelector("[data-curate]"); box.innerHTML = curateHtml(s); wireCurate(popup, s);
+        markerById.get(s.id)?.setIcon(pinIcon(s)); popup.update();
+        toast(b.dataset.vf === "verified" ? "Marked as verified." : b.dataset.vf === "outdated" ? "Marked as outdated." : "Cleared.");
+        window.fcTrack?.(`Spots: expert ${b.dataset.vf}`);
+      } catch (err) { toast(/not allowed/i.test(err.message) ? "This place is outside your area." : `Could not save: ${err.message}`, true); b.disabled = false; }
+    }));
+    const xf = el.querySelector("[data-xform]");
+    el.querySelector("[data-xedit]")?.addEventListener("click", () => { xf.hidden = !xf.hidden; popup.update(); });
+    xf?.addEventListener("submit", async e => {
+      e.preventDefault();
+      const c = xf.coords ? parseCoordsInput(xf.coords.value) : null;
+      if (xf.coords && !c) return toast("Coordinates not recognised. Format: 46.6013, 11.7246", true);
+      try {
+        await api("/rest/v1/rpc/expert_edit_spot", { method: "POST", body: { p_spot: s.id, p_name: xf.name.value, p_note: xf.note.value, p_category: xf.cat.value, p_lat: c ? c.lat : null, p_lon: c ? c.lon : null } });
+        Object.assign(s, { name: xf.name.value.trim() || s.name, note: xf.note.value.trim() || null, category: xf.cat.value }, c ? { lat: c.lat, lon: c.lon } : {});
+        map.closePopup(); drawClusters(); toast("Place updated.");
+      } catch (err) { toast(/outside/i.test(err.message) ? "The new position is outside your area." : `Could not save: ${err.message}`, true); }
+    });
+  }
+  async function openMyArea() {
+    const e = myExpert();
+    if (!e) return;
+    const inArea = s => kmBetween(e.lat, e.lon, s.lat, s.lon) <= +e.radius_km;
+    const toVerify = spots.filter(s => inArea(s) && !s.verified_at && !s.outdated).sort((a, b) => String(b.created_at || "").localeCompare(String(a.created_at || ""))).slice(0, 60);
+    const d = dlg("myAreaDialog", `<div class="import-body"><span class="eyebrow">Local expert</span><h2>🧭 ${esc(e.area_name)}</h2>
+      <p class="gate-help left">Your area: ${(+e.radius_km)} km around ${(+e.lat).toFixed(3)}, ${(+e.lon).toFixed(3)} · ${spots.filter(inArea).length} places · ${spots.filter(s => inArea(s) && s.verified_at && !s.outdated).length} verified.
+        In your area you can verify places, mark them outdated, fix their info, set Fragile and Support local, and handle flags.</p>
+      <p class="fb-sum-t">Flags in your area</p><div data-flags><p class="gate-help left">Loading…</p></div>
+      <p class="fb-sum-t">Not verified yet (${toVerify.length}${toVerify.length === 60 ? "+" : ""})</p>
+      <ul class="req-list">${toVerify.map(s => `<li class="req-row"><div><b>${esc(s.name)}</b><span>${esc(CATS[s.category]?.label || "")}${s.author_name ? ` · by ${esc(s.author_name)}` : ""}</span></div>
+        <button type="button" class="pop-btn" data-go="${s.id}">${ICON.pin}Show</button></li>`).join("") || `<li class="gate-help left">Everything in your area is checked. 🎉</li>`}</ul>
+      <button type="button" class="text-link" data-showarea>Show my area on the map</button></div>`);
+    d.querySelectorAll("[data-go]").forEach(b => b.addEventListener("click", () => { const s = spots.find(x => x.id === +b.dataset.go); d.close(); if (s) { $("#spotsMap").scrollIntoView({ behavior: "smooth", block: "center" }); focusSpot(s); } }));
+    d.querySelector("[data-showarea]").addEventListener("click", () => {
+      d.close(); $("#spotsMap").scrollIntoView({ behavior: "smooth", block: "center" });
+      const c = L.circle([e.lat, e.lon], { radius: e.radius_km * 1000, color: "#ffc46e", weight: 1.5, dashArray: "6 6", fillOpacity: .04, interactive: false }).addTo(originLayer);
+      map.flyToBounds(c.getBounds(), { duration: .8 });
+    });
+    const fb = d.querySelector("[data-flags]");
+    try {
+      const { data } = await api("/rest/v1/content_flags?select=id,kind,target_id,label,reason,note,created_at&resolved=eq.false&order=created_at.desc&limit=200");
+      fb.innerHTML = (data || []).length ? `<ul class="req-list">${data.map(f => `<li class="req-row" data-flag="${f.id}" data-kind="${f.kind}" data-target="${esc(f.target_id)}">
+          <div><b>${esc(f.kind)} · ${esc(FLAG_REASONS[f.reason] || f.reason)}</b><span>${esc(f.label || "")}${f.note ? ` — “${esc(f.note)}”` : ""}</span></div>
+          ${f.kind !== "spot" ? `<button type="button" class="pop-btn" data-fx="remove">Remove</button>` : ""}<button type="button" class="pop-btn" data-fx="dismiss">Dismiss</button></li>`).join("")}</ul>`
+        : `<p class="gate-help left">No open flags in your area.</p>`;
+      fb.querySelectorAll("[data-fx]").forEach(b => b.addEventListener("click", async () => {
+        const li = b.closest("[data-flag]");
+        if (b.dataset.fx === "remove" && b.dataset.confirm !== "1") { b.dataset.confirm = "1"; b.textContent = "Confirm"; return; }
+        try {
+          if (b.dataset.fx === "remove") await api(`/rest/v1/${li.dataset.kind === "review" ? "spot_reviews" : "spot_photos"}?id=eq.${encodeURIComponent(li.dataset.target)}`, { method: "DELETE" });
+          await api(`/rest/v1/content_flags?id=eq.${li.dataset.flag}`, { method: "PATCH", body: { resolved: true }, headers: { Prefer: "return=minimal" } });
+          li.innerHTML = `<p class="gate-help left">${b.dataset.fx === "remove" ? "Removed." : "Dismissed."}</p>`;
+        } catch (err) { toast(`Could not update: ${err.message}`, true); }
+      }));
+    } catch { fb.innerHTML = `<p class="gate-help left">Flags not available.</p>`; }
+  }
+  function openExperts() {
+    const list = [...experts.values()].sort((a, b) => a.area_name.localeCompare(b.area_name));
+    const d = dlg("expertsDialog", `<div class="import-body"><span class="eyebrow">Spots community</span><h2>🧭 Local experts</h2>
+      <p class="gate-help left">Trusted members who know their area: they verify places, keep information up to date and look after fragile spots.</p>
+      <ul class="req-list">${list.map(e => { const p = profiles.find(x => x.user_id === e.user_id) || {};
+        return `<li class="req-row"><div><b>${esc(e.display_name || p.display_name || "Local expert")}</b><span>🧭 ${esc(e.area_name)} · ${(+e.radius_km)} km${p.instagram ? ` · <a href="https://www.instagram.com/${encodeURIComponent(p.instagram)}/" target="_blank" rel="noopener">@${esc(p.instagram)}</a>` : ""}${p.website ? ` · <a href="${esc(p.website)}" target="_blank" rel="noopener">website</a>` : ""}</span></div>
+          <button type="button" class="pop-btn" data-area="${esc(e.user_id)}">${ICON.pin}Area</button></li>`; }).join("") || `<li class="gate-help left">No local experts yet.</li>`}</ul></div>`);
+    d.querySelectorAll("[data-area]").forEach(b => b.addEventListener("click", () => {
+      const e = experts.get(b.dataset.area); d.close(); if (!e) return;
+      $("#spotsMap").scrollIntoView({ behavior: "smooth", block: "center" });
+      const c = L.circle([e.lat, e.lon], { radius: e.radius_km * 1000, color: "#ffc46e", weight: 1.5, dashArray: "6 6", fillOpacity: .04, interactive: false }).addTo(originLayer);
+      map.flyToBounds(c.getBounds(), { duration: .8 });
+    }));
+  }
+  function openPosted() {
+    const me = profiles.find(p => p.user_id === myUid());
+    if (!me) return openProfile();
+    const d = dlg("postedDialog", `<form class="import-body gate-form" novalidate><span class="eyebrow">Photographers' map</span><h2>📣 I just posted</h2>
+      <p class="gate-help left">Paste the link of your new Instagram post: your icon on the photographers' map glows for 24 hours and stays visible even when members zoom out.</p>
+      <input id="igPost" type="url" placeholder="https://www.instagram.com/p/…" value="${esc(postFresh(me) ? me.last_post_url || "" : "")}" required>
+      <button class="outline-link" type="submit">MAKE MY ICON GLOW <span aria-hidden="true">→</span></button><p class="gate-note" id="igMsg" role="status"></p></form>`);
+    d.querySelector("form").addEventListener("submit", async ev => {
+      ev.preventDefault();
+      const url = d.querySelector("#igPost").value.trim().split("?")[0], msg = d.querySelector("#igMsg");
+      if (!/^https:\/\/(www\.)?instagram\.com\/(p|reel|tv)\/[A-Za-z0-9_-]+\/?$/.test(url)) { msg.className = "gate-note warn"; msg.textContent = "Paste the link of an Instagram post or reel (instagram.com/p/… or /reel/…)."; return; }
+      try {
+        const at = new Date().toISOString();
+        await api(`/rest/v1/member_profiles?user_id=eq.${encodeURIComponent(myUid())}`, { method: "PATCH", body: { last_post_url: url, last_post_at: at }, headers: { Prefer: "return=minimal" } });
+        Object.assign(me, { last_post_url: url, last_post_at: at });
+        d.close(); drawCommunity(); toast("Your icon glows for the next 24 hours. ✨"); window.fcTrack?.("Spots: Instagram post shared");
+      } catch (err) { msg.className = "gate-note warn"; msg.textContent = `Could not save: ${err.message}`; }
+    });
   }
 
   /* --- preferiti --- */
@@ -1631,10 +1776,12 @@ const Spots = (() => {
       mk.bindPopup(() => node || (node = Object.assign(document.createElement("div"), { innerHTML: meetupHtml(m) }).firstElementChild), { maxWidth: 300, minWidth: 240, className: "spot-popup" });
       mk.on("popupopen", e => wireMeetup(e.popup, m, () => { node = null; }));
     });
-    if (showPhotographers) profiles.filter(p => p.visible && p.lat != null).forEach(p => {
-      const mk = L.marker([p.lat, p.lon], { zIndexOffset: 1100, keyboard: true, title: p.display_name,
-        icon: L.divIcon({ className: "", iconSize: [30, 30], iconAnchor: [15, 15], popupAnchor: [0, -12],
-          html: `<div class="ph-pin">${PH_ICON}</div>` }) }).addTo(commLayer);
+    const zoomOk = map.getZoom() >= 5;
+    profiles.filter(p => p.visible && p.lat != null && (showPhotographers || (postFresh(p) && zoomOk))).forEach(p => {
+      const fresh = postFresh(p), xp = experts.has(p.user_id);
+      const mk = L.marker([p.lat, p.lon], { zIndexOffset: fresh ? 1300 : 1100, keyboard: true, title: p.display_name,
+        icon: L.divIcon({ className: "", iconSize: [xp ? 36 : 30, xp ? 36 : 30], iconAnchor: [xp ? 18 : 15, xp ? 18 : 15], popupAnchor: [0, -12],
+          html: `<div class="ph-pin${fresh ? " posted" : ""}${xp ? " expert" : ""}">${PH_ICON}${fresh ? `<span class="ph-new">NEW POST</span>` : ""}</div>` }) }).addTo(commLayer);
       mk.bindTooltip(esc(p.display_name), { direction: "top" });
       mk.bindPopup(() => profileHtml(p), { maxWidth: 300, minWidth: 220, className: "spot-popup" });
       mk.on("popupopen", e => e.popup.getElement()?.querySelector("[data-flagprofile]")?.addEventListener("click", () => openFlag("profile", p.user_id, p.display_name)));
@@ -1648,7 +1795,7 @@ const Spots = (() => {
       <strong>${esc(m.title)}</strong>
       <p class="pop-dates">${ICON.cal}<span>${fmtDay(m.meet_on)}${m.meet_time ? ` · ${esc(m.meet_time)}` : ""}</span></p>
       ${m.note ? `<p class="pop-desc">${esc(m.note)}</p>` : ""}
-      <p class="pop-author">Organised by ${esc(m.author_name || "a member")}</p>
+      <p class="pop-author">Organised by ${esc(m.author_name || "a member")}${xpBadge(m.created_by)}</p>
       <p class="meet-who" data-who>${who.length ? `👥 ${who.length} going: ${who.map(j => esc(j.name || "Member")).join(", ")}` : "Nobody has joined yet."}</p>
       <div class="pop-actions">
         ${own ? "" : `<button type="button" class="pop-btn${mine ? "" : " primary"}" data-join>${mine ? "Leave" : "I'm in"}</button>`}
@@ -1689,7 +1836,9 @@ const Spots = (() => {
       <span class="spot-cat" style="--c:#c9a7ff">${PH_ICON}Photographer</span>
       <strong>${esc(p.display_name)}</strong>
       ${p.base_name ? `<p class="pop-dates">${ICON.pin}<span>${esc(p.base_name)}</span></p>` : ""}
+      ${experts.has(p.user_id) ? `<p class="pop-dates">🧭 <span>Local expert · ${esc(experts.get(p.user_id).area_name)}</span></p>` : ""}
       ${p.bio ? `<p class="pop-desc">${esc(p.bio)}</p>` : ""}
+      ${postFresh(p) && p.last_post_url ? `<a class="pop-btn primary ig-new" href="${esc(p.last_post_url)}" target="_blank" rel="noopener">📣 See the new post</a>` : ""}
       <div class="pop-actions">
         ${ig ? `<a class="pop-btn primary" href="${esc(ig)}" target="_blank" rel="noopener">Instagram @${esc(p.instagram)}</a>` : ""}
         ${p.website ? `<a class="pop-btn" href="${esc(p.website)}" target="_blank" rel="noopener">${ICON.ext}Website</a>` : ""}
@@ -1871,8 +2020,34 @@ const Spots = (() => {
         body.innerHTML = `<input type="search" class="adm-search" placeholder="Cerca per nome o email" aria-label="Cerca membro">
           <ul class="req-list adm-members">${(data || []).map(m => `<li class="req-row" data-uid="${esc(m.user_id)}" data-q="${esc(`${m.first_name || ""} ${m.last_name || ""} ${m.email || ""}`.toLowerCase())}">
             <div><b>${esc([m.first_name, m.last_name].filter(Boolean).join(" ") || "—")}</b><span>${esc(m.email || "")} · ${label[m.status] || m.status}</span></div>
+            ${m.status === "approved" && nodiV ? `<button type="button" class="pop-btn${experts.has(m.user_id) ? " on" : ""}" data-node>${experts.has(m.user_id) ? `🧭 ${esc(experts.get(m.user_id).area_name)}` : "🧭 Nomina nodo"}</button>` : ""}
             ${m.status === "approved" ? `<button type="button" class="pop-btn" data-st="suspended">Sospendi</button>` : `<button type="button" class="pop-btn primary" data-st="approved">Riattiva</button>`}</li>`).join("")}</ul>
           <p class="gate-help left">Chi sospendi non vede più gli spot e non può scrivere nulla. Puoi riattivarlo quando vuoi.</p>`;
+        body.querySelectorAll("[data-node]").forEach(b => b.addEventListener("click", () => {
+          const li = b.closest(".req-row"), uid = li.dataset.uid, cur = experts.get(uid), nm = li.querySelector("b").textContent;
+          const c = map ? map.getCenter() : { lat: 46.5, lng: 11.8 };
+          li.insertAdjacentHTML("beforeend", `<form class="node-form" data-nodeform>
+            <input name="area" maxlength="80" placeholder="Area (es. Dolomiti di Gardena)" value="${esc(cur?.area_name || "")}" required>
+            <input name="coords" placeholder="Centro: 46.55, 11.75" value="${cur ? `${cur.lat}, ${cur.lon}` : `${c.lat.toFixed(3)}, ${L.Util.wrapNum(c.lng, [-180, 180], true).toFixed(3)}`}">
+            <input name="km" type="number" min="1" max="500" step="1" value="${cur?.radius_km || 25}" aria-label="Raggio km"> km
+            <button type="submit" class="pop-btn primary">Salva</button>${cur ? `<button type="button" class="pop-btn" data-unnode>Togli nodo</button>` : ""}
+            <p class="gate-help left">Il centro di default è il punto al centro della mappa Spots.</p></form>`);
+          b.disabled = true;
+          const f = li.querySelector("[data-nodeform]");
+          f.addEventListener("submit", async ev => {
+            ev.preventDefault();
+            const pc = parseCoordsInput(f.coords.value);
+            if (!pc || !f.area.value.trim()) return toast("Area e centro (coordinate) sono obbligatori.", true);
+            const row = { user_id: uid, display_name: nm, area_name: f.area.value.trim(), lat: pc.lat, lon: pc.lon, radius_km: +f.km.value || 25 };
+            try { await api("/rest/v1/local_experts?on_conflict=user_id", { method: "POST", body: row, headers: { Prefer: "return=minimal,resolution=merge-duplicates" } });
+              experts.set(uid, row); f.remove(); b.disabled = false; b.classList.add("on"); b.textContent = `🧭 ${row.area_name}`; toast(`${nm} è ora nodo di ${row.area_name}.`); }
+            catch (err) { toast(`Non riuscito (${err.message}). Hai eseguito supabase-nodi.sql?`, true); }
+          });
+          f.querySelector("[data-unnode]")?.addEventListener("click", async () => {
+            try { await api(`/rest/v1/local_experts?user_id=eq.${encodeURIComponent(uid)}`, { method: "DELETE" }); experts.delete(uid); f.remove(); b.disabled = false; b.classList.remove("on"); b.textContent = "🧭 Nomina nodo"; }
+            catch (err) { toast(`Non riuscito (${err.message}).`, true); }
+          });
+        }));
         body.querySelector(".adm-search").addEventListener("input", e => { const q = e.target.value.toLowerCase(); body.querySelectorAll(".adm-members li").forEach(li => { li.hidden = q && !li.dataset.q.includes(q); }); });
         body.querySelectorAll("[data-st]").forEach(b => b.addEventListener("click", () => {
           if (b.dataset.st === "suspended" && b.dataset.confirm !== "1") { b.dataset.confirm = "1"; b.textContent = "Conferma"; return; }
@@ -2011,7 +2186,7 @@ const Spots = (() => {
       const pbox = el.querySelector("[data-photos]"), uid0 = myUid();
       pbox.innerHTML = photos.map((p, i) => urls[p.path] ? `<figure class="pop-fig">
         <button type="button" class="pop-thumb" data-photo="${i}" aria-label="Open photo ${i + 1} by ${esc(p.author_name || "a member")}">
-        <img src="${esc(urls[p.path])}" alt="" loading="lazy"></button><figcaption>© ${esc(p.author_name || "Member")}${commV && p.user_id !== uid0 ? ` <button type="button" class="rev-flag" data-flagphoto="${p.id}" title="Flag this photo" aria-label="Flag this photo">⚑</button>` : ""}</figcaption></figure>` : "").join("");
+        <img src="${esc(urls[p.path])}" alt="" loading="lazy"></button><figcaption>© ${esc(p.author_name || "Member")}${xpBadge(p.user_id)}${commV && p.user_id !== uid0 ? ` <button type="button" class="rev-flag" data-flagphoto="${p.id}" title="Flag this photo" aria-label="Flag this photo">⚑</button>` : ""}</figcaption></figure>` : "").join("");
       pbox.querySelectorAll("[data-photo]").forEach(b => b.addEventListener("click", () => openPhotos(photos, urls, +b.dataset.photo, s)));
       const rated = reviews.filter(r => r.rating);
       const rbox = el.querySelector("[data-rating]");
@@ -2024,10 +2199,11 @@ const Spots = (() => {
       const pbox2 = el.querySelector("[data-spend]");
       if (pbox2) pbox2.innerHTML = spendSummary(s, reviews);
       const uid = myUid();
-      el.querySelector("[data-reviews]").innerHTML = reviews.map(r => `<div class="pop-rev">
+      reviews.sort((a, b) => (experts.has(b.user_id) ? 1 : 0) - (experts.has(a.user_id) ? 1 : 0));
+      el.querySelector("[data-reviews]").innerHTML = reviews.map(r => `<div class="pop-rev${experts.has(r.user_id) ? " by-expert" : ""}">
         <p class="rev-head">${r.rating ? `<span class="rev-stars">${"★".repeat(r.rating)}<i>${"★".repeat(5 - r.rating)}</i></span>` : ""}
-          <b>${esc(r.author_name || "Member")}</b><time>${fmtDay(r.created_at.slice(0, 10))}</time>
-          ${r.user_id === uid || admin ? `<button type="button" class="rev-del" data-delrev="${r.id}" aria-label="Delete review">${ICON.close}</button>` : commV ? `<button type="button" class="rev-flag" data-flagrev="${r.id}" title="Flag this review" aria-label="Flag this review">⚑</button>` : ""}</p>
+          <b>${esc(r.author_name || "Member")}</b>${xpBadge(r.user_id)}<time>${fmtDay(r.created_at.slice(0, 10))}</time>
+          ${r.user_id === uid || admin || canCurate(s) ? `<button type="button" class="rev-del" data-delrev="${r.id}" aria-label="Delete review">${ICON.close}</button>` : commV ? `<button type="button" class="rev-flag" data-flagrev="${r.id}" title="Flag this review" aria-label="Flag this review">⚑</button>` : ""}</p>
         ${r.body ? `<p>${esc(r.body)}</p>` : ""}
         ${r.paid != null ? `<p class="rev-paid">💶 Paid ${fmtMoney(r.paid, r.currency)}${r.people ? ` for ${r.people} ${r.people > 1 ? "people" : "person"}` : ""}${r.nights ? `, ${r.nights} night${r.nights > 1 ? "s" : ""}` : ""}${r.stay_type ? ` · ${esc(r.stay_type)}` : ""}</p>` : ""}</div>`).join("");
       el.querySelectorAll("[data-flagrev]").forEach(b => b.addEventListener("click", () => openFlag("review", b.dataset.flagrev, `Review on «${s.name}»`)));

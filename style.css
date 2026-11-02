@@ -1545,7 +1545,7 @@ body.map-full-open .fb-tip{display:none}
   background:linear-gradient(135deg,rgba(255,196,110,.07),rgba(156,200,255,.05));box-shadow:0 0 40px rgba(80,140,230,.12)}
 .crew-copy h2{margin:6px 0 8px;font:500 clamp(26px,3vw,34px)/1.1 var(--display);color:var(--head)}
 .crew-copy p{margin:0;color:var(--soft);line-height:1.65;font-size:14.5px}
-.crew-roles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.crew-roles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 .crew-role{display:grid;gap:4px;align-content:start;text-align:left;padding:14px;border:1px solid var(--line-strong);border-radius:14px;background:rgba(3,9,18,.55);color:var(--soft);font:inherit;font-size:12.5px;line-height:1.45;cursor:pointer;transition:border-color .2s,transform .2s}
 .crew-role b{color:#fff;font-weight:500;font-size:14px}
 .crew-role:hover{border-color:#ffc46e;transform:translateY(-2px)}
@@ -1553,3 +1553,36 @@ body.map-full-open .fb-tip{display:none}
 body[data-page="home"] .crew-band{margin-top:30px}
 .ct-msg{display:block;margin-top:4px;font-style:italic;color:var(--soft) !important}
 @media (max-width:860px){.crew-band{grid-template-columns:1fr;padding:22px 18px;width:calc(100% - 32px)}.crew-roles{grid-template-columns:1fr}.crew-cta{justify-self:stretch;text-align:center;justify-content:center}}
+
+/* nodi (local experts), verifica, post Instagram */
+.xp-badge{display:inline-flex;align-items:center;gap:3px;margin-left:6px;padding:1px 8px;border:1px solid rgba(255,196,110,.65);border-radius:999px;background:rgba(255,196,110,.1);color:#ffd9a0;font-size:11px;font-weight:600;letter-spacing:.02em;white-space:nowrap;vertical-align:1px}
+.vf{margin:6px 0;padding:6px 10px;border:1px solid rgba(126,214,155,.55);border-radius:10px;background:rgba(126,214,155,.08);font-size:12.5px;color:#bff3dc}
+.vf b{font-weight:600}
+.vf-out{border-color:rgba(255,196,110,.6);background:rgba(255,196,110,.08);color:#ffd9a0}
+.vf-dot{position:absolute;top:-6px;right:-7px;width:15px;height:15px;border-radius:50%;background:#7ed69b;color:#06101d;font-size:9px;font-weight:800;line-height:15px;text-align:center;box-shadow:0 0 0 2px #06101d}
+.spot-pin.outdated{opacity:.55;filter:grayscale(.7)}
+.curate{margin-top:8px;padding:8px 10px;border:1px dashed rgba(255,196,110,.5);border-radius:12px;background:rgba(255,196,110,.04)}
+.curate-t{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#ffd9a0;margin-right:4px}
+.pop-btn.on{border-color:#7ed69b;color:#bff3dc}
+.pop-rev.by-expert{border-left:2px solid #ffc46e;padding-left:8px}
+.ph-pin.expert{width:36px;height:36px;border-color:#ffc46e;box-shadow:0 0 14px rgba(255,196,110,.55)}
+.ph-pin.expert svg{stroke:#ffc46e}
+.ph-pin{position:relative}
+.ph-pin.posted{animation:phGlow 1.6s ease-in-out infinite}
+@keyframes phGlow{0%,100%{box-shadow:0 0 10px rgba(201,167,255,.6)}50%{box-shadow:0 0 0 8px rgba(201,167,255,.18),0 0 28px 8px rgba(201,167,255,.85)}}
+.ph-new{position:absolute;top:100%;left:50%;transform:translate(-50%,4px);white-space:nowrap;padding:1px 6px;border-radius:999px;background:#c9a7ff;color:#140f22;font:700 9.5px/1.6 var(--sans);letter-spacing:.08em}
+@media (prefers-reduced-motion:reduce){.ph-pin.posted{animation:none}}
+.ig-new{display:flex;justify-content:center;margin:6px 0;text-decoration:none}
+.xp-mine{border-color:rgba(255,196,110,.7) !important;color:#ffd9a0 !important}
+.node-form{display:flex;flex-wrap:wrap;gap:6px;align-items:center;width:100%;margin-top:8px}
+.node-form input{flex:1 1 140px;min-width:0;background:rgba(3,9,18,.7);border:1px solid var(--line-strong);border-radius:999px;color:#fff;padding:8px 12px;font:inherit;font-size:13px}
+.node-form input[name=km]{flex:0 0 70px}
+
+.crew-band{align-items:start}
+.crew-all{margin-top:12px !important;padding:12px 14px;border-left:2px solid #ffc46e;background:rgba(255,196,110,.05);border-radius:0 10px 10px 0}
+.crew-all b{color:#fff;font-weight:500}
+.crew-copy .crew-cta{margin-top:16px}
+.crew-what{color:var(--soft);font-size:13px}
+.crew-role ul{margin:6px 0 0;padding-left:16px;display:grid;gap:4px;font-size:12.5px;color:var(--soft)}
+.crew-role ul b{color:#fff;font-weight:500;font-size:inherit}
+@media (max-width:860px){.crew-roles{grid-template-columns:1fr}}
