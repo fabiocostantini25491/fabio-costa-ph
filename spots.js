@@ -479,7 +479,7 @@ const Spots = (() => {
           return tpl.replace("{n}", fmtN(spots.length)).replace("{total}", fmtN(Math.max(publicTotal, spots.length)));
         })()}</p>
           <button type="button" class="outline-link" id="guestJoin">JOIN FREE <span aria-hidden="true">→</span></button>
-          <a class="text-link guest-guide" href="#guide-spots">How Spots works</a></div>` : ""}
+          <a class="text-link guest-guide" href="#guide-spots">How Spots works</a> <a class="text-link guest-guide" href="guides/spots-quick-guide.pdf" target="_blank" rel="noopener">📄 One-page guide</a></div>` : ""}
       ${schemaV2 && socialV && !guest ? `<div class="spots-social" role="group" aria-label="Alerts and community">
         <label class="soc-pick">${ICON_ALERT}<span class="sr-only">Alerts</span>
           <select id="alertMode">
@@ -490,6 +490,7 @@ const Spots = (() => {
         <button type="button" class="filter soc-support${onlySupport ? " active" : ""}" id="onlySupport" aria-pressed="${onlySupport}">🌱 Support local <small>${spots.filter(x => x.support_local).length}</small></button>
         <button type="button" class="text-link" id="openConduct">Community code</button>
         <a class="text-link" href="#guide-spots">How Spots works</a>
+        <a class="text-link" href="guides/spots-quick-guide.pdf" target="_blank" rel="noopener">📄 Spots in one page</a>
       </div>` : ""}
       ${commV && !guest ? `<div class="spots-community" role="group" aria-label="Community">
         <button type="button" class="filter comm-btn${onlyFavs ? " active" : ""}" id="onlyFavs" aria-pressed="${onlyFavs}">♥ My spots <small>${favs.size}</small></button>

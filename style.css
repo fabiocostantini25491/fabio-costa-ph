@@ -1674,3 +1674,7 @@ body[data-page="home"] .crew-band{margin-top:30px}
 .crew-links svg{width:13px;height:13px}
 .crew-join{margin:26px 0 0;text-align:center;color:var(--soft)}
 .crew-meet{display:inline-block;margin:10px 0 0 14px}
+.guide-downloads{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin:0 0 16px;padding:12px 16px;border:1px solid rgba(255,196,110,.45);border-radius:14px;background:rgba(255,196,110,.05)}
+.guide-downloads .eyebrow{flex-basis:100%;color:#ffd9a0}
+.guide-downloads a{padding:7px 14px;border:1px solid var(--line-strong);border-radius:999px;color:#fff;text-decoration:none;font-size:13.5px}
+.guide-downloads a:hover{border-color:#ffc46e}
