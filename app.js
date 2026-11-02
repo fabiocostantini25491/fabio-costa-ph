@@ -1173,13 +1173,25 @@ function renderArticle(id) {
   const reader = $("#articleReader"), a = articles.find(x => x.id === id);
   if (!a) { reader.hidden = true; return; }
   const t = a.trip && tripById(a.trip);
-  const rep = a.type === "reportage";
   $("#journalLayout").hidden = true;
+  reader.className = `full-article mag-article ${a.type === "reportage" ? "is-reportage" : "is-guide"}`;
+  reader.innerHTML = articleHtml(a, t);
+  reader.insertAdjacentHTML("beforeend", `<div class="article-actions">
+      ${t ? `<button class="outline-link" type="button" id="articleTrip">VIEW THE JOURNEY ON THE MAP <span aria-hidden="true">→</span></button>` : ""}
+      <a class="text-link" href="#journal">${ICON.prev}Back to the Journal</a>
+    </div>`);
+  reader.hidden = false;
+  $("#articleTrip")?.addEventListener("click", () => { location.hash = "explore"; setTimeout(() => openTrip(t.id), 60); });
+  requestAnimationFrame(() => $("#journalMag").scrollIntoView({ behavior: "smooth", block: "start" }));
+}
+/* l'articolo impaginato (usato anche per l'anteprima di «Write for the Journal») */
+function articleHtml(a, t, back = true) {
+  const rep = a.type === "reportage";
   const byline = `<p class="mag-byline">Text and photographs by <b>${authorLink(a)}</b> · ${esc(fmtDate(a.date))}${a.minutes ? ` · ${a.minutes} min read` : ""}</p>`;
   const caption = t ? `<figcaption>${esc(t.name || "")} · ${fmtCoord(t.lat, t.lon).replace("  |  ", ", ")}</figcaption>` : "";
-  reader.className = `full-article mag-article ${rep ? "is-reportage" : "is-guide"}`;
-  reader.innerHTML = rep ? `
-    <a class="text-link mag-back" href="#journal">${ICON.prev}All stories</a>
+  const backLink = back ? `<a class="text-link mag-back" href="#journal">${ICON.prev}All stories</a>` : "";
+  return (rep ? `
+    ${backLink}
     <figure class="mag-opening"><img src="${esc(a.cover)}" alt="${esc(a.title)}" data-cat="Paesaggi">
       <div class="mag-opening-text"><p class="mag-kicker">Reportage${a.place ? ` · ${esc(a.place)}` : ""}</p><h2>${esc(a.title)}</h2></div></figure>
     <div class="mag-lede">
@@ -1189,7 +1201,7 @@ function renderArticle(id) {
     <div class="rich mag-body mag-prose">${magBody(md(a.text))}</div>
     ${glanceHtml(a.glance) ? `<div class="mag-after">${glanceHtml(a.glance)}</div>` : ""}
     <p class="mag-end" aria-hidden="true">■</p>` : `
-    <a class="text-link mag-back" href="#journal">${ICON.prev}All stories</a>
+    ${backLink}
     <p class="mag-kicker">Field guide · ${esc(catLabel(a.category))}${a.place ? ` · ${esc(a.place)}` : ""}</p>
     <h2>${esc(a.title)}</h2>
     ${a.excerpt ? `<p class="mag-deck">${esc(a.excerpt)}</p>` : ""}
@@ -1199,16 +1211,32 @@ function renderArticle(id) {
       ${glanceHtml(a.glance)}
       <div class="rich mag-body">${magBody(md(a.text))}</div>
     </div>
-    <p class="mag-end" aria-hidden="true">■</p>`;
-  if (!a.author.own) reader.insertAdjacentHTML("beforeend", authorBox(a.author));
-  reader.insertAdjacentHTML("beforeend", `<div class="article-actions">
-      ${t ? `<button class="outline-link" type="button" id="articleTrip">VIEW THE JOURNEY ON THE MAP <span aria-hidden="true">→</span></button>` : ""}
-      <a class="text-link" href="#journal">${ICON.prev}Back to the Journal</a>
-    </div>`);
-  reader.hidden = false;
-  $("#articleTrip")?.addEventListener("click", () => { location.hash = "explore"; setTimeout(() => openTrip(t.id), 60); });
-  requestAnimationFrame(() => $("#journalMag").scrollIntoView({ behavior: "smooth", block: "start" }));
+    <p class="mag-end" aria-hidden="true">■</p>`) + (a.author && !a.author.own ? authorBox(a.author) : "");
 }
+
+/* ---------- articoli dei contributor approvati (Supabase) ---------- */
+const TOPIC_OF = { "Attualità": "Attualità", Luoghi: "Luoghi", Viaggi: "Viaggi", Persone: "Persone", Natura: "Natura", Fotografia: "Fotografia", Tecnica: "Tecnica", "Guide pratiche": "Guide pratiche", Ispirazione: "Ispirazione" };
+function submissionToArticle(x) {
+  const words = String(x.body || "").split(/\s+/).length;
+  return { id: `c-${x.slug || x.id}`, title: x.title, category: TOPIC_OF[x.topic] || "Luoghi", date: String(x.published_at || x.updated_at || "").slice(0, 10),
+    minutes: Math.max(1, Math.round(words / 220)), cover: x.cover_url || "", trip: "", excerpt: x.excerpt || "", text: x.body || "",
+    type: x.kind === "reportage" ? "reportage" : "guide", place: x.place || "", glance: x.glance || {},
+    author: (x.author_name || "").trim() === (about?.proprietario || "Fabio Costantini") ? { name: x.author_name, slug: "fabio", own: true }
+      : { name: x.author_name, slug: slug(x.author_name), own: false, instagram: x.author_instagram || "", site: x.author_site || "", bio: x.author_bio || "", photo: "" } };
+}
+async function loadCommunityArticles() {
+  if (typeof SPOTS_CONFIG === "undefined" || !SPOTS_CONFIG.url) return;
+  try {
+    const res = await fetch(`${SPOTS_CONFIG.url.replace(/\/$/, "")}/rest/v1/journal_submissions?select=id,slug,title,kind,topic,place,excerpt,body,cover_url,glance,author_name,author_instagram,author_site,author_bio,published_at,updated_at&status=eq.published&order=published_at.desc&limit=200`,
+      { headers: { apikey: SPOTS_CONFIG.anonKey } });
+    if (!res.ok) return;
+    const extra = (await res.json()).map(submissionToArticle);
+    articles = articles.filter(a => !a.id.startsWith("c-")).concat(extra);
+    if (document.body.dataset.page === "journal") route();
+  } catch {}
+}
+window.FCJournal = { articleHtml: (a, t) => articleHtml(a, t, false), fromSubmission: submissionToArticle, reload: loadCommunityArticles };
+window.addEventListener("load", () => setTimeout(loadCommunityArticles, 50));
 
 /* =========================================================
    8. RICERCA: tuoi luoghi + qualsiasi luogo (OpenStreetMap)
@@ -1420,6 +1448,8 @@ function route() {
   let page = hash, article = null;
   if (hash.startsWith("art-")) { page = "journal"; article = hash.slice(4); }
   let authorSlug = null;
+  const writeMode = hash === "write";
+  if (writeMode) page = "journal";
   if (hash.startsWith("author-")) { page = "journal"; authorSlug = hash.slice(7); }
   const join = hash === "join";
   const guideAnchor = hash.startsWith("guide-") ? hash : null;
@@ -1454,7 +1484,8 @@ function route() {
   if (page === "spots") window.Spots?.show(join);
   if (page === "tools") window.Tools?.show();
   if (page === "journal") {
-    if (authorSlug) renderAuthor(authorSlug);
+    if (writeMode) { $("#journalLayout").hidden = true; const r = $("#articleReader"); r.hidden = false; r.className = "full-article mag-article is-write"; window.Spots?.renderWrite?.(r); }
+    else if (authorSlug) renderAuthor(authorSlug);
     else if (article) renderArticle(article);
     else { $("#articleReader").hidden = true; renderJournal(); }
   }

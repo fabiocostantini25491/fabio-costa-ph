@@ -2023,6 +2023,7 @@ const Spots = (() => {
         <button type="button" data-atab="flags" class="${tab === "flags" ? "on" : ""}">Segnalazioni <b>${openFlags}</b></button>
         <button type="button" data-atab="feedback" class="${tab === "feedback" ? "on" : ""}">Feedback</button>
         <button type="button" data-atab="crew" class="${tab === "crew" ? "on" : ""}">Contributor</button>
+        <button type="button" data-atab="articles" class="${tab === "articles" ? "on" : ""}">Articoli</button>
       </div>
       <div class="adm-body"><p class="gate-help left">Caricamento…</p></div>
     </div>`);
@@ -2100,6 +2101,38 @@ const Spots = (() => {
         body.querySelectorAll("[data-st]").forEach(b => b.addEventListener("click", () => {
           if (b.dataset.st === "suspended" && b.dataset.confirm !== "1") { b.dataset.confirm = "1"; b.textContent = "Conferma"; return; }
           const li = b.closest(".req-row"); decide(li.dataset.uid, b.dataset.st, li, b.dataset.st === "suspended" ? "Sospeso" : "✓ Riattivato");
+        }));
+      } else if (tab === "articles") {
+        const { data } = await api("/rest/v1/journal_submissions?select=*&status=in.(submitted,published,changes)&order=updated_at.desc&limit=300");
+        const order = { submitted: 0, changes: 1, published: 2 };
+        const list = (data || []).sort((a, b) => order[a.status] - order[b.status]);
+        const LBL = { submitted: "Da approvare", changes: "Rimandato all'autore", published: "Pubblicato" };
+        body.innerHTML = list.length ? `<ul class="req-list">${list.map(x => `<li class="req-row" data-jid="${x.id}"><div>
+            <b>${esc(x.title)}</b><span>${esc(x.author_name)} · ${x.kind === "reportage" ? "Reportage" : "Field guide"} · ${LBL[x.status]} · ${fmtDay(String(x.updated_at).slice(0, 10))}</span></div>
+            <button type="button" class="pop-btn" data-ja="preview">Anteprima</button>
+            ${x.status !== "published" ? `<button type="button" class="pop-btn primary" data-ja="publish">Pubblica</button><button type="button" class="pop-btn" data-ja="changes">Rimanda</button>` : `<button type="button" class="pop-btn" data-ja="unpublish">Ritira</button>`}
+            </li>`).join("")}</ul><div class="adm-preview" hidden></div>`
+          : `<p class="gate-help left">Nessun articolo da approvare. I contributor scrivono da fabiocostaph.com/#write.</p>`;
+        body.querySelectorAll("[data-ja]").forEach(b => b.addEventListener("click", async () => {
+          const li = b.closest("[data-jid]"), x = list.find(y => String(y.id) === li.dataset.jid), act = b.dataset.ja;
+          if (act === "preview") {
+            const pv = body.querySelector(".adm-preview"); pv.hidden = false;
+            pv.innerHTML = `<div class="mag adm-mag"><article class="full-article mag-article">${window.FCJournal.articleHtml(window.FCJournal.fromSubmission(x))}</article></div>`;
+            pv.scrollIntoView({ behavior: "smooth", block: "start" }); return;
+          }
+          let patch;
+          if (act === "publish") patch = { status: "published", published_at: x.published_at || new Date().toISOString(), review_note: null };
+          if (act === "unpublish") patch = { status: "changes", review_note: "Withdrawn for edits." };
+          if (act === "changes") {
+            const note = prompt("Nota per l'autore (cosa deve cambiare):", "");
+            if (note === null) return;
+            patch = { status: "changes", review_note: note.slice(0, 2000) || "Some changes needed." };
+          }
+          try {
+            await api(`/rest/v1/journal_submissions?id=eq.${x.id}`, { method: "PATCH", body: patch, headers: { Prefer: "return=minimal" } });
+            toast(act === "publish" ? "Pubblicato nel Journal." : act === "unpublish" ? "Ritirato." : "Rimandato all'autore.");
+            window.FCJournal?.reload(); openAdmin("articles");
+          } catch (err) { toast(`Non riuscito (${err.message}). Hai eseguito supabase-articoli.sql?`, true); }
         }));
       } else if (tab === "crew") {
         const { data } = await api("/rest/v1/contributor_requests?select=id,roles,name,email,links,message,lang,status,created_at&status=neq.archived&order=created_at.desc&limit=500");
@@ -2190,6 +2223,173 @@ const Spots = (() => {
         }));
       }
     } catch (err) { body.innerHTML = `<p class="gate-note warn">Non disponibile (${esc(err.message)}). Hai eseguito supabase-community2.sql?</p>`; }
+  }
+
+
+  /* =================== WRITE FOR THE JOURNAL (solo contributor, con approvazione) =================== */
+  const J_TOPICS = ["Luoghi", "Attualità", "Viaggi", "Persone", "Natura", "Fotografia", "Tecnica", "Guide pratiche", "Ispirazione"];
+  const J_TOPIC_EN = { "Luoghi": "Places", "Attualità": "Current affairs", "Viaggi": "Travel", "Persone": "People", "Natura": "Nature", "Fotografia": "Photography", "Tecnica": "Technique", "Guide pratiche": "Field guides", "Ispirazione": "Inspiration" };
+  const J_GLANCE = [["periodo", "Best time"], ["arrivare", "Getting there"], ["parcheggio", "Parking"], ["camminata", "The walk"], ["difficolta", "Difficulty"], ["permessi", "Permits & rules"], ["attrezzatura", "Gear"], ["impostazioni", "Settings"]];
+  const J_STATUS = { draft: ["Draft", ""], submitted: ["In review", "rev"], changes: ["Changes requested", "chg"], published: ["Published", "pub"], rejected: ["Not accepted", "rej"] };
+  const jSlug = t => String(t || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 70);
+  async function uploadJournalImage(file) {
+    if (!(await ensureSession())) throw new Error("please log in again");
+    const blob = await resizeImage(file, 2200, 0.84);
+    const path = `${myUid()}/${Date.now()}-${crypto.randomUUID().slice(0, 8)}.jpg`;
+    const res = await fetch(`${SPOTS_CONFIG.url.replace(/\/$/, "")}/storage/v1/object/journal/${path}`, { method: "POST",
+      headers: { apikey: SPOTS_CONFIG.anonKey, Authorization: `Bearer ${session.access_token}`, "Content-Type": "image/jpeg", "x-upsert": "false" }, body: blob });
+    if (!res.ok) throw new Error((await res.json().catch(() => ({}))).message || `upload failed (${res.status})`);
+    return `${SPOTS_CONFIG.url.replace(/\/$/, "")}/storage/v1/object/public/journal/${path}`;
+  }
+  async function renderWrite(box) {
+    const head = `<a class="text-link mag-back" href="#journal">${ICON.prev}All stories</a><p class="mag-kicker">Contributors</p><h2>Write for the Journal</h2>`;
+    box.innerHTML = `${head}<p class="mag-deck">Loading…</p>`;
+    if (!configured() || !(await ensureSession())) {
+      box.innerHTML = `${head}<p class="mag-deck">This section is for Fabio Costa Ph contributors. Log in to Spots first, then come back here.</p>
+        <p><a class="outline-link" href="#spots">LOG IN TO SPOTS <span aria-hidden="true">→</span></a></p>`; return;
+    }
+    if (!loaded) { try { admin = await checkAdmin(); } catch {} }
+    if (!contribs.size) { try { const { data } = await api("/rest/v1/contributors?select=user_id,display_name,roles&limit=1000"); (data || []).forEach(c => contribs.set(c.user_id, c)); } catch {} }
+    if (!admin && !contribs.has(myUid())) {
+      box.innerHTML = `${head}<p class="mag-deck">Writing for the Journal is open to contributors. Would you like to write reportage or practical guides? Tell me about you and your idea.</p>
+        <p><button type="button" class="outline-link" data-contribute="writer">BECOME A CONTRIBUTOR <span aria-hidden="true">→</span></button></p>`; return;
+    }
+    let mine = [];
+    try { const { data } = await api(`/rest/v1/journal_submissions?select=id,title,status,review_note,updated_at,slug&author_id=eq.${encodeURIComponent(myUid())}&order=updated_at.desc`); mine = data || []; }
+    catch (err) { box.innerHTML = `${head}<p class="mag-deck">Not available yet (${esc(err.message)}).</p>`; return; }
+    box.innerHTML = `${head}
+      <p class="mag-deck">${admin ? "Scrivi direttamente nel Journal: salva in bozza, guarda l'anteprima e pubblica subito, senza passare da Pages CMS. Gli articoli dei contributor da approvare sono in Spots → Admin → Articoli." : "Write a reportage or a practical guide. Save it as a draft whenever you like; when it's ready, send it for review — I read every piece and publish it with your name, or send it back with a note."}</p>
+      <p><button type="button" class="outline-link" data-jnew>✍ NEW ARTICLE <span aria-hidden="true">→</span></button></p>
+      <p class="mag-section">Your articles</p>
+      ${mine.length ? `<ul class="j-list">${mine.map(m => `<li><div><b>${esc(m.title)}</b><span class="j-st ${J_STATUS[m.status]?.[1] || ""}">${J_STATUS[m.status]?.[0] || m.status}</span>
+          <small>Updated ${fmtDay(String(m.updated_at).slice(0, 10))}</small>${m.review_note && (m.status === "changes" || m.status === "rejected") ? `<p class="j-note">Fabio: “${esc(m.review_note)}”</p>` : ""}</div>
+          ${["draft", "changes", "submitted"].includes(m.status) || admin ? `<button type="button" class="pop-btn" data-jedit="${m.id}">Edit</button>` : ""}${m.status === "published" ? `<a class="pop-btn" href="#art-c-${esc(m.slug || m.id)}">Read</a>` : ""}</li>`).join("")}</ul>`
+        : `<p class="mag-deck j-empty">No articles yet: start your first one.</p>`}
+      <p class="j-help">Tips: a reportage is your story, first person, with big photos. A field guide is practical: when to go, where to park, how long the walk is, the mistakes to avoid. Only use your own photos.</p>`;
+    box.querySelector("[data-jnew]").addEventListener("click", () => openEditor(box, null));
+    box.querySelectorAll("[data-jedit]").forEach(b => b.addEventListener("click", async () => {
+      try { const { data } = await api(`/rest/v1/journal_submissions?select=*&id=eq.${b.dataset.jedit}`); openEditor(box, data?.[0] || null); } catch (err) { toast(`Could not open: ${err.message}`, true); }
+    }));
+  }
+  function openEditor(box, art) {
+    const me = profiles.find(p => p.user_id === myUid()) || {};
+    const a = art || { kind: "guide", topic: "Luoghi", glance: {}, author_name: admin ? OWNER : (me.display_name || displayName()), author_instagram: me.instagram || "", author_site: me.website || "", author_bio: me.bio || "" };
+    const v = x => esc(x == null ? "" : String(x));
+    box.innerHTML = `<a class="text-link mag-back" href="#write">${ICON.prev}Your articles</a>
+      <p class="mag-kicker">${art ? (J_STATUS[art.status]?.[0] || "") : "New article"}</p><h2>${art ? "Edit article" : "New article"}</h2>
+      ${art?.review_note && art.status === "changes" ? `<p class="j-note">Fabio asks: “${esc(art.review_note)}”</p>` : ""}
+      <form class="j-form" novalidate>
+        <div class="j-row">
+          <label>Type<select name="kind"><option value="reportage"${a.kind === "reportage" ? " selected" : ""}>Reportage — your story</option><option value="guide"${a.kind !== "reportage" ? " selected" : ""}>Field guide — practical</option></select></label>
+          <label>Topic<select name="topic">${J_TOPICS.map(t => `<option value="${t}"${a.topic === t ? " selected" : ""}>${J_TOPIC_EN[t]}</option>`).join("")}</select></label>
+        </div>
+        <label>Title<input name="title" maxlength="160" value="${v(a.title)}" placeholder="e.g. Seceda at dawn: everything you need to know" required></label>
+        <label>Place and time <small>(optional)</small><input name="place" maxlength="120" value="${v(a.place)}" placeholder="e.g. Dolomites, October 2026"></label>
+        <label>Subtitle <small>(two lines that make people want to read)</small><textarea name="excerpt" rows="2" maxlength="400">${v(a.excerpt)}</textarea></label>
+        <div class="j-cover">${a.cover_url ? `<img src="${v(a.cover_url)}" alt="">` : `<span>No cover photo yet</span>`}
+          <label class="pop-btn">📷 ${a.cover_url ? "Change" : "Add"} cover photo<input type="file" accept="image/*" name="coverfile" hidden></label></div>
+        <label>Text</label>
+        <div class="j-tools">
+          <button type="button" data-md="## ">Heading</button><button type="button" data-md="**">Bold</button><button type="button" data-md="> ">Quote</button>
+          <button type="button" data-md="- ">List</button><label class="j-photo">📷 Photo<input type="file" accept="image/*" multiple hidden name="bodyfile"></label>
+        </div>
+        <textarea name="body" rows="18" maxlength="60000" placeholder="Write here. A blank line starts a new paragraph.">${v(a.body)}</textarea>
+        <p class="j-help">Photos: after uploading, write the caption between the square brackets: ![Caption](link). Two or three photos one after the other become a double page.</p>
+        <details class="j-glance"${Object.keys(a.glance || {}).length ? " open" : ""}><summary>At a glance — practical box (optional)</summary>
+          <div class="j-row">${J_GLANCE.map(([k, l]) => `<label>${l}<input name="g_${k}" maxlength="160" value="${v(a.glance?.[k])}"></label>`).join("")}</div></details>
+        <details class="j-glance"><summary>About you — shown under the article</summary>
+          <div class="j-row"><label>Name<input name="author_name" maxlength="80" value="${v(a.author_name)}" required></label>
+            <label>Instagram<input name="author_instagram" maxlength="40" value="${v(a.author_instagram)}" placeholder="username"></label>
+            <label>Website<input name="author_site" maxlength="300" value="${v(a.author_site)}" placeholder="https://…"></label></div>
+          <label>Short bio<textarea name="author_bio" rows="2" maxlength="400">${v(a.author_bio)}</textarea></label></details>
+        <label class="shot-check"><input type="checkbox" name="rights"${art ? " checked" : ""}> The text and the photos are mine (or I have the rights), and I accept the <a href="#terms" target="_blank">terms</a>.</label>
+        <div class="j-actions">
+          <button type="button" class="pop-btn" data-act="draft">Save draft</button>
+          <button type="button" class="pop-btn" data-act="preview">Preview</button>
+          ${admin ? `<button type="button" class="outline-link" data-act="publish">${art?.status === "published" ? "UPDATE PUBLISHED ARTICLE" : "PUBBLICA SUBITO"} <span aria-hidden="true">→</span></button>`
+            : `<button type="button" class="outline-link" data-act="submit">SEND FOR REVIEW <span aria-hidden="true">→</span></button>`}
+          ${art && ["draft", "changes"].includes(art.status) ? `<button type="button" class="text-link j-del" data-act="delete">Delete</button>` : ""}
+        </div>
+        <p class="gate-note" data-jmsg role="status"></p>
+      </form>
+      <div class="j-preview" hidden></div>`;
+    const f = box.querySelector("form"), msg = box.querySelector("[data-jmsg]"), say = (t, warn) => { msg.className = "gate-note" + (warn ? " warn" : ""); msg.textContent = t; };
+    let cover = a.cover_url || "";
+    const ta = f.body;
+    const insert = (txt, wrap) => {
+      const st = ta.selectionStart, en = ta.selectionEnd, sel = ta.value.slice(st, en);
+      const out = wrap ? `${txt}${sel || "text"}${txt}` : `${st && ta.value[st - 1] !== "\n" ? "\n" : ""}${txt}${sel}`;
+      ta.setRangeText(out, st, en, "end"); ta.focus();
+    };
+    f.querySelectorAll("[data-md]").forEach(b => b.addEventListener("click", () => insert(b.dataset.md, b.dataset.md === "**")));
+    f.coverfile.addEventListener("change", async () => {
+      const file = f.coverfile.files[0]; if (!file) return;
+      say("Uploading the cover…");
+      try { cover = await uploadJournalImage(file); f.querySelector(".j-cover").firstElementChild.outerHTML = `<img src="${esc(cover)}" alt="">`; say("Cover uploaded."); }
+      catch (err) { say(`Upload failed: ${err.message}`, true); }
+    });
+    f.bodyfile.addEventListener("change", async () => {
+      const files = [...f.bodyfile.files].slice(0, 6);
+      for (let i = 0; i < files.length; i++) {
+        say(`Uploading photo ${i + 1} of ${files.length}…`);
+        try { const url = await uploadJournalImage(files[i]); insert(`\n![Caption](${url})\n`); } catch (err) { say(`Upload failed: ${err.message}`, true); return; }
+      }
+      say("Photos added: write their captions between the square brackets.");
+    });
+    const collect = () => {
+      const glance = {}; J_GLANCE.forEach(([k]) => { const x = f[`g_${k}`].value.trim(); if (x) glance[k] = x; });
+      const site = f.author_site.value.trim();
+      return { title: f.title.value.trim(), kind: f.kind.value, topic: f.topic.value, place: f.place.value.trim() || null, excerpt: f.excerpt.value.trim() || null,
+        body: f.body.value, cover_url: cover || null, glance, author_name: f.author_name.value.trim() || displayName(),
+        author_instagram: f.author_instagram.value.trim().replace(/^@/, "") || null, author_site: /^https?:\/\//i.test(site) ? site : null, author_bio: f.author_bio.value.trim() || null };
+    };
+    const save = async status => {
+      const row = collect();
+      if (row.title.length < 3) { say("Give the article a title.", true); f.title.focus(); return null; }
+      if (status === "submitted" || status === "published") {
+        if (!cover) { say("Add a cover photo before sending it for review.", true); return null; }
+        if (row.body.trim().split(/\s+/).length < 120) { say("The text is a bit short: at least 120 words, please.", true); return null; }
+        if (!f.rights.checked) { say("Please confirm that text and photos are yours.", true); return null; }
+      }
+      row.status = status;
+      if (status === "submitted") row.submitted_at = new Date().toISOString();
+      if (status === "published") { row.published_at = art?.published_at || new Date().toISOString(); row.review_note = null; }
+      try {
+        if (art) { await api(`/rest/v1/journal_submissions?id=eq.${art.id}`, { method: "PATCH", body: row, headers: { Prefer: "return=minimal" } }); Object.assign(art, row); }
+        else {
+          row.slug = `${jSlug(row.title) || "article"}-${Math.random().toString(36).slice(2, 6)}`;
+          const { data } = await api("/rest/v1/journal_submissions", { method: "POST", body: row, headers: { Prefer: "return=representation" } });
+          art = Array.isArray(data) ? data[0] : data;
+        }
+        return art;
+      } catch (err) { say(`Could not save: ${err.message}`, true); return null; }
+    };
+    f.querySelectorAll("[data-act]").forEach(b => b.addEventListener("click", async () => {
+      const act = b.dataset.act;
+      if (act === "preview") {
+        const pv = box.querySelector(".j-preview"), row = collect();
+        const fake = window.FCJournal?.fromSubmission({ ...row, slug: "preview", published_at: new Date().toISOString() });
+        if (!fake) return;
+        pv.hidden = false;
+        pv.innerHTML = `<p class="mag-section">Preview</p>${window.FCJournal.articleHtml(fake)}<p><button type="button" class="pop-btn" data-closepv>Close preview</button></p>`;
+        pv.querySelector("[data-closepv]").onclick = () => { pv.hidden = true; f.scrollIntoView({ behavior: "smooth" }); };
+        pv.scrollIntoView({ behavior: "smooth", block: "start" });
+        return;
+      }
+      if (act === "delete") {
+        if (b.dataset.confirm !== "1") { b.dataset.confirm = "1"; b.textContent = "Click again to delete"; return; }
+        try { await api(`/rest/v1/journal_submissions?id=eq.${art.id}`, { method: "DELETE" }); renderWrite(box); } catch (err) { say(`Could not delete: ${err.message}`, true); }
+        return;
+      }
+      b.disabled = true; say(act === "submit" ? "Sending…" : "Saving…");
+      const ok = await save(act === "submit" ? "submitted" : act === "publish" ? "published" : (admin && art?.status === "published" ? "published" : "draft"));
+      b.disabled = false;
+      if (!ok) return;
+      window.fcTrack?.(act === "submit" ? "Journal: article submitted" : "Journal: draft saved");
+      if (act === "publish") { toast("Pubblicato nel Journal."); await window.FCJournal?.reload(); location.hash = `art-c-${ok.slug || ok.id}`; return; }
+      if (act === "submit") { toast("Sent for review: thank you! I'll get back to you soon."); renderWrite(box); }
+      else say(`Draft saved · ${new Date().toLocaleTimeString(window.I18N?.locale || "en-GB", { hour: "2-digit", minute: "2-digit" })}`);
+    }));
   }
 
   /* ---------- codice della community: si accetta una volta prima di contribuire ---------- */
@@ -2828,7 +3028,7 @@ const Spots = (() => {
     });
   }
 
-  return { show, handleCallback, loadSession, parse: { fromCSV, fromKML, fromGeoJSON, coordsFromText } };
+  return { show, handleCallback, loadSession, renderWrite, parse: { fromCSV, fromKML, fromGeoJSON, coordsFromText } };
 })();
 
 const LOCK_SVG = '<svg viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/><circle cx="12" cy="15.5" r="1.3"/></svg>';
