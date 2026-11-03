@@ -37,18 +37,20 @@
       ]
     },
     {
-      "nome": "Torre Tarugi",
+      "nome": "Val d'Orcia",
       "id": "Val d'Orcia",
       "paese": "Italia",
       "collezione": "Val d'Orcia",
-      "lat": "42.992144214246565",
-      "lon": "11.76128261926689",
+      "lat": "43.066491564587984",
+      "lon": " 11.628660394255544",
       "categoria": "Paesaggi",
       "foto": [
         {
           "titolo": "Torre Tarugi",
           "immagine": "/img/foto/torre-tarugi-alta-risoluzione.jpg",
-          "categoria": "Paesaggi"
+          "categoria": "Paesaggi",
+          "lat": "42.99460822966816",
+          "lon": "11.760917824606388"
         }
       ]
     },
