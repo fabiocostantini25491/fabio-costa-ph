@@ -201,6 +201,24 @@
           ]
         }
       ]
+    },
+    {
+      "nome": "Crete senesi",
+      "id": "Crete senesi",
+      "paese": "Italia",
+      "lat": "43.28424464488069",
+      "lon": "11.520084172944319",
+      "categoria": "Paesaggi",
+      "sottosezioni": [
+        {
+          "nome": "Baccoleno",
+          "lat": "43.20049493142335",
+          "lon": " 11.59014495313673",
+          "immagini": [
+            "/img/foto/ftzh8029-2026-09-04t14-12-52-509.jpg"
+          ]
+        }
+      ]
     }
   ]
 }
