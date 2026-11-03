@@ -1,38 +1,21 @@
 {
   "viaggi": [
     {
-      "nome": "Passo Sella",
-      "id": "Dolomiti",
-      "collezione": "Dolomiti",
-      "lat": "46.50782896989592 ",
-      "lon": "11.767028746306538",
-      "categoria": "Paesaggi",
-      "foto": [
-        {
-          "titolo": "Passo Sella",
-          "immagine": "/img/foto/fb-untitled-2-2025-11-30t18-03-23-337.jpg",
-          "categoria": "Paesaggi"
-        },
-        {
-          "titolo": "Passo Sella",
-          "immagine": "/img/foto/fb-untitled-4-2026-11-01t00-40-45-405-2.jpg",
-          "categoria": "Paesaggi"
-        }
-      ]
-    },
-    {
-      "nome": "Saint Magdalene",
+      "nome": "Dolomiti",
       "id": "Dolomiti",
       "paese": "Italia",
-      "collezione": "Dolomiti",
       "lat": "46.64635034253251",
       "lon": "11.688709644085456",
       "categoria": "Paesaggi",
-      "foto": [
+      "sottosezioni": [
         {
-          "titolo": "Saint Magdalene",
-          "immagine": "/img/foto/fb-untitled-7-jpg-2-2026-10-30t09-12-09-547.jpg",
-          "categoria": "Paesaggi"
+          "nome": "Passo Sella",
+          "lat": "46.50815066109146",
+          "lon": "11.764696274034279",
+          "immagini": [
+            "/img/foto/fb-untitled-4-2026-11-01t00-40-45-405-1.jpg",
+            "/img/foto/fb-untitled-2-2025-11-30t18-03-23-337.jpg"
+          ]
         }
       ]
     },
