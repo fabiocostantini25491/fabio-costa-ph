@@ -44,14 +44,13 @@
       "lat": "43.066491564587984",
       "lon": " 11.628660394255544",
       "categoria": "Paesaggi",
-      "sottosezioni": [
+      "foto": [
         {
-          "nome": "Torre Tarugi",
-          "lat": "42.99468670224149 ",
-          "lon": "11.760767620905265",
-          "immagini": [
-            "/img/foto/torre-tarugi-alta-risoluzione.jpg"
-          ]
+          "titolo": "Torre Tarugi",
+          "immagine": "/img/foto/torre-tarugi-alta-risoluzione.jpg",
+          "categoria": "Paesaggi",
+          "lat": "42.99212851908244 ",
+          "lon": "11.761314805749832"
         }
       ]
     },
