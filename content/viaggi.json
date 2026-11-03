@@ -51,6 +51,20 @@
           "categoria": "Paesaggi",
           "lat": "42.99212851908244 ",
           "lon": "11.761314805749832"
+        },
+        {
+          "titolo": "Poggio Covili",
+          "immagine": "/img/foto/fb-untitled-7-jpg-2-2026-08-30t20-38-50-040.jpg",
+          "categoria": "Paesaggi",
+          "lat": "43.02151643600475",
+          "lon": "11.636340392436288"
+        },
+        {
+          "titolo": "Monte Amiata e Poggio Istiano",
+          "immagine": "/img/foto/fb-untitled-3-jpg-3-jpg-4-2026-09-02t15-47-14-633.jpg",
+          "categoria": "Paesaggi",
+          "lat": "43.02157918657643 ",
+          "lon": "11.636554969142214"
         }
       ]
     },
