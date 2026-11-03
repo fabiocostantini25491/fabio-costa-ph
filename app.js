@@ -1190,28 +1190,16 @@ function articleHtml(a, t, back = true) {
   const byline = `<p class="mag-byline">Text and photographs by <b>${authorLink(a)}</b> · ${esc(fmtDate(a.date))}${a.minutes ? ` · ${a.minutes} min read` : ""}</p>`;
   const caption = t ? `<figcaption>${esc(t.name || "")} · ${fmtCoord(t.lat, t.lon).replace("  |  ", ", ")}</figcaption>` : "";
   const backLink = back ? `<a class="text-link mag-back" href="#journal">${ICON.prev}All stories</a>` : "";
-  return (rep ? `
+  return `
     ${backLink}
-    <figure class="mag-opening"><img src="${esc(a.cover)}" alt="${esc(a.title)}" data-cat="Paesaggi">
-      <div class="mag-opening-text"><p class="mag-kicker">Reportage${a.place ? ` · ${esc(a.place)}` : ""}</p><h2>${esc(a.title)}</h2></div></figure>
-    <div class="mag-lede">
-      ${a.excerpt ? `<p class="mag-deck">${esc(a.excerpt)}</p>` : ""}
-      ${byline}
-    </div>
-    <div class="rich mag-body mag-prose">${magBody(md(a.text))}</div>
-    ${glanceHtml(a.glance) ? `<div class="mag-after">${glanceHtml(a.glance)}</div>` : ""}
-    <p class="mag-end" aria-hidden="true">■</p>` : `
-    ${backLink}
-    <p class="mag-kicker">Field guide · ${esc(catLabel(a.category))}${a.place ? ` · ${esc(a.place)}` : ""}</p>
+    <p class="mag-kicker">${rep ? "Travel" : `Field guide · ${esc(catLabel(a.category))}`}${a.place ? ` · ${esc(a.place)}` : ""}</p>
     <h2>${esc(a.title)}</h2>
     ${a.excerpt ? `<p class="mag-deck">${esc(a.excerpt)}</p>` : ""}
     ${byline}
     <figure class="mag-hero"><img src="${esc(a.cover)}" alt="${esc(a.title)}" data-cat="Paesaggi">${caption}</figure>
-    <div class="mag-guide${glanceHtml(a.glance) ? " has-glance" : ""}">
-      ${glanceHtml(a.glance)}
-      <div class="rich mag-body">${magBody(md(a.text))}</div>
-    </div>
-    <p class="mag-end" aria-hidden="true">■</p>`) + (a.author && !a.author.own ? authorBox(a.author) : "");
+    <div class="rich mag-body mag-prose">${magBody(md(a.text))}</div>
+    ${glanceHtml(a.glance) ? `<div class="mag-after">${glanceHtml(a.glance)}</div>` : ""}
+    <p class="mag-end" aria-hidden="true">■</p>` + (a.author && !a.author.own ? authorBox(a.author) : "");
 }
 
 /* ---------- articoli dei contributor approvati (Supabase) ---------- */
