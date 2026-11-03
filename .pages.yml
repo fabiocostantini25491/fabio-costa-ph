@@ -37,6 +37,10 @@ content:
           - name: paese
             label: Nazione
             type: string
+          - name: collezione
+            label: Collezione o serie (facoltativa)
+            type: string
+            description: "Raggruppa più viaggi sotto un unico nome, es. Dolomiti oppure Blue hour. Scrivi lo stesso nome identico in ogni viaggio della collezione: nella Gallery compare un filtro e su Explore i viaggi vengono elencati insieme."
           - name: lat
             label: Latitudine (dove mettere l'astronauta)
             type: string
@@ -63,8 +67,23 @@ content:
             label: Articolo collegato (facoltativo)
             type: string
             description: "L'indirizzo di un articolo del Journal, es. islanda. Lascia vuoto se non c'è."
+          - name: categoria
+            label: Categoria delle foto caricate insieme
+            type: select
+            default: Paesaggi
+            options:
+              values: [Paesaggi, Urban]
+            description: "Vale per le foto qui sotto in «Carica più foto insieme» (e per le sottosezioni, se non scegli altro)."
+          - name: immagini
+            label: Carica più foto insieme
+            type: image
+            description: "Il modo veloce: seleziona o carica tutte le foto del viaggio in una volta. Prendono il nome del viaggio come titolo. Se a una foto vuoi dare un titolo, una data o una descrizione, mettila invece in «Foto una per una»."
+            options:
+              multiple: { max: 200 }
+              extensions: [jpg, jpeg, png, webp]
+              rename: true
           - name: foto
-            label: Fotografie del viaggio
+            label: Foto una per una (con titolo, data e descrizione)
             type: object
             list:
               collapsible:
@@ -102,6 +121,84 @@ content:
               - name: descrizione
                 label: Descrizione
                 type: text
+
+          - name: sottosezioni
+            label: Sottosezioni (facoltative)
+            type: object
+            description: "I luoghi dentro il viaggio, es. Roma → Tempio di Esculapio. Ognuna ha le sue foto; sul sito diventano dei pulsanti nel riquadro del viaggio."
+            list:
+              collapsible:
+                collapsed: true
+                summary: "{nome}"
+            fields:
+              - name: nome
+                label: Nome della sottosezione
+                type: string
+                required: true
+                description: "Es. Tempio di Esculapio"
+              - name: lat
+                label: Latitudine (facoltativa)
+                type: string
+                description: "Lascia vuoto per usare quella del viaggio."
+              - name: lon
+                label: Longitudine (facoltativa)
+                type: string
+              - name: descrizione
+                label: Descrizione breve
+                type: text
+              - name: categoria
+                label: Categoria delle foto
+                type: select
+                options:
+                  values: [Paesaggi, Urban]
+                description: "Lascia vuoto per usare quella del viaggio."
+              - name: immagini
+                label: Carica più foto insieme
+                type: image
+                options:
+                  multiple: { max: 200 }
+                  extensions: [jpg, jpeg, png, webp]
+                  rename: true
+              - name: foto
+                label: Foto una per una (con titolo, data e descrizione)
+                type: object
+                list:
+                  collapsible:
+                    collapsed: true
+                    summary: "{titolo}"
+                fields:
+
+                    - name: titolo
+                      label: Titolo
+                      type: string
+                      required: true
+                    - name: immagine
+                      label: Fotografia
+                      type: image
+                      required: true
+                      options:
+                        extensions: [jpg, jpeg, png, webp]
+                        rename: true
+                    - name: data
+                      label: Data dello scatto (facoltativa)
+                      type: string
+                      description: "Formato anno-mese-giorno, es. 2026-10-31. Puoi lasciarla vuota."
+                    - name: categoria
+                      label: Categoria
+                      type: select
+                      default: Paesaggi
+                      options:
+                        values: [Paesaggi, Urban]
+                    - name: lat
+                      label: Latitudine dello scatto (facoltativa)
+                      type: string
+                      description: "Lascia vuoto per usare quella della sottosezione."
+                    - name: lon
+                      label: Longitudine dello scatto (facoltativa)
+                      type: string
+                    - name: descrizione
+                      label: Descrizione
+                      type: text
 
   # ---------------------------------------------------------------
   # ARTICOLI DEL JOURNAL

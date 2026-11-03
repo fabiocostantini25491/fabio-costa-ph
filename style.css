@@ -1841,3 +1841,17 @@ body[data-page="home"] .crew-band{margin-top:30px}
   }
 }
 
+
+/* Viaggi: sottosezioni nel pannello, collezioni nell'elenco e nella Gallery */
+.sub-chips{display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 12px}
+.sub-chips button{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border:1px solid var(--line-strong);border-radius:999px;background:rgba(3,9,18,.55);color:var(--soft);font:500 12.5px var(--sans);cursor:pointer}
+.sub-chips button small{color:var(--muted);font-size:11px}
+.sub-chips button:hover{color:#fff;border-color:var(--accent)}
+.sub-chips button.on{color:#fff;border-color:var(--accent);background:rgba(156,200,255,.14)}
+.trip-coll{margin:14px 0 6px;font:600 10.5px var(--sans);letter-spacing:.2em;text-transform:uppercase;color:#9cc8ff}
+.trip-coll:first-of-type{margin-top:4px}
+.gallery-collections{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:-6px 0 18px}
+.gallery-collections .coll-label{font:600 10.5px var(--sans);letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-right:4px}
+.gallery-collections button{padding:6px 14px;border:1px solid var(--line-strong);border-radius:999px;background:none;color:var(--soft);font:500 13px var(--sans);cursor:pointer}
+.gallery-collections button:hover{color:#fff;border-color:var(--accent)}
+.gallery-collections button.on{color:#fff;border-color:var(--accent);background:rgba(156,200,255,.14)}

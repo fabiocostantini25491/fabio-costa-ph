@@ -18,11 +18,13 @@ list(read("content/articoli.json", {}), "articoli").forEach(a => {
   const k = slug(a?.slug || a?.titolo);
   if (k && !seen.articoli[k]) { seen.articoli[k] = stamp; changed = true; }
 });
+// foto con i dettagli, foto caricate insieme («immagini») e foto delle sottosezioni
+const paths = v => (Array.isArray(v) ? v : v ? [v] : []).map(x => typeof x === "string" ? x : x?.immagine || "").filter(Boolean);
+const mark = k => { if (k && !seen.foto[k]) { seen.foto[k] = stamp; changed = true; } };
+const scan = o => { (Array.isArray(o?.foto) ? o.foto : []).forEach(f => mark(f?.immagine)); paths(o?.immagini).forEach(mark); };
 list(read("content/viaggi.json", {}), "viaggi").forEach(t => {
-  (Array.isArray(t?.foto) ? t.foto : []).forEach(f => {
-    const k = f?.immagine;
-    if (k && !seen.foto[k]) { seen.foto[k] = stamp; changed = true; }
-  });
+  scan(t);
+  (Array.isArray(t?.sottosezioni) ? t.sottosezioni : []).forEach(scan);
 });
 
 if (changed) {

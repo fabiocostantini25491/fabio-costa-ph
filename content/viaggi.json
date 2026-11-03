@@ -2,6 +2,7 @@
   "viaggi": [
     {
       "nome": "Passo Sella",
+      "collezione": "Dolomiti",
       "id": "Dolomiti",
       "lat": "46.50782896989592 ",
       "lon": "11.767028746306538",
@@ -22,6 +23,7 @@
       "nome": "Saint Magdalene",
       "id": "Dolomiti",
       "paese": "Italia",
+      "collezione": "Dolomiti",
       "lat": "46.64635034253251",
       "lon": "11.688709644085456",
       "foto": [

@@ -131,19 +131,43 @@ async function loadContent() {
   const listOf = (r, key) => r.status !== "fulfilled" || !r.value ? [] : Array.isArray(r.value) ? r.value : Array.isArray(r.value[key]) ? r.value[key] : [];
   const rawTrips = listOf(v, "viaggi");
   trips = []; photos = [];
+  // immagini caricate in blocco: Pages CMS salva un elenco di percorsi (o un solo percorso)
+  const pathsOf = v => (Array.isArray(v) ? v : v ? [v] : []).map(x => typeof x === "string" ? x : x?.immagine || x?.src || "").filter(Boolean);
+  const okCat = c => (c === "Urban" ? "Urban" : "Paesaggi");
   rawTrips.forEach((t, ti) => {
     if (!t || !t.nome) return;
     const id = slug(t.id || t.nome) + (trips.some(x => x.id === slug(t.id || t.nome)) ? "-" + ti : "");
     const trip = { id, name: t.nome, country: t.paese || "", lat: num(t.lat, 0), lon: num(t.lon, 0),
-      start: t.inizio || "", end: t.fine || t.inizio || "", description: t.descrizione || "", article: slug(t.articolo || "") };
+      start: t.inizio || "", end: t.fine || t.inizio || "", description: t.descrizione || "", article: slug(t.articolo || ""),
+      collection: String(t.collezione || "").trim(), subs: [] };
     trips.push(trip);
-    (Array.isArray(t.foto) ? t.foto : []).forEach((f, fi) => {
-      if (!f || !f.immagine) return;
-      photos.push({ id: `${id}-${fi}`, trip: id, raw: f.immagine, title: f.titolo || trip.name, src: mediaUrl(f.immagine),
-        date: f.data || trip.start, category: f.categoria || "Paesaggi",
-        lat: num(f.lat, trip.lat), lon: num(f.lon, trip.lon), description: f.descrizione || "",
-        ownCoords: Number.isFinite(parseFloat(f.lat)) && Number.isFinite(parseFloat(f.lon)) });
+    const cat0 = okCat(t.categoria);
+    // foto con i dettagli (una per una) e foto caricate insieme, per il viaggio o per una sua sottosezione
+    const addPhotos = (list, bulk, prefix, sub) => {
+      const base = sub || trip;
+      (Array.isArray(list) ? list : []).forEach((f, fi) => {
+        if (!f || !f.immagine) return;
+        const own = Number.isFinite(parseFloat(f.lat)) && Number.isFinite(parseFloat(f.lon));
+        photos.push({ id: `${prefix}-${fi}`, trip: id, sub: sub?.id || "", raw: f.immagine, title: f.titolo || base.name, src: mediaUrl(f.immagine),
+          date: f.data || trip.start, category: f.categoria ? okCat(f.categoria) : (sub?.category || cat0),
+          lat: own ? num(f.lat) : base.lat, lon: own ? num(f.lon) : base.lon, description: f.descrizione || "",
+          ownCoords: own || !!sub?.ownCoords });
+      });
+      pathsOf(bulk).forEach((src, k) => {
+        photos.push({ id: `${prefix}-i${k}`, trip: id, sub: sub?.id || "", raw: src, title: base.name, src: mediaUrl(src),
+          date: trip.start, category: sub?.category || cat0, lat: base.lat, lon: base.lon, description: "", ownCoords: !!sub?.ownCoords });
+      });
+    };
+    addPhotos(t.foto, t.immagini, id);
+    (Array.isArray(t.sottosezioni) ? t.sottosezioni : []).forEach((x, si) => {
+      if (!x || !x.nome) return;
+      const own = Number.isFinite(parseFloat(x.lat)) && Number.isFinite(parseFloat(x.lon));
+      const sub = { id: `${id}--${slug(x.nome) || si}`, name: x.nome, description: x.descrizione || "",
+        lat: own ? num(x.lat) : trip.lat, lon: own ? num(x.lon) : trip.lon, ownCoords: own, category: x.categoria ? okCat(x.categoria) : cat0 };
+      trip.subs.push(sub);
+      addPhotos(x.foto, x.immagini, `${id}-s${si}`, sub);
     });
+    trip.subs = trip.subs.filter(sb => photos.some(p => p.sub === sb.id));
     // se le date del viaggio mancano, le ricavo dalle foto
     const dates = photos.filter(p => p.trip === id && p.date).map(p => p.date).sort();
     if (!trip.start && dates.length) { trip.start = dates[0]; trip.end = dates[dates.length - 1]; }
@@ -190,6 +214,9 @@ function md(text) {
 }
 
 const tripById = id => trips.find(t => t.id === id);
+const subOf = p => p && p.sub ? tripById(p.trip)?.subs.find(x => x.id === p.sub) : null;
+/* «Roma · Tempio di Esculapio» */
+const placeOf = p => [tripById(p.trip)?.name, subOf(p)?.name].filter(Boolean).join(" · ");
 const photosOfTrip = id => photos.filter(p => p.trip === id).sort((a, b) => (a.date || "").localeCompare(b.date || ""));
 
 /* =========================================================
@@ -728,6 +755,15 @@ function drawPins(kind) {
    ========================================================= */
 let carouselIndex = 0;
 
+/* elenco dei viaggi, raggruppati per collezione quando ce n'è almeno una */
+function tripListHtml(list) {
+  const li = t => `<li><button type="button" data-trip="${esc(t.id)}"><strong>${esc(t.name)}</strong><small>${esc([fmtRange(t.start, t.end), t.subs.length ? `${t.subs.length} ${t.subs.length === 1 ? "place" : "places"}` : ""].filter(Boolean).join(" · "))}</small></button></li>`;
+  const cols = [...new Set(list.map(t => t.collection).filter(Boolean))];
+  if (!cols.length) return `<ul class="trip-list">${list.map(li).join("")}</ul>`;
+  const loose = list.filter(t => !t.collection);
+  return cols.map(c => `<p class="trip-coll">${esc(c)}</p><ul class="trip-list">${list.filter(t => t.collection === c).map(li).join("")}</ul>`).join("")
+    + (loose.length ? `<p class="trip-coll">More places</p><ul class="trip-list">${loose.map(li).join("")}</ul>` : "");
+}
 function renderPanelIntro() {
   activeTripId = null;
   const list = trips.filter(t => photosOfTrip(t.id).length)
@@ -736,17 +772,17 @@ function renderPanelIntro() {
     <span class="eyebrow">SELECT A LOCATION</span>
     <h2 class="intro-title">Where I've been</h2>
     <p class="trip-desc">${list.length ? "Tap an astronaut on the map, or pick a journey from the list." : "The first journeys are coming soon."}</p>
-    <ul class="trip-list">${list.map(t => `
-      <li><button type="button" data-trip="${esc(t.id)}"><strong>${esc(t.name)}</strong><small>${esc(fmtRange(t.start, t.end))}</small></button></li>`).join("")}
-    </ul>`;
+    ${tripListHtml(list)}`;
   $$("#locationPanel [data-trip]").forEach(b => b.addEventListener("click", () => openTrip(b.dataset.trip)));
   drawPins("explore");
 }
 
-function openTrip(id, photoId) {
+function openTrip(id, photoId, subId) {
   const t = tripById(id);
   if (!t) return;
-  const items = photosOfTrip(id);
+  if (photoId && subId === undefined) subId = "";
+  const sub = subId ? t.subs.find(x => x.id === subId) : null;
+  const all = photosOfTrip(id), items = sub ? all.filter(p => p.sub === sub.id) : all;
   activeTripId = id;
   carouselIndex = Math.max(0, items.findIndex(p => p.id === photoId));
   const article = t.article && articles.find(a => a.id === t.article);
@@ -754,10 +790,12 @@ function openTrip(id, photoId) {
 
   $("#locationPanel").innerHTML = `
     <div class="panel-head">
-      <div><span class="eyebrow">PHOTO LOCATION</span><h2>${esc(t.name)}</h2></div>
+      <div><span class="eyebrow">${t.collection ? esc(t.collection) : "PHOTO LOCATION"}</span><h2>${esc(t.name)}</h2></div>
       <button class="panel-close" type="button" id="closeLocation" aria-label="Close journey">${ICON.close}</button>
     </div>
-    <p class="coords">${ICON.pin}${fmtCoord(t.lat, t.lon)}</p>
+    ${t.subs.length ? `<nav class="sub-chips" aria-label="Places in ${esc(t.name)}"><button type="button" data-sub=""${sub ? "" : ' class="on"'}>All <small>${all.length}</small></button>${t.subs.map(x =>
+      `<button type="button" data-sub="${esc(x.id)}"${sub && sub.id === x.id ? ' class="on"' : ""}>${esc(x.name)} <small>${all.filter(p => p.sub === x.id).length}</small></button>`).join("")}</nav>` : ""}
+    <p class="coords">${ICON.pin}${fmtCoord((sub || t).lat, (sub || t).lon)}</p>
     <div class="carousel">
       <img id="carouselImg" alt="" data-cat="">
       ${items.length > 1 ? `<button class="nav-arrow prev" type="button" id="carPrev" aria-label="Previous photo">${ICON.prev}</button>
@@ -768,7 +806,7 @@ function openTrip(id, photoId) {
     </div>
     <p class="shot-row" id="shotRow"></p>
     <p class="trip-facts"><span>${ICON.cal}${esc(fmtRange(t.start, t.end))}</span><span>${ICON.img}${items.length} ${items.length === 1 ? "photo" : "photos"}</span></p>
-    <p class="trip-desc">${esc(t.description || "A place from my photographic archive.")}</p>
+    <p class="trip-desc">${esc((sub && sub.description) || t.description || "A place from my photographic archive.")}</p>
     <div class="panel-actions">
       <button class="outline-link" type="button" id="viewPlacePhotos">VIEW PHOTOS <span aria-hidden="true">→</span></button>
       <div class="panel-links">
@@ -786,7 +824,7 @@ function openTrip(id, photoId) {
     img.alt = p.title;
     img.src = p.src;
     $$("#locationPanel .thumbs button").forEach((b, k) => b.classList.toggle("is-current", k === carouselIndex));
-    $("#shotRow").innerHTML = `<span class="shot-label">This photo</span>` + photoCoordsHtml(p);
+    $("#shotRow").innerHTML = `<span class="shot-label">${p.sub && !sub ? esc(subOf(p)?.name || "This photo") : "This photo"}</span>` + photoCoordsHtml(p);
     showPhotoMarker(p);
   };
   show(carouselIndex);
@@ -795,15 +833,16 @@ function openTrip(id, photoId) {
   $$("#locationPanel .thumbs button").forEach(b => b.addEventListener("click", () => show(+b.dataset.i)));
   $("#carouselImg").addEventListener("click", () => items[carouselIndex] && openPhoto(items[carouselIndex].id, items));
   $("#closeLocation").addEventListener("click", () => { photoMarker?.remove(); photoMarker = null; renderPanelIntro(); });
+  $$("#locationPanel [data-sub]").forEach(b => b.addEventListener("click", () => openTrip(id, null, b.dataset.sub)));
   $("#viewPlacePhotos").addEventListener("click", () => {
-    gallery.trip = id; gallery.category = "Tutte";
+    gallery.trip = id; gallery.sub = sub ? sub.id : ""; gallery.collection = ""; gallery.category = "Tutte";
     location.hash = "gallery";
   });
 
   const map = maps.explore;
   if (map) {
     drawPins("explore");
-    const pts = [[t.lat, t.lon], ...items.filter(p => p.ownCoords).map(p => [p.lat, p.lon])];
+    const pts = sub && sub.ownCoords ? [[sub.lat, sub.lon]] : [[t.lat, t.lon], ...items.filter(p => p.ownCoords).map(p => [p.lat, p.lon])];
     const target = items[carouselIndex];
     if (photoId && target && target.ownCoords) pts.splice(0, pts.length, [t.lat, t.lon], [target.lat, target.lon]);
     map.flyToBounds(L.latLngBounds(pts).pad(0.05), { ...mapPadding(), maxZoom: 13, duration: 1.1 });
@@ -814,12 +853,14 @@ function openTrip(id, photoId) {
 /* =========================================================
    6. GALLERY + LIGHTBOX
    ========================================================= */
-const gallery = { category: "Tutte", trip: null };
+const gallery = { category: "Tutte", trip: null, sub: "", collection: "" };
 
 function galleryItems() {
   return photos
     .filter(p => gallery.category === "Tutte" || p.category === gallery.category)
     .filter(p => !gallery.trip || p.trip === gallery.trip)
+    .filter(p => !gallery.sub || p.sub === gallery.sub)
+    .filter(p => !gallery.collection || tripById(p.trip)?.collection === gallery.collection)
     .sort((a, b) => (b.date || "").localeCompare(a.date || ""));
 }
 
@@ -829,8 +870,19 @@ function renderGallery() {
   const chip = $("#tripChip"), t = gallery.trip && tripById(gallery.trip);
   chip.hidden = !t;
   if (t) {
-    chip.innerHTML = `${esc(t.name)} <button type="button" aria-label="Show all places">${ICON.close}</button>`;
-    chip.querySelector("button").addEventListener("click", () => { gallery.trip = null; renderGallery(); });
+    const sb = gallery.sub && t.subs.find(x => x.id === gallery.sub);
+    chip.innerHTML = `${esc(sb ? `${t.name} · ${sb.name}` : t.name)} <button type="button" aria-label="Show all places">${ICON.close}</button>`;
+    chip.querySelector("button").addEventListener("click", () => { gallery.trip = null; gallery.sub = ""; renderGallery(); });
+  }
+  // collezioni e serie: compaiono solo se almeno un viaggio ne ha una
+  const cols = [...new Set(trips.filter(x => photosOfTrip(x.id).length).map(x => x.collection).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+  const cbox = $("#galleryCollections");
+  if (cbox) {
+    if (gallery.collection && !cols.includes(gallery.collection)) gallery.collection = "";
+    cbox.hidden = !cols.length;
+    cbox.innerHTML = cols.length ? `<span class="coll-label">Collections</span><button type="button" data-coll=""${gallery.collection ? "" : ' class="on"'}>All</button>` +
+      cols.map(c => `<button type="button" data-coll="${esc(c)}"${c === gallery.collection ? ' class="on"' : ""}>${esc(c)}</button>`).join("") : "";
+    cbox.querySelectorAll("[data-coll]").forEach(b => b.addEventListener("click", () => { gallery.collection = b.dataset.coll; gallery.trip = null; gallery.sub = ""; renderGallery(); }));
   }
   const tr = s => window.I18N ? I18N.t(s) : s;
   $("#photoCount").textContent = items.length === 1 ? tr("1 photograph") : tr("{n} photographs").replace("{n}", items.length);
@@ -838,7 +890,7 @@ function renderGallery() {
     <div class="photo-cell">
       <button class="photo-card" type="button" data-id="${esc(p.id)}">
         <img src="${esc(p.src)}" alt="${esc(p.title)}" data-cat="${esc(p.category)}" loading="lazy">
-        <span class="photo-info"><h3>${esc(p.title)}</h3><small>${esc(tripById(p.trip)?.name || "")} · ${esc(catLabel(p.category))}</small></span>
+        <span class="photo-info"><h3>${esc(p.title)}</h3><small>${esc(placeOf(p))} · ${esc(catLabel(p.category))}</small></span>
       </button>
       <button class="photo-pick" type="button" data-pick="${esc(p.id)}" aria-pressed="${picks.has(p.id)}" aria-label="Add “${esc(p.title)}” to your selection" title="Add to your selection">${ICON_PICK}</button>
     </div>`).join("");
@@ -923,7 +975,7 @@ function showLightbox() {
   img.src = p.src;
   $("#dialogTitle").textContent = p.title;
   $("#dialogCategory").textContent = catLabel(p.category);
-  $("#dialogMeta").textContent = [tripById(p.trip)?.name, p.date ? fmtDate(p.date) : ""].filter(Boolean).join(" · ");
+  $("#dialogMeta").textContent = [placeOf(p), p.date ? fmtDate(p.date) : ""].filter(Boolean).join(" · ");
   $("#dialogCoords").innerHTML = photoCoordsHtml(p);
   $("#dialogCount").textContent = lightboxList.length > 1 ? `${lightboxIndex + 1} / ${lightboxList.length}` : "";
   $("#dialogDescription").textContent = p.description || "";
@@ -1290,8 +1342,8 @@ function localMatches(q) {
   const n = norm(q);
   if (!n) return { trips: trips.filter(t => photosOfTrip(t.id).length).slice(0, 6), photos: [], articles: [] };
   return {
-    trips: trips.filter(t => photosOfTrip(t.id).length && (norm(t.name).includes(n) || norm(t.country).includes(n))),
-    photos: photos.filter(p => norm(p.title).includes(n) || norm(p.description).includes(n)).slice(0, 6),
+    trips: trips.filter(t => photosOfTrip(t.id).length && [t.name, t.country, t.collection, ...t.subs.map(x => x.name)].some(v => norm(v).includes(n))),
+    photos: photos.filter(p => norm(p.title).includes(n) || norm(p.description).includes(n) || norm(subOf(p)?.name).includes(n)).slice(0, 6),
     articles: articles.filter(a => norm(a.title).includes(n) || norm(a.excerpt).includes(n)).slice(0, 4)
   };
 }

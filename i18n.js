@@ -564,6 +564,8 @@ const I18N = (() => {
     "Topics": ["Argomenti", "Temas", "Thèmes", "Themen"],
     "Thanks for stopping by. Now, let's go explore.": ["Grazie di essere passato. Ora, andiamo a esplorare.", "Gracias por pasar. Ahora, vamos a explorar.", "Merci d'être passé. Maintenant, allons explorer.", "Danke fürs Vorbeischauen. Jetzt lass uns losziehen."],
     "Field Notes / Fabio Costa Ph": ["Field Notes / Fabio Costa Ph", "Field Notes / Fabio Costa Ph", "Field Notes / Fabio Costa Ph", "Field Notes / Fabio Costa Ph"],
+    "Collections": ["Collezioni", "Colecciones", "Collections", "Sammlungen"],
+    "More places": ["Altri luoghi", "Más lugares", "Autres lieux", "Weitere Orte"],
     "Install the app": ["Installa l'app", "Instala la app", "Installer l'app", "App installieren"],
     "Install": ["Installa", "Instalar", "Installer", "Installieren"],
     "Fabio Costa Ph on your home screen: full screen, quicker, and Tools work offline.": ["Fabio Costa Ph sulla schermata Home: a tutto schermo, più veloce, e i Tools funzionano anche offline.", "Fabio Costa Ph en tu pantalla de inicio: a pantalla completa, más rápido, y los Tools funcionan sin conexión.", "Fabio Costa Ph sur votre écran d'accueil : plein écran, plus rapide, et les Tools fonctionnent hors ligne.", "Fabio Costa Ph auf deinem Home-Bildschirm: Vollbild, schneller, und die Tools funktionieren offline."],
