@@ -1068,44 +1068,33 @@ function renderJournal() {
   layout.hidden = false;
   const issue = $("#magIssue");
   const list = [...articles].sort((a, b) => (b.date || "").localeCompare(a.date || ""));
-  if (issue) issue.textContent = `No. ${String(Math.max(1, list.length)).padStart(2, "0")} · ${new Intl.DateTimeFormat(window.I18N?.locale || "en-GB", { month: "long", year: "numeric" }).format(list[0]?.date ? new Date(list[0].date + "T12:00:00") : new Date())}`;
+  if (issue) issue.textContent = "";
   if (!list.length) {
     layout.innerHTML = `<div class="mag-empty"><p class="mag-kicker">Coming soon</p><h2>The first issue is being written.</h2>
-      <p>Reportage, places, current affairs, photography and technique — and practical guides: when to go, where to park, how long the walk is and the mistakes to avoid.</p></div>`;
+      <p>Reportage, places, photography and field guides.</p></div>`;
     return;
   }
-  const kind = a => (a.type === "reportage" ? "Reportage" : "Field guide");
-  const topics = [...new Set(list.map(a => a.category))];
+  const topics = [...new Set(list.map(a => a.category).filter(Boolean))];
   const cur = renderJournal.topic && topics.includes(renderJournal.topic) ? renderJournal.topic : "";
   const shown = cur ? list.filter(a => a.category === cur) : list;
-  const by = a => `<p class="mag-byline">By <b>${authorLink(a)}</b> · ${esc(fmtDate(a.date))}${a.minutes ? ` · ${a.minutes} min read` : ""}</p>`;
-  const [lead, ...rest] = shown;
-  const second = rest.slice(0, 2), more = rest.slice(2);
+  const kind = a => a.type === "reportage" ? "Travel" : catLabel(a.category || "Field guide");
   layout.innerHTML = `
-    ${topics.length > 1 ? `<nav class="mag-topics" aria-label="Topics"><button type="button" data-topic=""${cur ? "" : ' class="on"'}>All</button>${topics.map(t =>
-      `<button type="button" data-topic="${esc(t)}"${t === cur ? ' class="on"' : ""}>${esc(catLabel(t))}</button>`).join("")}</nav>` : ""}
-    <a class="mag-cover" href="#art-${esc(lead.id)}">
-      <figure><img src="${esc(lead.cover)}" alt="" data-cat="Paesaggi" loading="lazy"></figure>
-      <div class="mag-cover-text">
-        <p class="mag-kicker">${kind(lead)} · Cover story</p>
-        <h2>${esc(lead.title)}</h2>
-        ${lead.excerpt ? `<p class="mag-deck">${esc(lead.excerpt)}</p>` : ""}
-        ${by(lead)}
-      </div>
-    </a>
-    ${second.length ? `<div class="mag-row">${second.map(a => `
-      <a class="mag-story" href="#art-${esc(a.id)}">
-        <figure><img src="${esc(a.cover)}" alt="" data-cat="Paesaggi" loading="lazy"></figure>
-        <p class="mag-kicker">${kind(a)} · ${esc(catLabel(a.category))}</p>
-        <h3>${esc(a.title)}</h3>
-        ${a.excerpt ? `<p class="mag-deck">${esc(a.excerpt)}</p>` : ""}
-        ${by(a)}
-      </a>`).join("")}</div>` : ""}
-    ${more.length ? `<p class="mag-section">Also in this issue</p><div class="mag-index">${more.map(a => `
-      <a class="mag-brief" href="#art-${esc(a.id)}">
-        <img src="${esc(a.cover)}" alt="" data-cat="Paesaggi" loading="lazy">
-        <div><p class="mag-kicker">${kind(a)}</p><h4>${esc(a.title)}</h4>${by(a)}</div>
-      </a>`).join("")}</div>` : ""}`;
+    <div class="journal-index-heading">
+      <div><h2>Field Notes</h2><span class="journal-index-slash"></span></div>
+      <p>Travel, Photography and Field Notes</p>
+    </div>
+    ${topics.length > 1 ? `<nav class="journal-index-filters" aria-label="Filter stories"><button type="button" data-topic=""${cur ? "" : ' class="on"'}>All stories</button>${topics.map(t => `<button type="button" data-topic="${esc(t)}"${t === cur ? ' class="on"' : ""}>${esc(catLabel(t))}</button>`).join("")}</nav>` : ""}
+    <div class="journal-index-list">${shown.map((a,i) => `
+      <a class="journal-index-entry" href="#art-${esc(a.id)}">
+        <span class="journal-index-number">${String(i+1).padStart(2,"0")}</span>
+        <span class="journal-index-copy">
+          <span class="journal-index-category">${esc(kind(a))}</span>
+          <strong>${esc(a.title)}</strong>
+          ${a.excerpt ? `<span class="journal-index-description">${esc(a.excerpt)}</span>` : ""}
+          <span class="journal-index-meta">${esc(fmtDate(a.date))}${a.minutes ? ` · ${a.minutes} min read` : ""}</span>
+        </span>
+        <img src="${esc(a.cover)}" alt="" loading="lazy">
+      </a>`).join("")}</div>`;
   layout.querySelectorAll("[data-topic]").forEach(b => b.addEventListener("click", () => { renderJournal.topic = b.dataset.topic; renderJournal(); }));
 }
 const GLANCE = [["periodo", "Best time"], ["arrivare", "Getting there"], ["parcheggio", "Parking"], ["camminata", "The walk"],
