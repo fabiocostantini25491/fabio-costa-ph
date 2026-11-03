@@ -2,10 +2,11 @@
   "viaggi": [
     {
       "nome": "Passo Sella",
-      "collezione": "Dolomiti",
       "id": "Dolomiti",
+      "collezione": "Dolomiti",
       "lat": "46.50782896989592 ",
       "lon": "11.767028746306538",
+      "categoria": "Paesaggi",
       "foto": [
         {
           "titolo": "Passo Sella",
@@ -26,6 +27,7 @@
       "collezione": "Dolomiti",
       "lat": "46.64635034253251",
       "lon": "11.688709644085456",
+      "categoria": "Paesaggi",
       "foto": [
         {
           "titolo": "Saint Magdalene",
@@ -38,8 +40,10 @@
       "nome": "Torre Tarugi",
       "id": "Val d'Orcia",
       "paese": "Italia",
+      "collezione": "Val d'Orcia",
       "lat": "42.992144214246565",
       "lon": "11.76128261926689",
+      "categoria": "Paesaggi",
       "foto": [
         {
           "titolo": "Torre Tarugi",
@@ -52,8 +56,10 @@
       "nome": "Lerici",
       "id": "Lerici",
       "paese": "Italia",
+      "collezione": "Lerici",
       "lat": "44.073849174457656",
       "lon": "9.90963477602486",
+      "categoria": "Paesaggi",
       "foto": [
         {
           "titolo": "Lerici",
@@ -72,8 +78,10 @@
     {
       "nome": "Roma",
       "id": "Roma",
+      "collezione": "Roma",
       "lat": "41.89078521973111",
       "lon": "12.490868334333522",
+      "categoria": "Paesaggi",
       "foto": [
         {
           "titolo": "Tempio di Esculapio",
@@ -123,8 +131,10 @@
       "nome": "Circeo",
       "id": "Circeo",
       "paese": "Italia",
+      "collezione": "Circeo e dintorni",
       "lat": "41.23954266491015",
       "lon": "13.096020787882697",
+      "categoria": "Paesaggi",
       "foto": [
         {
           "titolo": "Circeo",
@@ -137,8 +147,10 @@
       "nome": "Firenze",
       "id": "Firenze",
       "paese": "Italia",
+      "collezione": "Firenze",
       "lat": "43.77893702238663 ",
       "lon": "11.247830983178837",
+      "categoria": "Paesaggi",
       "foto": [
         {
           "titolo": "Terrazza Michelangelo",
