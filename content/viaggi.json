@@ -61,7 +61,6 @@
       "nome": "Lerici",
       "id": "Lerici",
       "paese": "Italia",
-      "collezione": "Lerici",
       "lat": "44.073849174457656",
       "lon": "9.90963477602486",
       "categoria": "Paesaggi",
@@ -83,7 +82,6 @@
     {
       "nome": "Roma",
       "id": "Roma",
-      "collezione": "Roma",
       "lat": "41.89078521973111",
       "lon": "12.490868334333522",
       "categoria": "Paesaggi",
