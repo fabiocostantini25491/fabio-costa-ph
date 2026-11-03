@@ -191,8 +191,15 @@
       "lat": "32.79286912275502",
       "lon": " -16.84900668005293",
       "categoria": "Paesaggi",
-      "immagini": [
-        "/img/foto/fb-untitled-7-jpg-2.jpg"
+      "sottosezioni": [
+        {
+          "nome": "Fajal",
+          "lat": "32.78203751556815",
+          "lon": " -16.859906739199907",
+          "immagini": [
+            "/img/foto/fb-untitled-7-jpg-2.jpg"
+          ]
+        }
       ]
     }
   ]
