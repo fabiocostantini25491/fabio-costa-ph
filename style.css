@@ -1790,3 +1790,72 @@ body[data-page="home"] .crew-band{margin-top:30px}
   #journalMag:has(#articleReader:not([hidden])) .mag-byline{margin-bottom:22px}
   #journalMag:has(#articleReader:not([hidden])) .mag-body{column-count:1;column-gap:0;margin-top:28px}
 }
+
+
+/* JOURNAL — indice editoriale e articolo secondo i riferimenti approvati */
+#journalMag{
+ --paper:#f7f3ec;--ink:#111;--ink-soft:#4b4843;--rule:#aaa49b;--rule-red:#b20d0d;
+ color:var(--ink);background:var(--paper);padding:clamp(22px,4.4vw,54px);
+ border:0;border-radius:0;box-shadow:none;background-image:none;
+}
+#journalMag .mag-head{border-bottom:1px solid #6e6a64;padding-bottom:20px}
+#journalMag .mag-top{color:#4b4843}
+#journalMag .mag-title{color:#111;font:700 clamp(48px,5.3vw,68px)/1 Georgia,"Times New Roman",serif;letter-spacing:-.045em;text-transform:none}
+#journalMag .mag-strip{color:#4b4843;border-color:#aaa49b}
+#journalMag .mag-write{color:#b20d0d}
+#journalMag .journal-index-heading{display:flex;align-items:center;gap:24px;padding:34px 0 24px;border-bottom:1px solid #6e6a64}
+#journalMag .journal-index-heading>div{display:flex;align-items:center;gap:24px}
+#journalMag .journal-index-heading h2{margin:0;color:#111;font:700 clamp(48px,5.3vw,68px)/1 Georgia,"Times New Roman",serif;letter-spacing:-.045em}
+#journalMag .journal-index-slash{height:58px;width:2px;background:#b20d0d;transform:skew(-25deg)}
+#journalMag .journal-index-heading p{margin:0;color:#222;font:italic 700 clamp(16px,1.5vw,21px)/1.3 Georgia,serif}
+#journalMag .journal-index-filters{display:flex;flex-wrap:wrap;gap:8px;padding:18px 0 4px}
+#journalMag .journal-index-filters button{padding:6px 11px;border:1px solid #aaa49b;background:transparent;color:#4b4843;font:700 10px Arial,sans-serif;letter-spacing:.1em;text-transform:uppercase;cursor:pointer}
+#journalMag .journal-index-filters button.on,#journalMag .journal-index-filters button:hover{color:#b20d0d;border-color:#b20d0d}
+#journalMag .journal-index-list{padding-top:12px}
+#journalMag .journal-index-entry{display:grid;grid-template-columns:62px minmax(0,1fr) minmax(210px,34%);gap:clamp(18px,2.2vw,32px);align-items:center;padding:22px 0;border-bottom:1px solid #aaa49b;color:#111;text-decoration:none}
+#journalMag .journal-index-number{height:100%;min-height:120px;display:flex;align-items:center;padding-left:10px;border-right:1px solid #77716b;font:400 27px Georgia,serif}
+#journalMag .journal-index-number:after{content:"";width:35px;height:2px;background:#b20d0d;margin:14px 0 0 8px;align-self:center}
+#journalMag .journal-index-copy{display:grid;gap:8px;min-width:0}
+#journalMag .journal-index-category{color:#b20d0d;font:700 12px Arial,sans-serif;letter-spacing:.12em;text-transform:uppercase}
+#journalMag .journal-index-copy strong{font:700 clamp(25px,2.3vw,35px)/1.08 Georgia,serif;letter-spacing:-.035em}
+#journalMag .journal-index-description{font:400 16px/1.38 Georgia,serif;color:#222;max-width:590px}
+#journalMag .journal-index-meta{font:700 10px/1.5 Arial,sans-serif;letter-spacing:.13em;text-transform:uppercase;color:#4b4843}
+#journalMag .journal-index-entry>img{display:block;width:100%;height:clamp(145px,15vw,205px);object-fit:cover;filter:grayscale(1);background:#ddd}
+#journalMag .journal-index-entry:hover strong{color:#b20d0d}
+/* Article: layout of the supplied editorial photograph */
+#journalMag:has(#articleReader:not([hidden])){padding:0;background:#f7f3ec;color:#111}
+#journalMag:has(#articleReader:not([hidden])) .mag-head{display:none}
+#journalMag:has(#articleReader:not([hidden])) #articleReader{max-width:none;margin:0;padding:28px 0 0;color:#111}
+#journalMag:has(#articleReader:not([hidden])) .mag-back{display:inline-block;margin:0 0 20px;color:#b20d0d}
+#journalMag:has(#articleReader:not([hidden])) .mag-kicker{margin:8px 0 10px;color:#b20d0d;font:700 12px Arial,sans-serif;letter-spacing:.16em;text-transform:uppercase}
+#journalMag:has(#articleReader:not([hidden])) .mag-article>h2{max-width:900px;margin:0 0 8px;color:#111;font:700 clamp(42px,5.2vw,70px)/1.02 Georgia,"Times New Roman",serif;letter-spacing:-.045em;text-transform:none}
+#journalMag:has(#articleReader:not([hidden])) .mag-deck{max-width:780px;margin:0 0 18px;color:#25211d;font:italic 400 clamp(18px,1.8vw,23px)/1.4 Georgia,serif}
+#journalMag:has(#articleReader:not([hidden])) .mag-byline{margin:20px 0 34px;color:#4b4843;font:10px Arial,sans-serif;letter-spacing:.12em;text-transform:uppercase}
+#journalMag:has(#articleReader:not([hidden])) .mag-hero{margin:0 0 32px !important;height:clamp(260px,40vw,520px);aspect-ratio:auto;background:#e5e0d7}
+#journalMag:has(#articleReader:not([hidden])) .mag-hero img{width:100%;height:100%;object-fit:cover;filter:grayscale(1)}
+#journalMag:has(#articleReader:not([hidden])) .mag-hero figcaption{margin:8px 0 0;color:#4b4843;text-align:center;font:italic 13px Georgia,serif}
+#journalMag:has(#articleReader:not([hidden])) .mag-body{margin:0;color:#111;font:400 15px/1.62 Georgia,serif;column-count:2;column-gap:42px;column-rule:1px solid #d3cec5}
+#journalMag:has(#articleReader:not([hidden])) .mag-body p{margin:0 0 11px;text-align:justify;hyphens:auto}
+#journalMag:has(#articleReader:not([hidden])) .mag-body h2,#journalMag:has(#articleReader:not([hidden])) .mag-body h3{margin:0 0 10px;color:#111;font:700 23px/1.12 Georgia,serif;letter-spacing:-.025em;text-transform:none;break-after:avoid}
+#journalMag:has(#articleReader:not([hidden])) .mag-body .mag-fig{width:100%;max-width:100%;margin:18px 0 !important;break-inside:avoid}
+#journalMag:has(#articleReader:not([hidden])) .mag-body .mag-fig img{width:100%;height:auto;max-height:360px;object-fit:cover;filter:grayscale(1)}
+#journalMag:has(#articleReader:not([hidden])) .mag-body .mag-fig figcaption{color:#4b4843;font:italic 12px Georgia,serif}
+#journalMag:has(#articleReader:not([hidden])) .mag-end{margin-top:28px;color:#b20d0d}
+@media(max-width:760px){
+ #journalMag{padding:20px 16px}
+ #journalMag .journal-index-heading{align-items:flex-start;flex-direction:column;gap:10px;padding:24px 0 20px}
+ #journalMag .journal-index-heading h2{font-size:48px}
+ #journalMag .journal-index-slash{height:43px}
+ #journalMag .journal-index-entry{grid-template-columns:38px minmax(0,1fr);gap:12px;padding:18px 0;align-items:start}
+ #journalMag .journal-index-number{grid-column:1;grid-row:1/3;min-height:100%;padding:4px 0 0;font-size:21px}
+ #journalMag .journal-index-copy{grid-column:2;grid-row:1}
+ #journalMag .journal-index-copy strong{font-size:clamp(25px,7vw,34px)}
+ #journalMag .journal-index-description{font-size:15px}
+ #journalMag .journal-index-entry>img{grid-column:2;grid-row:2;height:clamp(130px,48vw,220px);margin-top:13px}
+ #journalMag:has(#articleReader:not([hidden])){padding:0 18px}
+ #journalMag:has(#articleReader:not([hidden])) #articleReader{padding-top:22px}
+ #journalMag:has(#articleReader:not([hidden])) .mag-article>h2{font-size:42px}
+ #journalMag:has(#articleReader:not([hidden])) .mag-byline{margin-bottom:22px}
+ #journalMag:has(#articleReader:not([hidden])) .mag-hero{height:250px;margin-bottom:22px !important}
+ #journalMag:has(#articleReader:not([hidden])) .mag-body{column-count:1;column-rule:0}
+}
