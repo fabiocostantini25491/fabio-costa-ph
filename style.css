@@ -1688,7 +1688,7 @@ body[data-page="home"] .crew-band{margin-top:30px}
   text-shadow:0 0 8px rgba(74,255,132,.8),0 0 24px rgba(35,255,112,.42);
   border-right:2px solid #78ff9b;
   clip-path:inset(0 100% 0 0);
-  animation:fc-title-type 1.55s steps(14,end) .35s forwards,fc-terminal-caret .8s step-end .35s infinite;
+  animation:fc-title-type 1.55s steps(50,end) .35s forwards,fc-terminal-caret .8s step-end .35s infinite;
 }
 .hero-copy .hero-tagline{
   display:block;width:fit-content;max-width:100%;margin:0 auto 28px;
@@ -1698,7 +1698,7 @@ body[data-page="home"] .crew-band{margin-top:30px}
   text-shadow:0 0 8px rgba(42,255,158,.65),0 0 20px rgba(42,255,158,.28);
   border-right:2px solid #42f5a1;
   clip-path:inset(0 100% 0 0);
-  animation:fc-subtitle-type 2.1s steps(30,end) 2.05s forwards,fc-terminal-caret .8s step-end 2.05s infinite;
+  animation:fc-subtitle-type 2.1s steps(100,end) 2.05s forwards,fc-terminal-caret .8s step-end 2.05s infinite;
 }
 @keyframes fc-title-type{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}
 @keyframes fc-subtitle-type{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}
