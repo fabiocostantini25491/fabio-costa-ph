@@ -1,3 +1,20 @@
 {
-  "articoli": []
+  "articoli": [
+    {
+      "slug": "building-fabio-costaph",
+      "titolo": "Building FabioCostaPh: From an Idea to a Website",
+      "categoria": "Fotografia",
+      "data": "2026-11-02",
+      "minuti": 7,
+      "copertina": "https://hfidpbssartkmjlqcqvz.supabase.co/storage/v1/object/public/journal/cadcb454-be0f-4a4f-965d-f723ab734b55/1793634861603-f80b367a.jpg",
+      "viaggio": "",
+      "estratto": "A behind-the-scenes look at how I designed and built my own photography platform, from the first sketches to the final launch.",
+      "tipo": "reportage",
+      "luogo": "",
+      "autore": {
+        "nome": "Fabio Costantini"
+      },
+      "testo": "## 01. It all started with an idea\n\nI wanted a place where photography, travel and exploration could live together. Not simply a gallery, but a platform where images could become part of a wider story.\n\n## 02. Planning before coding\n\nBefore building the pages, I had to define the experience: how visitors would discover places, explore photographs and read the stories behind each journey.\n\n## 03. The tools behind the website\n\nThe project brings together a visual portfolio, an interactive map, practical tools and an editorial Journal. Each part has its own role, while contributing to one coherent experience.\n\n## 04. Building the website, one section at a time\n\nThe work moved forward section by section, shaping the structure and visual language while keeping the experience consistent across desktop and mobile.\n\n## 05. Connecting everything\n\nThe different areas needed to work together: journeys, photographs, articles and tools had to feel like parts of the same platform.\n\n## 06. Testing, fixing and improving\n\nReviewing the site on different screens helped identify details to refine. The process was iterative: build, test, adjust and repeat.\n\n## 07. Going live\n\nLaunching the website was an important milestone, but not the end of the project. It marked the beginning of a platform that can continue to grow.\n\n## 08. What's next?\n\nMore journeys, photographs, stories and useful tools will find their place here. The idea is to keep exploring and to keep improving the way those experiences are shared.\n\nThanks for stopping by. Now, let's go explore."
+    }
+  ]
 }
