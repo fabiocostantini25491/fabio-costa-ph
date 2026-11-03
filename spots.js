@@ -2118,7 +2118,7 @@ const Spots = (() => {
           const li = b.closest("[data-jid]"), x = list.find(y => String(y.id) === li.dataset.jid), act = b.dataset.ja;
           if (act === "preview") {
             const pv = body.querySelector(".adm-preview"); pv.hidden = false;
-            pv.innerHTML = `<div class="mag adm-mag"><article class="full-article mag-article">${window.FCJournal.articleHtml(window.FCJournal.fromSubmission(x))}</article></div>`;
+            pv.innerHTML = `<div class="mag fn adm-mag"><article class="full-article mag-article">${window.FCJournal.articleHtml(window.FCJournal.fromSubmission(x))}</article></div>`;
             pv.scrollIntoView({ behavior: "smooth", block: "start" }); return;
           }
           let patch;

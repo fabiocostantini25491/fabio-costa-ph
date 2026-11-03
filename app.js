@@ -1066,47 +1066,42 @@ function articleMeta(a, withIcons = true) {
 function renderJournal() {
   const layout = $("#journalLayout");
   layout.hidden = false;
-  const issue = $("#magIssue");
   const list = [...articles].sort((a, b) => (b.date || "").localeCompare(a.date || ""));
-  if (issue) issue.textContent = `No. ${String(Math.max(1, list.length)).padStart(2, "0")} · ${new Intl.DateTimeFormat(window.I18N?.locale || "en-GB", { month: "long", year: "numeric" }).format(list[0]?.date ? new Date(list[0].date + "T12:00:00") : new Date())}`;
+  const topics = [...new Set(list.map(a => a.category))];
+  const cur = renderJournal.topic && topics.includes(renderJournal.topic) ? renderJournal.topic : "";
+  renderTopics(topics, cur);
   if (!list.length) {
-    layout.innerHTML = `<div class="mag-empty"><p class="mag-kicker">Coming soon</p><h2>The first issue is being written.</h2>
+    layout.innerHTML = `<div class="fn-empty"><p class="fn-cat">Coming soon</p><h2>The first issue is being written.</h2>
       <p>Reportage, places, current affairs, photography and technique — and practical guides: when to go, where to park, how long the walk is and the mistakes to avoid.</p></div>`;
     return;
   }
-  const kind = a => (a.type === "reportage" ? "Reportage" : "Field guide");
-  const topics = [...new Set(list.map(a => a.category))];
-  const cur = renderJournal.topic && topics.includes(renderJournal.topic) ? renderJournal.topic : "";
   const shown = cur ? list.filter(a => a.category === cur) : list;
-  const by = a => `<p class="mag-byline">By <b>${authorLink(a)}</b> · ${esc(fmtDate(a.date))}${a.minutes ? ` · ${a.minutes} min read` : ""}</p>`;
-  const [lead, ...rest] = shown;
-  const second = rest.slice(0, 2), more = rest.slice(2);
-  layout.innerHTML = `
-    ${topics.length > 1 ? `<nav class="mag-topics" aria-label="Topics"><button type="button" data-topic=""${cur ? "" : ' class="on"'}>All</button>${topics.map(t =>
-      `<button type="button" data-topic="${esc(t)}"${t === cur ? ' class="on"' : ""}>${esc(catLabel(t))}</button>`).join("")}</nav>` : ""}
-    <a class="mag-cover" href="#art-${esc(lead.id)}">
-      <figure><img src="${esc(lead.cover)}" alt="" data-cat="Paesaggi" loading="lazy"></figure>
-      <div class="mag-cover-text">
-        <p class="mag-kicker">${kind(lead)} · Cover story</p>
-        <h2>${esc(lead.title)}</h2>
-        ${lead.excerpt ? `<p class="mag-deck">${esc(lead.excerpt)}</p>` : ""}
-        ${by(lead)}
+  layout.innerHTML = `<div class="fn-list">${shown.map((a, i) => `
+    <a class="fn-entry" href="#art-${esc(a.id)}">
+      <div class="fn-num">${String(i + 1).padStart(2, "0")}</div>
+      <div class="fn-copy">
+        <p class="fn-cat">${a.type === "reportage" ? "Reportage" : esc(catLabel(a.category))}</p>
+        <h2>${esc(a.title)}</h2>
+        ${a.excerpt ? `<p class="fn-desc">${esc(a.excerpt)}</p>` : ""}
+        <p class="fn-meta">${a.author && !a.author.own ? `By ${esc(a.author.name)} · ` : ""}${esc(fmtDate(a.date))}${a.minutes ? ` · ${a.minutes} min read` : ""}</p>
       </div>
-    </a>
-    ${second.length ? `<div class="mag-row">${second.map(a => `
-      <a class="mag-story" href="#art-${esc(a.id)}">
-        <figure><img src="${esc(a.cover)}" alt="" data-cat="Paesaggi" loading="lazy"></figure>
-        <p class="mag-kicker">${kind(a)} · ${esc(catLabel(a.category))}</p>
-        <h3>${esc(a.title)}</h3>
-        ${a.excerpt ? `<p class="mag-deck">${esc(a.excerpt)}</p>` : ""}
-        ${by(a)}
-      </a>`).join("")}</div>` : ""}
-    ${more.length ? `<p class="mag-section">Also in this issue</p><div class="mag-index">${more.map(a => `
-      <a class="mag-brief" href="#art-${esc(a.id)}">
-        <img src="${esc(a.cover)}" alt="" data-cat="Paesaggi" loading="lazy">
-        <div><p class="mag-kicker">${kind(a)}</p><h4>${esc(a.title)}</h4>${by(a)}</div>
-      </a>`).join("")}</div>` : ""}`;
-  layout.querySelectorAll("[data-topic]").forEach(b => b.addEventListener("click", () => { renderJournal.topic = b.dataset.topic; renderJournal(); }));
+      ${a.cover ? `<img src="${esc(a.cover)}" alt="" data-cat="Paesaggi" loading="lazy">` : `<span class="fn-noimg" aria-hidden="true">Field Notes</span>`}
+    </a>`).join("")}</div>`;
+}
+/* argomenti nella colonna laterale: portano sempre all'indice filtrato */
+function renderTopics(topics, cur) {
+  const nav = $("#fnTopics");
+  if (!nav) return;
+  const side = nav.previousElementSibling;
+  nav.hidden = side.hidden = topics.length < 2;
+  nav.innerHTML = `<a href="#journal" data-topic=""${cur ? "" : ' class="active"'}>All stories</a>` +
+    topics.map(t => `<a href="#journal" data-topic="${esc(t)}"${t === cur ? ' class="active"' : ""}>${esc(catLabel(t))}</a>`).join("");
+  nav.querySelectorAll("[data-topic]").forEach(el => el.addEventListener("click", e => {
+    e.preventDefault();
+    renderJournal.topic = el.dataset.topic;
+    if (location.hash === "#journal") { $("#articleReader").hidden = true; renderJournal(); } else location.hash = "journal";
+    $("#journalMag").scrollIntoView({ behavior: "smooth", block: "start" });
+  }));
 }
 const GLANCE = [["periodo", "Best time"], ["arrivare", "Getting there"], ["parcheggio", "Parking"], ["camminata", "The walk"],
   ["difficolta", "Difficulty"], ["permessi", "Permits & rules"], ["attrezzatura", "Gear"], ["impostazioni", "Settings"]];
@@ -1160,12 +1155,13 @@ function renderAuthor(authorSlug) {
   const au = list[0].author;
   $("#journalLayout").hidden = true;
   reader.className = "full-article mag-article is-author";
-  reader.innerHTML = `<a class="text-link mag-back" href="#journal">${ICON.prev}All stories</a>
-    <p class="mag-kicker">${au.own ? "Editor" : "Contributor"}</p><h2>${esc(au.name)}</h2>
+  reader.innerHTML = `<a class="fn-back" href="#journal">← Back to Field Notes</a>
+    <p class="fn-kicker">${au.own ? "Editor" : "Contributor"}</p><h1 class="fn-title">${esc(au.name)}</h1>
     ${au.own ? "" : authorBox(au)}
-    <p class="mag-section">${list.length} ${list.length === 1 ? "story" : "stories"}</p>
-    <div class="mag-index">${list.map(a => `<a class="mag-brief" href="#art-${esc(a.id)}"><img src="${esc(a.cover)}" alt="" data-cat="Paesaggi" loading="lazy">
-      <div><p class="mag-kicker">${a.type === "reportage" ? "Reportage" : "Field guide"}</p><h4>${esc(a.title)}</h4><p class="mag-byline">${esc(fmtDate(a.date))}</p></div></a>`).join("")}</div>`;
+    <p class="fn-section">${list.length} ${list.length === 1 ? "story" : "stories"}</p>
+    <div class="fn-list">${list.map((a, i) => `<a class="fn-entry" href="#art-${esc(a.id)}"><div class="fn-num">${String(i + 1).padStart(2, "0")}</div>
+      <div class="fn-copy"><p class="fn-cat">${a.type === "reportage" ? "Reportage" : esc(catLabel(a.category))}</p><h2>${esc(a.title)}</h2>${a.excerpt ? `<p class="fn-desc">${esc(a.excerpt)}</p>` : ""}<p class="fn-meta">${esc(fmtDate(a.date))}${a.minutes ? ` · ${a.minutes} min read` : ""}</p></div>
+      ${a.cover ? `<img src="${esc(a.cover)}" alt="" data-cat="Paesaggi" loading="lazy">` : `<span class="fn-noimg" aria-hidden="true">Field Notes</span>`}</a>`).join("")}</div>`;
   reader.hidden = false;
   requestAnimationFrame(() => $("#journalMag").scrollIntoView({ behavior: "smooth", block: "start" }));
 }
@@ -1178,40 +1174,40 @@ function renderArticle(id) {
   reader.innerHTML = articleHtml(a, t);
   reader.insertAdjacentHTML("beforeend", `<div class="article-actions">
       ${t ? `<button class="outline-link" type="button" id="articleTrip">VIEW THE JOURNEY ON THE MAP <span aria-hidden="true">→</span></button>` : ""}
-      <a class="text-link" href="#journal">${ICON.prev}Back to the Journal</a>
-    </div>`);
+      <a class="fn-back" href="#journal">← Back to Field Notes</a>
+    </div><p class="fn-foot">Field Notes / Fabio Costa Ph</p>`);
   reader.hidden = false;
   $("#articleTrip")?.addEventListener("click", () => { location.hash = "explore"; setTimeout(() => openTrip(t.id), 60); });
   requestAnimationFrame(() => $("#journalMag").scrollIntoView({ behavior: "smooth", block: "start" }));
 }
 /* l'articolo impaginato (usato anche per l'anteprima di «Write for the Journal») */
+/* capolettera vero (un elemento, non ::first-letter: nelle due colonne il pseudo-elemento si spezza) */
+function dropCap(html) {
+  const tpl = document.createElement("template");
+  tpl.innerHTML = html;
+  const p = [...tpl.content.children].find(el => el.tagName === "P" && el.textContent.trim());
+  const walker = p && document.createTreeWalker(p, NodeFilter.SHOW_TEXT);
+  let n = walker?.nextNode();
+  while (n && !n.nodeValue.trim()) n = walker.nextNode();
+  if (n) {
+    const txt = n.nodeValue.replace(/^\s+/, ""), m = txt.match(/^["“‘'(]?\p{L}/u);
+    if (m) { const sp = document.createElement("span"); sp.className = "fn-drop"; sp.textContent = m[0]; n.nodeValue = txt.slice(m[0].length); n.before(sp); p.classList.add("fn-first"); }
+  }
+  return tpl.innerHTML;
+}
 function articleHtml(a, t, back = true) {
   const rep = a.type === "reportage";
-  const byline = `<p class="mag-byline">Text and photographs by <b>${authorLink(a)}</b> · ${esc(fmtDate(a.date))}${a.minutes ? ` · ${a.minutes} min read` : ""}</p>`;
   const caption = t ? `<figcaption>${esc(t.name || "")} · ${fmtCoord(t.lat, t.lon).replace("  |  ", ", ")}</figcaption>` : "";
-  const backLink = back ? `<a class="text-link mag-back" href="#journal">${ICON.prev}All stories</a>` : "";
-  return (rep ? `
-    ${backLink}
-    <figure class="mag-opening"><img src="${esc(a.cover)}" alt="${esc(a.title)}" data-cat="Paesaggi">
-      <div class="mag-opening-text"><p class="mag-kicker">Reportage${a.place ? ` · ${esc(a.place)}` : ""}</p><h2>${esc(a.title)}</h2></div></figure>
-    <div class="mag-lede">
-      ${a.excerpt ? `<p class="mag-deck">${esc(a.excerpt)}</p>` : ""}
-      ${byline}
-    </div>
-    <div class="rich mag-body mag-prose">${magBody(md(a.text))}</div>
-    ${glanceHtml(a.glance) ? `<div class="mag-after">${glanceHtml(a.glance)}</div>` : ""}
-    <p class="mag-end" aria-hidden="true">■</p>` : `
-    ${backLink}
-    <p class="mag-kicker">Field guide · ${esc(catLabel(a.category))}${a.place ? ` · ${esc(a.place)}` : ""}</p>
-    <h2>${esc(a.title)}</h2>
-    ${a.excerpt ? `<p class="mag-deck">${esc(a.excerpt)}</p>` : ""}
-    ${byline}
-    <figure class="mag-hero"><img src="${esc(a.cover)}" alt="${esc(a.title)}" data-cat="Paesaggi">${caption}</figure>
-    <div class="mag-guide${glanceHtml(a.glance) ? " has-glance" : ""}">
-      ${glanceHtml(a.glance)}
-      <div class="rich mag-body">${magBody(md(a.text))}</div>
-    </div>
-    <p class="mag-end" aria-hidden="true">■</p>`) + (a.author && !a.author.own ? authorBox(a.author) : "");
+  const glance = glanceHtml(a.glance);
+  return `${back ? `<a class="fn-back" href="#journal">← Back to Field Notes</a>` : ""}
+    <p class="fn-kicker">${rep ? "Reportage" : "Field guide"} · ${esc(catLabel(a.category))}${a.place ? ` · ${esc(a.place)}` : ""}</p>
+    <h1 class="fn-title">${esc(a.title)}</h1>
+    ${a.excerpt ? `<p class="fn-deck">${esc(a.excerpt)}</p>` : ""}
+    <p class="fn-byline">Text and photographs by ${authorLink(a)} · ${esc(fmtDate(a.date))}${a.minutes ? ` · ${a.minutes} min read` : ""}</p>
+    ${a.cover ? `<figure class="fn-hero"><img src="${esc(a.cover)}" alt="${esc(a.title)}" data-cat="Paesaggi">${caption}</figure>` : ""}
+    ${glance}
+    <div class="rich mag-body fn-body">${dropCap(magBody(md(a.text)))}</div>
+    <p class="fn-end">Thanks for stopping by. Now, let's go explore.</p>` + (a.author && !a.author.own ? authorBox(a.author) : "");
 }
 
 /* ---------- articoli dei contributor approvati (Supabase) ---------- */
