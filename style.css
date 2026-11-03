@@ -1358,7 +1358,12 @@ main > .page{scroll-margin-top:80px}
 .mag-hero figcaption{position:absolute;margin-top:-34px;padding:0 clamp(18px,4vw,48px);font:500 11px var(--mag-head);letter-spacing:.16em;text-transform:uppercase;color:#fff;text-shadow:0 1px 6px rgba(0,0,0,.8)}
 .mag-hero{position:relative}
 .mag-body{margin-top:clamp(22px,3vw,36px);column-count:2;column-gap:42px;column-rule:1px solid var(--hair);font:400 16.5px/1.75 var(--mag-serif);color:var(--ink)}
-.mag-body p{margin:0 0 1em;max-width:none;text-align:justify;hyphens:auto}
+.mag-body p {
+    margin: 0 0 1em;
+    max-width: none;
+    text-align: justify;
+    hyphens: auto;
+}
 .mag-body > p:first-of-type::first-letter{float:left;font:700 4.6em/.8 var(--mag-head);margin:.06em .1em 0 0;color:var(--rule)}
 .mag-body h2,.mag-body h3{column-span:all;margin:1.2em 0 .5em;font:700 clamp(22px,2.4vw,30px)/1 var(--mag-head);text-transform:uppercase;letter-spacing:.01em;color:var(--ink);max-width:none}
 .mag-body img{column-span:all;display:block;width:100%;height:auto;margin:1.2em 0;border:0;border-radius:0;aspect-ratio:auto}
