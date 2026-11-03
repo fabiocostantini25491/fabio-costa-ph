@@ -1714,3 +1714,79 @@ body[data-page="home"] .crew-band{margin-top:30px}
   }
 }
 
+
+
+/* JOURNAL ARTICLE — editorial paper layout based on approved reference */
+#journalMag:has(#articleReader:not([hidden])){
+  --paper:#f5f1e9;--ink:#111;--ink-soft:#514c45;--rule:#b3231c;--hair:rgba(17,17,17,.18);
+  background:#f5f1e9;color:#111;padding:clamp(22px,4.4vw,54px);
+  border:0;border-radius:0;box-shadow:none;background-image:none;
+}
+#journalMag:has(#articleReader:not([hidden])) .mag-head{display:none}
+#journalMag:has(#articleReader:not([hidden])) #articleReader{max-width:none;margin:0;color:#111}
+#journalMag:has(#articleReader:not([hidden])) .mag-back{display:none}
+#journalMag:has(#articleReader:not([hidden])) .mag-kicker{
+  margin:0 0 10px;color:#b3231c;font:700 14px/1.3 var(--mag-head);
+  letter-spacing:.16em;text-transform:uppercase
+}
+#journalMag:has(#articleReader:not([hidden])) .mag-article h2{
+  max-width:18ch;margin:0 0 8px;color:#111;
+  font:700 clamp(38px,6vw,76px)/.98 var(--mag-serif);
+  letter-spacing:-.035em;text-transform:none
+}
+#journalMag:has(#articleReader:not([hidden])) .mag-deck{
+  max-width:36em;margin:0 0 20px;color:#191919;
+  font:italic 400 clamp(18px,2.2vw,25px)/1.3 var(--mag-serif)
+}
+#journalMag:has(#articleReader:not([hidden])) .mag-byline{
+  margin:20px 0 34px;color:#222;font:500 11px/1.5 var(--mag-head);
+  letter-spacing:.13em;text-transform:uppercase
+}
+#journalMag:has(#articleReader:not([hidden])) .mag-byline b{color:#111}
+#journalMag:has(#articleReader:not([hidden])) .mag-hero{
+  margin:0 0 8px !important;aspect-ratio:16/9;max-height:none;background:transparent
+}
+#journalMag:has(#articleReader:not([hidden])) .mag-hero img{
+  width:100%;height:100%;object-fit:cover;filter:grayscale(1) contrast(1.02)
+}
+#journalMag:has(#articleReader:not([hidden])) .mag-hero figcaption{
+  position:static;margin:7px 0 0;padding:0;color:#29251f;text-shadow:none;
+  text-align:center;font:italic 13px/1.4 var(--mag-serif);letter-spacing:0;text-transform:none
+}
+#journalMag:has(#articleReader:not([hidden])) .mag-body{
+  max-width:none;margin:42px 0 0;color:#111;
+  font:400 clamp(15px,1.35vw,18px)/1.5 var(--mag-serif);
+  column-count:2;column-gap:38px;column-rule:0
+}
+#journalMag:has(#articleReader:not([hidden])) .mag-body p{
+  margin:0 0 1em;text-align:justify;hyphens:auto;break-inside:avoid
+}
+#journalMag:has(#articleReader:not([hidden])) .mag-body h2,
+#journalMag:has(#articleReader:not([hidden])) .mag-body h3{
+  color:#111;font:700 clamp(22px,2.2vw,30px)/1.08 var(--mag-serif);
+  text-transform:none;letter-spacing:-.02em;break-after:avoid
+}
+#journalMag:has(#articleReader:not([hidden])) .mag-body .mag-fig{
+  width:100%;max-width:100%;margin:1.3em 0 !important;transform:none;
+  break-inside:avoid
+}
+#journalMag:has(#articleReader:not([hidden])) .mag-body .mag-fig img{
+  width:100%;height:auto;max-height:62vh;object-fit:cover;filter:grayscale(1)
+}
+#journalMag:has(#articleReader:not([hidden])) .mag-body .mag-fig figcaption{
+  margin-top:6px;color:#514c45;font:italic 12px/1.4 var(--mag-serif)
+}
+#journalMag:has(#articleReader:not([hidden])) .mag-body blockquote{
+  color:#111;border-color:#b3231c
+}
+#journalMag:has(#articleReader:not([hidden])) .mag-end{color:#b3231c}
+#journalMag:has(#articleReader:not([hidden])) .article-actions{
+  margin-top:38px;padding-top:18px;border-top:1px solid rgba(17,17,17,.45)
+}
+#journalMag:has(#articleReader:not([hidden])) .article-actions a{color:#111}
+@media(max-width:760px){
+  #journalMag:has(#articleReader:not([hidden])){padding:22px 16px}
+  #journalMag:has(#articleReader:not([hidden])) .mag-article h2{font-size:clamp(36px,10vw,54px)}
+  #journalMag:has(#articleReader:not([hidden])) .mag-byline{margin-bottom:22px}
+  #journalMag:has(#articleReader:not([hidden])) .mag-body{column-count:1;column-gap:0;margin-top:28px}
+}
