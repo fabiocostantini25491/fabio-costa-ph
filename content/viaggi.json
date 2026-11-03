@@ -163,6 +163,18 @@
           "lon": "11.26428772722712"
         }
       ]
+    },
+    {
+      "nome": "Fajal",
+      "id": "Madeira",
+      "paese": "Portugal",
+      "collezione": "Madeira",
+      "lat": "32.79286912275502",
+      "lon": " -16.84900668005293",
+      "categoria": "Paesaggi",
+      "immagini": [
+        "/img/foto/fb-untitled-7-jpg-2-1.jpg"
+      ]
     }
   ]
 }
