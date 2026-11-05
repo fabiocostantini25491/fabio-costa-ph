@@ -921,11 +921,20 @@ function setupLightbox() {
   tools.appendChild(close);   // tutti i pulsanti in alto a destra, in fila
   if (!(d.requestFullscreen || d.webkitRequestFullscreen)) $("#dialogFull").hidden = true;
 }
+let interestTimer = null, interestGone = false;
+function syncInterest() {
+  const d = $("#photoDialog"), box = $("#photoInterest");
+  if (!box) return;
+  const gone = interestGone && d.classList.contains("info-hidden") && !box.classList.contains("open");
+  box.classList.toggle("pi-gone", gone);
+  box.inert = gone;
+}
 function toggleInfo(force) {
   const d = $("#photoDialog");
   const hide = force ?? !d.classList.contains("info-hidden");
   d.classList.toggle("info-hidden", hide);
   $("#dialogInfo").setAttribute("aria-label", hide ? "Show details" : "Hide details");
+  syncInterest();
 }
 function isFullscreen() { return !!(document.fullscreenElement || document.webkitFullscreenElement); }
 /* Ruotare la foto: sul telefono, se il sistema lo consente, si gira davvero lo schermo (Android a schermo intero);
@@ -958,10 +967,18 @@ function openPhoto(id, list = photos) {
   showLightbox();
   const d = $("#photoDialog");
   d.classList.remove("rot-90");
-  // sul telefono in orizzontale: solo la foto, a tutto schermo
-  toggleInfo(isTouch() && matchMedia("(orientation: landscape)").matches);
+  // solo la foto, a tutto schermo (anche senza la barra del browser); i dettagli si aprono con «i» o toccando la foto
+  interestGone = false;
+  toggleInfo(true);
   if (!d.open) d.showModal();
-  if (isTouch() && !isFullscreen()) { try { (d.requestFullscreen || d.webkitRequestFullscreen)?.call(d)?.catch?.(() => {}); } catch {} }
+  if (!isFullscreen()) { try { (d.requestFullscreen || d.webkitRequestFullscreen)?.call(d)?.catch?.(() => {}); } catch {} }
+  // «Interested in this photo?»: un banner di 10 secondi, poi sparisce (torna mostrando i dettagli)
+  clearTimeout(interestTimer);
+  interestTimer = setTimeout(() => {
+    const box = $("#photoInterest");
+    if (box && (box.classList.contains("open") || box.matches(":hover"))) return;
+    interestGone = true; syncInterest();
+  }, 10000);
   document.documentElement.classList.add("no-scroll");
   renderPickBar();
 }
@@ -1007,11 +1024,14 @@ function renderInterest(p) {
         ${ig ? `<a class="outline-link" href="https://ig.me/m/${encodeURIComponent(ig)}" target="_blank" rel="noopener">${ICON_IG}<span>Message on Instagram</span></a>` : ""}
       </div>
     </div>`;
+  syncInterest();
+  box.onmouseleave = () => { if (interestGone) syncInterest(); };
   const t = box.querySelector(".pi-toggle");
   t.addEventListener("click", e => {
     e.stopPropagation();
     const open = !box.classList.contains("open");
     box.classList.toggle("open", open); t.setAttribute("aria-expanded", String(open));
+    if (!open) { interestGone = true; syncInterest(); }
     if (open) trackEvent("Gallery: interested in photo");
   });
   box.querySelectorAll(".pi-actions a").forEach(a => a.addEventListener("click", e => {
@@ -1613,6 +1633,7 @@ function bindEvents() {
   $("#dialogInfo").addEventListener("click", () => toggleInfo());
   $("#dialogImage").addEventListener("click", () => toggleInfo());          // clic sulla foto: solo immagine
   dlg.addEventListener("close", () => {
+    clearTimeout(interestTimer);
     document.documentElement.classList.remove("no-scroll");
     renderPickBar();
     try { screen.orientation?.unlock?.(); } catch {}

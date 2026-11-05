@@ -1860,3 +1860,9 @@ body[data-page="home"] .crew-band{margin-top:30px}
 .gallery-collections button{padding:6px 14px;border:1px solid var(--line-strong);border-radius:999px;background:none;color:var(--soft);font:500 13px var(--sans);cursor:pointer}
 .gallery-collections button:hover{color:#fff;border-color:var(--accent)}
 .gallery-collections button.on{color:#fff;border-color:var(--accent);background:rgba(156,200,255,.14)}
+
+/* lightbox: il banner «Interested in this photo?» sparisce dopo 10 secondi */
+.photo-interest{transition:opacity .7s ease,transform .7s ease}
+.photo-interest.pi-gone{opacity:0;transform:translateY(12px);pointer-events:none}
+.lightbox-full.info-hidden .lightbox-tools{opacity:.45;transition:opacity .3s}
+.lightbox-full.info-hidden .lightbox-tools:hover,.lightbox-full.info-hidden .lightbox-tools:focus-within{opacity:1}
