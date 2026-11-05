@@ -620,6 +620,26 @@ async function loadHomeWorkshops() {
   } catch {}
   return homeWorkshops;
 }
+/* nuovi punti di interesse e ritrovi di Spots: per i visitatori solo la zona, senza nomi (vista public_news) */
+let homeSpotNews = null;
+async function loadHomeSpotNews() {
+  if (homeSpotNews) return homeSpotNews;
+  homeSpotNews = [];
+  try {
+    if (typeof SPOTS_CONFIG === "undefined" || !SPOTS_CONFIG.url) return homeSpotNews;
+    const res = await fetch(`${SPOTS_CONFIG.url.replace(/\/$/, "")}/rest/v1/public_news?select=kind,category,lat,lon,n,created_at,on_date`, { headers: { apikey: SPOTS_CONFIG.anonKey } });
+    if (res.ok) homeSpotNews = await res.json();
+  } catch {}
+  return homeSpotNews;
+}
+const NEWS_KIND = {
+  photos:   { icon: "📷", color: "#9cc8ff", name: "New photos" },
+  article:  { icon: "✍", color: "#ffc46e", name: "New article" },
+  workshop: { icon: "🎓", color: "#9fe3c8", name: "New workshop" },
+  meetup:   { icon: "🤝", color: "#ffd166", name: "New meetup" },
+  spot:     { icon: "📍", color: "#ff8fb1", name: "New place in Spots" }
+};
+const SPOT_WORD = { spot: "photo spot", restaurant: "place to eat", hotel: "place to stay", trekking: "trek" };
 function newsItems() {
   const items = [];
   articles.forEach(a => {
@@ -643,24 +663,56 @@ function newsItems() {
       title: `${w.name}${date ? ` · ${date}` : ""}${w.places_left != null ? ` · ${w.places_left} places left` : ""}`,
       go: () => { if (w.ws_link && /^https?:\/\//.test(w.ws_link)) window.open(w.ws_link, "_blank", "noopener"); else location.hash = "spots"; } });
   });
+  (homeSpotNews || []).forEach(x => {
+    if (!isFresh(x.created_at)) return;
+    if (x.kind === "meetup") items.push({ kind: "meetup", when: x.created_at, lat: +x.lat, lon: +x.lon, label: "New meetup",
+      title: `Members meet${x.on_date ? ` on ${fmtDate(x.on_date)}` : ""} · open Spots to join`, go: () => { location.hash = "spots"; } });
+    else {
+      const w = SPOT_WORD[x.category] || "place", n = +x.n || 1;
+      items.push({ kind: "spot", when: x.created_at, lat: +x.lat, lon: +x.lon, label: n === 1 ? "New place in Spots" : `${n} new places in Spots`,
+        title: `${n === 1 ? `A new ${w}` : `New ${w}s`} in this area · members only`, go: () => { location.hash = "spots"; } });
+    }
+  });
   return items.filter(i => Number.isFinite(i.lat) && Number.isFinite(i.lon)).sort((a, b) => String(b.when).localeCompare(String(a.when)));
 }
 async function drawHomeNews() {
   const map = homeMap;
   if (!map) return;
-  if (!homeWorkshops) { await loadHomeWorkshops(); }
+  if (!homeWorkshops || !homeSpotNews) await Promise.all([loadHomeWorkshops(), loadHomeSpotNews()]);
   if (!map._news) map._news = L.layerGroup().addTo(map);
   map._news.clearLayers();
   const items = newsItems();
+  // novità vicine (a questo zoom) si dispongono a ventaglio, così ognuna resta facile da toccare
+  const pts = items.map(it => map.latLngToLayerPoint([it.lat, it.lon])), shift = items.map(() => [0, 0]), used = new Set();
+  items.forEach((_, i) => {
+    if (used.has(i)) return;
+    const group = items.map((_, j) => j).filter(j => !used.has(j) && pts[i].distanceTo(pts[j]) < 46);
+    group.forEach(j => used.add(j));
+    if (group.length > 1) group.forEach((j, k) => {
+      const a = (k / group.length) * Math.PI * 2 - Math.PI / 2, rad = 30 + group.length * 4;
+      shift[j] = [Math.round(Math.cos(a) * rad), Math.round(Math.sin(a) * rad)];
+    });
+  });
+  if (!map._newsZoom) { map._newsZoom = true; map.on("zoomend", () => drawHomeNews()); }
   items.forEach((it, i) => {
     const m = L.marker([it.lat, it.lon], { zIndexOffset: 2000, keyboard: true, title: `${it.label}: ${it.title}`,
-      icon: L.divIcon({ className: "", iconSize: [64, 64], iconAnchor: [32, 32], tooltipAnchor: [0, -26],
-        html: `<div class="ship ship-${it.kind}" style="--d:${-i * 2.3}s;--r:${22 + (i % 3) * 5}px"><div class="ship-orbit"><span class="ship-craft"><span class="ship-trail"></span>${SHIP_SVG}</span></div><span class="ship-dot"></span></div>` })
+      icon: L.divIcon({ className: "", iconSize: [64, 64], iconAnchor: [32 - shift[i][0], 32 - shift[i][1]], tooltipAnchor: [shift[i][0], shift[i][1] - 26],
+        html: `<div class="ship ship-${it.kind}" style="--d:${-i * 2.3}s;--r:${24 + (i % 3) * 4}px;--c:${NEWS_KIND[it.kind]?.color || "#9cc8ff"}"><div class="ship-orbit"><span class="ship-craft"><span class="ship-trail"></span>${SHIP_SVG}</span></div><span class="ship-ico" aria-hidden="true">${NEWS_KIND[it.kind]?.icon || "★"}</span></div>` })
     }).addTo(map._news);
     m.bindTooltip(`<b class="news-kind">${esc(it.label)}</b><br>${esc(it.title)}`, { direction: "top", className: "news-tip" });
     m.on("click", () => { window.fcTrack?.(`Home news: ${it.kind}`); it.go(); });
   });
   renderNewsTicker(items);
+  renderNewsLegend(items);
+  window.FCSystem?.render();
+}
+/* legenda delle astronavi (solo i tipi presenti) */
+function renderNewsLegend(items) {
+  const box = $("#newsLegend");
+  if (!box) return;
+  const kinds = [...new Set(items.map(i => i.kind))];
+  box.hidden = !kinds.length;
+  box.innerHTML = kinds.map(k => `<span style="--c:${NEWS_KIND[k].color}"><i aria-hidden="true">${NEWS_KIND[k].icon}</i>${NEWS_KIND[k].name}</span>`).join("");
 }
 let newsTimer = 0;
 function renderNewsTicker(items) {

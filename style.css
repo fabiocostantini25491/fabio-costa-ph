@@ -1866,3 +1866,133 @@ body[data-page="home"] .crew-band{margin-top:30px}
 .photo-interest.pi-gone{opacity:0;transform:translateY(12px);pointer-events:none}
 .lightbox-full.info-hidden .lightbox-tools{opacity:.45;transition:opacity .3s}
 .lightbox-full.info-hidden .lightbox-tools:hover,.lightbox-full.info-hidden .lightbox-tools:focus-within{opacity:1}
+
+/* ---------- Home: astronavi delle novità (icona per tipo, area di clic ampia) e legenda ---------- */
+.ship{width:64px;height:64px}
+.ship::before{content:"";position:absolute;inset:6px;border-radius:50%}
+.ship-ico{position:absolute;left:50%;top:50%;width:30px;height:30px;margin:-15px 0 0 -15px;display:grid;place-items:center;border-radius:50%;
+  background:rgba(4,12,24,.92);border:2px solid var(--c);box-shadow:0 0 14px var(--c),0 0 0 4px rgba(4,12,24,.35);font-size:14px;line-height:1;animation:shipPing 2.4s ease-out infinite;transition:transform .2s}
+.ship:hover .ship-ico,.leaflet-marker-icon:focus .ship-ico{transform:scale(1.18)}
+.news-legend{position:absolute;z-index:3;top:calc(var(--header-h,72px) + 14px);right:var(--gutter-r,24px);display:flex;flex-wrap:wrap;justify-content:flex-end;gap:6px;max-width:min(560px,70vw);pointer-events:none}
+.news-legend span{display:inline-flex;align-items:center;gap:6px;padding:4px 10px 4px 5px;border:1px solid color-mix(in srgb,var(--c) 55%,transparent);border-radius:999px;background:rgba(4,12,24,.72);font:500 11px var(--sans);letter-spacing:.06em;color:#e7eef6;backdrop-filter:blur(4px)}
+.news-legend i{font-style:normal;width:20px;height:20px;display:grid;place-items:center;border-radius:50%;border:1.5px solid var(--c);font-size:10px}
+@media (max-width:700px){.news-legend{left:12px;right:12px;justify-content:center;max-width:none;top:calc(var(--header-h,64px) + 8px)}.news-legend span{font-size:10px;padding:3px 8px 3px 4px}}
+
+/* pulsante in fondo al centro: «Scroll to explore fabiocostaph.com» */
+.hero-scroll-label{width:auto;height:auto;display:inline-flex;flex-direction:column;align-items:center;gap:6px;border:0;background:none;cursor:pointer;font:500 10.5px var(--sans);letter-spacing:.22em;text-transform:uppercase;color:#dfe6ec}
+.hero-scroll-label span{white-space:nowrap}
+.hero-scroll-label svg{animation:scrollHint 2.2s ease-in-out infinite}
+@keyframes scrollHint{0%,100%{transform:translateY(0)}50%{transform:translateY(5px)}}
+@media (max-width:700px){.hero-scroll-label{font-size:9px;letter-spacing:.14em}.hero-scroll-label span{white-space:normal;max-width:160px;text-align:center}}
+@media (prefers-reduced-motion:reduce){.hero-scroll-label svg{animation:none}}
+
+/* ---------- Home: il sistema solare ---------- */
+.sys{position:relative;padding:clamp(40px,6vw,72px) 0 clamp(36px,5vw,60px);background:#02050a;overflow:hidden;scroll-margin-top:var(--header-h,64px)}
+.sys-head{text-align:center;max-width:760px;margin:0 auto clamp(14px,2.4vw,26px);padding:0 20px}
+.sys-head h2{margin:8px 0 10px;font:500 clamp(28px,3.6vw,44px)/1.1 var(--display);color:#fff}
+.sys-hint{margin:0;color:var(--soft);font-size:15px;line-height:1.6}
+.sys-hint b{color:#fff;font-weight:500}
+.sys-viewport{position:relative;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.sys-viewport::-webkit-scrollbar{display:none}
+.sys-stage{position:relative;width:100%;aspect-ratio:3/1;background:#02050a var(--img) center/100% 100% no-repeat;overflow:hidden;user-select:none;-webkit-user-select:none}
+.sys-stage::after{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(circle at 50% 50%,rgba(255,255,255,.0),rgba(255,255,255,0));transition:background .3s}
+.sys-stage.flash::after{background:radial-gradient(circle at 50% 50%,rgba(255,255,255,.35),rgba(255,255,255,0) 60%)}
+.sys-swipe{display:none;text-align:center;margin:10px 0 0;font:500 11px var(--sans);letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
+
+/* corpi celesti: zona cliccabile rotonda sopra il pianeta dell'immagine */
+.sys-body{position:absolute;left:calc(var(--x) * 1%);top:calc(var(--y) * 1%);width:calc(var(--r) * 2%);aspect-ratio:1;transform:translate(-50%,-50%);
+  padding:0;border:0;border-radius:50%;background:none;cursor:pointer;z-index:2;-webkit-tap-highlight-color:transparent}
+.sys-body::before{content:"";position:absolute;inset:-60%;border-radius:50%}  /* area di tocco più ampia per i pianeti piccoli */
+.sys-mercury::before{inset:-110%}
+.sys-zoom{position:absolute;inset:0;border-radius:50%;overflow:hidden;opacity:0;transition:transform .7s cubic-bezier(.2,.8,.2,1),filter .7s,opacity .4s}
+.sys-zoom img{position:absolute;height:auto;max-width:none;pointer-events:none}
+.sys-ring{position:absolute;inset:-14%;border-radius:50%;border:1.5px solid rgba(190,220,255,0);transition:border-color .3s,inset .4s;pointer-events:none}
+.sys-body:hover .sys-ring,.sys-body:focus-visible .sys-ring{border-color:rgba(190,220,255,.55);inset:-20%}
+.sys-body:focus-visible{outline:none}
+.sys-body.on{z-index:4}
+.sys-body.on .sys-zoom{opacity:1;transform:scale(1.22);filter:brightness(1.35) saturate(1.15);animation:sysGlow 2.6s ease-in-out infinite}
+.sys-body.on .sys-ring{border-color:rgba(255,220,150,.75);inset:-34%;animation:sysPulse 2.6s ease-out infinite}
+@keyframes sysGlow{0%,100%{box-shadow:0 0 30px 6px rgba(255,214,150,.35)}50%{box-shadow:0 0 60px 14px rgba(255,214,150,.6)}}
+@keyframes sysPulse{0%{transform:scale(.9);opacity:1}100%{transform:scale(1.35);opacity:0}}
+.sys-sun .sys-zoom{transform-origin:100% 50%}
+.sys-sun.on .sys-zoom{transform:scale(1.04);filter:brightness(1.25) saturate(1.2)}
+.sys-sun .sys-ring{display:none}
+.sys-stage.has-sel .sys-body:not(.on){filter:brightness(.7)}
+
+.sys-label{position:absolute;left:calc(var(--x) * 1%);top:calc(var(--y) * 1%);transform:translateX(-50%);z-index:3;padding:3px 10px;border:1px solid rgba(220,230,245,.25);border-radius:999px;background:rgba(2,6,12,.6);
+  font:600 clamp(9px,.85vw,11.5px) var(--sans);letter-spacing:.16em;text-transform:uppercase;color:#dfe8f3;white-space:nowrap;cursor:pointer;transition:color .3s,border-color .3s,background .3s}
+.sys-label.on{color:#1a1206;background:#ffd9a0;border-color:#ffd9a0}
+.sys-label:hover{border-color:rgba(220,230,245,.7)}
+
+/* lune (sottosezioni): orbitano lente, si fermano al passaggio del mouse */
+.sys-moons{position:absolute;left:calc(var(--x) * 1%);top:calc(var(--y) * 1%);width:calc(var(--R) * 2%);aspect-ratio:1;transform:translate(-50%,-50%);z-index:5;pointer-events:none}
+.sys-orbit{position:absolute;inset:0;border-radius:50%;border:1px dashed rgba(200,220,255,.28);animation:sysOrbit 60s linear infinite}
+.sys-moons:hover .sys-orbit,.sys-moons:focus-within .sys-orbit,.sys-moons:hover .sys-moon,.sys-moons:focus-within .sys-moon{animation-play-state:paused}
+@keyframes sysOrbit{to{transform:rotate(360deg)}}
+.sys-moon{position:absolute;left:var(--mx);top:var(--my);transform:translate(-50%,-50%);display:inline-flex;align-items:center;gap:6px;padding:3px 9px 3px 3px;border:1px solid rgba(200,220,255,.35);border-radius:999px;
+  background:rgba(4,10,20,.86);color:#eef4fb;font:500 clamp(10px,.9vw,12px) var(--sans);white-space:nowrap;cursor:pointer;pointer-events:auto;animation:sysCounter 60s linear infinite;max-width:180px}
+.sys-moon-name{overflow:hidden;text-overflow:ellipsis}
+.sys-moon:hover,.sys-moon:focus-visible{border-color:#ffd9a0;color:#fff;outline:none}
+.sys-moon-ball{flex:none;width:14px;height:14px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#f4f1ea,#9a958c 60%,#4a4742);box-shadow:0 0 8px rgba(255,255,255,.35)}
+@keyframes sysCounter{from{transform:translate(-50%,-50%) rotate(0)}to{transform:translate(-50%,-50%) rotate(-360deg)}}
+
+/* l'astronave */
+.sys-ship{position:absolute;z-index:6;width:clamp(44px,4.4vw,64px);aspect-ratio:2;margin:0;transform:translate(-50%,-50%) rotate(var(--a,0deg)) scale(var(--s,1));opacity:0;pointer-events:none;
+  transition:left 1.3s cubic-bezier(.45,.05,.25,1),top 1.3s cubic-bezier(.45,.05,.25,1),transform .6s ease,opacity .4s;filter:drop-shadow(0 0 8px rgba(156,200,255,.6))}
+.sys-ship.show{opacity:1}
+.sys-ship svg{position:relative;width:100%;height:100%;display:block}
+.sys-flame{position:absolute;right:88%;top:50%;width:0;height:38%;transform:translateY(-50%);border-radius:50% 0 0 50%;background:linear-gradient(90deg,transparent,#ff7a2e 45%,#ffd36e 80%,#fff);opacity:0;transition:width .3s,opacity .3s}
+.sys-ship.burn .sys-flame{width:85%;opacity:1;animation:sysFlame .12s linear infinite alternate}
+.sys-ship.burn{animation:sysShake .09s linear 4}
+.sys-ship.land{transition:left 1s cubic-bezier(.6,0,.9,.6),top 1s cubic-bezier(.6,0,.9,.6),transform 1s ease-in,opacity .5s .7s;opacity:0}
+@keyframes sysFlame{from{width:70%;opacity:.85}to{width:100%;opacity:1}}
+@keyframes sysShake{0%,100%{margin-left:0}50%{margin-left:2px}}
+
+/* comete = novità */
+.sys-comets{position:absolute;inset:0;z-index:3;pointer-events:none}
+.sys-comet{position:absolute;left:0;top:var(--cy);display:flex;align-items:center;gap:0;padding:0;border:0;background:none;cursor:pointer;pointer-events:auto;color:#fff;
+  animation:sysCometStage var(--dur) linear var(--delay) infinite}
+.sys-comet:hover,.sys-comet:focus-visible{animation-play-state:paused;outline:none}
+.sys-comet-tail{width:clamp(60px,7vw,120px);height:3px;border-radius:3px;background:linear-gradient(90deg,var(--c),transparent);opacity:.85;order:2}
+.sys-comet-head{order:1;flex:none;width:12px;height:12px;border-radius:50%;background:#fff;box-shadow:0 0 10px 3px var(--c),0 0 24px 6px var(--c)}
+.sys-comet-tag{order:0;margin-right:8px;display:grid;padding:4px 10px;border:1px solid var(--c);border-radius:10px;background:rgba(3,8,16,.82);font:600 10.5px var(--sans);letter-spacing:.06em;text-align:right;white-space:nowrap;max-width:220px}
+.sys-comet-tag small{font-weight:400;letter-spacing:0;color:#cfd9e6;overflow:hidden;text-overflow:ellipsis}
+.sys-comet:hover .sys-comet-tag,.sys-comet:focus-visible .sys-comet-tag{background:rgba(3,8,16,.96)}
+@keyframes sysCometStage{from{left:100%}to{left:-25%}}
+.sys-comet.still{animation:none;left:var(--still)}
+
+/* scheda della sezione */
+.sys-card{position:relative;z-index:7;max-width:760px;margin:clamp(-60px,-4vw,-20px) auto 0;padding:0 16px}
+.sys-card-in{padding:18px 22px;border:1px solid var(--line-strong);border-radius:18px;background:rgba(6,14,26,.92);backdrop-filter:blur(8px);box-shadow:0 20px 60px rgba(0,0,0,.5);animation:sysCard .45s ease}
+@keyframes sysCard{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.sys-card-kick{margin:0 0 6px;font:600 11px var(--sans);letter-spacing:.2em;text-transform:uppercase;color:#9cc8ff}
+.sys-card-kick b{color:#ffd9a0;font-weight:600}
+.sys-card-desc{margin:0 0 12px;color:var(--soft);font-size:15px;line-height:1.6}
+.sys-card-moons,.sys-card-news{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:0 0 14px}
+.sys-card-moons > span{font:600 10.5px var(--sans);letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin-right:4px}
+.sys-card-moons button,.sys-card-news button{padding:6px 12px;border:1px solid var(--line-strong);border-radius:999px;background:none;color:#eef4fb;font:500 13px var(--sans);cursor:pointer;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sys-card-moons button:hover{border-color:#ffd9a0}
+.sys-card-news button{border-color:var(--c);display:inline-flex;gap:6px;align-items:baseline}
+.sys-card-news button small{color:var(--soft);font-size:12px;overflow:hidden;text-overflow:ellipsis}
+.sys-card-act{display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px;margin:0}
+.sys-card-in.is-default .sys-card-desc{margin:0}
+.sys-card-in.is-default .sys-card-news{margin:0}
+
+@media (max-width:760px){
+  .sys-stage{width:auto;height:min(58vh,440px);aspect-ratio:3/1}
+  .sys-swipe{display:block}
+  .sys-card{margin-top:12px}
+  .sys-label{font-size:10px;letter-spacing:.12em;padding:3px 8px}
+  .sys-moon{font-size:11px}
+}
+@media (prefers-reduced-motion:reduce){
+  .sys-orbit,.sys-moon,.sys-comet,.sys-body.on .sys-zoom,.sys-body.on .sys-ring{animation:none}
+  .sys-ship{transition:none}
+}
+@media (max-width:700px){
+  .hero-foot{grid-template-columns:1fr;justify-items:center;gap:10px}
+  .hero-coords,.hero-tags{display:none}
+  .hero-news{order:-1;justify-self:center;text-align:center;max-width:88vw}
+  .hero-news .news-item{text-align:center}
+}
+#sysFly span:not([aria-hidden]){font:inherit !important;letter-spacing:inherit !important}
