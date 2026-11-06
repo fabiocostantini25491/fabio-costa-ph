@@ -2184,3 +2184,4 @@ body[data-page="home"] .crew-band{margin-top:30px}
 .sx-sub{padding:6px 10px;min-height:0;font-size:13px}
 .sx-sub .sx-check{width:16px;height:16px}
 @media (max-width:700px){.sx-sub{min-height:40px}}
+.sx-stage.is-flying .sx-gcl,.sx-stage.is-flying .sx-gpin{pointer-events:none}

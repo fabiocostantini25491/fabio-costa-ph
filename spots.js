@@ -755,8 +755,11 @@ const Spots = (() => {
     $("#sxToClassic")?.addEventListener("click", () => { ui = "classic"; lsSet(UI_KEY, ui); onGlobe = false; renderApp(); });
     $("#sxFull")?.addEventListener("click", () => document.querySelector(".sx-stage .map-full-ctrl a")?.click());
     const st = stageEl();
+    let wasFull = st?.classList.contains("map-full");
     if (st) new MutationObserver(() => {
       const full = st.classList.contains("map-full"), b = $("#sxFull");
+      if (full === wasFull) return;   // solo quando cambia lo schermo intero
+      wasFull = full;
       if (b) { b.innerHTML = full ? SX_ICON.fullExit : SX_ICON.full; b.title = full ? "Exit full screen" : "Full screen"; b.setAttribute("aria-label", b.title); }
       [60, 350].forEach(t => setTimeout(() => { globe?.resize(); drawGlobe(); }, t));
       setTimeout(() => { sheetPad(); if (globe && onGlobe && globe.getZoom() < earthZoom() + 0.3) globe.easeTo({ zoom: earthZoom(), duration: 500 }); }, 400);
@@ -818,16 +821,50 @@ const Spots = (() => {
         el.className = `sx-gcl${n >= 10 ? " has-n" : ""}`; el.style.setProperty("--s", `${size}px`); el.style.opacity = fade(lat, lon);
         el.innerHTML = `<span>${fmtN(n)}</span>`;
         el.setAttribute("aria-label", `${n} spots`);
-        el.addEventListener("click", ev => { ev.stopPropagation(); globe.flyTo({ center: [lon, lat], zoom: Math.min(globe.getZoom() + 2.2, GLOBE_TO_FLAT + 0.2), duration: 1200 }); });
+        el.addEventListener("click", ev => {
+          ev.stopPropagation();
+          const z = Math.min(globe.getZoom() + 2.2, GLOBE_TO_FLAT + 0.2);
+          if (z >= GLOBE_TO_FLAT) return cinematic(lat, lon, () => map.flyTo([lat, lon], Math.min(12, z + 2.5), { duration: 1.2 }));
+          cinematic(lat, lon, () => {}, { zoom: z, stayOnGlobe: true });
+        });
         globeMarkers.push(new ml.Marker({ element: el }).setLngLat([lon, lat]).addTo(globe));
       }
     });
   }
-  /* tocco su uno spot del globo: si scende sulla mappa di dettaglio e si apre la sua scheda */
-  function openFromGlobe(s) {
-    const z = globe.getZoom();
-    globe.flyTo({ center: [s.lon, s.lat], zoom: Math.min(GLOBE_TO_FLAT, Math.max(z, 5)), duration: 900 });
-    setTimeout(() => { toFlat([s.lat, s.lon], Math.max(z + 1, 7), { quiet: true }); focusSpot(s); }, 950);
+  /* tocco su uno spot del globo: la Terra ruota, si avvicina e si apre la sua scheda */
+  function openFromGlobe(s) { focusSpot(s); }
+
+  /* VOLO CINEMATOGRAFICO: 1) la Terra ruota e porta il luogo al centro  2) ci si avvicina piano
+     3) si scende senza stacchi sulla mappa satellitare di dettaglio, dove continua l'avvicinamento */
+  const sxCalm = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const easeInOut = t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+  const easeOut = t => 1 - Math.pow(1 - t, 3);
+  let flying = false;
+  function arcDeg(lat, lon) {
+    const r = Math.PI / 180, c = globe.getCenter();
+    return Math.acos(Math.min(1, Math.sin(c.lat * r) * Math.sin(lat * r) + Math.cos(c.lat * r) * Math.cos(lat * r) * Math.cos((lon - c.lng) * r))) / r;
+  }
+  function cinematic(lat, lon, then, opts = {}) {
+    if (!globe || !onGlobe) return then();
+    if (sxCalm) { toFlat([lat, lon], GLOBE_TO_FLAT + 1, { quiet: true }); return then(); }
+    if (flying) return;
+    flying = true; handing = true;
+    stageEl()?.classList.add("is-flying");
+    const arc = arcDeg(lat, lon), z0 = globe.getZoom(), whole = earthZoom();
+    const spin = Math.round(Math.min(2400, 700 + arc * 14));
+    const target = opts.zoom ?? (GLOBE_TO_FLAT - 0.05);
+    const dur2 = Math.round(1400 + Math.max(0, target - Math.min(z0, whole)) * 260);
+    const step2 = () => globe.easeTo({ center: [lon, lat], zoom: target, duration: dur2, easing: easeOut });
+    const finish = () => {
+      flying = false; handing = false;
+      stageEl()?.classList.remove("is-flying");
+      if (opts.stayOnGlobe) { drawGlobe(); return then(); }
+      toFlat([lat, lon], target + 1, { quiet: true });
+      then();
+    };
+    // 1) rotazione: se il luogo è lontano, ci si allontana un poco per vedere girare il pianeta
+    globe.easeTo({ center: [lon, lat], zoom: arc > 35 ? Math.min(z0, whole + 0.1) : z0, duration: spin, easing: easeInOut });
+    setTimeout(() => { step2(); setTimeout(finish, dur2 + 80); }, spin + 80);
   }
 
   function renderApp() {
@@ -1204,6 +1241,7 @@ const Spots = (() => {
   }
 
   function setOrigin(o, extent) {
+    if (ui === "earth" && onGlobe) return cinematic(o.lat, o.lon, () => setOrigin(o, extent));
     origin = o;
     drawOrigin();
     if (schemaV2) scanOsm(o, extent);
@@ -1475,6 +1513,7 @@ const Spots = (() => {
   }
 
   function focusSpot(s) {
+    if (ui === "earth" && onGlobe) return cinematic(s.lat, s.lon, () => focusSpot(s));
     let done = false;
     const open = () => { if (done) return; const m = markerById.get(s.id); if (m) { done = true; m.openPopup(); } };
     map.once("moveend", () => setTimeout(open, 60));
