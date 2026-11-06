@@ -67,7 +67,7 @@ const Spots = (() => {
   let schemaV2 = true;      // false finché non è stato eseguito supabase-community.sql
   let socialV = true;       // false finché non è stato eseguito supabase-sociale.sql
   let guest = false;        // visitatore senza account: vede solo la selezione pubblica
-  let guestLoaded = false, publicTotal = 0, wantLogin = false;
+  let guestLoaded = false, guestLoading = false, publicTotal = 0, wantLogin = false;
   let nodiV = true;          // false finché non è stato eseguito supabase-nodi.sql
   let contribs = new Map();  // user_id → { display_name, roles } — contributor del Journal
   let experts = new Map();   // user_id → { area_name, lat, lon, radius_km, display_name }
@@ -274,13 +274,19 @@ const Spots = (() => {
       return;
     }
     if (!(await ensureSession())) {
+      // visitatori: la mappa compare subito; il riquadro di accesso solo se lo chiedono (Log in / Join)
       if (wantLogin || wantJoin || notice) return renderGate();
-      if (await loadPublic()) { renderApp(); return; }
-      renderGate(); return;
+      guest = true;
+      if (guestLoaded) { renderApp(); return; }
+      if (!map || !guestLoading) { spots = []; guestLoading = true; renderApp(); }
+      await loadPublic();
+      guestLoading = false; guest = true;
+      if (!session && !wantLogin && !wantJoin && document.body.dataset.page === "spots") renderApp();
+      return;
     }
     guest = false;
     if (!loaded) {
-      el.innerHTML = gateHtml(`<p class="gate-note">Loading the map…</p>`);
+      el.innerHTML = `<div class="spots-loading"><p class="gate-note">Loading the map…</p></div>`;
       try {
         admin = await checkAdmin();
         memberStatus = admin ? "approved" : await fetchMemberStatus();
@@ -471,7 +477,9 @@ const Spots = (() => {
           ${CATS[k].icon}${CATS[k].label} <small>${spots.filter(s => s.category === k).length}</small></button>`).join("")}
       </div>` : ""}
       ${guest && session ? `<div class="guest-banner pending-banner">${LOCK_SVG}<p>${esc(pendingText())}</p></div>` : ""}
-      ${guest && !session ? `<div class="guest-banner">${LOCK_SVG}<p>${(() => {
+      ${guest && !session ? `<div class="guest-banner">${LOCK_SVG}<p>${guestLoading || !spots.length ? `<strong>${guestLoading ? "Loading the shared spots…" : "The community map"}</strong>
+          Members see every spot with its exact location, photos, reviews, prices and live alerts — and can add their own.
+          <em>Membership is free:</em> <a href="#join">join in a minute</a>.` : (() => {
           const tr = window.I18N ? I18N.t("GUEST_BANNER") : "GUEST_BANNER";
           const tpl = tr !== "GUEST_BANNER" ? tr : `<strong>You're seeing {n} of {total} spots</strong>, in approximate positions.
           Members see every spot with its exact location, photos, reviews, prices and live alerts — and can add their own.
@@ -540,7 +548,7 @@ const Spots = (() => {
           <p>All photos remain the property of their authors: they may not be downloaded, copied or reused without the author's permission. Photos that break these terms will be removed.</p>
         </div>
       </aside>
-      ${spots.length ? "" : `<p class="empty-state">No spots yet.${admin ? " Use «Importa da Google Maps» to add them." : ""}</p>`}`;
+      ${spots.length || guest ? "" : `<p class="empty-state">No spots yet.${admin ? " Use «Importa da Google Maps» to add them." : ""}</p>`}`;
 
     wireSearch();
     $("#nearKm")?.addEventListener("change", e => {
