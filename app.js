@@ -1379,8 +1379,9 @@ async function renderCrew() {
   grid.innerHTML = list.map(c => {
     const site = /^https?:\/\//.test(c.website || "") ? c.website : "";
     return `<article class="crew-card${isCo(c) ? " is-co" : ""}${isDev(c) && !isCo(c) ? " is-dev" : ""}">
-      <div class="crew-avatar" aria-hidden="true">${isCo(c) ? CREW_AP : isDev(c) ? CREW_DEV : `<span>${esc(ini(c.name))}</span>`}</div>
+      <div class="crew-avatar${c.avatar_path ? " has-photo" : ""}" aria-hidden="true">${c.avatar_path ? `<img src="${esc(`${SPOTS_CONFIG.url.replace(/\/$/, "")}/storage/v1/object/public/avatars/${c.avatar_path}`)}" alt="" loading="lazy">` : isCo(c) ? CREW_AP : isDev(c) ? CREW_DEV : `<span>${esc(ini(c.name))}</span>`}</div>
       <h3>${esc(c.name)}</h3>
+      ${c.username ? `<p class="crew-user">@${esc(c.username)}</p>` : ""}
       <p class="crew-badges">${isCo(c) ? `<span class="co-badge">${CREW_AP}Contributor</span>` : ""}${isDev(c) ? `<span class="co-badge dev-badge">${CREW_DEV}Developer</span>` : ""}${isXp(c) ? `<span class="xp-badge">🧭 ${esc(c.expert_area)}</span>` : ""}</p>
       ${c.base_name ? `<p class="crew-base">${ICON.pin}${esc(c.base_name)}</p>` : ""}
       ${c.bio ? `<p class="crew-bio">${esc(c.bio)}</p>` : ""}
@@ -1611,6 +1612,8 @@ function route() {
   if (writeMode) page = "journal";
   if (hash.startsWith("author-")) { page = "journal"; authorSlug = hash.slice(7); }
   const join = hash === "join";
+  const meHash = hash === "me";
+  if (meHash) page = "spots";
   const guideAnchor = hash.startsWith("guide-") ? hash : null;
   if (guideAnchor) page = "guide";
   if (join) page = "spots";
@@ -1641,7 +1644,7 @@ function route() {
   }
   if (page === "gallery") renderGallery();
   if (page === "crew") renderCrew();
-  if (page === "spots") window.Spots?.show(join);
+  if (page === "spots") window.Spots?.show(join, meHash);
   if (page === "tools") window.Tools?.show();
   if (page === "journal") {
     if (writeMode) { $("#journalLayout").hidden = true; const r = $("#articleReader"); r.hidden = false; r.className = "full-article mag-article is-write"; window.Spots?.renderWrite?.(r); }

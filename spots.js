@@ -29,6 +29,8 @@ const Spots = (() => {
       icon: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5v15M21 20v-6.5a3 3 0 0 0-3-3h-7.5V14M3 14h18M3 17.5h18"/><circle cx="7" cy="11.2" r="1.7"/></svg>' },
     workshop:   { label: "Workshops", color: "#9fe3c8",
       icon: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="1.8"/><path d="M3.5 10h17M8 3v4M16 3v4M12 12.6l1 2 2.2.3-1.6 1.5.4 2.2-2-1-2 1 .4-2.2-1.6-1.5 2.2-.3z"/></svg>' },
+    experience: { label: "Experiences", color: "#7fd8ff",
+      icon: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5 14.5 9l6 .6-4.5 4 1.3 5.9L12 16.5l-5.3 3 1.3-5.9-4.5-4 6-.6z"/></svg>' },
     trekking:   { label: "Trekking", color: "#f7a6c4",
       icon: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m2.5 20 6.5-11 4 6.5 2.5-3.5 6 8z"/><path d="M8 13.5l1.6 1.2M14.5 16l1.5-1"/><circle cx="17" cy="5.5" r="1.8"/></svg>' }
   };
@@ -202,10 +204,11 @@ const Spots = (() => {
     for (let from = 0; ; from += PAGE_SIZE) {
       let data;
       try {
-        ({ data } = await api(`/rest/v1/spots?select=${cols}${schemaV2 ? ",category,starts_on,ends_on,created_by,author_name" : ""}${schemaV2 && socialV ? ",support_local,fragile,best_months" + (pubV ? ",public_pick" : "") : ""}${schemaV2 && wsV ? ",ws_capacity,ws_enrolled,ws_price,ws_currency,ws_link,support_since,ws_offer,ws_offer_until" : ""}${schemaV2 && tkV ? ",tk_difficulty,tk_minutes,tk_km,tk_gain,tk_route,tk_parking,tk_park_lat,tk_park_lon" : ""}${schemaV2 && nodiV ? ",verified_at,verified_name,outdated" : ""}&order=list.asc,name.asc`, {
+        ({ data } = await api(`/rest/v1/spots?select=${cols}${schemaV2 ? ",category,starts_on,ends_on,created_by,author_name" : ""}${schemaV2 && socialV ? ",support_local,fragile,best_months" + (pubV ? ",public_pick" : "") : ""}${schemaV2 && wsV ? ",ws_capacity,ws_enrolled,ws_price,ws_currency,ws_link,support_since,ws_offer,ws_offer_until" : ""}${schemaV2 && tkV ? ",tk_difficulty,tk_minutes,tk_km,tk_gain,tk_route,tk_parking,tk_park_lat,tk_park_lon" : ""}${schemaV2 && nodiV ? ",verified_at,verified_name,outdated" : ""}${schemaV2 && profV ? ",subcategory,info,status,updated_at" : ""}&order=list.asc,name.asc`, {
           headers: { "Range-Unit": "items", Range: `${from}-${from + PAGE_SIZE - 1}` } }));
       } catch (err) {
         // database non ancora aggiornato (colonne nuove assenti): funziona come prima
+        if (profV && schemaV2 && err.status === 400 && from === 0) { profV = false; from -= PAGE_SIZE; continue; }
         if (nodiV && schemaV2 && err.status === 400 && from === 0) { nodiV = false; from -= PAGE_SIZE; continue; }
         if (tkV && schemaV2 && err.status === 400 && from === 0) { tkV = false; from -= PAGE_SIZE; continue; }
         if (wsV && schemaV2 && err.status === 400 && from === 0) { wsV = false; from -= PAGE_SIZE; continue; }
@@ -260,10 +263,12 @@ const Spots = (() => {
   const LIST_COLORS = ["#9cc8ff", "#ffbe7a", "#9fe3c8", "#f7a6c4", "#d2b8ff", "#ffe08a", "#8fd3ff", "#ffa98f"];
   const listColor = name => { const lists = [...new Set(spots.map(s => s.list))].sort(); return LIST_COLORS[Math.max(0, lists.indexOf(name)) % LIST_COLORS.length]; };
 
-  function show(join) {
+  function show(join, me) {
     if (join && !session) { wantJoin = true; wantLogin = false; }
+    meView = !!me;
+    if (me && !session) { wantLogin = true; wantJoin = false; }
     render();
-    if (map) setTimeout(() => { map.invalidateSize(); drawClusters(); }, 40);
+    setTimeout(() => { if (map) { map.invalidateSize(); drawClusters(); } }, 40);
   }
 
   async function render() {
@@ -293,7 +298,7 @@ const Spots = (() => {
         if (memberStatus !== "approved") {
           // in attesa di approvazione: vede la mappa pubblica, come un visitatore
           wantLogin = false; wantJoin = false;
-          if (await loadPublic()) { renderApp(); return; }
+          if (await loadPublic()) { meView ? renderMe() : renderApp(); return; }
           el.innerHTML = gateHtml(`<p class="gate-note">${esc(pendingText())}</p>`);
           return;
         }
@@ -306,7 +311,7 @@ const Spots = (() => {
         return;
       }
     }
-    renderApp();
+    meView ? renderMe() : renderApp();
   }
 
   function gateHtml(inner) {
@@ -480,7 +485,7 @@ const Spots = (() => {
     { id: "places", title: "Places", sub: "Photo spots · Viewpoints · Nature · Urban", cats: ["spot"] },
     { id: "essentials", title: "Essentials", sub: "Stay · Food & drink", cats: ["hotel", "restaurant"] },
     { id: "community", title: "Community", sub: "Photographers · Local experts · Meetups", cats: [] },
-    { id: "outdoors", title: "Outdoors", sub: "Trekking · Workshops · Experiences", cats: ["trekking", "workshop"] }
+    { id: "outdoors", title: "Outdoors", sub: "Trekking · Workshops · Experiences", cats: ["trekking", "workshop", "experience"] }
   ];
 
   function earthHtml({ searchHtml, userHtml, bannerHtml, tailHtml }) {
@@ -502,7 +507,7 @@ const Spots = (() => {
         + (!guest && commV ? `<button type="button" class="sx-item${onlyFavs ? " on" : ""}" id="onlyFavs" aria-pressed="${onlyFavs}" style="--c:#ff8fb1"><span class="sx-ico">♥</span><span class="sx-name">My spots</span><small>${favs.size}</small><span class="sx-check" aria-hidden="true"></span></button>` : "");
       if (g.id === "community") {
         if (guest || !commV) return lockItem("Photographers", "📷") + lockItem("Local experts", "🧭") + lockItem("Meetups", "👥");
-        return `<button type="button" class="sx-item${showPhotographers ? " on" : ""}" id="showPh" aria-pressed="${showPhotographers}" style="--c:#c9a7ff"><span class="sx-ico">📷</span><span class="sx-name">Photographers</span><small>${profiles.filter(p => p.visible && p.lat != null).length}</small><span class="sx-check" aria-hidden="true"></span></button>
+        return `<button type="button" class="sx-item${showPhotographers ? " on" : ""}" id="showPh" aria-pressed="${showPhotographers}" style="--c:#c9a7ff"><span class="sx-ico">📷</span><span class="sx-name">Photographers</span><small>${profiles.filter(p => p.visible && p.on_map !== false && p.lat != null).length}</small><span class="sx-check" aria-hidden="true"></span></button>
           <p class="sx-links"><button type="button" class="text-link" id="phList">List</button><button type="button" class="text-link" id="myProfile">${profiles.some(p => p.user_id === myUid()) ? "My photographer profile" : "Join the photographers' map"}</button>${nodiV && profiles.some(p => p.user_id === myUid()) ? `<button type="button" class="text-link" id="iPosted">📣 I just posted</button>` : ""}</p>
           ${nodiV ? `<button type="button" class="sx-item" id="expList" style="--c:#ffd9a0"><span class="sx-ico">🧭</span><span class="sx-name">Local experts</span><small>${experts.size}</small><span class="sx-go" aria-hidden="true">›</span></button>` : ""}
           ${nodiV && myExpert() ? `<button type="button" class="sx-item" id="myArea" style="--c:#ffd9a0"><span class="sx-ico">🧭</span><span class="sx-name">My area</span><span class="sx-go" aria-hidden="true">›</span></button>` : ""}
@@ -888,6 +893,7 @@ const Spots = (() => {
           ${guest && session ? `<span class="spots-email">${esc(memberName || email)}</span>
           <button class="text-link" type="button" id="spotsLogout">Log out</button>` : guest ? `<button class="text-link" type="button" id="spotsLogin">Log in</button>
           <button class="outline-link spots-add" type="button" id="spotsJoin">${LOCK_SVG}Join free</button>` : `
+          <a class="outline-link spots-add me-link" href="#me">◉ My Spots</a>
           ${admin ? `<button class="outline-link spots-add req-btn${pendingMembers.length + openFlags ? " has" : ""}" type="button" id="spotsRequests">Admin <b>${pendingMembers.length + openFlags}</b></button>` : ""}
           ${schemaV2 || admin ? `<button class="outline-link spots-add" type="button" id="spotsAdd">${ICON_PLUS}Add a place</button>` : ""}
           ${admin ? `<button class="text-link" type="button" id="spotsImport">${ICON_UPLOAD}Importa da Google Maps</button>` : ""}
@@ -997,7 +1003,7 @@ const Spots = (() => {
         <button type="button" class="filter comm-btn${onlyFavs ? " active" : ""}" id="onlyFavs" aria-pressed="${onlyFavs}">♥ My spots <small>${favs.size}</small></button>
         <button type="button" class="filter comm-btn" id="meetList">👥 Meetups <small>${upcomingMeetups().length}</small></button>
         <button type="button" class="filter comm-btn" id="meetAdd">＋ Meetup</button>
-        <button type="button" class="filter comm-btn${showPhotographers ? " active" : ""}" id="showPh" aria-pressed="${showPhotographers}">📷 Photographers <small>${profiles.filter(p => p.visible && p.lat != null).length}</small></button>
+        <button type="button" class="filter comm-btn${showPhotographers ? " active" : ""}" id="showPh" aria-pressed="${showPhotographers}">📷 Photographers <small>${profiles.filter(p => p.visible && p.on_map !== false && p.lat != null).length}</small></button>
         <button type="button" class="text-link" id="phList">List</button>
         ${nodiV ? `<button type="button" class="filter comm-btn" id="expList">🧭 Local experts <small>${experts.size}</small></button>` : ""}
         ${nodiV && myExpert() ? `<button type="button" class="filter comm-btn xp-mine" id="myArea">🧭 My area</button>` : ""}
@@ -1095,7 +1101,7 @@ const Spots = (() => {
       $("#showPh").classList.toggle("active", showPhotographers);
       $("#showPh").setAttribute("aria-pressed", showPhotographers);
       drawCommunity();
-      if (showPhotographers) { const pts = profiles.filter(p => p.visible && p.lat != null).map(p => [p.lat, p.lon]); if (pts.length) map.flyToBounds(L.latLngBounds(pts).pad(0.3), { maxZoom: 8, duration: .8 }); else toast("No photographers on the map yet: be the first!"); }
+      if (showPhotographers) { const pts = profiles.filter(p => p.visible && p.on_map !== false && p.lat != null).map(p => [p.lat, p.lon]); if (pts.length) map.flyToBounds(L.latLngBounds(pts).pad(0.3), { maxZoom: 8, duration: .8 }); else toast("No photographers on the map yet: be the first!"); }
     });
     $("#myProfile")?.addEventListener("click", openProfile);
     $("#expList")?.addEventListener("click", openExperts);
@@ -1104,6 +1110,7 @@ const Spots = (() => {
     $("#iPosted")?.addEventListener("click", openPosted);
     buildMap();
     if (origin) renderNear();
+    consumeFocus();
   }
 
   /* ---------- ricerca: spot per nome + luoghi (città, laghi, zone) ---------- */
@@ -1533,6 +1540,7 @@ const Spots = (() => {
   const activeSubs = new Set(SUB_KEYS);
   const subCache = new Map();
   function spotSub(s) {
+    if (s.subcategory && SUBS[s.subcategory]) return s.subcategory;
     if (subCache.has(s.id)) return subCache.get(s.id);
     const t = `${s.name || ""} ${s.note || ""} ${s.list || ""}`;
     const k = SUBS.viewpoint.re.test(t) ? "viewpoint" : SUBS.urban.re.test(t) ? "urban" : SUBS.nature.re.test(t) ? "nature" : "other";
@@ -1541,13 +1549,14 @@ const Spots = (() => {
   /* gli spot che rispettano i filtri di contorno (cerca, preferiti, avvisi…), senza quelli di categoria: per i conteggi */
   function baseSpots() {
     const q = norm(query);
-    return spots.filter(s => (!onlyFavs || favs.has(s.id)) && (!onlySupport || s.support_local)
+    return spots.filter(s => shownStatus(s) && (!onlyFavs || favs.has(s.id)) && (!onlySupport || s.support_local)
       && (alertMode === "show" || (alertMode === "hide" ? !alertsOf(s).length : alertsOf(s).length > 0))
       && (!q || norm(s.name).includes(q) || norm(s.note).includes(q) || norm(s.list).includes(q) || norm(CATS[s.category].label).includes(q)));
   }
+  const shownStatus = s => !s.status || s.status === "published" || admin || (s.created_by && s.created_by === myUid());
   function visibleSpots() {
     const q = norm(query);
-    return spots.filter(s => (!onlyFavs || favs.has(s.id)) && (!activeCats || activeCats.has(s.category))
+    return spots.filter(s => shownStatus(s) && (!onlyFavs || favs.has(s.id)) && (!activeCats || activeCats.has(s.category))
       && (s.category !== "spot" || activeSubs.size === SUB_KEYS.length || activeSubs.has(spotSub(s)))
       && (!onlySupport || s.support_local)
       && (alertMode === "show" || (alertMode === "hide" ? !alertsOf(s).length : alertsOf(s).length > 0))
@@ -1581,7 +1590,7 @@ const Spots = (() => {
     if (keep) map.setView(keep.c, keep.z, { animate: false });
     else if (pts.length) map.fitBounds(L.latLngBounds(pts).pad(0.1), { maxZoom: 12, animate: false });
     else map.setView([42.5, 12.5], 5);
-    setTimeout(() => { map.invalidateSize(); drawClusters(); }, 30);
+    setTimeout(() => { if (map) { map.invalidateSize(); drawClusters(); } }, 30);
     if (ui === "earth") earthAfterBuild();
   }
 
@@ -1780,8 +1789,9 @@ const Spots = (() => {
   function guestPopup(s) {
     const cat = CATS[s.category] || CATS.spot;
     return `<div class="spot-pop">
-      <span class="spot-cat" style="--c:${cat.color}">${cat.icon}${cat.label}</span>
+      <span class="spot-cat" style="--c:${cat.color}">${cat.icon}${cat.label}${subLabel(s) ? ` · ${esc(subLabel(s))}` : ""}</span>
       <strong>${esc(s.name)}</strong>
+      ${s.status && s.status !== "published" ? `<span class="ws-chip st-chip">${s.status === "review" ? "In review" : "Hidden"}</span>` : ""}
       ${s.avg_rating ? `<p class="pop-rating"><span class="stars-static" style="--v:${(s.avg_rating / 5 * 100).toFixed(0)}%">★★★★★</span> <b>${(+s.avg_rating).toFixed(1)}</b> · ${s.reviews} review${s.reviews > 1 ? "s" : ""}</p>` : ""}
       ${s.support_local ? `<p class="soc-note">🌱 Support local — your visit helps this place</p>` : ""}
       <p class="spot-coords">${ICON.pin}<span>Approximate area (about 1 km)</span></p>
@@ -1792,6 +1802,7 @@ const Spots = (() => {
   }
 
   const canEdit = s => admin || (s.created_by && s.created_by === myUid());
+  const subLabel = s => (WZ_SUBS[s.category] || []).find(([k]) => k === s.subcategory)?.[1] || "";
   const fmtDay = d => new Date(d + "T12:00:00").toLocaleDateString((window.I18N?.locale || "en-GB"), { day: "numeric", month: "short", year: "numeric" });
   function datesText(s) {
     if (!s.starts_on && !s.ends_on) return "";
@@ -1839,6 +1850,7 @@ const Spots = (() => {
       <p class="pop-rating" data-rating hidden></p>
       ${PRICED[s.category] ? `<p class="pop-spend" data-spend></p>` : ""}
       ${s.note ? `<p class="pop-desc">${esc(s.note)}</p>` : ""}
+      ${infoRows(s.info).length ? `<dl class="pop-info">${infoRows(s.info).map(([a, b]) => `<div><dt>${esc(a)}</dt><dd>${/^https?:\/\//.test(b) ? `<a href="${esc(b)}" target="_blank" rel="noopener">${ICON.ext}Open</a>` : esc(b)}</dd></div>`).join("")}</dl>` : ""}
       ${schemaV2 ? `<div class="pop-photos" data-photos></div>` : ""}
       ${s.support_local ? `<div class="soc-box local"><b>🌱 Support local</b><p>Your visit helps this place: eat, sleep and buy locally.${s.best_months ? ` Best visited: <em>${esc(s.best_months)}</em>.` : ""}</p><div data-nearby></div></div>` : ""}
       ${s.fragile ? `<div class="soc-box fragile"><b>🛡️ Fragile place</b><p>Please leave no trace: stay on paths, keep groups small, no drones, no geotags on social media.</p></div>` : ""}
@@ -1894,15 +1906,17 @@ const Spots = (() => {
               <option value="no"${s.public_pick === false ? " selected" : ""}>Never show to visitors</option></select></label>` : ""}
           <button type="submit" class="pop-btn primary">Save</button>
         </form>` : ""}` : ""}
-      <p class="pop-author">Added by ${esc(s.author_name || OWNER)}${xpBadge(s.created_by)}</p>
+      <p class="pop-author">Added by ${s.created_by && !guest ? `<button type="button" class="text-link pop-authorp" data-authorp>${esc(s.author_name || OWNER)}</button>` : esc(s.author_name || OWNER)}${xpBadge(s.created_by)}</p>
       <div data-curate>${curateHtml(s)}</div>
-      ${canEdit(s) ? `<button type="button" class="spot-delete" data-delete>Delete</button>` : ""}
+      ${canEdit(s) ? `<p class="pop-own"><button type="button" class="pop-btn" data-editspot>✎ Edit place</button><button type="button" class="spot-delete" data-delete>Delete</button></p>` : ""}
     </div>`;
   }
 
   async function wirePopup(popup, s) {
     const el = popup.getElement();
     el.querySelector("[data-copy]")?.addEventListener("click", ev => copyText(ev.currentTarget, `${s.lat.toFixed(6)}, ${s.lon.toFixed(6)}`));
+    el.querySelector("[data-editspot]")?.addEventListener("click", () => { map.closePopup(); openEditPlace(s); });
+    el.querySelector("[data-authorp]")?.addEventListener("click", () => openMemberProfile(s.created_by));
     el.querySelector("[data-delete]")?.addEventListener("click", async ev => {
       const b = ev.currentTarget;
       if (b.dataset.confirm !== "1") { b.dataset.confirm = "1"; b.textContent = "Confirm delete"; return; }
@@ -2170,7 +2184,9 @@ const Spots = (() => {
         api(`/rest/v1/meetups?select=id,title,note,meet_on,meet_time,lat,lon,spot_id,created_by,author_name&meet_on=gt.${todayISO()}&order=meet_on.asc&limit=500`),
         api("/rest/v1/meetup_joins?select=meetup_id,user_id,name&limit=5000"),
         api(`/rest/v1/spot_favorites?select=spot_id&user_id=eq.${encodeURIComponent(uid)}&limit=10000`),
-        api(`/rest/v1/member_profiles?select=user_id,display_name,instagram,website,bio,base_name,lat,lon,visible${nodiV ? ",last_post_url,last_post_at" : ""}&limit=2000`).catch(err => { if (nodiV && err.status === 400) { nodiV = false; return api("/rest/v1/member_profiles?select=user_id,display_name,instagram,website,bio,base_name,lat,lon,visible&limit=2000"); } throw err; })
+        api(`/rest/v1/member_profiles?select=user_id,display_name,instagram,website,bio,base_name,lat,lon,visible${nodiV ? ",last_post_url,last_post_at" : ""}${profV ? ",on_map,username,avatar_path" : ""}&limit=2000`)
+          .catch(err => { if (profV && err.status === 400) { profV = false; return api(`/rest/v1/member_profiles?select=user_id,display_name,instagram,website,bio,base_name,lat,lon,visible${nodiV ? ",last_post_url,last_post_at" : ""}&limit=2000`); } throw err; })
+          .catch(err => { if (nodiV && err.status === 400) { nodiV = false; return api("/rest/v1/member_profiles?select=user_id,display_name,instagram,website,bio,base_name,lat,lon,visible&limit=2000"); } throw err; })
       ]);
       meetups = mu.data || [];
       meetupJoins = new Map();
@@ -2374,7 +2390,7 @@ const Spots = (() => {
       mk.on("popupopen", e => wireMeetup(e.popup, m, () => { node = null; }));
     });
     const zoomOk = map.getZoom() >= 5;
-    profiles.filter(p => p.visible && p.lat != null && (showPhotographers || (postFresh(p) && (zoomOk || isCo(p.user_id))))).forEach(p => {
+    profiles.filter(p => p.visible && p.on_map !== false && p.lat != null && (showPhotographers || (postFresh(p) && (zoomOk || isCo(p.user_id))))).forEach(p => {
       const fresh = postFresh(p), xp = experts.has(p.user_id), co = isCo(p.user_id), dev = isDev(p.user_id), big = xp || co || dev;
       const mk = L.marker([p.lat, p.lon], { zIndexOffset: (fresh ? 1300 : 1100) + (co ? 50 : 0), keyboard: true, title: p.display_name,
         icon: L.divIcon({ className: "", iconSize: [big ? 36 : 30, big ? 36 : 30], iconAnchor: [big ? 18 : 15, big ? 18 : 15], popupAnchor: [0, -12],
@@ -2511,8 +2527,10 @@ const Spots = (() => {
     const me = profiles.find(p => p.user_id === myUid()) || {};
     const v = x => (x == null ? "" : esc(String(x)));
     const d = dlg("profileDialog", `<form class="import-body gate-form" novalidate>
-      <span class="eyebrow">Photographers' map</span><h2>${me.user_id ? "Your profile" : "Join the map"}</h2>
+      <span class="eyebrow">${profV ? "My Spots" : "Photographers' map"}</span><h2>${me.user_id ? "Your profile" : profV ? "Create your profile" : "Join the map"}</h2>
+      ${profV ? `<div class="pf-avatar">${avatarHtml(me.display_name ? me : { display_name: displayName() }, 72)}<label class="pop-btn">📷 ${me.avatar_path ? "Change photo" : "Add a profile photo"}<input type="file" id="pfPhoto" accept="image/*" hidden></label>${me.avatar_path ? `<button type="button" class="text-link" id="pfNoPhoto">Remove</button>` : ""}</div>` : ""}
       <label for="pfName">Name</label><input id="pfName" maxlength="60" value="${v(me.display_name || displayName())}" required>
+      ${profV ? `<label for="pfUser">Username <small>(3–30: letters, numbers, dots, underscores)</small></label><input id="pfUser" maxlength="30" value="${v(me.username)}" placeholder="e.g. anna.dolomiti" autocapitalize="none" autocomplete="username">` : ""}
       <div class="ws-fields">
         <label>Instagram<input id="pfIg" maxlength="31" value="${v(me.instagram)}" placeholder="username (no @)"></label>
         <label>Website<input id="pfWeb" type="url" maxlength="300" value="${v(me.website)}" placeholder="https://…"></label>
@@ -2523,11 +2541,17 @@ const Spots = (() => {
       <div class="gkey-row"><input id="pfBase" maxlength="80" value="${v(me.base_name)}" placeholder="Town or area, e.g. Bolzano"><button class="text-link" type="button" id="pfHere">Use my location</button></div>
       <input id="pfCoords" value="${me.lat != null ? `${(+me.lat).toFixed(2)}, ${(+me.lon).toFixed(2)}` : ""}" placeholder="Coordinates of your area, e.g. 46.50, 11.35" autocomplete="off">
       <p class="gate-help left">For privacy your pin is placed only roughly (about 5 km), never at your address.</p>
-      <label class="shot-check"><input type="checkbox" id="pfVisible"${me.user_id ? (me.visible ? " checked" : "") : " checked"}> Show me on the photographers' map</label>
+      <label class="shot-check"><input type="checkbox" id="pfVisible"${me.user_id ? ((profV ? me.on_map !== false : me.visible) ? " checked" : "") : " checked"}> Show me on the photographers' map</label>
       <button class="outline-link" type="submit">SAVE PROFILE <span aria-hidden="true">→</span></button>
       ${me.user_id ? `<button class="text-link" type="button" id="pfDelete">Remove my profile</button>` : ""}
       <p class="gate-note" id="pfMsg" role="status"></p>
     </form>`);
+    let newPhoto = null, dropPhoto = false;
+    d.querySelector("#pfPhoto")?.addEventListener("change", e => {
+      newPhoto = e.target.files[0] || null; dropPhoto = false;
+      if (newPhoto) { const u = URL.createObjectURL(newPhoto); d.querySelector(".pf-avatar .me-avatar").innerHTML = `<img src="${u}" alt="">`; }
+    });
+    d.querySelector("#pfNoPhoto")?.addEventListener("click", ev => { dropPhoto = true; newPhoto = null; d.querySelector(".pf-avatar .me-avatar").innerHTML = `<span>${esc(initials(d.querySelector("#pfName").value))}</span>`; ev.currentTarget.hidden = true; });
     d.querySelector("#pfHere").addEventListener("click", () => {
       if (!navigator.geolocation) return toast("Your browser can't share its location.", true);
       navigator.geolocation.getCurrentPosition(p => { d.querySelector("#pfCoords").value = `${p.coords.latitude.toFixed(2)}, ${p.coords.longitude.toFixed(2)}`; },
@@ -2548,16 +2572,24 @@ const Spots = (() => {
       if (ig && !/^[A-Za-z0-9._]{1,30}$/.test(ig)) return warn("Instagram: just the username, e.g. fabiocostaph");
       if (web && !/^https?:\/\//i.test(web)) return warn("The website must start with https://");
       if (cTxt && !c) return warn("Coordinates not recognised. Format: 46.50, 11.35");
+      const uname = profV ? (d.querySelector("#pfUser")?.value || "").trim().toLowerCase().replace(/^@/, "") : "";
+      if (uname && !/^[a-z0-9._]{3,30}$/.test(uname)) return warn("Username: 3–30 letters, numbers, dots or underscores.");
       const round = x => Math.round(x * 20) / 20;   // ~5 km
       const row = { user_id: myUid(), display_name: name, instagram: ig || null, website: web || null, bio: d.querySelector("#pfBio").value.trim() || null,
         base_name: d.querySelector("#pfBase").value.trim() || null, lat: c ? round(c.lat) : null, lon: c ? round(c.lon) : null,
-        visible: d.querySelector("#pfVisible").checked, updated_at: new Date().toISOString() };
+        ...(profV ? { visible: true, on_map: d.querySelector("#pfVisible").checked, username: uname || null } : { visible: d.querySelector("#pfVisible").checked }), updated_at: new Date().toISOString() };
       try {
+        if (profV && newPhoto) { msg.className = "gate-note"; msg.textContent = "Uploading the photo…"; row.avatar_path = await uploadAvatar(newPhoto); }
+        else if (profV && dropPhoto) row.avatar_path = null;
+        const oldPath = me.avatar_path;
         await api("/rest/v1/member_profiles?on_conflict=user_id", { method: "POST", body: row, headers: { Prefer: "return=minimal,resolution=merge-duplicates" } });
-        profiles = profiles.filter(p => p.user_id !== row.user_id).concat(row);
-        d.close(); showPhotographers = true; renderApp(); toast(row.lat == null ? "Profile saved. Add your area to appear on the map." : "Profile saved: you're on the photographers' map.");
+        if (oldPath && "avatar_path" in row && row.avatar_path !== oldPath) { try { await api(`/storage/v1/object/avatars/${oldPath}`, { method: "DELETE" }); } catch {} }
+        profiles = profiles.filter(p => p.user_id !== row.user_id).concat({ ...me, ...row });
+        d.close(); meCache = null;
+        if (meView) { renderMe(); toast("Profile saved."); }
+        else { showPhotographers = row.lat != null && row.on_map !== false; renderApp(); toast(row.lat == null ? "Profile saved. Add your area to appear on the photographers' map." : "Profile saved: you're on the photographers' map."); }
         window.fcTrack?.("Spots: saved photographer profile");
-      } catch (err) { warn(`Could not save: ${err.message}`); }
+      } catch (err) { warn(/duplicate|unique|23505/i.test(err.message) ? "That username is already taken: try another." : `Could not save: ${err.message}`); }
     });
   }
   const FLAG_REASONS = { spam: "Spam or advertising", offensive: "Offensive or abusive", wrong: "Wrong or misleading", not_theirs: "Not their photo / copyright", danger: "Dangerous or illegal", other: "Something else" };
@@ -3134,7 +3166,771 @@ const Spots = (() => {
     return Math.abs(lat) <= 90 && Math.abs(lon) <= 180 ? { lat, lon } : null;
   }
 
-  function openAdd(pre, preset = {}) {
+  /* =========================================================
+     MY SPOTS — profilo pubblico (per gli altri membri) e dashboard privata
+     Profilo · I miei contributi · I miei luoghi · Cronologia · Salvati
+     Tutto si legge dalle tabelle che ci sono già (più lo storico): nessun dato copiato.
+     ========================================================= */
+  let meView = false, meTab = "places", meCache = null, pendingFocus = null, meFilter = "all", savedQuery = "";
+  const ME_TABS = [["profile", "Profile"], ["contrib", "Contributions"], ["places", "My places"], ["activity", "Activity"], ["saved", "Saved"]];
+  const avatarUrl = p => p ? `${SPOTS_CONFIG.url.replace(/\/$/, "")}/storage/v1/object/public/avatars/${p}` : "";
+  const initials = n => String(n || "?").trim().split(/\s+/).map(w => w[0]).slice(0, 2).join("").toUpperCase();
+  const avatarHtml = (p, size = 72) => `<span class="me-avatar" style="--s:${size}px">${p.avatar_path ? `<img src="${esc(avatarUrl(p.avatar_path))}" alt="">` : `<span>${esc(initials(p.display_name))}</span>`}</span>`;
+  const fmtWhen = iso => { try { return new Date(String(iso).length === 10 ? iso + "T12:00:00" : iso).toLocaleDateString(window.I18N?.locale || "en-GB", { day: "numeric", month: "short", year: "numeric" }); } catch { return ""; } };
+  const FIELD_LABEL = { name: "name", note: "description", category: "category", subcategory: "type", info: "useful info", lat: "position", lon: "position", url: "link",
+    fragile: "fragile", support_local: "Support local", best_months: "best months", status: "status", public_pick: "visibility", outdated: "outdated mark",
+    verified_at: "verification", verified_by: "verification", verified_name: "verification", starts_on: "dates", ends_on: "dates", author_name: "author name", list: "list" };
+  const fieldLabel = f => FIELD_LABEL[f] || (f.startsWith("tk_") ? "trail info" : f.startsWith("ws_") ? "workshop info" : f.replace(/_/g, " "));
+  const fieldsText = arr => [...new Set((arr || []).map(fieldLabel))].join(", ");
+
+  /* apre un luogo sulla mappa dalla dashboard */
+  function openOnMap(s) { pendingFocus = s.id; meView = false; location.hash = "spots"; }
+  function consumeFocus() {
+    if (pendingFocus == null || !map) return;
+    const s = spots.find(x => x.id === pendingFocus); pendingFocus = null;
+    if (s) setTimeout(() => focusSpot(s), 350);
+  }
+
+  async function loadMe(force) {
+    if (meCache && !force) return meCache;
+    const uid = myUid(), out = { profile: null, photos: [], reviews: [], saved: [], activity: null, since: null };
+    const q = (u, fb) => api(u).then(r => r.data || fb).catch(() => fb);
+    const [prof, photos, reviews, saved, act, mem] = await Promise.all([
+      profV ? api("/rest/v1/rpc/public_profile", { method: "POST", body: { p_user: uid } }).then(r => r.data).catch(() => null) : null,
+      schemaV2 ? q(`/rest/v1/spot_photos?select=id,spot_id,path,created_at&user_id=eq.${uid}&order=created_at.desc&limit=200`, []) : [],
+      schemaV2 ? q(`/rest/v1/spot_reviews?select=id,spot_id,rating,body,created_at&user_id=eq.${uid}&order=created_at.desc&limit=200`, []) : [],
+      commV ? q(`/rest/v1/spot_favorites?select=spot_id,created_at${profV ? ",list_name,note" : ""}&user_id=eq.${uid}&order=created_at.desc`, []) : [],
+      profV ? api("/rest/v1/rpc/my_activity", { method: "POST", body: { p_limit: 300 } }).then(r => r.data).catch(() => null) : null,
+      q(`/rest/v1/members?select=created_at&user_id=eq.${uid}`, [])
+    ]);
+    Object.assign(out, { profile: prof, photos, reviews, saved, activity: act, since: prof?.since || mem?.[0]?.created_at || null });
+    return (meCache = out);
+  }
+
+  async function renderMe() {
+    if (map) { try { map.remove(); } catch {} map = null; layer = null; }
+    onGlobe = false;
+    const el = root();
+    if (guest) { el.innerHTML = gateHtml(`<p class="gate-note">${esc(pendingText())}</p>`); return; }
+    el.innerHTML = `<div class="me"><a class="text-link me-back" href="#spots">${ICON.prev}Back to the map</a><p class="gate-note">Loading your Spots…</p></div>`;
+    const data = await loadMe();
+    if (!meView) return;
+    const uid = myUid(), me = profiles.find(p => p.user_id === uid) || { display_name: displayName() };
+    const mine = spots.filter(s => s.created_by === uid);
+    const stats = [["Places", data.profile?.places ?? mine.length], ["Reviews", data.profile?.reviews ?? data.reviews.length], ["Photos", data.profile?.photos ?? data.photos.length], ["Saved", data.profile?.saved ?? favs.size]];
+    el.innerHTML = `<div class="me">
+      <a class="text-link me-back" href="#spots">${ICON.prev}Back to the map</a>
+      <header class="me-head">
+        ${avatarHtml(me, 84)}
+        <div class="me-id">
+          <p class="eyebrow">My Spots</p>
+          <h2>${esc(me.display_name || displayName())}</h2>
+          <p class="me-sub">${me.username ? `<b>@${esc(me.username)}</b>` : `<button type="button" class="text-link" data-meedit>Choose a username</button>`}${me.base_name ? ` · ${esc(me.base_name)}` : ""}${data.since ? ` · Member since ${esc(fmtWhen(data.since))}` : ""}</p>
+        </div>
+        <div class="me-acts"><button type="button" class="pop-btn" data-meedit>✎ Edit profile</button><button type="button" class="text-link" data-mepublic>See my public profile</button></div>
+      </header>
+      <dl class="me-stats">${stats.map(([k, v]) => `<div><dt>${k}</dt><dd>${fmtN(+v || 0)}</dd></div>`).join("")}</dl>
+      <nav class="me-tabs" role="tablist">${ME_TABS.map(([k, l]) => `<button type="button" role="tab" data-metab="${k}" aria-selected="${k === meTab}" class="${k === meTab ? "on" : ""}">${l}</button>`).join("")}</nav>
+      <section class="me-body" id="meBody"></section>
+    </div>`;
+    el.querySelectorAll("[data-metab]").forEach(b => b.addEventListener("click", () => { meTab = b.dataset.metab; el.querySelectorAll("[data-metab]").forEach(x => { const on = x === b; x.classList.toggle("on", on); x.setAttribute("aria-selected", on); }); drawMeTab(); }));
+    el.querySelectorAll("[data-meedit]").forEach(b => b.addEventListener("click", openProfile));
+    el.querySelector("[data-mepublic]").addEventListener("click", () => openMemberProfile(uid));
+    drawMeTab();
+  }
+
+  const spotById = id => spots.find(s => s.id === id);
+  const spotRow = (s, extra = "") => {
+    const k = CATS[s.category] || CATS.spot, sub = subLabel(s);
+    return `<li class="me-row" data-open="${s.id}"><span class="me-ico" style="--c:${k.color}">${k.icon}</span>
+      <span class="me-txt"><b>${esc(s.name)}</b><small>${esc(k.label)}${sub ? ` · ${esc(sub)}` : ""}${s.created_at ? ` · ${esc(fmtWhen(s.created_at))}` : ""}</small></span>${extra}</li>`;
+  };
+  function wireOpen(box) {
+    box.querySelectorAll("[data-open]").forEach(li => li.addEventListener("click", e => {
+      if (e.target.closest("button, input, select, a, details")) return;
+      const s = spotById(+li.dataset.open); if (s) openOnMap(s);
+    }));
+  }
+
+  async function drawMeTab() {
+    const box = $("#meBody"), data = meCache, uid = myUid();
+    if (!box || !data) return;
+    const mine = spots.filter(s => s.created_by === uid).sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
+    const me = profiles.find(p => p.user_id === uid) || {};
+    if (meTab === "profile") {
+      box.innerHTML = `<div class="me-card">
+        <p class="me-bio">${me.bio ? esc(me.bio) : `<span class="muted">No bio yet.</span>`}</p>
+        <dl class="me-dl">
+          <div><dt>Username</dt><dd>${me.username ? `@${esc(me.username)}` : "—"}</dd></div>
+          <div><dt>Location</dt><dd>${esc(me.base_name || "—")}</dd></div>
+          <div><dt>Instagram</dt><dd>${me.instagram ? `<a href="https://www.instagram.com/${encodeURIComponent(me.instagram)}/" target="_blank" rel="noopener">@${esc(me.instagram)}</a>` : "—"}</dd></div>
+          <div><dt>Website</dt><dd>${me.website ? `<a href="${esc(me.website)}" target="_blank" rel="noopener">${esc(me.website.replace(/^https?:\/\//, ""))}</a>` : "—"}</dd></div>
+          <div><dt>Photographers' map</dt><dd>${me.user_id && me.lat != null && me.on_map !== false && me.visible !== false ? "Shown (about 5 km precision)" : "Not shown"}</dd></div>
+        </dl>
+        <p class="gate-help left">Your public profile is seen only by Spots members${contribs.has(uid) || experts.has(uid) ? ", and your name, username and photo also on The crew page" : ""}. Saved places, meetups you join and your activity history are private: only you see them.</p>
+        <button type="button" class="outline-link" data-meedit2>✎ Edit profile</button>
+      </div>`;
+      box.querySelector("[data-meedit2]").addEventListener("click", openProfile);
+      return;
+    }
+    if (meTab === "contrib") {
+      const photoUrls = data.photos.length ? await signPhotos(data.photos.slice(0, 24).map(p => p.path)).catch(() => ({})) : {};
+      const meetMine = (meetups || []).filter(m => m.created_by === uid);
+      box.innerHTML = `
+        <h3 class="me-h">Places <small>${mine.length}</small></h3>
+        ${mine.length ? `<ul class="me-list">${mine.slice(0, 30).map(s => spotRow(s)).join("")}</ul>` : `<p class="muted">You haven't added any place yet. <button type="button" class="text-link" data-meadd>Add your first place</button></p>`}
+        <h3 class="me-h">Photos <small>${data.photos.length}</small></h3>
+        ${data.photos.length ? `<div class="me-photos">${data.photos.slice(0, 24).map(p => `<button type="button" data-open-photo="${p.spot_id}" title="${esc(spotById(p.spot_id)?.name || "")}">${photoUrls[p.path] ? `<img src="${esc(photoUrls[p.path])}" alt="" loading="lazy">` : ""}</button>`).join("")}</div>` : `<p class="muted">No photos yet.</p>`}
+        <h3 class="me-h">Reviews <small>${data.reviews.length}</small></h3>
+        ${data.reviews.length ? `<ul class="me-list">${data.reviews.slice(0, 30).map(r => { const s = spotById(r.spot_id); return s ? spotRow(s, `<span class="me-meta">${r.rating ? "★".repeat(r.rating) : ""}${r.body ? `<em>${esc(r.body.slice(0, 90))}${r.body.length > 90 ? "…" : ""}</em>` : ""}</span>`) : ""; }).join("")}</ul>` : `<p class="muted">No reviews yet.</p>`}
+        <h3 class="me-h">Meetups organised <small>${meetMine.length}</small></h3>
+        ${meetMine.length ? `<ul class="me-list">${meetMine.map(m => `<li class="me-row"><span class="me-ico" style="--c:#ffd166">👥</span><span class="me-txt"><b>${esc(m.title)}</b><small>${esc(fmtWhen(m.meet_on))}</small></span></li>`).join("")}</ul>` : `<p class="muted">No meetups organised.</p>`}`;
+      wireOpen(box);
+      box.querySelectorAll("[data-open-photo]").forEach(b => b.addEventListener("click", () => { const s = spotById(+b.dataset.openPhoto); if (s) openOnMap(s); }));
+      box.querySelector("[data-meadd]")?.addEventListener("click", () => withConduct(() => openAdd()));
+      return;
+    }
+    if (meTab === "places") {
+      const chips = s => {
+        const st = s.status && s.status !== "published" ? (s.status === "review" ? ["In review", "rev"] : ["Hidden", "hid"]) : ["Published", "pub"];
+        const al = alertsOf(s).length;
+        return `<span class="me-st ${st[1]}">${st[0]}</span>${al ? `<span class="me-st warn">${al} alert${al > 1 ? "s" : ""}</span>` : ""}${s.outdated ? `<span class="me-st warn">To verify</span>` : ""}${s.fragile ? `<span class="me-st">Fragile</span>` : ""}`;
+      };
+      box.innerHTML = `<div class="me-bar"><button type="button" class="outline-link" data-meadd>＋ Add a place</button><p class="muted">${mine.length} place${mine.length === 1 ? "" : "s"} · changes show on the map straight away</p></div>
+        ${mine.length ? `<ul class="me-list me-manage">${mine.map(s => spotRow(s, `<span class="me-chips">${chips(s)}</span>
+          <span class="me-ops">
+            <button type="button" class="pop-btn" data-medit="${s.id}">✎ Edit</button>
+            <button type="button" class="text-link" data-mehist="${s.id}">History</button>
+            <button type="button" class="text-link" data-megone="${s.id}">Not there anymore</button>
+            <button type="button" class="text-link me-del" data-medel="${s.id}">Delete</button>
+          </span><div class="me-hist" id="meHist${s.id}" hidden></div>`)).join("")}</ul>` : `<p class="muted">Your places will appear here, with their status and history.</p>`}`;
+      wireOpen(box);
+      box.querySelector("[data-meadd]").addEventListener("click", () => withConduct(() => openAdd()));
+      box.querySelectorAll("[data-medit]").forEach(b => b.addEventListener("click", () => { const s = spotById(+b.dataset.medit); if (s) openEditPlace(s); }));
+      box.querySelectorAll("[data-mehist]").forEach(b => b.addEventListener("click", () => toggleHistory(+b.dataset.mehist)));
+      box.querySelectorAll("[data-megone]").forEach(b => b.addEventListener("click", async () => {
+        const s = spotById(+b.dataset.megone);
+        if (b.dataset.confirm !== "1") { b.dataset.confirm = "1"; b.textContent = "Confirm: it's closed or gone"; return; }
+        try {
+          await api("/rest/v1/spot_reports", { method: "POST", body: { spot_id: s.id, kind: "closed", note: "The author reports this place no longer exists or has closed.", author_name: displayName() }, headers: { Prefer: "return=minimal" } });
+          await fetchReports(); toast("Thanks: members now see the place as closed. You can also delete it."); drawMeTab();
+        } catch (err) { toast(`Could not report: ${err.message}`, true); }
+      }));
+      box.querySelectorAll("[data-medel]").forEach(b => b.addEventListener("click", async () => {
+        const s = spotById(+b.dataset.medel);
+        if (b.dataset.confirm !== "1") { b.dataset.confirm = "1"; b.textContent = "Delete for good? Photos and reviews go too"; return; }
+        b.disabled = true;
+        try { await removeSpot(s.id); spots = spots.filter(x => x.id !== s.id); meCache = null; toast("Place deleted."); renderMe(); }
+        catch (err) { toast(`Could not delete: ${err.message}`, true); b.disabled = false; }
+      }));
+      return;
+    }
+    if (meTab === "activity") {
+      const KIND = { place: ["📍", "Added", true], review: ["★", "Reviewed", true], photo: ["📷", "Photo on", true], edit: ["✎", "Edited", false], saved: ["♥", "Saved", false],
+        meetup: ["👥", "Organised the meetup", true], meetup_join: ["👥", "Joined the meetup", false], alert: ["⚠", "Alert on", true] };
+      let items = data.activity;
+      if (!items) {   // database non ancora aggiornato: la cronologia si ricava da ciò che c'è
+        items = [...mine.map(s => ({ kind: "place", at: s.created_at, spot_id: s.id, spot_name: s.name, is_public: true })),
+          ...data.reviews.map(r => ({ kind: "review", at: r.created_at, spot_id: r.spot_id, spot_name: spotById(r.spot_id)?.name, detail: r.rating, is_public: true })),
+          ...data.photos.map(p => ({ kind: "photo", at: p.created_at, spot_id: p.spot_id, spot_name: spotById(p.spot_id)?.name, is_public: true })),
+          ...data.saved.map(v => ({ kind: "saved", at: v.created_at, spot_id: v.spot_id, spot_name: spotById(v.spot_id)?.name, is_public: false }))]
+          .sort((a, b) => String(b.at).localeCompare(String(a.at)));
+      }
+      const shown = items.filter(i => meFilter === "all" || (meFilter === "public" ? i.is_public : !i.is_public));
+      const month = iso => { try { return new Date(iso).toLocaleDateString(window.I18N?.locale || "en-GB", { month: "long", year: "numeric" }); } catch { return ""; } };
+      let last = "";
+      box.innerHTML = `<div class="me-filter" role="group">${[["all", "All"], ["public", "Public"], ["private", "Private"]].map(([k, l]) => `<button type="button" data-mef="${k}" class="${meFilter === k ? "on" : ""}">${l}</button>`).join("")}</div>
+        ${shown.length ? `<ol class="me-tl">${shown.map(i => {
+          const k = KIND[i.kind] || ["•", i.kind, true], m = month(i.at), head = m !== last ? `<li class="me-month">${esc(m)}</li>` : "";
+          last = m;
+          const det = i.kind === "edit" ? `: ${esc(fieldsText(String(i.detail || "").split(", ")))}` : i.kind === "review" && i.detail ? ` · ${"★".repeat(+i.detail)}` : i.kind === "saved" && i.detail ? ` · list «${esc(i.detail)}»` : i.kind === "alert" ? ` · ${esc((ALERTS[i.detail] || {}).label || i.detail || "")}` : (i.kind === "meetup" || i.kind === "meetup_join") && i.detail ? ` · ${esc(fmtWhen(i.detail))}` : "";
+          return `${head}<li class="me-ev"${i.spot_id && spotById(i.spot_id) ? ` data-open="${i.spot_id}"` : ""}><span class="me-evi">${k[0]}</span><span class="me-txt"><b>${esc(k[1])} «${esc(i.spot_name || "")}»${det}</b><small>${esc(fmtWhen(i.at))} · ${i.is_public ? "Public" : "🔒 Private"}</small></span></li>`;
+        }).join("")}</ol>` : `<p class="muted">Nothing here yet.</p>`}
+        <p class="gate-help left">Public = members can already see it (places, photos, reviews, meetups you organise). Private = only you: edits, saved places, meetups you join.</p>`;
+      box.querySelectorAll("[data-mef]").forEach(b => b.addEventListener("click", () => { meFilter = b.dataset.mef; drawMeTab(); }));
+      wireOpen(box);
+      return;
+    }
+    if (meTab === "saved") {
+      const rows = data.saved.map(v => ({ ...v, s: spotById(v.spot_id) })).filter(v => v.s && (!savedQuery || norm(v.s.name).includes(norm(savedQuery)) || norm(v.list_name).includes(norm(savedQuery))));
+      const lists = [...new Set(data.saved.map(v => v.list_name).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+      const groups = [...new Set(rows.map(v => v.list_name || ""))].sort((a, b) => (a === "") - (b === "") || a.localeCompare(b));
+      box.innerHTML = `<div class="me-bar"><label class="me-search">${ICON.pin}<input type="search" id="meSavedQ" value="${esc(savedQuery)}" placeholder="Search your saved places"></label>
+          <button type="button" class="outline-link" data-mesavedmap>Show them on the map</button></div>
+        <datalist id="meLists">${lists.map(l => `<option value="${esc(l)}">`).join("")}</datalist>
+        ${rows.length ? groups.map(g => `<h3 class="me-h">${esc(g || "Saved")} <small>${rows.filter(v => (v.list_name || "") === g).length}</small></h3>
+          <ul class="me-list">${rows.filter(v => (v.list_name || "") === g).map(v => spotRow(v.s, `<span class="me-ops">
+            ${profV ? `<input class="me-listin" list="meLists" maxlength="60" value="${esc(v.list_name || "")}" placeholder="List, e.g. Dolomites 2027" data-melist="${v.spot_id}" aria-label="List">` : ""}
+            <button type="button" class="text-link me-del" data-meunsave="${v.spot_id}">Remove</button></span>`)).join("")}</ul>`).join("")
+          : `<p class="muted">${data.saved.length ? "No saved place matches." : "Tap ♡ Save on any place to keep it here. Organise them in lists like «Dolomites 2027»."}</p>`}`;
+      const qi = box.querySelector("#meSavedQ");
+      qi.addEventListener("input", () => { savedQuery = qi.value; const pos = qi.selectionStart; drawMeTab().then(() => { const n = $("#meSavedQ"); n?.focus(); n?.setSelectionRange(pos, pos); }); });
+      box.querySelector("[data-mesavedmap]").addEventListener("click", () => { onlyFavs = true; meView = false; location.hash = "spots"; });
+      box.querySelectorAll("[data-melist]").forEach(inp => inp.addEventListener("change", async () => {
+        const id = +inp.dataset.melist, name = inp.value.trim() || null;
+        try { await api(`/rest/v1/spot_favorites?spot_id=eq.${id}&user_id=eq.${encodeURIComponent(uid)}`, { method: "PATCH", body: { list_name: name }, headers: { Prefer: "return=minimal" } });
+          const v = data.saved.find(x => x.spot_id === id); if (v) v.list_name = name; drawMeTab(); }
+        catch (err) { toast(`Could not save the list: ${err.message}`, true); }
+      }));
+      box.querySelectorAll("[data-meunsave]").forEach(b => b.addEventListener("click", async () => {
+        const id = +b.dataset.meunsave;
+        try { await api(`/rest/v1/spot_favorites?spot_id=eq.${id}&user_id=eq.${encodeURIComponent(uid)}`, { method: "DELETE" }); favs.delete(id); data.saved = data.saved.filter(x => x.spot_id !== id); drawMeTab(); }
+        catch (err) { toast(`Could not remove: ${err.message}`, true); }
+      }));
+      wireOpen(box);
+    }
+  }
+
+  /* storico di un luogo: modifiche (chi, cosa, quando) e foto aggiunte */
+  async function toggleHistory(id) {
+    const box = $(`#meHist${id}`);
+    if (!box) return;
+    if (!box.hidden) { box.hidden = true; return; }
+    box.hidden = false; box.innerHTML = `<p class="muted">Loading…</p>`;
+    const [ch, ph] = await Promise.all([
+      profV ? api(`/rest/v1/spot_changes?select=created_at,user_id,user_name,fields&spot_id=eq.${id}&order=created_at.desc&limit=50`).then(r => r.data || []).catch(() => []) : [],
+      schemaV2 ? api(`/rest/v1/spot_photos?select=created_at,author_name,user_id&spot_id=eq.${id}&order=created_at.desc&limit=50`).then(r => r.data || []).catch(() => []) : []
+    ]);
+    const s = spotById(id), who = (uid, n) => uid === myUid() ? "you" : uid && !admin ? (n || "a member") : (n || "admin");
+    const rows = [...ch.map(c => ({ at: c.created_at, t: `${who(c.user_id, c.user_name)}: ${fieldsText(c.fields)}` })),
+      ...ph.map(p => ({ at: p.created_at, t: `${who(p.user_id, p.author_name)}: added a photo` })),
+      ...(s?.created_at ? [{ at: s.created_at, t: "added to Spots" }] : [])].sort((a, b) => String(b.at).localeCompare(String(a.at)));
+    box.innerHTML = rows.length ? `<ol class="me-histl">${rows.map(r => `<li><time>${esc(fmtWhen(r.at))}</time><span>${esc(r.t)}</span></li>`).join("")}</ol>` : `<p class="muted">No changes yet.</p>`;
+    if (!profV) box.insertAdjacentHTML("beforeend", `<p class="gate-help left">The full history of changes starts once the database is updated.</p>`);
+  }
+
+  /* profilo pubblico di un membro (lo vedono solo i membri) */
+  async function openMemberProfile(uid) {
+    const local = profiles.find(p => p.user_id === uid) || {};
+    const d = dlg("memberDialog", `<div class="import-body me-pub"><p class="gate-note">Loading…</p></div>`);
+    let p = null;
+    if (profV) { try { ({ data: p } = await api("/rest/v1/rpc/public_profile", { method: "POST", body: { p_user: uid } })); } catch {} }
+    p = { ...local, ...(p || {}) };
+    if (!p.display_name) p.display_name = "Member";
+    const places = spots.filter(s => s.created_by === uid && shownStatus(s)).sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
+    const body = d.querySelector(".me-pub");
+    body.innerHTML = `<header class="me-head small">${avatarHtml(p, 64)}<div class="me-id"><p class="eyebrow">Member${contribs.has(uid) ? " · Contributor" : ""}${experts.has(uid) ? ` · Local expert, ${esc(experts.get(uid).area_name)}` : ""}</p>
+        <h2>${esc(p.display_name)}</h2><p class="me-sub">${p.username ? `@${esc(p.username)}` : ""}${p.base_name ? ` · ${esc(p.base_name)}` : ""}${p.since ? ` · since ${esc(fmtWhen(p.since))}` : ""}</p></div></header>
+      ${p.bio ? `<p class="me-bio">${esc(p.bio)}</p>` : ""}
+      <dl class="me-stats">${[["Places", p.places ?? places.length], ["Reviews", p.reviews], ["Photos", p.photos], ["Meetups", p.meetups]].filter(([, v]) => v != null).map(([k, v]) => `<div><dt>${k}</dt><dd>${fmtN(+v || 0)}</dd></div>`).join("")}</dl>
+      <p class="sx-links">${p.instagram ? `<a class="text-link" href="https://www.instagram.com/${encodeURIComponent(p.instagram)}/" target="_blank" rel="noopener">Instagram @${esc(p.instagram)}</a>` : ""}${p.website ? `<a class="text-link" href="${esc(p.website)}" target="_blank" rel="noopener">${ICON.ext}Website</a>` : ""}</p>
+      ${places.length ? `<h3 class="me-h">Places added <small>${places.length}</small></h3><ul class="me-list">${places.slice(0, 20).map(s => spotRow(s)).join("")}</ul>` : ""}`;
+    body.querySelectorAll("[data-open]").forEach(li => li.addEventListener("click", () => { const s = spotById(+li.dataset.open); if (!s) return; d.close(); if (meView) openOnMap(s); else focusSpot(s); }));
+  }
+
+  /* foto profilo: piccola, quadrata, nella cartella pubblica «avatars» (si vede anche su The crew) */
+  async function uploadAvatar(file) {
+    if (!(await ensureSession())) throw new Error("please log in again");
+    const blob = await resizeImage(file, 400, 0.85);
+    const path = `${myUid()}/${crypto.randomUUID()}.jpg`;
+    const res = await fetch(`${SPOTS_CONFIG.url.replace(/\/$/, "")}/storage/v1/object/avatars/${path}`, {
+      method: "POST", body: blob, headers: { apikey: SPOTS_CONFIG.anonKey, Authorization: `Bearer ${session.access_token}`, "Content-Type": "image/jpeg", "x-upsert": "false" } });
+    if (!res.ok) { let m = `HTTP ${res.status}`; try { const j = await res.json(); m = j.message || j.error || m; } catch {} throw new Error(m); }
+    return path;
+  }
+
+  /* =========================================================
+     AGGIUNGI O MODIFICA UN LUOGO — procedura guidata in tre passaggi
+     1 · Trova il luogo (cerca, posizione, mirino sulla mappa, link di Google Maps, foto con GPS)
+     2 · Dettagli (categoria e sottocategoria, campi dedicati, foto)
+     3 · Controlla e pubblica (anteprima, luoghi simili vicini: mai bloccante)
+     Le coordinate non si scrivono mai: restano in «Advanced».
+     ========================================================= */
+  let profV = true;   // false finché non è stato eseguito supabase-profilo.sql (sottocategoria, info, stato)
+  const WZ_SUBS = {
+    spot: [["viewpoint", "Viewpoint"], ["nature", "Nature"], ["urban", "Urban"], ["other", "Other"]],
+    hotel: [["hotel", "Hotel"], ["bnb", "B&B · guesthouse"], ["camping", "Camping"], ["hut", "Mountain hut"], ["other", "Other"]],
+    restaurant: [["restaurant", "Restaurant"], ["bar", "Bar · café"], ["streetfood", "Street food"], ["other", "Other"]],
+    experience: [["tour", "Tour"], ["boat", "Boat trip"], ["guided", "Guided visit"], ["other", "Other"]],
+    trekking: [], workshop: []
+  };
+  const WZ_GROUPS = [
+    { id: "places", label: "Places", cats: ["spot"] },
+    { id: "essentials", label: "Essentials", cats: ["hotel", "restaurant"] },
+    { id: "outdoors", label: "Outdoors", cats: ["trekking", "workshop", "experience"] },
+    { id: "community", label: "Community", cats: [] }
+  ];
+  /* informazioni pratiche per categoria (colonna «info» del luogo) */
+  const WZ_INFO = {
+    spot: [["access", "Access & parking", "text", "e.g. 10 min walk from the free car park"],
+      ["accessibility", "Accessibility", "select", ["", "Easy, step-free", "Some steps or a short path", "Hike or difficult access"]],
+      ["permits", "Drone, permits, rules", "text", "e.g. drones not allowed, ZTL"]],
+    hotel: [["price", "Price per night, from", "price"], ["services", "Services", "text", "e.g. parking, breakfast, pets welcome"],
+      ["hours", "Reception hours", "text", "e.g. 8:00–22:00"], ["parking", "Parking", "text", "e.g. free on site"]],
+    restaurant: [["price_level", "Price range", "select", ["", "€ · cheap", "€€ · moderate", "€€€ · expensive"]],
+      ["hours", "Opening hours", "text", "e.g. 12–15, 19–23"], ["closed", "Closed on", "text", "e.g. Mondays"]],
+    experience: [["duration", "Duration", "text", "e.g. 3 hours"], ["price", "Price per person", "price"], ["link", "Booking link", "url", "https://…"]],
+    trekking: [], workshop: []
+  };
+  const INFO_LABEL = { access: "Access & parking", accessibility: "Accessibility", permits: "Drone, permits, rules", price: "Price", services: "Services",
+    hours: "Hours", parking: "Parking", price_level: "Price range", closed: "Closed on", duration: "Duration", link: "Booking" };
+  const groupOf = cat => WZ_GROUPS.find(g => g.cats.includes(cat))?.id || "places";
+  const DRAFT_KEY = "fcph-add-draft";
+  let wz = null, wzMap = null, wzMini = null;
+
+  /* posizione GPS di una foto JPEG (EXIF), senza librerie: null se non c'è */
+  async function exifGps(file) {
+    try {
+      const v = new DataView(await file.slice(0, 256 * 1024).arrayBuffer());
+      if (v.getUint16(0) !== 0xFFD8) return null;
+      let o = 2;
+      while (o < v.byteLength - 4) {
+        const mk = v.getUint16(o), len = v.getUint16(o + 2);
+        if (mk === 0xFFE1 && v.getUint32(o + 4) === 0x45786966) {
+          const t = o + 10, le = v.getUint16(t) === 0x4949, u16 = p => v.getUint16(t + p, le), u32 = p => v.getUint32(t + p, le);
+          const ifd = p => { const n = u16(p), out = {}; for (let i = 0; i < n; i++) { const e = p + 2 + i * 12; out[u16(e)] = { type: u16(e + 2), count: u32(e + 4), at: e + 8 }; } return out; };
+          const ifd0 = ifd(u32(4)), gp = ifd0[0x8825];
+          if (!gp) return null;
+          const g = ifd(u32(gp.at));
+          const rat = (tag) => { const e = g[tag]; if (!e) return null; const p = u32(e.at); const r = k => u32(p + k * 8) / (u32(p + k * 8 + 4) || 1); return r(0) + r(1) / 60 + r(2) / 3600; };
+          const ref = tag => { const e = g[tag]; return e ? String.fromCharCode(v.getUint8(t + e.at)) : ""; };
+          let lat = rat(2), lon = rat(4);
+          if (lat == null || lon == null || (!lat && !lon)) return null;
+          if (ref(1) === "S") lat = -lat; if (ref(3) === "W") lon = -lon;
+          return Math.abs(lat) <= 90 && Math.abs(lon) <= 180 ? { lat, lon } : null;
+        }
+        if ((mk & 0xFF00) !== 0xFF00) break;
+        o += 2 + len;
+      }
+    } catch {}
+    return null;
+  }
+  /* nome e località dalle coordinate (Photon, gratuito, già usato in Tools) */
+  async function reverseName(lat, lon) {
+    try {
+      const r = await fetch(`https://photon.komoot.io/reverse?lat=${lat.toFixed(5)}&lon=${lon.toFixed(5)}&limit=1`);
+      const p = (await r.json()).features?.[0]?.properties || {};
+      return { name: p.name || "", place: [p.city || p.town || p.village || p.county, p.country].filter(Boolean).join(", ") };
+    } catch { return { name: "", place: "" }; }
+  }
+  /* link brevi di Google Maps: li apre la funzione Supabase «resolve-maps-link» */
+  async function resolveShortLink(url) {
+    if (!(await ensureSession())) throw new Error("please log in again");
+    const r = await fetch(`${SPOTS_CONFIG.url.replace(/\/$/, "")}/functions/v1/resolve-maps-link`, {
+      method: "POST", body: JSON.stringify({ url }),
+      headers: { apikey: SPOTS_CONFIG.anonKey, Authorization: `Bearer ${session.access_token}`, "Content-Type": "application/json" } });
+    if (r.status === 404) throw new Error("not-deployed");
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.error || `HTTP ${r.status}`);
+    return j;
+  }
+  const nameFromLink = t => { const m = String(t).match(/\/place\/([^/@?]+)/); try { return m ? decodeURIComponent(m[1].replace(/\+/g, " ")) : ""; } catch { return ""; } };
+  const isShortLink = t => /^https?:\/\/(maps\.app\.goo\.gl|goo\.gl\/maps)\//i.test(String(t).trim());
+  const metersBetween = (a, b) => { const r = Math.PI / 180, x = Math.sin((b.lat - a.lat) * r / 2) ** 2 + Math.cos(a.lat * r) * Math.cos(b.lat * r) * Math.sin((b.lon - a.lon) * r / 2) ** 2; return 2 * 6371000 * Math.asin(Math.sqrt(x)); };
+  const similarName = (a, b) => {
+    const t = s => norm(s).replace(/[^a-z0-9 ]/g, " ").split(/\s+/).filter(w => w.length >= 4);
+    const A = t(a), B = new Set(t(b));
+    return !!A.length && (A.some(w => B.has(w)) || norm(a).includes(norm(b)) || norm(b).includes(norm(a)));
+  };
+
+  /* apre la procedura: pre = punto già scelto (tocco lungo, risultato della ricerca), edit = luogo da modificare */
+  function openAdd(pre, preset = {}, edit = null) {
+    let draft = null;
+    if (!edit && !pre) { try { const d = JSON.parse(localStorage.getItem(DRAFT_KEY) || "null"); if (d && Date.now() - d.at < 3 * 864e5) draft = d; } catch {} }
+    const lastCat = preset.category || (() => { try { return localStorage.getItem("fcph-last-cat") || "spot"; } catch { return "spot"; } })();
+    const s = edit || {};
+    wz = {
+      step: 1, edit, lat: pre?.lat ?? s.lat ?? null, lon: pre?.lon ?? s.lon ?? null, placed: !!(pre || edit),
+      name: preset.name || s.name || "", cat: edit ? s.category : (CATS[lastCat] ? lastCat : "spot"),
+      sub: s.subcategory || (edit && s.category === "spot" ? spotSub(s) : ""), note: s.note || "", info: { ...(s.info || {}) },
+      support: !!s.support_local, months: s.best_months || "", fragile: !!s.fragile, author: s.author_name || displayName(),
+      from: s.starts_on || "", to: s.ends_on || "", files: [], removePhotos: new Set(), photos: [], place: "", rev: 0, tk: null, ws: null
+    };
+    if (draft && !edit) Object.assign(wz, draft.wz, { files: [], removePhotos: new Set(), photos: [], step: 1 });
+    let d = $("#wzDialog");
+    if (!d) {
+      d = document.createElement("dialog");
+      d.id = "wzDialog"; d.className = "wz-dialog";
+      document.body.appendChild(d);
+      d.addEventListener("close", () => { try { wzMap?.remove(); wzMini?.remove(); } catch {} wzMap = wzMini = null; });
+    }
+    d.innerHTML = `
+      <header class="wz-head">
+        <div><span class="eyebrow">${edit ? "Your place" : "Share with members"}</span><h2>${edit ? "Edit place" : "Add a place"}</h2></div>
+        <ol class="wz-steps" aria-label="Steps"><li data-st="1">Find</li><li data-st="2">Details</li><li data-st="3">Review</li></ol>
+        <button class="dialog-close" type="button" data-wzclose aria-label="Close">${ICON.close}</button>
+      </header>
+      ${draft && !edit ? `<p class="wz-draft">Draft restored from your last visit. <button type="button" class="text-link" data-wzdiscard>Start again</button></p>` : ""}
+      <div class="wz-body" id="wzBody"></div>
+      <footer class="wz-foot">
+        <button type="button" class="text-link" id="wzBack">Back</button>
+        <p class="gate-note" id="wzStatus" role="status"></p>
+        <button type="button" class="outline-link" id="wzNext">Next <span aria-hidden="true">→</span></button>
+      </footer>`;
+    d.querySelector("[data-wzclose]").addEventListener("click", () => d.close());
+    d.querySelector("[data-wzdiscard]")?.addEventListener("click", () => { try { localStorage.removeItem(DRAFT_KEY); } catch {} d.close(); openAdd(); });
+    d.querySelector("#wzBack").addEventListener("click", () => { collect(); if (wz.step > 1) go(wz.step - 1); else d.close(); });
+    d.querySelector("#wzNext").addEventListener("click", () => { collect(); if (wz.step < 3) { if (check()) go(wz.step + 1); } else publish(); });
+    if (!d.open) d.showModal();
+    if (edit) loadEditPhotos();
+    go(1);
+  }
+
+  function saveDraft() {
+    if (!wz || wz.edit) return;
+    const { files, removePhotos, photos, edit, ...keep } = wz;
+    try { localStorage.setItem(DRAFT_KEY, JSON.stringify({ at: Date.now(), wz: keep })); } catch {}
+  }
+  function status(t, warn) { const el = $("#wzStatus"); if (el) { el.textContent = t || ""; el.className = "gate-note" + (warn ? " warn" : ""); } }
+
+  function go(step) {
+    wz.step = step;
+    const d = $("#wzDialog");
+    d.querySelectorAll("[data-st]").forEach(li => { const n = +li.dataset.st; li.classList.toggle("on", n === step); li.classList.toggle("done", n < step); });
+    d.querySelector("#wzBack").textContent = step === 1 ? "Cancel" : "Back";
+    d.querySelector("#wzNext").innerHTML = step < 3 ? `Next <span aria-hidden="true">→</span>` : (wz.edit ? "Save changes" : "Publish");
+    status(""); d.querySelector("#wzNext").disabled = step === 2 && wz.group === "community";
+    try { wzMap?.remove(); wzMini?.remove(); } catch {} wzMap = wzMini = null;
+    const body = d.querySelector("#wzBody");
+    body.innerHTML = step === 1 ? stepFind() : step === 2 ? stepDetails() : stepReview();
+    body.scrollTop = 0;
+    if (step === 1) wireFind(); else if (step === 2) wireDetails(); else wireReview();
+    saveDraft();
+  }
+
+  /* ---------- 1 · Trova il luogo ---------- */
+  function stepFind() {
+    const fragileLock = wz.edit && wz.edit.fragile && !admin;
+    return `<div class="wz-find">
+      <div class="wz-search">
+        ${ICON.pin}<input id="wzQ" type="search" autocomplete="off" placeholder="Search a place or address, or paste a Google Maps link" aria-label="Search a place">
+        <div class="wz-sug" id="wzSug" hidden></div>
+      </div>
+      <div class="wz-quick">
+        <button type="button" class="pop-btn" id="wzMe">📍 Use my location</button>
+        <button type="button" class="pop-btn" id="wzPhotoBtn">📷 From a photo</button>
+        <input type="file" id="wzPhoto" accept="image/jpeg,image/*" hidden>
+      </div>
+      <div class="wz-map${fragileLock ? " is-locked" : ""}">
+        <div id="wzMap" aria-label="Move the map to place the pin"></div>
+        <span class="wz-pin" aria-hidden="true"></span>
+        <p class="wz-where" id="wzWhere">${wz.placed ? "" : "Search, use your location or move the map: the pin marks the place."}</p>
+      </div>
+      <p class="gate-help left">${fragileLock ? "This place is fragile: its exact position is protected, ask the admin to move it." : "Drag the map to put the pin exactly on the spot. Tap the map to jump there."}</p>
+      <details class="wz-adv"><summary>Advanced: coordinates</summary>
+        <div class="gkey-row"><input id="wzCoords" type="text" inputmode="text" autocomplete="off" placeholder="41.902782, 12.496366"><button class="text-link" type="button" id="wzCopy">Copy</button></div>
+      </details>
+    </div>`;
+  }
+  function wireFind() {
+    const fragileLock = wz.edit && wz.edit.fragile && !admin;
+    const c0 = wz.lat != null ? [wz.lat, wz.lon] : map ? map.getCenter() : [42.5, 12.5];
+    const z0 = wz.lat != null ? 17 : map ? Math.min(map.getZoom(), 12) : 5;
+    wzMap = L.map("wzMap", { zoomControl: true, attributionControl: false, minZoom: 2, maxZoom: 19, dragging: !fragileLock, scrollWheelZoom: !fragileLock, doubleClickZoom: !fragileLock, touchZoom: !fragileLock });
+    L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", { maxZoom: 19, maxNativeZoom: 18 }).addTo(wzMap);
+    L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}", { maxZoom: 19, maxNativeZoom: 18, opacity: .85 }).addTo(wzMap);
+    wzMap.setView(c0, z0);
+    setTimeout(() => wzMap?.invalidateSize(), 60);
+    const coords = $("#wzCoords"), where = $("#wzWhere");
+    let rt = 0;
+    const sync = () => {
+      const c = wzMap.getCenter();
+      wz.lat = +c.lat.toFixed(6); wz.lon = +L.Util.wrapNum(c.lng, [-180, 180], true).toFixed(6);
+      coords.value = `${wz.lat.toFixed(6)}, ${wz.lon.toFixed(6)}`;
+      clearTimeout(rt);
+      if (wzMap.getZoom() >= 12) rt = setTimeout(async () => {
+        const r = await reverseName(wz.lat, wz.lon);
+        if (!wzMap) return;
+        wz.place = r.place;
+        if (!wz.name && r.name) wz.suggested = r.name;
+        where.innerHTML = `${ICON.pin}<span>${esc([r.name, r.place].filter(Boolean).join(" · ") || "Somewhere on Earth")}</span>`;
+      }, 600);
+      else where.textContent = "Zoom in to place the pin exactly.";
+      saveDraft();
+    };
+    if (!fragileLock) {
+      wzMap.on("moveend", () => { wz.placed = true; sync(); });
+      wzMap.on("click", e => wzMap.flyTo(e.latlng, Math.max(wzMap.getZoom(), 16), { duration: .5 }));
+    }
+    if (wz.lat != null) sync();
+    const put = (lat, lon, name, zoom = 17) => { if (fragileLock) return; if (name && !wz.name) wz.name = name; wz.placed = true; wzMap.setView([lat, lon], zoom); };
+    coords.addEventListener("change", () => { const c = parseCoordsInput(coords.value); if (c) put(c.lat, c.lon); else status("Coordinates not recognised. Format: 41.902782, 12.496366", true); });
+    $("#wzCopy").addEventListener("click", ev => copyText(ev.currentTarget, coords.value));
+    $("#wzMe").addEventListener("click", () => {
+      if (!navigator.geolocation) return status("Your browser can't share its location.", true);
+      status("Finding you…");
+      navigator.geolocation.getCurrentPosition(p => { status(p.coords.accuracy > 100 ? `Accuracy about ${Math.round(p.coords.accuracy)} m: check the pin.` : ""); put(p.coords.latitude, p.coords.longitude, "", 17); },
+        () => status("Location not available: allow it in the browser, or search the place.", true), { enableHighAccuracy: true, timeout: 12000 });
+    });
+    $("#wzPhotoBtn").addEventListener("click", () => $("#wzPhoto").click());
+    $("#wzPhoto").addEventListener("change", async e => {
+      const f = e.target.files[0]; if (!f) return;
+      const g = await exifGps(f);
+      if (wz.files.length < 4) wz.files.push(f);   // la foto diventa anche la prima foto del luogo
+      if (g) { put(g.lat, g.lon); status("📷 Position taken from the photo. The photo is added to the place."); }
+      else status("This photo has no position (photos sent through WhatsApp or social apps lose it). It's added to the place anyway: place the pin by hand.", true);
+    });
+    // ricerca: luoghi, indirizzi, coordinate e link di Google Maps nella stessa casella
+    const q = $("#wzQ"), sug = $("#wzSug");
+    let st = 0, results = [];
+    const show = html => { sug.innerHTML = html; sug.hidden = !html; };
+    const pickers = () => {
+      sug.querySelectorAll("[data-p]").forEach(b => b.addEventListener("click", () => { const p = results[+b.dataset.p]; show(""); q.value = p.name; put(p.lat, p.lon, p.name); }));
+      sug.querySelector("[data-c]")?.addEventListener("click", () => { const c = parseCoordsInput(q.value); show(""); put(c.lat, c.lon, nameFromLink(q.value)); });
+      sug.querySelector("[data-short]")?.addEventListener("click", async ev => {
+        ev.currentTarget.disabled = true; ev.currentTarget.textContent = "Opening the link…";
+        try {
+          const r = await resolveShortLink(q.value.trim());
+          show("");
+          if (r.lat != null) { put(r.lat, r.lon, r.name || ""); status(r.name ? `Found «${r.name}».` : "Found the point of the link."); }
+          else if (r.name) { q.value = r.name; q.dispatchEvent(new Event("input")); }
+          else status("The link doesn't contain a position: search the place by name.", true);
+        } catch (err) {
+          show("");
+          status(err.message === "not-deployed" ? "Short links aren't active yet: in Google Maps use Share → copy the full link, or search by name." : `Could not open the link (${err.message}).`, true);
+        }
+      });
+    };
+    q.addEventListener("input", () => {
+      clearTimeout(st);
+      const t = q.value.trim();
+      if (!t) return show("");
+      const c = parseCoordsInput(t);
+      if (c) { show(`<button type="button" class="sg-item" data-c>${ICON.pin}<span class="sg-text"><strong>${esc(nameFromLink(t) || fmtCoord(c.lat, c.lon).replace("  |  ", " · "))}</strong><small>${/^https?:/.test(t) ? "From the Google Maps link" : "Coordinates"}</small></span></button>`); return pickers(); }
+      if (isShortLink(t)) { show(`<button type="button" class="sg-item" data-short>${ICON.pin}<span class="sg-text"><strong>Open this Google Maps link</strong><small>maps.app.goo.gl</small></span></button>`); return pickers(); }
+      if (t.length < 3) return show("");
+      show(`<p class="sg-head sg-wait">Searching…</p>`);
+      st = setTimeout(async () => {
+        results = await searchPlaces(t);
+        if (q.value.trim() !== t) return;
+        show(results.length ? results.map((p, i) => `<button type="button" class="sg-item" data-p="${i}">${ICON.pin}<span class="sg-text"><strong>${esc(p.name)}</strong><small>${esc(p.context)}</small></span></button>`).join("") : `<p class="sg-head">Nothing found: try another name, or move the map.</p>`);
+        pickers();
+      }, 350);
+    });
+    q.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); sug.querySelector(".sg-item")?.click(); } });
+    if (!wz.placed) setTimeout(() => q.focus(), 80);
+  }
+
+  /* ---------- 2 · Dettagli ---------- */
+  function stepDetails() {
+    const g = wz.group === "community" ? "community" : groupOf(wz.cat), cats = WZ_GROUPS.find(x => x.id === g).cats.filter(k => k !== "experience" || profV);
+    const subs = WZ_SUBS[wz.cat] || [];
+    const field = ([k, label, type, opt]) => {
+      const v = wz.info[k] ?? "";
+      if (type === "select") return `<label>${label}<select data-info="${k}">${opt.map(o => `<option value="${esc(o)}"${o === v ? " selected" : ""}>${o ? esc(o) : "—"}</option>`).join("")}</select></label>`;
+      if (type === "price") return `<label>${label}<span class="pay-row"><input type="number" min="0" step="1" inputmode="decimal" data-info="${k}" value="${esc(String(v))}" placeholder="e.g. 80">
+        <select data-info="currency" aria-label="Currency">${CURRENCIES.map(c => `<option${c === (wz.info.currency || "EUR") ? " selected" : ""}>${c}</option>`).join("")}</select></span></label>`;
+      return `<label>${label}<input type="${type === "url" ? "url" : "text"}" maxlength="${type === "url" ? 500 : 200}" data-info="${k}" value="${esc(String(v))}" placeholder="${esc(opt || "")}"></label>`;
+    };
+    const s = wz.edit || {};
+    return `<div class="wz-details">
+      <label class="wz-name">Name<input id="wzName" type="text" maxlength="300" value="${esc(wz.name || wz.suggested || "")}" placeholder="e.g. Capo Testa lighthouse" required></label>
+      <fieldset class="wz-groups"><legend>What is it?</legend>
+        ${WZ_GROUPS.map(x => `<button type="button" class="wz-group${x.id === g ? " on" : ""}" data-wzg="${x.id}">${SX_ICON[x.id]}<span>${x.label}</span></button>`).join("")}
+      </fieldset>
+      ${g === "community" ? `<div class="wz-community">
+          <p>Photographers, local experts and meetups have their own place in Spots:</p>
+          <button type="button" class="outline-link" data-wzmeet>👥 Organise a meetup here</button>
+          <button type="button" class="outline-link" data-wzph>📷 Join the photographers' map</button>
+        </div>` : `
+      ${cats.length > 1 ? `<div class="wz-cats" role="group" aria-label="Category">${cats.map(k => `<button type="button" class="wz-cat${k === wz.cat ? " on" : ""}" data-wzcat="${k}" style="--c:${CATS[k].color}">${CATS[k].icon}<span>${CATS[k].label}</span></button>`).join("")}</div>` : ""}
+      ${subs.length && profV ? `<div class="wz-subs" role="group" aria-label="Type">${subs.map(([k, l]) => `<button type="button" class="wz-sub${k === wz.sub ? " on" : ""}" data-wzsub="${k}">${esc(l)}</button>`).join("")}</div>` : ""}
+      <label>Description <small>(optional)</small><textarea id="wzNote" rows="3" maxlength="2000" placeholder="What makes it worth it? Best time, what to shoot, tips…">${esc(wz.note)}</textarea></label>
+      ${wz.cat === "workshop" ? `<div class="add-dates"><div><label for="wzFrom">From</label><input id="wzFrom" type="date" value="${esc(wz.from)}"></div><div><label for="wzTo">To</label><input id="wzTo" type="date" value="${esc(wz.to)}"></div></div>
+        ${wsV ? wsFieldsHtml(s, "wzWs") : ""}` : ""}
+      ${wz.cat === "trekking" && tkV ? `<fieldset class="soc-add tk-add"><legend>Trail <small>(optional)</small></legend>${tkFieldsHtml(s, "wzTk")}</fieldset>` : ""}
+      ${(WZ_INFO[wz.cat] || []).length ? `<fieldset class="wz-info"><legend>Useful info <small>(optional)</small></legend>${WZ_INFO[wz.cat].map(field).join("")}</fieldset>` : ""}
+      ${wz.cat === "spot" && socialV ? `<fieldset class="soc-add"><legend>Community <small>(optional)</small></legend>
+          <label class="shot-check"><input type="checkbox" id="wzSupport"${wz.support ? " checked" : ""}> 🌱 Support local — this place benefits from visitors</label>
+          <input type="text" id="wzMonths" maxlength="60" value="${esc(wz.months)}" placeholder="Best months to visit, e.g. Oct–Apr">
+          <label class="shot-check"><input type="checkbox" id="wzFragile"${wz.fragile ? " checked" : ""}> 🛡️ Fragile — hide it from the public map, ask members not to geotag it</label>
+        </fieldset>` : ""}
+      <div class="wz-photos">
+        <p class="wz-label">Photos <small>(optional, up to 4 new)</small></p>
+        <div class="wz-thumbs" id="wzThumbs"></div>
+        <label class="pop-btn wz-addph">＋ Add photos<input type="file" id="wzFiles" accept="image/*" multiple hidden></label>
+        <p class="gate-help left">Only photos you took yourself. You keep all rights: see the photo terms under the map.</p>
+      </div>
+      <label>Your name <small>(shown to members)</small><input id="wzAuthor" type="text" maxlength="60" value="${esc(wz.author)}" autocomplete="nickname"></label>`}
+    </div>`;
+  }
+  function drawThumbs() {
+    const box = $("#wzThumbs");
+    if (!box) return;
+    const old = wz.photos.filter(p => !wz.removePhotos.has(p.id));
+    box.innerHTML = old.map(p => `<span class="wz-th"><img src="${esc(p.url || "")}" alt="">${admin || p.user_id === myUid() ? `<button type="button" data-rmold="${p.id}" aria-label="Remove photo">${ICON.close}</button>` : ""}</span>`).join("")
+      + wz.files.map((f, i) => `<span class="wz-th is-new"><img data-newi="${i}" alt=""><button type="button" data-rmnew="${i}" aria-label="Remove photo">${ICON.close}</button></span>`).join("");
+    box.querySelectorAll("[data-newi]").forEach(img => { const u = URL.createObjectURL(wz.files[+img.dataset.newi]); img.src = u; img.onload = () => URL.revokeObjectURL(u); });
+    box.querySelectorAll("[data-rmold]").forEach(b => b.addEventListener("click", () => { wz.removePhotos.add(+b.dataset.rmold); drawThumbs(); }));
+    box.querySelectorAll("[data-rmnew]").forEach(b => b.addEventListener("click", () => { wz.files.splice(+b.dataset.rmnew, 1); drawThumbs(); }));
+  }
+  function wireDetails() {
+    const d = $("#wzDialog");
+    d.querySelectorAll("[data-wzg]").forEach(b => b.addEventListener("click", () => {
+      collect();
+      const g = WZ_GROUPS.find(x => x.id === b.dataset.wzg);
+      if (g.cats.length && !g.cats.includes(wz.cat)) { (wz.subBy ||= {})[wz.cat] = wz.sub; wz.cat = g.cats[0]; wz.sub = wz.subBy[wz.cat] || ""; }
+      wz.group = g.id;   // Community non è un tipo di luogo: mostra solo i suoi pulsanti
+      rerender();
+    }));
+    d.querySelectorAll("[data-wzcat]").forEach(b => b.addEventListener("click", () => { collect(); (wz.subBy ||= {})[wz.cat] = wz.sub; wz.cat = b.dataset.wzcat; wz.sub = wz.subBy[wz.cat] || ""; rerender(); }));
+    d.querySelectorAll("[data-wzsub]").forEach(b => b.addEventListener("click", () => { collect(); wz.sub = wz.sub === b.dataset.wzsub ? "" : b.dataset.wzsub; rerender(); }));
+    d.querySelector("[data-wzmeet]")?.addEventListener("click", () => { const p = { lat: wz.lat, lon: wz.lon }; d.close(); withConduct(() => openMeetup(p.lat != null ? p : null)); });
+    d.querySelector("[data-wzph]")?.addEventListener("click", () => { d.close(); openProfile(); });
+    if (d.querySelector("#wzTk")) wireTkGrade(d, "wzTk");
+    d.querySelector("#wzFiles")?.addEventListener("change", e => {
+      const room = 4 - wz.files.length;
+      [...e.target.files].slice(0, Math.max(0, room)).forEach(f => wz.files.push(f));
+      if (e.target.files.length > room) status("Up to 4 new photos at a time.", true);
+      e.target.value = ""; drawThumbs();
+    });
+    drawThumbs();
+    if (!wz.name && wz.suggested) wz.name = wz.suggested;
+  }
+  function rerender() {
+    const body = $("#wzBody"), y = body.scrollTop;
+    body.innerHTML = stepDetails(); wireDetails(); body.scrollTop = y;
+    $("#wzNext").disabled = wz.group === "community";
+  }
+  /* legge i campi del passaggio corrente nello stato (così non si perde nulla tornando indietro) */
+  function collect() {
+    const d = $("#wzDialog");
+    if (!d || !wz) return;
+    const v = id => d.querySelector(`#${id}`);
+    if (v("wzName")) wz.name = v("wzName").value.trim();
+    if (v("wzNote")) wz.note = v("wzNote").value.trim();
+    if (v("wzAuthor")) wz.author = v("wzAuthor").value.trim();
+    if (v("wzSupport")) wz.support = v("wzSupport").checked;
+    if (v("wzMonths")) wz.months = v("wzMonths").value.trim();
+    if (v("wzFragile")) wz.fragile = v("wzFragile").checked;
+    if (v("wzFrom")) { wz.from = v("wzFrom").value; wz.to = v("wzTo").value; }
+    d.querySelectorAll("[data-info]").forEach(el => { const k = el.dataset.info, x = el.value.trim(); if (x) wz.info[k] = x; else delete wz.info[k]; });
+    if (d.querySelector("#wzTkDiff")) wz.tk = readTk(d, "wzTk");
+    if (d.querySelector("#wzWsCap")) wz.ws = readWs(d, "wzWs");
+    saveDraft();
+  }
+  function check() {
+    if (wz.step === 1) {
+      if (wz.lat == null) { status("Find the place first: search it, use your location or move the map.", true); return false; }
+      if (wzMap && wzMap.getZoom() < 13 && !(wz.edit && wz.edit.fragile)) { status("Zoom in closer so the pin is exactly on the place.", true); wzMap.flyTo(wzMap.getCenter(), 15, { duration: .6 }); return false; }
+      return true;
+    }
+    if (wz.step === 2) {
+      if (wz.group === "community") { status("Choose a category for the place, or use one of the community buttons.", true); return false; }
+      if (!wz.name) { status("Give the place a name.", true); $("#wzName")?.focus(); return false; }
+      if (wz.cat === "workshop" && wz.from && wz.to && wz.to < wz.from) { status("The end date is before the start date.", true); return false; }
+      if (wz.tk && wz.tk._badPark) { status("Parking coordinates not recognised. Format: 46.6156, 11.7322", true); return false; }
+      if (wz.ws && wz.ws.link && !/^https?:\/\//i.test(wz.ws.link)) { status("The workshop link must start with https://", true); return false; }
+      if (wz.ws && wz.ws.cap != null && wz.ws.enr != null && wz.ws.enr > wz.ws.cap) { status("Booked can't be more than the places in total.", true); return false; }
+      if (wz.info.link && !/^https?:\/\//i.test(wz.info.link)) { status("The booking link must start with https://", true); return false; }
+      return true;
+    }
+    return true;
+  }
+
+  /* ---------- 3 · Controlla e pubblica ---------- */
+  function infoRows(info) {
+    return Object.entries(info || {}).filter(([k, v]) => v && k !== "currency" && INFO_LABEL[k])
+      .map(([k, v]) => [INFO_LABEL[k], k === "price" ? `${v} ${info.currency || "EUR"}` : v]);
+  }
+  function stepReview() {
+    const k = CATS[wz.cat] || CATS.spot, sub = (WZ_SUBS[wz.cat] || []).find(([x]) => x === wz.sub)?.[1];
+    const rows = infoRows(wz.info);
+    return `<div class="wz-review">
+      <article class="wz-card">
+        <p class="wz-kind" style="--c:${k.color}">${k.icon}<span>${k.label}${sub ? ` · ${esc(sub)}` : ""}</span></p>
+        <h3>${esc(wz.name)}</h3>
+        ${wz.place ? `<p class="wz-place">${ICON.pin}${esc(wz.place)}</p>` : ""}
+        ${wz.note ? `<p class="wz-desc">${esc(wz.note)}</p>` : ""}
+        ${rows.length ? `<dl class="wz-dl">${rows.map(([a, b]) => `<div><dt>${esc(a)}</dt><dd>${esc(b)}</dd></div>`).join("")}</dl>` : ""}
+        ${wz.support || wz.fragile || wz.months ? `<p class="wz-tags">${wz.support ? "<span>🌱 Support local</span>" : ""}${wz.fragile ? "<span>🛡️ Fragile</span>" : ""}${wz.months ? `<span>📅 ${esc(wz.months)}</span>` : ""}</p>` : ""}
+        <p class="wz-ph-count">${wz.files.length ? `📷 ${wz.files.length} new photo${wz.files.length > 1 ? "s" : ""}` : ""}${wz.removePhotos.size ? ` · ${wz.removePhotos.size} to remove` : ""}</p>
+      </article>
+      <div class="wz-mini" id="wzMini" aria-label="Position preview"></div>
+      <section class="wz-similar" id="wzSimilar"><p class="gate-note">Looking for similar places nearby…</p></section>
+    </div>`;
+  }
+  async function wireReview() {
+    wzMini = L.map("wzMini", { zoomControl: false, attributionControl: false, dragging: false, scrollWheelZoom: false, doubleClickZoom: false, touchZoom: false, keyboard: false });
+    L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", { maxZoom: 19, maxNativeZoom: 18 }).addTo(wzMini);
+    wzMini.setView([wz.lat, wz.lon], 16);
+    L.marker([wz.lat, wz.lon], { interactive: false, icon: pinIcon({ category: wz.cat, name: wz.name }) }).addTo(wzMini);
+    setTimeout(() => wzMini?.invalidateSize(), 60);
+    // luoghi simili: entro 150 m qualunque nome, entro 1 km con un nome simile (mai bloccante)
+    let near = [];
+    try {
+      if (profV) { const { data } = await api("/rest/v1/rpc/nearby_spots", { method: "POST", body: { p_lat: wz.lat, p_lon: wz.lon, p_km: 1, p_exclude: wz.edit?.id || null } }); near = (data || []).map(x => ({ ...x, dist: x.dist_m })); }
+      else throw new Error("no rpc");
+    } catch {
+      near = spots.filter(x => x.id !== wz.edit?.id).map(x => ({ ...x, dist: Math.round(metersBetween(wz, x)) })).filter(x => x.dist <= 1000).sort((a, b) => a.dist - b.dist).slice(0, 12);
+    }
+    const sim = near.filter(x => x.dist <= 150 || similarName(wz.name, x.name)).slice(0, 5);
+    const box = $("#wzSimilar");
+    if (!box) return;
+    box.innerHTML = sim.length ? `<p class="wz-label">Already on Spots nearby — is it the same place?</p>
+      <ul class="wz-sim">${sim.map(x => `<li><span><b>${esc(x.name)}</b><small>${esc((CATS[x.category] || CATS.spot).label)} · ${x.dist < 1000 ? `${x.dist} m` : `${(x.dist / 1000).toFixed(1)} km`}</small></span>
+        <button type="button" class="text-link" data-simopen="${x.id}">Same place: open it</button></li>`).join("")}</ul>
+      <p class="gate-help left">If it's the same, open it and add your photos or a review instead. If it's a different place, just publish.</p>`
+      : `<p class="gate-note">✓ No similar places nearby.</p>`;
+    box.querySelectorAll("[data-simopen]").forEach(b => b.addEventListener("click", () => {
+      const x = spots.find(y => y.id === +b.dataset.simopen);
+      $("#wzDialog").close();
+      if (x) focusSpot(x); else toast("That place is in a filter you've hidden: show all categories to see it.");
+    }));
+  }
+
+  async function loadEditPhotos() {
+    if (!wz?.edit || !schemaV2) return;
+    try {
+      const { data } = await api(`/rest/v1/spot_photos?select=id,path,user_id&spot_id=eq.${wz.edit.id}&order=created_at.asc`);
+      const urls = data?.length ? await signPhotos(data.map(p => p.path)) : {};
+      wz.photos = (data || []).map(p => ({ ...p, url: urls[p.path] || "" }));
+      drawThumbs();
+    } catch {}
+  }
+
+  async function publish() {
+    const btn = $("#wzNext");
+    const cat = wz.cat, edit = wz.edit;
+    const row = { name: wz.name.slice(0, 300), lat: wz.lat, lon: wz.lon, note: wz.note || null };
+    if (schemaV2) Object.assign(row, { category: cat, author_name: (wz.author || displayName()).slice(0, 60),
+      starts_on: cat === "workshop" ? wz.from || null : null, ends_on: cat === "workshop" ? (wz.to || wz.from || null) : null });
+    if (profV) Object.assign(row, { subcategory: wz.sub || null, info: Object.fromEntries(Object.entries(wz.info).filter(([k]) => (WZ_INFO[cat] || []).some(f => f[0] === k) || (k === "currency" && wz.info.price))) });
+    else if (infoRows(wz.info).length) row.note = [row.note, infoRows(wz.info).map(([a, b]) => `${a}: ${b}`).join("\n")].filter(Boolean).join("\n\n");
+    if (schemaV2 && socialV && cat === "spot") Object.assign(row, { support_local: wz.support, best_months: wz.months || null });
+    if (cat === "trekking" && tkV && wz.tk) { const { _badPark, ...tk } = wz.tk; Object.assign(row, tk); }
+    if (cat === "workshop" && wsV && wz.ws) Object.assign(row, { ws_capacity: wz.ws.cap || null, ws_enrolled: wz.ws.enr, ws_price: wz.ws.price, ws_currency: wz.ws.price != null ? wz.ws.cur : null, ws_link: wz.ws.link || null, ws_offer: wz.ws.offer || null, ws_offer_until: wz.ws.offerUntil });
+    if (wz.author) setDisplayName(wz.author);
+    btn.disabled = true; status(edit ? "Saving…" : "Publishing…");
+    try {
+      if (!(await ensureSession())) throw new Error("please log in again");
+      let saved;
+      if (edit) {
+        const { data } = await api(`/rest/v1/spots?id=eq.${edit.id}`, { method: "PATCH", body: row, headers: { Prefer: "return=representation" } });
+        saved = Array.isArray(data) ? data[0] : data;
+        if (!saved) throw new Error("you can only edit your own places");
+      } else {
+        const { data } = await api("/rest/v1/spots", { method: "POST", body: { ...row, source_key: `u:${crypto.randomUUID()}`, list: COMMUNITY }, headers: { Prefer: "return=representation" } });
+        saved = Array.isArray(data) ? data[0] : data;
+      }
+      if (schemaV2 && socialV && cat === "spot" && wz.fragile !== !!edit?.fragile) { try { await api("/rest/v1/rpc/set_fragile", { method: "POST", body: { p_spot: saved.id, p_fragile: wz.fragile } }); } catch {} }
+      let photoErr = "";
+      for (const id of wz.removePhotos) {
+        const p = wz.photos.find(x => x.id === id);
+        try { await api(`/rest/v1/spot_photos?id=eq.${id}`, { method: "DELETE" }); if (p) await api(`/storage/v1/object/spot-photos/${p.path}`, { method: "DELETE" }); } catch (err) { photoErr = err.message; }
+      }
+      for (let i = 0; i < wz.files.length; i++) {
+        status(`Uploading photo ${i + 1} of ${wz.files.length}…`);
+        try { await uploadPhoto(saved.id, wz.files[i]); } catch (err) { photoErr = err.message; }
+      }
+      try { localStorage.setItem("fcph-last-cat", cat); if (!edit) localStorage.removeItem(DRAFT_KEY); } catch {}
+      spots = await fetchSpots();
+      if (activeCats) activeCats.add(cat);
+      $("#wzDialog").close();
+      meCache = null;
+      if (meView) renderMe();
+      else { renderApp(); const s = spots.find(x => x.id === saved.id); if (s) focusSpot(s); }
+      toast(photoErr ? `Saved, but a photo failed: ${photoErr}` : edit ? `«${row.name}» updated.` : `«${row.name}» is on the map.`, !!photoErr);
+    } catch (err) {
+      status(/row-level|policy|permission/i.test(err.message) ? "Your account can't save this place." : `Could not save: ${err.message}`, true);
+      btn.disabled = false;
+    }
+  }
+  /* modifica di un luogo esistente (autore o admin): la stessa procedura, già compilata */
+  const openEditPlace = s => openAdd(null, {}, s);
+
+  /* il vecchio modulo a una pagina (non più usato: resta come riferimento) */
+  function openAddLegacy(pre, preset = {}) {
     let d = $("#addDialog");
     if (!d) {
       d = document.createElement("dialog");
