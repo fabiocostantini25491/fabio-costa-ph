@@ -484,12 +484,16 @@ const Spots = (() => {
   ];
 
   function earthHtml({ searchHtml, userHtml, bannerHtml, tailHtml }) {
-    const n = k => spots.filter(s => s.category === k).length;
+    const base = baseSpots();
+    const n = k => base.filter(s => s.category === k).length;
     const item = k => `<button type="button" class="sx-item${activeCats.has(k) ? " on" : ""}" data-sxcat="${k}" style="--c:${CATS[k].color}" aria-pressed="${activeCats.has(k)}">
-        <span class="sx-ico">${CATS[k].icon}</span><span class="sx-name">${CATS[k].label}</span><small>${fmtN(n(k))}</small><span class="sx-check" aria-hidden="true"></span></button>`;
+        <span class="sx-ico">${CATS[k].icon}</span><span class="sx-name">${CATS[k].label}</span><small data-sxcount="${k}">${fmtN(n(k))}</small><span class="sx-check" aria-hidden="true"></span></button>`;
+    const subOn = k => activeCats.has("spot") && activeSubs.has(k);
+    const subItems = () => `<div class="sx-subs">${SUB_KEYS.map(k => `<button type="button" class="sx-item sx-sub${subOn(k) ? " on" : ""}" data-sxsub="${k}" style="--c:${CATS.spot.color}" aria-pressed="${subOn(k)}">
+        <span class="sx-name">${SUBS[k].label}</span><small data-sxsubcount="${k}">${fmtN(base.filter(s => s.category === "spot" && spotSub(s) === k).length)}</small><span class="sx-check" aria-hidden="true"></span></button>`).join("")}</div>`;
     const lockItem = (label, ico) => `<button type="button" class="sx-item is-locked" data-sxjoin><span class="sx-ico">${ico}</span><span class="sx-name">${label}</span><span class="sx-lock">${SX_ICON.lock}Members</span></button>`;
     const body = g => {
-      if (g.id === "places") return g.cats.map(item).join("") + (!guest && schemaV2 && socialV ? `
+      if (g.id === "places") return g.cats.map(item).join("") + subItems() + (!guest && schemaV2 && socialV ? `
         <button type="button" class="sx-item${onlySupport ? " on" : ""}" id="onlySupport" aria-pressed="${onlySupport}" style="--c:#9fe3c8"><span class="sx-ico">🌱</span><span class="sx-name">Support local</span><small>${spots.filter(x => x.support_local).length}</small><span class="sx-check" aria-hidden="true"></span></button>
         <label class="sx-select">Alerts <select id="alertMode">
           <option value="show"${alertMode === "show" ? " selected" : ""}>Show</option>
@@ -514,7 +518,7 @@ const Spots = (() => {
         <button type="button" class="sx-ghead" data-sxg="${g.id}" aria-expanded="${open}">
           <span class="sx-gico">${SX_ICON[g.id]}</span>
           <span class="sx-gtext"><b>${g.title}</b><small>${g.sub}</small></span>
-          ${count ? `<span class="sx-gcount">${fmtN(count)}</span>` : ""}
+          ${g.cats.length ? `<span class="sx-gcount" data-sxgcount="${g.id}">${fmtN(count)}</span>` : ""}
           <span class="sx-chev" aria-hidden="true"></span>
         </button>
         <div class="sx-gbody">${body(g)}</div>
@@ -554,10 +558,24 @@ const Spots = (() => {
         </div>
         ${schemaV2 ? `<button type="button" class="osm-scan" id="osmScan">${ICON_SCAN}Scan this area</button>` : ""}
         <p class="sx-hint" id="sxHint" hidden></p>
+        <div class="sx-sheet" id="sxSheet"></div>
       </div>
     </div>
     ${bannerHtml}
     ${tailHtml}`;
+  }
+
+  /* conteggi del pannello: seguono la ricerca e gli altri filtri, senza ridisegnare tutto */
+  function updateSxCounts() {
+    if (!document.querySelector(".sx")) return;
+    const base = baseSpots(), by = {}, subs = {};
+    base.forEach(s => { by[s.category] = (by[s.category] || 0) + 1; if (s.category === "spot") { const k = spotSub(s); subs[k] = (subs[k] || 0) + 1; } });
+    document.querySelectorAll("[data-sxcount]").forEach(el => { el.textContent = fmtN(by[el.dataset.sxcount] || 0); });
+    document.querySelectorAll("[data-sxsubcount]").forEach(el => { el.textContent = fmtN(subs[el.dataset.sxsubcount] || 0); });
+    document.querySelectorAll("[data-sxgcount]").forEach(el => {
+      const g = SX_GROUPS.find(x => x.id === el.dataset.sxgcount);
+      el.textContent = fmtN(g.cats.reduce((a, k) => a + (!activeCats.has(k) ? 0 : k === "spot" ? SUB_KEYS.filter(x => activeSubs.has(x)).reduce((c, x) => c + (subs[x] || 0), 0) : by[k] || 0), 0) || 0);
+    });
   }
 
   /* fondo della mappa piana: satellite (con nomi) oppure rilievo */
@@ -569,16 +587,25 @@ const Spots = (() => {
     if (!topo) satLabels.addTo(map);
   }
 
+  /* MapLibre 5 tutto per il globo: non tocca la versione 4 usata dal planner 3D di Tools (e viceversa) */
+  let ML5 = null;
   function loadMapLibre() {
-    if (window.maplibregl) return Promise.resolve(window.maplibregl);
+    if (ML5) return Promise.resolve(ML5);
     if (loadMapLibre.p) return loadMapLibre.p;
+    const before = window.maplibregl;
+    if (before) delete window.maplibregl;
     loadMapLibre.p = new Promise((res, rej) => {
       const css = document.createElement("link");
       css.rel = "stylesheet"; css.href = `https://unpkg.com/maplibre-gl@${ML_VER}/dist/maplibre-gl.css`;
       document.head.appendChild(css);
       const js = document.createElement("script");
       js.src = `https://unpkg.com/maplibre-gl@${ML_VER}/dist/maplibre-gl.js`;
-      js.onload = () => res(window.maplibregl); js.onerror = () => { loadMapLibre.p = null; rej(new Error("MapLibre not loaded")); };
+      js.onload = () => {
+        ML5 = window.maplibregl;
+        if (before) window.maplibregl = before; else delete window.maplibregl;   // il planner troverà (o caricherà) la sua versione
+        res(ML5);
+      };
+      js.onerror = () => { if (before) window.maplibregl = before; loadMapLibre.p = null; rej(new Error("MapLibre not loaded")); };
       document.head.appendChild(js);
     });
     return loadMapLibre.p;
@@ -595,7 +622,7 @@ const Spots = (() => {
     $("#sxGlobeSlot")?.appendChild(globeEl);
     const ESRI = "https://server.arcgisonline.com/ArcGIS/rest/services";
     globe = new ml.Map({
-      container: globeEl, center: [12, 30], zoom: earthZoom(), minZoom: 0, maxZoom: 7.5, attributionControl: { compact: true },
+      container: globeEl, center: [12, 30], zoom: earthZoom(), minZoom: 0, maxZoom: 7.5, attributionControl: { compact: true }, renderWorldCopies: false,
       dragRotate: false, pitchWithRotate: false, touchPitch: false,   // si gira e si avvicina, senza inclinare per sbaglio
       style: {
         version: 8, projection: { type: "globe" },
@@ -609,7 +636,8 @@ const Spots = (() => {
       }
     });
     globe.on("moveend", () => { drawGlobe(); maybeDescend(); });
-    globe.on("load", () => { try { globe.setProjection({ type: "globe" }); } catch {} drawGlobe(); });
+    globeEl.classList.add("is-loading");   // si mostra solo quando è già una sfera (mai la mappa piana ripetuta)
+    globe.on("load", () => { try { globe.setProjection({ type: "globe" }); } catch {} globeEl.classList.remove("is-loading"); drawGlobe(); });
     return globe;
   }
 
@@ -633,7 +661,7 @@ const Spots = (() => {
     if (slot && globeEl && globeEl.parentElement !== slot) slot.appendChild(globeEl);
     onGlobe = true;
     stageEl()?.classList.add("on-globe");
-    globe.resize();
+    globe.resize(); sheetPad();
     handing = true;
     if (center) globe.jumpTo({ center: [center[1], center[0]], zoom: Math.max(earthZoom() - 0.3, zoom) });
     if (fly) globe.flyTo({ center: globe.getCenter(), zoom: earthZoom(), duration: 1600, essential: true });
@@ -643,7 +671,7 @@ const Spots = (() => {
   }
   const stageEl = () => document.querySelector(".sx-stage");
   /* zoom che mostra il pianeta intero nello spazio disponibile (il globo è largo ~470 px a zoom 1.35) */
-  const earthZoom = () => { const el = stageEl(); const m = el ? Math.min(el.clientWidth, el.clientHeight) : 700; return Math.max(0.1, 1.35 + Math.log2(m * 0.8 / 470)); };
+  const earthZoom = () => { const el = stageEl(); const m = el ? Math.min(el.clientWidth, el.clientHeight - (el.classList.contains("has-sheet") ? 150 : 0)) : 700; return Math.max(0.1, 1.35 + Math.log2(m * 0.8 / 470)); };
   function hint(t) { const h = $("#sxHint"); if (!h) return; h.textContent = t; h.hidden = !t; clearTimeout(hint.t); if (t) hint.t = setTimeout(() => { h.hidden = true; }, 4000); }
 
   function setViewMode(m) {
@@ -674,21 +702,49 @@ const Spots = (() => {
     } else toFlat(null, null, { quiet: true });
   }
 
+  const sxPhone = () => matchMedia("(max-width: 700px)").matches;
+  /* sul telefono il centro del globo sale sopra il pannello in basso */
+  function sheetPad() { try { globe?.setPadding({ top: 0, left: 0, right: 0, bottom: stageEl()?.classList.contains("has-sheet") ? 140 : 0 }); } catch {} }
   function wireEarth() {
+    // telefono: le quattro macrocategorie diventano un pannello in basso, dentro la mappa, che si apre verso l'alto
+    const sheet = $("#sxSheet"), groupsEl = document.querySelector(".sx-groups");
+    if (sxPhone() && sheet && groupsEl) {
+      sxOpen.clear();
+      groupsEl.querySelectorAll(".sx-group").forEach(g => { g.classList.remove("open"); g.querySelector("[data-sxg]")?.setAttribute("aria-expanded", "false"); });
+      sheet.appendChild(groupsEl);
+      stageEl()?.classList.add("has-sheet");
+    }
+    if (!wireEarth.mq) { wireEarth.mq = true; matchMedia("(max-width: 700px)").addEventListener("change", () => { if (ui === "earth" && document.querySelector(".sx")) renderApp(); }); }
+    const closeSheet = () => document.querySelectorAll(".sx-sheet .sx-group.open").forEach(g => { g.classList.remove("open"); g.querySelector("[data-sxg]")?.setAttribute("aria-expanded", "false"); sxOpen.delete(g.dataset.g); stageEl()?.classList.remove("sheet-open"); });
+    if (sxPhone()) { $("#sxGlobeSlot")?.addEventListener("pointerdown", closeSheet); $("#spotsMap")?.addEventListener("pointerdown", closeSheet); }
     document.querySelectorAll("[data-sxg]").forEach(b => b.addEventListener("click", () => {
       const id = b.dataset.sxg, sec = b.closest(".sx-group"), open = !sec.classList.contains("open");
+      if (sxPhone()) closeSheet();   // sul telefono se ne apre uno alla volta
       sec.classList.toggle("open", open); b.setAttribute("aria-expanded", open);
       open ? sxOpen.add(id) : sxOpen.delete(id);
+      if (sxPhone()) stageEl()?.classList.toggle("sheet-open", open);
     }));
-    document.querySelectorAll("[data-sxcat]").forEach(b => b.addEventListener("click", () => {
-      const k = b.dataset.sxcat;
-      activeCats.has(k) ? activeCats.delete(k) : activeCats.add(k);
-      b.classList.toggle("on", activeCats.has(k)); b.setAttribute("aria-pressed", activeCats.has(k));
+    const syncCats = () => {
+      document.querySelectorAll("[data-sxcat]").forEach(b => { const on = activeCats.has(b.dataset.sxcat); b.classList.toggle("on", on); b.setAttribute("aria-pressed", on); });
+      document.querySelectorAll("[data-sxsub]").forEach(b => { const on = activeCats.has("spot") && activeSubs.has(b.dataset.sxsub); b.classList.toggle("on", on); b.setAttribute("aria-pressed", on); });
       document.querySelectorAll(".sx-group").forEach(sec => {
         const g = SX_GROUPS.find(x => x.id === sec.dataset.g);
         sec.classList.toggle("on", g.cats.some(c => activeCats.has(c)) || (g.id === "community" && showPhotographers));
       });
       drawClusters(); if (origin) renderNear();
+    };
+    document.querySelectorAll("[data-sxcat]").forEach(b => b.addEventListener("click", () => {
+      const k = b.dataset.sxcat;
+      if (activeCats.has(k)) activeCats.delete(k);
+      else { activeCats.add(k); if (k === "spot" && !activeSubs.size) SUB_KEYS.forEach(x => activeSubs.add(x)); }
+      syncCats();
+    }));
+    document.querySelectorAll("[data-sxsub]").forEach(b => b.addEventListener("click", () => {
+      const k = b.dataset.sxsub;
+      if (!activeCats.has("spot")) { activeCats.add("spot"); activeSubs.clear(); activeSubs.add(k); }   // solo questa sottocategoria
+      else if (activeSubs.has(k)) { activeSubs.delete(k); if (!activeSubs.size) { activeCats.delete("spot"); SUB_KEYS.forEach(x => activeSubs.add(x)); } }
+      else activeSubs.add(k);
+      syncCats();
     }));
     document.querySelectorAll("[data-sxjoin]").forEach(b => b.addEventListener("click", () => { wantJoin = true; render(); root().scrollIntoView({ behavior: "smooth" }); }));
     document.querySelectorAll("[data-sxmode]").forEach(b => b.addEventListener("click", () => setViewMode(b.dataset.sxmode)));
@@ -703,6 +759,7 @@ const Spots = (() => {
       const full = st.classList.contains("map-full"), b = $("#sxFull");
       if (b) { b.innerHTML = full ? SX_ICON.fullExit : SX_ICON.full; b.title = full ? "Exit full screen" : "Full screen"; b.setAttribute("aria-label", b.title); }
       [60, 350].forEach(t => setTimeout(() => { globe?.resize(); drawGlobe(); }, t));
+      setTimeout(() => { sheetPad(); if (globe && onGlobe && globe.getZoom() < earthZoom() + 0.3) globe.easeTo({ zoom: earthZoom(), duration: 500 }); }, 400);
     }).observe(st, { attributes: true, attributeFilter: ["class"] });
   }
 
@@ -711,33 +768,55 @@ const Spots = (() => {
     if (!globe) return;
     globeMarkers.forEach(m => m.remove()); globeMarkers = [];
     if (!onGlobe) return;
-    const ml = window.maplibregl, c = globe.getCenter(), cell = sxTouch ? 50 : 58, w = globeEl.clientWidth, h = globeEl.clientHeight;
+    const ml = ML5, c = globe.getCenter(), cell = sxTouch ? 64 : 78, w = globeEl.clientWidth, h = globeEl.clientHeight;
     const rad = Math.PI / 180, cLat = c.lat * rad, cLon = c.lng * rad;
-    const far = s => {   // distanza angolare dal centro della vista: oltre ~80° è dietro al pianeta
-      const la = s.lat * rad, lo = s.lon * rad;
-      return Math.acos(Math.min(1, Math.sin(cLat) * Math.sin(la) + Math.cos(cLat) * Math.cos(la) * Math.cos(lo - cLon))) / rad > 80;
+    const ang = (lat, lon) => {   // distanza angolare dal centro della vista (oltre ~80° è dietro al pianeta)
+      const la = lat * rad, lo = lon * rad;
+      return Math.acos(Math.min(1, Math.sin(cLat) * Math.sin(la) + Math.cos(cLat) * Math.cos(la) * Math.cos(lo - cLon))) / rad;
     };
+    const far = s => ang(s.lat, s.lon) > 80;
+    // verso il bordo del pianeta i punti sfumano, così non coprono la Terra
+    const fade = (lat, lon) => globe.getZoom() >= 4 ? 1 : Math.max(0.15, Math.min(1, (84 - ang(lat, lon)) / 30));
     const cells = new Map();
     visibleSpots().forEach(s => {
       if (globe.getZoom() < 4 && far(s)) return;
       const p = globe.project([s.lon, s.lat]);
       if (p.x < -20 || p.y < -20 || p.x > w + 20 || p.y > h + 20) return;
       const key = `${Math.floor(p.x / cell)}:${Math.floor(p.y / cell)}`;
-      (cells.get(key) || cells.set(key, []).get(key)).push(s);
+      const c0 = cells.get(key) || cells.set(key, { list: [], x: 0, y: 0 }).get(key);
+      c0.list.push(s); c0.x += p.x; c0.y += p.y;
     });
-    cells.forEach(group => {
+    // i gruppi troppo vicini (a qualsiasi zoom) si fondono: mai cerchi o numeri sovrapposti
+    let blobs = [...cells.values()].map(b => ({ list: b.list, x: b.x / b.list.length, y: b.y / b.list.length }));
+    const minGap = sxTouch ? 40 : 46;
+    blobs.sort((a, b) => b.list.length - a.list.length);
+    for (let changed = true, guard = 0; changed && guard < 6; guard++) {
+      changed = false;
+      const out = [];
+      blobs.forEach(b => {
+        const t = out.find(o => Math.hypot(o.x - b.x, o.y - b.y) < minGap);
+        if (!t) return out.push(b);
+        const n = t.list.length + b.list.length;
+        t.x = (t.x * t.list.length + b.x * b.list.length) / n; t.y = (t.y * t.list.length + b.y * b.list.length) / n;
+        t.list = t.list.concat(b.list); changed = true;
+      });
+      blobs = out;
+    }
+    blobs.map(b => b.list).forEach(group => {
       const el = document.createElement("button");
       el.type = "button";
       if (group.length === 1) {
         const s = group[0], k = CATS[s.category] || CATS.spot;
-        el.className = "sx-gpin"; el.style.setProperty("--c", k.color); el.innerHTML = k.icon;
+        el.className = "sx-gpin"; el.style.setProperty("--c", k.color); el.style.opacity = fade(s.lat, s.lon); el.innerHTML = `<span>${k.icon}</span>`;
         el.title = s.name; el.setAttribute("aria-label", s.name);
         el.addEventListener("click", ev => { ev.stopPropagation(); openFromGlobe(s); });
         globeMarkers.push(new ml.Marker({ element: el }).setLngLat([s.lon, s.lat]).addTo(globe));
       } else {
         const lat = group.reduce((a, s) => a + s.lat, 0) / group.length, lon = group.reduce((a, s) => a + s.lon, 0) / group.length;
-        const n = group.length, size = Math.round((n < 10 ? 38 : n < 100 ? 46 : n < 1000 ? 54 : 62) * (sxTouch ? .8 : 1));
-        el.className = "sx-gcl"; el.style.setProperty("--s", `${size}px`); el.textContent = fmtN(n);
+        // grandezza discreta, cresce piano con il numero di spot; il numero si legge solo sui gruppi grandi
+        const n = group.length, size = Math.round(Math.min(34, 10 + Math.log10(n) * 9) * (sxTouch ? .9 : 1));
+        el.className = `sx-gcl${n >= 10 ? " has-n" : ""}`; el.style.setProperty("--s", `${size}px`); el.style.opacity = fade(lat, lon);
+        el.innerHTML = `<span>${fmtN(n)}</span>`;
         el.setAttribute("aria-label", `${n} spots`);
         el.addEventListener("click", ev => { ev.stopPropagation(); globe.flyTo({ center: [lon, lat], zoom: Math.min(globe.getZoom() + 2.2, GLOBE_TO_FLAT + 0.2), duration: 1200 }); });
         globeMarkers.push(new ml.Marker({ element: el }).setLngLat([lon, lat]).addTo(globe));
@@ -1404,9 +1483,33 @@ const Spots = (() => {
   }
 
   /* ---------- mappa satellite con raggruppamento ---------- */
+  /* sottocategorie dei punti foto, ricavate da nome, descrizione e lista (in più lingue) */
+  const SUBS = {
+    viewpoint: { label: "Viewpoints", re: /belvedere|panoram|viewpoint|view ?point|lookout|overlook|mirador|aussicht|point de vue|scenic|terrazz|terrace|vista point|sunset point|sunrise point/i },
+    urban: { label: "Urban", re: /chies|church|[ée]glise|kirche|iglesia|duomo|cattedral|cathedral|basilic|ponte\b|bridge|\bpont\b|br[üu]cke|puente|piazz|square|platz|plaza|\bvia\b|street|\brue\b|stra(ss|ß)e|calle|torre|tower|\btour\b|turm|castell|castle|ch[âa]teau|\bburg\b|palazz|palace|museo|museum|stazione|station|porto\b|harbou?r|\bport\b|\bcity\b|citt[àa]|borgo|village|town|centro|quartier|district|monaster|abbazi|abbey|\bfaro\b|lighthouse|tempi|temple|villa\b|skyline|rooftop|mural|urban|street art/i },
+    nature: { label: "Nature", re: /\blag[oh]|lake|\blac\b|\bsee\b|cascat|waterfall|cascade|wasserfall|spiaggi|beach|plage|strand|playa|bosc|forest|for[êe]t|\bwald\b|monte\b|mount|\bmont\b|\bberg|vall[eé]|valley|\btal\b|parco|\bpark\b|\bgol[ae]\b|gorge|grott|\bcave|fiume|river|\bisol|island|\bcala\b|\bbai[ae]\b|\bbay\b|dune|glacier|ghiacciai|canyon|cliff|scogli|faraglion|\bpasso\b|\bpass\b|rifugio|\balp|\bcima\b|peak|picco|riserva|reserve|oasi|fjord|fiord|volcan|vulcan|meadow|prat[oi]\b|nature|natura/i },
+    other: { label: "Other photo spots", re: null }
+  };
+  const SUB_KEYS = Object.keys(SUBS);
+  const activeSubs = new Set(SUB_KEYS);
+  const subCache = new Map();
+  function spotSub(s) {
+    if (subCache.has(s.id)) return subCache.get(s.id);
+    const t = `${s.name || ""} ${s.note || ""} ${s.list || ""}`;
+    const k = SUBS.viewpoint.re.test(t) ? "viewpoint" : SUBS.urban.re.test(t) ? "urban" : SUBS.nature.re.test(t) ? "nature" : "other";
+    subCache.set(s.id, k); return k;
+  }
+  /* gli spot che rispettano i filtri di contorno (cerca, preferiti, avvisi…), senza quelli di categoria: per i conteggi */
+  function baseSpots() {
+    const q = norm(query);
+    return spots.filter(s => (!onlyFavs || favs.has(s.id)) && (!onlySupport || s.support_local)
+      && (alertMode === "show" || (alertMode === "hide" ? !alertsOf(s).length : alertsOf(s).length > 0))
+      && (!q || norm(s.name).includes(q) || norm(s.note).includes(q) || norm(s.list).includes(q) || norm(CATS[s.category].label).includes(q)));
+  }
   function visibleSpots() {
     const q = norm(query);
     return spots.filter(s => (!onlyFavs || favs.has(s.id)) && (!activeCats || activeCats.has(s.category))
+      && (s.category !== "spot" || activeSubs.size === SUB_KEYS.length || activeSubs.has(spotSub(s)))
       && (!onlySupport || s.support_local)
       && (alertMode === "show" || (alertMode === "hide" ? !alertsOf(s).length : alertsOf(s).length > 0))
       && (!q || norm(s.name).includes(q) || norm(s.note).includes(q) || norm(s.list).includes(q) || norm(CATS[s.category].label).includes(q)));
@@ -1415,7 +1518,7 @@ const Spots = (() => {
   function buildMap() {
     const keep = map && map.getCenter ? { c: map.getCenter(), z: map.getZoom() } : null;
     if (map) { try { map.remove(); } catch {} map = null; }
-    map = L.map("spotsMap", { zoomControl: false, minZoom: 2, maxZoom: 19, worldCopyJump: true, zoomSnap: 0.5 });
+    map = L.map("spotsMap", { zoomControl: false, minZoom: ui === "earth" ? 3 : 2, maxZoom: 19, worldCopyJump: true, zoomSnap: 0.5 });
     if (ui !== "earth") L.control.zoom({ position: "topleft", zoomInTitle: "Zoom in", zoomOutTitle: "Zoom out" }).addTo(map);
     window.addMapFullscreen?.(map, document.querySelector(".spots-stage"));
     map.attributionControl.setPrefix(false);
@@ -1463,7 +1566,24 @@ const Spots = (() => {
       const key = z >= 16 ? s.id : `${Math.floor(p.x / cell)}:${Math.floor(p.y / cell)}`;
       (cells.get(key) || cells.set(key, []).get(key)).push(s);
     });
-    cells.forEach(group => {
+    // gruppi troppo vicini tra celle confinanti: si fondono, così cerchi e numeri non si sovrappongono
+    let blobs = [...cells.values()].map(g => {
+      const pts = g.map(s => map.latLngToLayerPoint([s.lat, s.lon]));
+      return { list: g, x: pts.reduce((a, p) => a + p.x, 0) / g.length, y: pts.reduce((a, p) => a + p.y, 0) / g.length };
+    }).sort((a, b) => b.list.length - a.list.length);
+    if (z < 16) for (let changed = true, guard = 0; changed && guard < 5; guard++) {
+      changed = false;
+      const out = [];
+      blobs.forEach(b => {
+        const t = out.find(o => Math.hypot(o.x - b.x, o.y - b.y) < 48);
+        if (!t) return out.push(b);
+        const n = t.list.length + b.list.length;
+        t.x = (t.x * t.list.length + b.x * b.list.length) / n; t.y = (t.y * t.list.length + b.y * b.list.length) / n;
+        t.list = t.list.concat(b.list); changed = true;
+      });
+      blobs = out;
+    }
+    blobs.map(b => b.list).forEach(group => {
       if (group.length === 1) return addSpotMarker(group[0]);
       const lat = group.reduce((a, s) => a + s.lat, 0) / group.length, lon = group.reduce((a, s) => a + s.lon, 0) / group.length;
       const size = group.length < 10 ? 36 : group.length < 100 ? 44 : 54;
@@ -1474,7 +1594,7 @@ const Spots = (() => {
         .on("click", () => map.flyToBounds(L.latLngBounds(group.map(s => [s.lat, s.lon])).pad(0.3), { maxZoom: Math.min(19, z + 4), duration: .8 }));
     });
     drawCommunity();
-    if (ui === "earth") drawGlobe();
+    if (ui === "earth") { drawGlobe(); updateSxCounts(); }
   }
 
   function addSpotMarker(s, front) {
