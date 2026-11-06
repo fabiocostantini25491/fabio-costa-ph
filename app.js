@@ -609,12 +609,8 @@ function createMap(kind) {
     L.tileLayer(ESRI + "Elevation/World_Hillshade/MapServer/tile/{z}/{y}/{x}", { maxZoom: 18, maxNativeZoom: 16, pane: "relief", className: "tiles-hill",
       attribution: "Relief &copy; Esri, USGS, NASA SRTM" })
   ]);
-  const bases = {
-    earth,
-    satellite: L.tileLayer(ESRI + "World_Imagery/MapServer/tile/{z}/{y}/{x}", { maxZoom: 18, maxNativeZoom: 18, attribution: IMG_ATTR })
-  };
-  let mode = "earth";
-  try { const m = localStorage.getItem("fcph-map"); if (bases[m]) mode = m; } catch {}
+  const bases = { earth };
+  const mode = "earth";   // una sola vista: satellite con rilievo, confini e nomi
   const REF_ZOOM = 6.5;   // da qui in su: nomi e confini dettagliati di Esri
   const earthDeco = createEarthDecor(map);
 
@@ -640,16 +636,9 @@ function createMap(kind) {
       onAdd() {
         const box = L.DomUtil.create("div", "map-modes");
         box.innerHTML = `
-          <button type="button" data-mode="earth" aria-pressed="false">Earth</button>
-          <button type="button" data-mode="satellite" aria-pressed="false">Satellite</button>
           <button type="button" class="fit-all" title="Show all my spots" aria-label="Show all my spots">${ICON.globe}</button>`;
         L.DomEvent.disableClickPropagation(box);
         L.DomEvent.disableScrollPropagation(box);
-        box.querySelectorAll("[data-mode]").forEach(b => b.addEventListener("click", () => {
-          mode = b.dataset.mode;
-          try { localStorage.setItem("fcph-map", mode); } catch {}
-          updateBase();
-        }));
         box.querySelector(".fit-all").addEventListener("click", () => fitAllTrips(true));
         return box;
       }
