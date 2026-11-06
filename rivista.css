@@ -80,3 +80,19 @@ body { margin: 0; color: var(--ink); font: 400 10pt/1.55 var(--serif); -webkit-p
 .rv-back h2 span { display: block; font: italic 400 16pt var(--serif); letter-spacing: 0; margin-top: 2mm; }
 .rv-back p { margin: 0 auto 4mm; max-width: 120mm; font-size: 11pt; }
 .rv-back-foot { margin-top: 14mm !important; font: 700 8pt var(--head) !important; letter-spacing: .14em; text-transform: uppercase; color: var(--soft); }
+
+/* impaginazione a blocchi: formati delle foto */
+.rv-fig.fig-col { column-span: none; margin: 2mm 0 4mm; }
+.rv-fig.fig-col img { max-height: 120mm; }
+.rv-fig.fig-left, .rv-fig.fig-right { column-span: none; width: 48%; margin: 1mm 0 3mm; }
+.rv-fig.fig-left { float: left; margin-right: 4mm; }
+.rv-fig.fig-right { float: right; margin-left: 4mm; }
+.rv-fig.fig-left img, .rv-fig.fig-right img { max-height: 80mm; }
+.rv-fig.fig-page { break-before: page; break-after: page; margin: 0; }
+.rv-fig.fig-page img { max-height: 250mm; }
+.rv-spread { column-span: all; display: grid; gap: 3mm; margin: 5mm 0; break-inside: avoid; align-items: start; }
+.rv-spread.n2 { grid-template-columns: 1fr 1fr; }
+.rv-spread.n3 { grid-template-columns: 1fr 1fr 1fr; }
+.rv-spread img { display: block; width: 100%; height: auto; max-height: 120mm; object-fit: contain; }
+.rv-spread p { grid-column: 1 / -1; margin: 0; text-align: center; font: italic 400 9pt/1.4 var(--serif); color: var(--soft); }
+.rv-body blockquote cite { display: block; margin-top: 2mm; font: normal 700 7.5pt var(--head); letter-spacing: .14em; text-transform: uppercase; color: var(--soft); }

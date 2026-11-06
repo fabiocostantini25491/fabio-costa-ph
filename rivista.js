@@ -64,6 +64,7 @@
         out.push({ id: slug(x.slug || x.titolo), title: x.titolo, category: x.categoria || "Viaggi", date: x.data || "", minutes: +x.minuti || 0,
           cover: media(x.copertina), excerpt: x.estratto || "", text: x.testo || "", place: x.luogo || "",
           type: /reportage/i.test(x.tipo || "") ? "reportage" : "guide", glance: x.in_breve && typeof x.in_breve === "object" ? x.in_breve : {},
+          blocks: Array.isArray(x.impaginazione) ? x.impaginazione.filter(b => b && typeof b === "object") : [],
           author: au ? { name: au, bio: x.autore.bio || "", instagram: String(x.autore.instagram || "").replace(/^@/, ""), own: false } : { name: owner, own: true } });
       });
     } catch (e) { console.warn("[rivista] articoli del pannello", e); }
@@ -110,6 +111,22 @@
     })));
   }
 
+  /* impaginazione a blocchi scelta nel pannello */
+  const FMT = { "Tutta larghezza": "full", "Nella colonna": "col", "A sinistra nel testo": "left", "A destra nel testo": "right", "Pagina intera": "page" };
+  function blocksHtml(blocks) {
+    const fig = (src, cap, fmt) => `<figure class="rv-fig fig-${fmt}"><img src="${esc(media(src))}" alt="">${cap ? `<figcaption>${esc(cap)}</figcaption>` : ""}</figure>`;
+    return blocks.map(b => {
+      const k = b.blocco || b._block || b.type || "";
+      if (k === "testo") return md(b.testo || "");
+      if (k === "foto" && b.immagine) return fig(b.immagine, b.didascalia, FMT[b.formato] || "full");
+      if (k === "coppia") {
+        const imgs = (Array.isArray(b.immagini) ? b.immagini : b.immagini ? [b.immagini] : []).map(x => typeof x === "string" ? x : x?.immagine || "").filter(Boolean).slice(0, 3);
+        return imgs.length ? `<div class="rv-spread n${Math.max(2, imgs.length)}">${imgs.map(i => `<img src="${esc(media(i))}" alt="">`).join("")}${b.didascalia ? `<p>${esc(b.didascalia)}</p>` : ""}</div>` : "";
+      }
+      if (k === "citazione" && b.testo) return `<blockquote><p>${esc(b.testo)}</p>${b.autore ? `<cite>— ${esc(b.autore)}</cite>` : ""}</blockquote>`;
+      return "";
+    }).join("");
+  }
   const glanceHtml = g => {
     const rows = GLANCE.filter(([k]) => g && g[k] && String(g[k]).trim());
     return rows.length ? `<aside class="rv-glance"><p>At a glance</p><dl>${rows.map(([k, l]) => `<div><dt>${l}</dt><dd>${esc(g[k])}</dd></div>`).join("")}</dl></aside>` : "";
@@ -160,7 +177,7 @@
         <p class="rv-byline">Text and photographs by <b>${esc(a.author.name)}</b> · ${esc(fmtDate(a.date))}${a.minutes ? ` · ${a.minutes} min read` : ""}</p>
         ${a.cover ? `<figure class="rv-fig rv-hero"><img src="${esc(a.cover)}" alt=""></figure>` : ""}
         ${glanceHtml(a.glance)}
-        <div class="rv-body">${figures(md(a.text))}</div>
+        <div class="rv-body">${a.blocks?.length ? blocksHtml(a.blocks) : figures(md(a.text))}</div>
         ${!a.author.own ? `<aside class="rv-author"><b>${esc(a.author.name)}</b>${a.author.bio ? ` — ${esc(a.author.bio)}` : ""}${a.author.instagram ? ` · Instagram @${esc(a.author.instagram)}` : ""}</aside>` : ""}
       </section>`).join("")}
       <section class="rv-part rv-back" data-part="back">

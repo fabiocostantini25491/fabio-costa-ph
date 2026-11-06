@@ -2896,3 +2896,13 @@ body[data-page="explore"]::after{background:radial-gradient(90% 55% at 85% 0,rgb
 .zm-close{top:calc(12px + env(safe-area-inset-top));right:12px}
 .zm-prev{left:12px;top:50%;transform:translateY(-50%)}.zm-next{right:12px;top:50%;transform:translateY(-50%)}
 @media (pointer:coarse){.zm-prev,.zm-next{opacity:.7}}
+/* impaginazione a blocchi: formati delle foto nel testo */
+.fn-body .mag-fig.fig-col{column-span:none;margin:.6em 0 1em !important}
+.fn-body .mag-fig.fig-left,.fn-body .mag-fig.fig-right{column-span:none;width:48% !important;margin:.25em 0 .7em !important}
+.fn-body .mag-fig.fig-left{float:left;margin-right:1em !important}
+.fn-body .mag-fig.fig-right{float:right;margin-left:1em !important}
+.fn-body .mag-fig.fig-left img,.fn-body .mag-fig.fig-right img,.fn-body .mag-fig.fig-col img{max-height:60vh}
+.fn-body .fig-cap-shared{column-span:all;margin:-.8em 0 1.4em !important;text-align:center !important;font:italic 13px/1.5 var(--mag-serif);color:var(--ink-soft)}
+.fn-body blockquote cite{display:block;margin-top:8px;font:normal 700 11px var(--mag-head);letter-spacing:.14em;text-transform:uppercase;color:var(--ink-soft)}
+@media (max-width:760px){.fn-body .mag-fig.fig-left,.fn-body .mag-fig.fig-right{float:none;width:auto !important;margin:1em 0 !important}}
+.fn-body .mag-fig.fig-col,.fn-body .mag-fig.fig-left,.fn-body .mag-fig.fig-right{column-span:none !important}

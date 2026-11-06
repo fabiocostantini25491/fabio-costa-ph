@@ -293,6 +293,66 @@ content:
             options:
               format: markdown
               rename: true
+          - name: impaginazione
+            label: Impaginazione a blocchi (facoltativa)
+            type: block
+            list: true
+            blockKey: blocco
+            description: "Per impaginare come una rivista: aggiungi blocchi di testo, foto, coppie di foto e citazioni e trascinali nell'ordine che vuoi. Se usi i blocchi, prendono il posto del «Testo dell'articolo» qui sopra (che puoi lasciare vuoto). Valgono sia sul sito sia nel PDF del mese."
+            blocks:
+              - name: testo
+                label: Testo
+                fields:
+                  - name: testo
+                    label: Testo
+                    type: rich-text
+                    options:
+                      format: markdown
+                      rename: true
+              - name: foto
+                label: Foto
+                fields:
+                  - name: immagine
+                    label: Fotografia
+                    type: image
+                    required: true
+                    options:
+                      extensions: [jpg, jpeg, png, webp]
+                      rename: true
+                  - name: didascalia
+                    label: Didascalia (facoltativa)
+                    type: string
+                  - name: formato
+                    label: Come impaginarla
+                    type: select
+                    default: Tutta larghezza
+                    options:
+                      values: [Tutta larghezza, Nella colonna, A sinistra nel testo, A destra nel testo, Pagina intera]
+                    description: "Tutta larghezza: sopra le colonne. Nella colonna: dentro una delle due colonne di testo. A sinistra / a destra: il testo le gira intorno. Pagina intera: nel PDF occupa una pagina da sola (sul sito è a tutta larghezza)."
+              - name: coppia
+                label: Foto affiancate (2 o 3)
+                fields:
+                  - name: immagini
+                    label: Fotografie
+                    type: image
+                    required: true
+                    options:
+                      multiple: { max: 3 }
+                      extensions: [jpg, jpeg, png, webp]
+                      rename: true
+                  - name: didascalia
+                    label: Didascalia (facoltativa)
+                    type: string
+              - name: citazione
+                label: Citazione in evidenza
+                fields:
+                  - name: testo
+                    label: Frase
+                    type: text
+                    required: true
+                  - name: autore
+                    label: Di chi è (facoltativo)
+                    type: string
           - name: autore
             label: Autore (lascia vuoto se sei tu)
             type: object

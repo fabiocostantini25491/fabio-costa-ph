@@ -180,6 +180,7 @@ async function loadContent() {
     minutes: num(x.minuti, 0), cover: mediaUrl(x.copertina), trip: slug(x.viaggio || ""),
     excerpt: x.estratto || "", text: x.testo || "",
     type: /reportage/i.test(x.tipo || "") ? "reportage" : "guide", place: x.luogo || "", glance: x.in_breve && typeof x.in_breve === "object" ? x.in_breve : {},
+    blocks: Array.isArray(x.impaginazione) ? x.impaginazione.filter(b => b && typeof b === "object") : [],
     author: authorOf(x.autore) }));
 
   about = c.status === "fulfilled" && c.value ? c.value : {};
@@ -1782,6 +1783,23 @@ function dropCap(html) {
   }
   return tpl.innerHTML;
 }
+/* impaginazione a blocchi (pannello): testo, foto con formato, foto affiancate, citazioni, nell'ordine scelto */
+const FIG_FMT = { "Tutta larghezza": "full", "Nella colonna": "col", "A sinistra nel testo": "left", "A destra nel testo": "right", "Pagina intera": "page" };
+function blocksHtml(blocks) {
+  const fig = (src, cap, fmt) => `<figure class="mag-fig fig-${fmt}"><img src="${esc(mediaUrl(src))}" alt="${esc(cap || "")}" loading="lazy">${cap ? `<figcaption>${esc(cap)}</figcaption>` : ""}</figure>`;
+  return blocks.map(b => {
+    const kind = b.blocco || b._block || b.type || "";
+    if (kind === "testo") return md(b.testo || "");
+    if (kind === "foto" && b.immagine) return fig(b.immagine, b.didascalia, FIG_FMT[b.formato] || "full");
+    if (kind === "coppia") {
+      const imgs = (Array.isArray(b.immagini) ? b.immagini : b.immagini ? [b.immagini] : []).map(x => typeof x === "string" ? x : x?.immagine || "").filter(Boolean).slice(0, 3);
+      if (!imgs.length) return "";
+      return `<div class="mag-spread n${Math.max(2, imgs.length)}">${imgs.map(i => fig(i, "", "full")).join("")}</div>${b.didascalia ? `<p class="fig-cap-shared">${esc(b.didascalia)}</p>` : ""}`;
+    }
+    if (kind === "citazione" && b.testo) return `<blockquote><p>${esc(b.testo)}</p>${b.autore ? `<cite>— ${esc(b.autore)}</cite>` : ""}</blockquote>`;
+    return "";
+  }).join("");
+}
 function articleHtml(a, t, back = true) {
   const rep = a.type === "reportage";
   const caption = t ? `<figcaption>${esc(t.name || "")} · ${fmtCoord(t.lat, t.lon).replace("  |  ", ", ")}</figcaption>` : "";
@@ -1793,7 +1811,7 @@ function articleHtml(a, t, back = true) {
     <p class="fn-byline">Text and photographs by ${authorLink(a)} · ${esc(fmtDate(a.date))}${a.minutes ? ` · ${a.minutes} min read` : ""}</p>
     ${a.cover ? `<figure class="fn-hero"><img src="${esc(a.cover)}" alt="${esc(a.title)}" data-cat="Paesaggi">${caption}</figure>` : ""}
     ${glance}
-    <div class="rich mag-body fn-body">${dropCap(magBody(md(a.text)))}</div>
+    <div class="rich mag-body fn-body">${dropCap(a.blocks?.length ? blocksHtml(a.blocks) : magBody(md(a.text)))}</div>
     <p class="fn-end">Thanks for stopping by. Now, let's go explore.</p>` + (a.author && !a.author.own ? authorBox(a.author) : "");
 }
 
