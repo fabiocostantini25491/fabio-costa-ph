@@ -248,8 +248,160 @@ function showPhotoMarker(p) {
 }
 
 function pinIcon(active) {
-  return L.divIcon({ className: "", iconSize: [40, 52], iconAnchor: [20, 48], tooltipAnchor: [0, -44],
-    html: `<div class="home-astro${active ? " is-active" : ""}">${ASTRO_SVG}</div>` });
+  return L.divIcon({ className: "", iconSize: [46, 50], iconAnchor: [23, 44], tooltipAnchor: [0, -40],
+    html: `<div class="ex-lander${active ? " is-active" : ""}">${LANDER_SVG}</div>` });
+}
+/* Lander arancione = viaggio; rover ciano = località dentro il viaggio */
+const LANDER_SVG = `<svg viewBox="0 0 46 50" aria-hidden="true">
+  <ellipse class="lg" cx="23" cy="44" rx="17" ry="4.5"/>
+  <path class="ln" d="M30 9l6-6M36 3a3 3 0 1 0 .01 0"/>
+  <path class="lb" d="M12 14h22l3 14H9z"/>
+  <rect class="lw" x="17" y="17" width="12" height="6" rx="1.5"/>
+  <path class="ll" d="M11 28 5 41M35 28l6 13M17 28l-3 13M29 28l3 13M2 41h7M37 41h7M11 41h6M29 41h6"/>
+  <path class="lt" d="M15 14l2-5h12l2 5"/>
+</svg>`;
+const ROVER_SVG = `<svg viewBox="0 0 40 34" aria-hidden="true">
+  <ellipse class="rg" cx="20" cy="29" rx="15" ry="3.6"/>
+  <path class="rm" d="M14 13V5M14 5h6M20 3v4"/>
+  <rect class="rb" x="7" y="13" width="26" height="8" rx="2"/>
+  <circle class="rw" cx="11" cy="25" r="3.4"/><circle class="rw" cx="20" cy="25" r="3.4"/><circle class="rw" cx="29" cy="25" r="3.4"/>
+</svg>`;
+const roverIcon = () => L.divIcon({ className: "", iconSize: [36, 31], iconAnchor: [18, 26], tooltipAnchor: [0, -22], html: `<div class="ex-rover">${ROVER_SVG}</div>` });
+let roverLayer = null;
+const ROVER_ZOOM = 4.5;
+/* rover per ogni sottosezione con coordinate proprie, legato al suo lander con una linea tratteggiata */
+function drawRovers() {
+  const map = maps.explore;
+  if (!map || !roverLayer) return;
+  roverLayer.clearLayers();
+  if (map.getZoom() < ROVER_ZOOM) return;
+  trips.forEach(t => {
+    if (!photosOfTrip(t.id).length) return;
+    t.subs.filter(sb => sb.ownCoords && distKm(t, sb) > 0.05).forEach(sb => {
+      L.polyline([[t.lat, t.lon], [sb.lat, sb.lon]], { color: "#ff9a3c", weight: 1.6, opacity: 0.85, dashArray: "1 6", lineCap: "round", interactive: false, className: "ex-link" }).addTo(roverLayer);
+      L.marker([sb.lat, sb.lon], { icon: roverIcon(), title: `${sb.name} · ${t.name}`, keyboard: true, riseOnHover: true })
+        .addTo(roverLayer)
+        .bindTooltip(`${esc(sb.name)} <small>${esc(t.name)}</small>`, { direction: "top", className: "ex-tip" })
+        .on("click", () => openTrip(t.id, null, sb.id));
+    });
+  });
+}
+
+/* Confini e coste (Natural Earth) e nomi eleganti di paesi e mari, per la vista da lontano */
+const SEA_LABELS = [
+  ["Atlantic Ocean", 28, -40, 1.5, 5], ["Atlantic Ocean", -22, -16, 2, 5], ["Pacific Ocean", 8, -140, 1.5, 5], ["Pacific Ocean", -25, -115, 2, 5],
+  ["Indian Ocean", -22, 78, 1.5, 5], ["Arctic Ocean", 80, -20, 2, 5], ["Southern Ocean", -58, 40, 2, 5],
+  ["Mediterranean Sea", 34.6, 18.5, 4, 7], ["Tyrrhenian Sea", 39.8, 12.3, 5, 8], ["Adriatic Sea", 43.1, 15.2, 5, 8], ["Ionian Sea", 37.8, 18.8, 5, 8],
+  ["Ligurian Sea", 43.5, 8.6, 6, 9], ["Aegean Sea", 38.9, 25.1, 5, 8], ["Balearic Sea", 40.3, 2.6, 6, 9], ["Black Sea", 43.3, 34.2, 4, 7],
+  ["North Sea", 56, 3.2, 4, 7], ["Baltic Sea", 57.8, 19.4, 4, 7], ["Norwegian Sea", 68, 3, 3, 6], ["Bay of Biscay", 45.2, -4.6, 5, 8],
+  ["Celtic Sea", 50, -8, 5.5, 8], ["Caribbean Sea", 15, -75, 3, 6], ["Gulf of Mexico", 25, -90, 3, 6], ["Red Sea", 20, 38.4, 4, 7],
+  ["Arabian Sea", 15, 64, 3, 6], ["Bay of Bengal", 15, 88, 3, 6], ["South China Sea", 13, 114, 3, 6], ["Philippine Sea", 20, 132, 3, 6],
+  ["Sea of Japan", 40, 135, 4, 7], ["Tasman Sea", -38, 160, 3, 6], ["Coral Sea", -17, 155, 3, 6], ["Caspian Sea", 42, 50.6, 4, 7],
+  ["Hudson Bay", 59, -85, 3, 6], ["Gulf of Alaska", 56, -145, 3, 6], ["Canary Islands", 28.3, -15.8, 6, 9]
+];
+const COUNTRY_SOURCES = {
+  low: ["https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/countries-110m.json", "https://unpkg.com/world-atlas@2.0.2/countries-110m.json"],
+  high: ["https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/countries-50m.json", "https://unpkg.com/world-atlas@2.0.2/countries-50m.json"]
+};
+const countryCache = {};
+function loadCountries(level) {
+  if (countryCache[level]) return countryCache[level];
+  countryCache[level] = (async () => {
+    for (const url of COUNTRY_SOURCES[level]) {
+      try {
+        const res = await fetch(url);
+        if (!res.ok) continue;
+        const topo = await res.json(), tf = topo.transform;
+        const arcs = topo.arcs.map(arc => { let x = 0, y = 0; return arc.map(p => tf ? (x += p[0], y += p[1], [x * tf.scale[0] + tf.translate[0], y * tf.scale[1] + tf.translate[1]]) : p); });
+        const ring = ids => ids.reduce((pts, i) => { const a = i < 0 ? arcs[~i].slice().reverse() : arcs[i]; return pts.concat(pts.length ? a.slice(1) : a); }, []);
+        // bordi come linee (ogni arco una volta sola): confini e coste senza doppioni
+        const lines = { type: "Feature", properties: {}, geometry: { type: "MultiLineString", coordinates: arcs } };
+        const countries = topo.objects.countries.geometries.filter(g => g.arcs).map(g => ({ name: g.properties?.name || "",
+          polys: g.type === "Polygon" ? [g.arcs.map(ring)] : g.arcs.map(p => p.map(ring)) }));
+        return { lines, countries };
+      } catch { /* prova la fonte successiva */ }
+    }
+    return null;
+  })();
+  return countryCache[level];
+}
+/* punto dentro il poligono più grande, il più lontano possibile dai bordi (per centrare il nome) */
+function labelPoint(polys) {
+  const area = r => Math.abs(r.reduce((s, p, i) => { const q = r[(i + 1) % r.length]; return s + p[0] * q[1] - q[0] * p[1]; }, 0) / 2);
+  const big = polys.map(p => ({ p, a: area(p[0]) })).sort((x, y) => y.a - x.a)[0];
+  if (!big) return null;
+  const outer = big.p[0];
+  const inside = (x, y) => { let c = false; for (let i = 0, j = outer.length - 1; i < outer.length; j = i++) { const [xi, yi] = outer[i], [xj, yj] = outer[j]; if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) c = !c; } return c; };
+  let minX = 180, maxX = -180, minY = 90, maxY = -90;
+  outer.forEach(([x, y]) => { minX = Math.min(minX, x); maxX = Math.max(maxX, x); minY = Math.min(minY, y); maxY = Math.max(maxY, y); });
+  let best = null, bestD = -1;
+  const step = 12, kx = Math.cos(((minY + maxY) / 2) * Math.PI / 180);
+  for (let i = 1; i < step; i++) for (let j = 1; j < step; j++) {
+    const x = minX + (maxX - minX) * i / step, y = minY + (maxY - minY) * j / step;
+    if (!inside(x, y)) continue;
+    let d = Infinity;
+    for (let k = 0; k < outer.length; k += Math.max(1, Math.floor(outer.length / 300))) { const dx = (outer[k][0] - x) * kx, dy = outer[k][1] - y; d = Math.min(d, dx * dx + dy * dy); }
+    if (d > bestD) { bestD = d; best = [y, x]; }
+  }
+  return best ? { at: best, area: big.a } : null;
+}
+function createEarthDecor(map) {
+  const group = L.layerGroup();
+  let shown = false, lines = null, linesLevel = "", labels = [], loading = false, withLines = true;
+  const seaMarkers = SEA_LABELS.map(([n, lat, lon, z0, z1]) => ({ z0, z1, sea: true, m: L.marker([lat, lon], { pane: "earthLabels", interactive: false, keyboard: false,
+    icon: L.divIcon({ className: "", iconSize: [0, 0], html: `<span class="ex-lab sea">${esc(n)}</span>` }) }) }));
+  const place = () => {
+    if (!shown) return;
+    const z = map.getZoom(), size = map.getSize();
+    const boxes = [];
+    // prima i mari, poi i paesi dal più grande: se due nomi si sovrappongono resta il primo
+    [...seaMarkers, ...labels].forEach(l => {
+      const want = z >= l.z0 && z < l.z1;
+      let ok = want;
+      if (ok) {
+        const pt = map.latLngToContainerPoint(l.m.getLatLng()), w = l.w || 120, h = 18;
+        const r = [pt.x - w / 2, pt.y - h / 2, pt.x + w / 2, pt.y + h / 2];
+        ok = r[2] > -50 && r[0] < size.x + 50 && r[3] > -20 && r[1] < size.y + 20 && !boxes.some(b => r[0] < b[2] && r[2] > b[0] && r[1] < b[3] && r[3] > b[1]);
+        if (ok) boxes.push(r);
+      }
+      if (ok && !group.hasLayer(l.m)) group.addLayer(l.m);
+      if (!ok && group.hasLayer(l.m)) group.removeLayer(l.m);
+    });
+  };
+  const build = async () => {
+    const level = map.getZoom() >= 3.5 ? "high" : "low";
+    if (level === linesLevel || loading) return;
+    loading = true;
+    const data = await loadCountries(level).catch(() => null);
+    loading = false;
+    if (!data) return;
+    linesLevel = level;
+    if (lines) group.removeLayer(lines);
+    lines = L.geoJSON(data.lines, { pane: "earthLines", interactive: false, style: { color: "#f0bd72", weight: 0.9, opacity: 0.62, className: "ex-border" } });
+    if (withLines) group.addLayer(lines);
+    if (!labels.length || level === "high") {
+      labels.forEach(l => group.removeLayer(l.m));
+      labels = data.countries.map(c => {
+        const lp = c.name && labelPoint(c.polys);
+        if (!lp) return null;
+        const z0 = lp.area > 600 ? 2.5 : lp.area > 120 ? 3.5 : lp.area > 25 ? 4.5 : 5.3;
+        const name = c.name.replace(/^United States of America$/, "United States").replace(/^Dem\. Rep\. Congo$/, "DR Congo");
+        return { z0, z1: 6.5, area: lp.area, w: name.length * 8.5 + 20, m: L.marker(lp.at, { pane: "earthLabels", interactive: false, keyboard: false,
+          icon: L.divIcon({ className: "", iconSize: [0, 0], html: `<span class="ex-lab">${esc(name)}</span>` }) }) };
+      }).filter(Boolean).sort((a, b) => b.area - a.area);
+    }
+    place();
+  };
+  map.on("moveend zoomend", () => { if (shown) { build(); place(); } });
+  return {
+    update(on, showLines = true) {
+      withLines = showLines;
+      if (on && !shown) { shown = true; group.addTo(map); }
+      if (!on && shown) { shown = false; map.removeLayer(group); }
+      if (lines) { if (withLines && !group.hasLayer(lines)) group.addLayer(lines); if (!withLines && group.hasLayer(lines)) group.removeLayer(lines); }
+      if (shown) { build(); place(); }
+    }
+  };
 }
 
 /* Geometria dei continenti (Natural Earth). Prova più fonti in ordine e usa la prima valida.
@@ -420,7 +572,7 @@ function createMap(kind) {
   map.fitBounds([[-50, -165], [75, 175]]);
 
   // Livello "artistico" (da lontano): la Terra di notte con le luci delle città (NASA Black Marble)
-  const art = L.layerGroup().addTo(map);
+  const art = L.layerGroup();
   const landOk = true;
   let nightErrors = 0, nightFallback = false;
   const night = L.tileLayer(NIGHT_TILES, { maxNativeZoom: 8, maxZoom: 10, className: "tiles-night", attribution: NIGHT_ATTRIBUTION }).addTo(art);
@@ -437,39 +589,50 @@ function createMap(kind) {
   map.getPane("labels").style.zIndex = 450;
   map.getPane("labels").style.pointerEvents = "none";
   const OSM = '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>';
+  const ESRI = "https://server.arcgisonline.com/ArcGIS/rest/services/";
+  const IMG_ATTR = "Imagery &copy; Esri, Maxar, Earthstar Geographics, USGS, NASA and the GIS community";
+  // «Satellite + Terrain»: foto satellitari + ombreggiatura del rilievo (Esri World Hillshade, in moltiplica)
+  // + confini e coste (Natural Earth) + nomi eleganti; da vicino nomi e confini dettagliati di Esri.
+  map.createPane("relief");
+  map.getPane("relief").style.zIndex = 250;
+  map.getPane("relief").style.pointerEvents = "none";
+  map.createPane("earthLines");
+  map.getPane("earthLines").style.zIndex = 420;
+  map.getPane("earthLines").style.pointerEvents = "none";
+  map.createPane("earthLabels");
+  map.getPane("earthLabels").style.zIndex = 455;
+  map.getPane("earthLabels").style.pointerEvents = "none";
+  const earthRef = L.tileLayer(ESRI + "Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}", {
+    maxZoom: 18, maxNativeZoom: 16, pane: "labels", className: "tiles-ref" });
+  const earth = L.featureGroup([
+    L.tileLayer(ESRI + "World_Imagery/MapServer/tile/{z}/{y}/{x}", { maxZoom: 18, maxNativeZoom: 18, className: "tiles-earth", attribution: IMG_ATTR }),
+    L.tileLayer(ESRI + "Elevation/World_Hillshade/MapServer/tile/{z}/{y}/{x}", { maxZoom: 18, maxNativeZoom: 16, pane: "relief", className: "tiles-hill",
+      attribution: "Relief &copy; Esri, USGS, NASA SRTM" })
+  ]);
   const bases = {
-    // Esri "Dark Gray Canvas": gratuita, senza chiave; i nomi dei luoghi sono un livello a parte
-    mappa: L.featureGroup([
-      L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}", {
-        maxZoom: 18, maxNativeZoom: 16, className: "tiles-site",
-        attribution: "Map &copy; Esri, HERE, Garmin, &copy; OpenStreetMap and the GIS community" }),
-      L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}", {
-        maxZoom: 18, maxNativeZoom: 16, pane: "labels", className: "tiles-labels" })
-    ]),
-    satellite: L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
-      maxZoom: 18, maxNativeZoom: 18,
-      attribution: "Imagery &copy; Esri, Maxar, Earthstar Geographics and the GIS community" }),
-    rilievo: L.tileLayer("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", {
-      subdomains: "abc", maxZoom: 18, maxNativeZoom: 17,
-      attribution: `${OSM}, SRTM &middot; style &copy; <a href="https://opentopomap.org" target="_blank" rel="noopener">OpenTopoMap</a> (CC-BY-SA)` })
+    earth,
+    satellite: L.tileLayer(ESRI + "World_Imagery/MapServer/tile/{z}/{y}/{x}", { maxZoom: 18, maxNativeZoom: 18, attribution: IMG_ATTR })
   };
-  let mode = "mappa";
-  try { if (bases[localStorage.getItem("fcph-map")]) mode = localStorage.getItem("fcph-map"); } catch {}
-  const DETAIL_ZOOM = 7;   // sotto questo zoom, in modalità "Map", si vede la Terra di notte
+  let mode = "earth";
+  try { const m = localStorage.getItem("fcph-map"); if (bases[m]) mode = m; } catch {}
+  const REF_ZOOM = 6.5;   // da qui in su: nomi e confini dettagliati di Esri
+  const earthDeco = createEarthDecor(map);
 
   function updateBase() {
-    const artistic = mode === "mappa" && landOk && map.getZoom() < DETAIL_ZOOM;
     Object.entries(bases).forEach(([k, layer]) => {
-      const want = k === mode && !artistic;
+      const want = k === mode;
       if (want && !map.hasLayer(layer)) layer.addTo(map).bringToBack();
       if (!want && map.hasLayer(layer)) map.removeLayer(layer);
     });
-    if (artistic && !map.hasLayer(art)) art.addTo(map);
-    if (!artistic && map.hasLayer(art)) map.removeLayer(art);
-    map.getContainer().dataset.base = artistic ? "art" : mode;
+    if (map.hasLayer(art)) map.removeLayer(art);
+    const near = map.getZoom() >= REF_ZOOM, isEarth = mode === "earth";
+    if (isEarth && near && !map.hasLayer(earthRef)) earthRef.addTo(map);
+    if ((!isEarth || !near) && map.hasLayer(earthRef)) map.removeLayer(earthRef);
+    earthDeco.update(isEarth && !near);
+    map.getContainer().dataset.base = mode;
     $$(".map-modes [data-mode]", map.getContainer()).forEach(b => b.setAttribute("aria-pressed", String(b.dataset.mode === mode)));
   }
-  map.on("zoomend", () => { updateBase(); updateShotDots(); });
+  map.on("zoomend", () => { updateBase(); updateShotDots(); drawRovers(); });
 
   if (interactive) {
     const Modes = L.Control.extend({
@@ -477,9 +640,8 @@ function createMap(kind) {
       onAdd() {
         const box = L.DomUtil.create("div", "map-modes");
         box.innerHTML = `
-          <button type="button" data-mode="mappa" aria-pressed="false">Map</button>
+          <button type="button" data-mode="earth" aria-pressed="false">Earth</button>
           <button type="button" data-mode="satellite" aria-pressed="false">Satellite</button>
-          <button type="button" data-mode="rilievo" aria-pressed="false">Terrain</button>
           <button type="button" class="fit-all" title="Show all my spots" aria-label="Show all my spots">${ICON.globe}</button>`;
         L.DomEvent.disableClickPropagation(box);
         L.DomEvent.disableScrollPropagation(box);
@@ -493,9 +655,11 @@ function createMap(kind) {
       }
     });
     new Modes().addTo(map);
+    L.control.scale({ position: "bottomright", imperial: false, maxWidth: 140 }).addTo(map);
   }
   updateBase();
 
+  roverLayer = L.layerGroup().addTo(map);
   shotLayer = L.layerGroup().addTo(map);
   pinLayers[kind] = L.layerGroup().addTo(map);
   maps[kind] = map;
@@ -789,7 +953,7 @@ function drawPins(kind) {
   trips.forEach(t => {
     if (!photosOfTrip(t.id).length) return;
     if (distKm(t, HOME_BASE) > 50)
-      L.polyline(curve(HOME_BASE, t), { color: "#bcdcff", weight: 1.1, opacity: 0.5, dashArray: "2 7", interactive: false }).addTo(layer);
+      L.polyline(curve(HOME_BASE, t), { color: "#ffa14a", weight: 1.4, opacity: 0.7, dashArray: "1 7", lineCap: "round", interactive: false, className: "ex-route" }).addTo(layer);
   });
   trips.forEach(t => {
     if (!photosOfTrip(t.id).length) return;
@@ -800,7 +964,7 @@ function drawPins(kind) {
       else openTrip(t.id);
     });
   });
-  if (kind === "explore") updateShotDots();
+  if (kind === "explore") { updateShotDots(); drawRovers(); }
 }
 
 /* =========================================================
@@ -824,7 +988,7 @@ function renderPanelIntro() {
   $("#locationPanel").innerHTML = `
     <span class="eyebrow">SELECT A LOCATION</span>
     <h2 class="intro-title">Where I've been</h2>
-    <p class="trip-desc">${list.length ? "Tap an astronaut on the map, or pick a journey from the list." : "The first journeys are coming soon."}</p>
+    <p class="trip-desc">${list.length ? "Tap a lander on the map, or pick a journey from the list. Rovers mark the places inside each journey." : "The first journeys are coming soon."}</p>
     ${tripListHtml(list)}`;
   $$("#locationPanel [data-trip]").forEach(b => b.addEventListener("click", () => openTrip(b.dataset.trip)));
   drawPins("explore");
