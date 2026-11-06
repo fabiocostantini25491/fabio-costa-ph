@@ -240,6 +240,23 @@
           ]
         }
       ]
+    },
+    {
+      "nome": "Venezia",
+      "id": "Venezia",
+      "paese": "Italia",
+      "lat": "45.439158030148604",
+      "lon": "12.325738842534337",
+      "categoria": "Paesaggi",
+      "foto": [
+        {
+          "titolo": "Ponte delle Piscine",
+          "immagine": "/img/foto/fb-dsc09478-2025-03-22t22-04-21-019-copy.jpg",
+          "categoria": "Urban",
+          "lat": "45.4335121839849",
+          "lon": "12.33508671333569"
+        }
+      ]
     }
   ]
 }
