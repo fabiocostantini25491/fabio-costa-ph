@@ -624,6 +624,7 @@ const Spots = (() => {
           ${!guest && schemaV2 && socialV ? `<button type="button" class="text-link" id="openConduct">Community code</button>` : ""}
           <a class="text-link" href="guides/spots-quick-guide.pdf" target="_blank" rel="noopener">📄 Spots in one page</a>
           <button type="button" class="text-link sx-switch" id="sxToClassic">Use the classic map</button>
+          ${admin && !guest ? `<button type="button" class="text-link" id="sxExport" title="Admin only: download the spots in the current map view">⬇ Export this area (CSV)</button>` : ""}
         </p>
       </aside>
       <div class="sx-stage spots-stage" data-mode="${viewMode}">
@@ -645,6 +646,28 @@ const Spots = (() => {
     </div>
     ${bannerHtml}
     ${tailHtml}`;
+  }
+
+  /* solo amministratore: scarica gli spot inquadrati sulla mappa in un file CSV (per preparare guide e articoli).
+     Usa i dati già caricati sul dispositivo: nessuna richiesta in più al database. */
+  function exportArea() {
+    if (!admin || !map) return;
+    const b = map.getBounds();
+    const rows = spots.filter(s => Number.isFinite(+s.lat) && Number.isFinite(+s.lon) && b.contains([+s.lat, +s.lon]));
+    if (!rows.length) { const bt = $("#sxExport"); if (bt) bt.textContent = "No spots in this view: zoom out a little"; return; }
+    const cols = ["name", "category", "subcategory", "lat", "lon", "note", "info", "url", "best_months", "fragile", "public_pick", "status", "author_name", "created_at", "id"];
+    const cell = v => {
+      if (v === null || v === undefined) return "";
+      const t = typeof v === "object" ? JSON.stringify(v) : String(v);
+      return /[",\n;]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t;
+    };
+    const csv = "\ufeff" + [cols.join(","), ...rows.map(s => cols.map(k => cell(s[k])).join(","))].join("\r\n");
+    const c = b.getCenter(), a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+    a.download = `spots-${c.lat.toFixed(2)}_${c.lng.toFixed(2)}-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    const btn = $("#sxExport"); if (btn) { const t = btn.textContent; btn.textContent = `✓ ${rows.length} spots exported`; setTimeout(() => (btn.textContent = t), 3000); }
   }
 
   /* conteggi del pannello: seguono la ricerca e gli altri filtri, senza ridisegnare tutto */
@@ -835,6 +858,7 @@ const Spots = (() => {
     $("#sxOut")?.addEventListener("click", () => onGlobe ? globe.zoomOut() : map.zoomOut());
     $("#sxHome")?.addEventListener("click", () => { if (viewMode !== "globe") setViewMode("globe"); else if (onGlobe) globe.flyTo({ zoom: earthZoom(), duration: 1400 }); else { const c = map.getCenter(); toGlobe([c.lat, c.lng], Math.min(map.getZoom() - 1, 5), true); } });
     $("#sxToClassic")?.addEventListener("click", () => { ui = "classic"; lsSet(UI_KEY, ui); onGlobe = false; renderApp(); });
+    $("#sxExport")?.addEventListener("click", exportArea);
     $("#sxFull")?.addEventListener("click", () => document.querySelector(".sx-stage .map-full-ctrl a")?.click());
     const st = stageEl();
     let wasFull = st?.classList.contains("map-full");
