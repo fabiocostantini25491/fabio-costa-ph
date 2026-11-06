@@ -1981,10 +1981,10 @@ function setupArticleZoom() {
   };
   const step = k => { if (list.length > 1) { i = (i + k + list.length) % list.length; show(); } };
   document.addEventListener("click", e => {
-    const img = e.target.closest?.("#journalMag .mag-body img, #journalMag .fn-hero img, #journalMag .mz-cover-img");
+    const img = e.target.closest?.("#journalMag .mag-body img, #journalMag .fn-hero img, #journalMag .mz-cover-img, #journalMag .gd-photo img, #journalMag .gd-hero img");
     if (!img || img.closest("a")) return;
-    const scope = img.closest(".mag-article, .mz-cover") || document;
-    list = [...scope.querySelectorAll(".mag-body img, .fn-hero img, .mz-cover-img")];
+    const scope = img.closest(".mag-article, .mz-cover, .gd") || document;
+    list = [...scope.querySelectorAll(".mag-body img, .fn-hero img, .mz-cover-img, .gd-photo img, .gd-hero img")];
     i = Math.max(0, list.indexOf(img));
     show(); d.showModal(); document.documentElement.classList.add("no-scroll");
     trackEvent("Journal: zoom photo");
@@ -2004,6 +2004,111 @@ function setupArticleZoom() {
     if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.3) step(dx < 0 ? 1 : -1);
     else if (dy > 90 && dy > Math.abs(dx) * 1.3) d.close();
   });
+}
+
+/* =========================================================
+   7c. GUIDES — guide per zone (pannello → content/guide.json), con PDF su richiesta (guida.html)
+   ========================================================= */
+let guidesData = null;
+async function loadGuides() {
+  if (guidesData) return guidesData;
+  try { const r = await getJSON("content/guide.json"); guidesData = (Array.isArray(r?.guide) ? r.guide : []).filter(g => g && g.titolo && g.slug); }
+  catch { guidesData = []; }
+  return guidesData;
+}
+const LIGHT_ICON = { "Sunrise": "◐", "Early morning": "◔", "Morning": "○", "Afternoon": "◑", "Sunset": "◒", "Blue hour": "◕", "Night": "●", "Any time": "◌" };
+const ZONE_COLORS = ["#b20d0d", "#1f5f8b", "#7a5a12", "#2d6a4f", "#6b3fa0", "#a0522d", "#3d5a80", "#8a1c7c"];
+/* Canal Grande, tracciato schematico (per orientarsi sulle mappe delle guide di Venezia) */
+const VENICE_CANAL = [[45.4378,12.3172],[45.4398,12.3208],[45.4412,12.3228],[45.4424,12.3262],[45.4434,12.3296],[45.442,12.333],[45.44,12.335],[45.438,12.336],[45.4362,12.334],[45.435,12.3312],[45.4344,12.3275],[45.4334,12.3264],[45.4318,12.3287],[45.4316,12.332],[45.431,12.335],[45.4318,12.339]];
+/* mappa schematica in SVG: punti numerati su un riquadro in scala, senza tessere (va bene anche nel PDF) */
+function guideMapSvg(points, { w = 640, h = 380, color = "#b20d0d", canal = false, labels = false } = {}) {
+  const pts = points.filter(p => Number.isFinite(p.lat) && Number.isFinite(p.lon));
+  if (!pts.length) return "";
+  const k = Math.cos(pts[0].lat * Math.PI / 180);
+  let x0 = Math.min(...pts.map(p => p.lon)), x1 = Math.max(...pts.map(p => p.lon)), y0 = Math.min(...pts.map(p => p.lat)), y1 = Math.max(...pts.map(p => p.lat));
+  const padX = Math.max((x1 - x0) * 0.12, 0.0015), padY = Math.max((y1 - y0) * 0.12, 0.0012);
+  x0 -= padX; x1 += padX; y0 -= padY; y1 += padY;
+  const sx = (w - 40) / ((x1 - x0) * k), sy = (h - 40) / (y1 - y0), s = Math.min(sx, sy);
+  const ox = (w - (x1 - x0) * k * s) / 2, oy = (h - (y1 - y0) * s) / 2;
+  const X = lon => ox + (lon - x0) * k * s, Y = lat => h - oy - (lat - y0) * s;
+  const canalPath = canal ? `<path d="${VENICE_CANAL.map(([la, lo], i) => `${i ? "L" : "M"}${X(lo).toFixed(1)} ${Y(la).toFixed(1)}`).join(" ")}" class="gm-canal"/>` : "";
+  // scala grafica: 200 m
+  const m200 = 200 / (111320 * k) * k * s;
+  return `<svg class="gm" viewBox="0 0 ${w} ${h}" role="img" aria-label="Schematic map">
+    <rect x="0" y="0" width="${w}" height="${h}" class="gm-bg"/>${canalPath}
+    ${canal ? `<text x="${w - 12}" y="${h - 12}" class="gm-note" text-anchor="end">Grand Canal, schematic</text>` : ""}
+    <g class="gm-scale"><path d="M14 ${h - 16}h${m200.toFixed(1)}"/><text x="14" y="${h - 22}">200 m</text></g>
+    <text x="${w - 14}" y="22" class="gm-n" text-anchor="end">N ↑</text>
+    ${pts.map(p => `<g class="gm-pt"><circle cx="${X(p.lon).toFixed(1)}" cy="${Y(p.lat).toFixed(1)}" r="11" fill="${p.color || color}"/><text x="${X(p.lon).toFixed(1)}" y="${(Y(p.lat) + 4).toFixed(1)}" text-anchor="middle">${p.n}</text>${labels ? `<text class="gm-lbl" x="${(X(p.lon) + 15).toFixed(1)}" y="${(Y(p.lat) + 4).toFixed(1)}">${esc(p.label || "")}</text>` : ""}</g>`).join("")}
+  </svg>`;
+}
+const gnum = g => { let n = 0; return (g.zone || []).map((z, zi) => ({ ...z, color: ZONE_COLORS[zi % ZONE_COLORS.length], luoghi: (z.luoghi || []).filter(l => l && l.nome).map(l => ({ ...l, n: ++n, lat: parseFloat(l.lat), lon: parseFloat(l.lon) })) })); };
+const mdInline = t => md(t || "").replace(/^<p>|<\/p>\s*$/g, "");
+async function renderGuides() {
+  const layout = $("#journalLayout");
+  layout.hidden = false; $("#articleReader").hidden = true;
+  renderTopics([...new Set(articles.map(a => a.category))], "");
+  const list = await loadGuides();
+  if (document.body.dataset.page !== "journal" || !/^#guides$/.test(location.hash)) return;
+  const T = s => window.I18N ? I18N.t(s) : s;
+  layout.innerHTML = `<div class="gd-shelf">
+    <p class="gd-shelf-lead">${T("Photographer's guides, zone by zone: where to stand, when the light is right, and the practical things to know. Read them here or download the PDF.")}</p>
+    ${list.length ? `<ul class="gd-books">${list.map(g => {
+      const n = (g.zone || []).reduce((a, z) => a + (z.luoghi || []).length, 0);
+      return `<li><a class="gd-book" href="#g-${esc(g.slug)}">
+        <span class="gd-cover${g.copertina ? "" : " no-img"}">${g.copertina ? `<img src="${esc(mediaUrl(g.copertina))}" alt="" loading="lazy">` : ""}<span class="gd-cover-t"><small>Field Notes · Guide</small><b>${esc(g.titolo)}</b><em>${esc(g.sottotitolo || "")}</em></span></span>
+        <span class="gd-book-meta">${(g.zone || []).length} ${T("zones")} · ${n} ${T("places")}</span></a>
+        <a class="gd-book-pdf" href="guida.html?g=${encodeURIComponent(g.slug)}&amp;print=1" target="_blank" rel="noopener" data-guide-pdf>PDF</a></li>`;
+    }).join("")}</ul>` : `<p class="mz-empty">${T("The first guide is being written.")}</p>`}
+  </div>`;
+}
+async function renderGuide(slugId) {
+  const layout = $("#journalLayout");
+  layout.hidden = false; $("#articleReader").hidden = true;
+  renderTopics([...new Set(articles.map(a => a.category))], "");
+  const g = (await loadGuides()).find(x => x.slug === slugId);
+  if (document.body.dataset.page !== "journal") return;
+  if (!g) { location.hash = "guides"; return; }
+  const T = s => window.I18N ? I18N.t(s) : s;
+  const zones = gnum(g), venice = /venice|venezia/i.test(g.slug + g.titolo);
+  const all = zones.flatMap(z => z.luoghi.map(l => ({ ...l, color: z.color, label: l.nome })));
+  const pdf = `guida.html?g=${encodeURIComponent(g.slug)}&amp;print=1`;
+  layout.innerHTML = `<article class="gd">
+    <a class="fn-back" href="#guides">← ${T("All guides")}</a>
+    <header class="gd-hero${g.copertina ? "" : " no-img"}">
+      ${g.copertina ? `<img src="${esc(mediaUrl(g.copertina))}" alt="" data-zoom>` : ""}
+      <div class="gd-hero-t"><p class="mz-issue">Field Notes · ${T("Guide")}${g.luogo ? ` · ${esc(g.luogo)}` : ""}</p><h2>${esc(g.titolo)}</h2>${g.sottotitolo ? `<p class="gd-sub">${esc(g.sottotitolo)}</p>` : ""}</div>
+    </header>
+    <div class="gd-bar"><a class="mz-pdf gd-pdf" href="${pdf}" target="_blank" rel="noopener" data-guide-pdf>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 19h14"/></svg>
+      <span><b>${T("Download the PDF guide")}</b><small>${T("Prepared on request: choose “Save as PDF” in the print window")}</small></span></a></div>
+    ${g.intro ? `<p class="gd-intro">${esc(g.intro)}</p>` : ""}
+    <section class="gd-glance"><h3>${T("The zones")}</h3>
+      <div class="gd-map" id="gdMap">${guideMapSvg(all, { w: 900, h: 560, canal: venice })}</div>
+      <ol class="gd-zlist">${zones.map((z, i) => `<li><a href="#" data-gz="${i}"><span class="gd-dot" style="background:${z.color}"></span><b>${esc(z.nome)}</b><small>${z.luoghi.length} ${T("places")}</small></a></li>`).join("")}</ol>
+    </section>
+    ${zones.map((z, i) => `<section class="gd-zone" id="gz-${i}" style="--zc:${z.color}">
+      <p class="gd-zk">${T("Zone")} ${i + 1}</p><h3>${esc(z.nome)}</h3>
+      ${z.intro ? `<p class="gd-zintro">${esc(z.intro)}</p>` : ""}
+      <div class="gd-zmap">${guideMapSvg(z.luoghi, { color: z.color, canal: venice })}</div>
+      <ol class="gd-spots">${z.luoghi.map(l => `<li class="gd-spot">
+        <span class="gd-n" style="background:${z.color}">${l.n}</span>
+        <div><h4>${esc(l.nome)}</h4>
+          ${l.luce ? `<p class="gd-light"><span aria-hidden="true">${LIGHT_ICON[l.luce] || "○"}</span> ${T("Best light")}: <b>${esc(T(l.luce))}</b></p>` : ""}
+          ${l.consiglio ? `<p>${mdInline(l.consiglio)}</p>` : ""}
+          ${l.nota ? `<p class="gd-note">${esc(l.nota)}</p>` : ""}
+          ${l.foto ? `<figure class="gd-photo"><img src="${esc(mediaUrl(l.foto))}" alt="${esc(l.nome)}" loading="lazy"></figure>` : ""}
+          ${Number.isFinite(l.lat) ? `<p class="gd-coord">${fmtCoord(l.lat, l.lon)} · <a href="${gmapsUrl(l.lat, l.lon)}" target="_blank" rel="noopener">${T("Open in Maps")}</a></p>` : ""}
+        </div></li>`).join("")}</ol>
+    </section>`).join("")}
+    ${(g.pause || []).length ? `<section class="gd-zone gd-pause"><p class="gd-zk">${T("Take a break")}</p><h3>${T("Where to stop")}</h3>
+      <ul class="gd-spots">${g.pause.map(p => `<li class="gd-spot"><span class="gd-n gd-cup">☕</span><div><h4>${esc(p.nome)}</h4>${p.consiglio ? `<p>${esc(p.consiglio)}</p>` : ""}${p.nota ? `<p class="gd-note">${esc(p.nota)}</p>` : ""}
+        ${Number.isFinite(parseFloat(p.lat)) ? `<p class="gd-coord"><a href="${gmapsUrl(parseFloat(p.lat), parseFloat(p.lon))}" target="_blank" rel="noopener">${T("Open in Maps")}</a></p>` : ""}</div></li>`).join("")}</ul></section>` : ""}
+    ${g.pratiche ? `<section class="gd-zone gd-prac"><p class="gd-zk">${T("Before you go")}</p><h3>${T("Practical information")}</h3><div class="rich gd-rich">${md(g.pratiche)}</div></section>` : ""}
+    <p class="fn-foot">Field Notes · ${esc(g.titolo)}${g.aggiornata ? ` · ${T("updated")} ${esc(fmtDate(g.aggiornata))}` : ""}</p>
+  </article>`;
+  layout.querySelectorAll("[data-gz]").forEach(a => a.addEventListener("click", e => { e.preventDefault(); document.getElementById("gz-" + a.dataset.gz)?.scrollIntoView({ behavior: "smooth", block: "start" }); }));
+  requestAnimationFrame(() => $("#journalMag")?.scrollIntoView({ block: "start" }));
 }
 
 /* ---------- articoli dei contributor approvati (Supabase) ---------- */
@@ -2308,6 +2413,8 @@ function route() {
   const writeMode = hash === "write";
   const magMonth = (hash.match(/^magazine-(\d{4}-\d{2})$/) || [])[1] || "";
   const magazine = hash === "magazine" || !!magMonth;
+  const guidesHash = hash === "guides", guideSlug = (hash.match(/^g-([a-z0-9-]+)$/) || [])[1] || "";
+  if (guidesHash || guideSlug) page = "journal";
   if (magazine) page = "journal";
   if (writeMode) page = "journal";
   if (hash.startsWith("author-")) { page = "journal"; authorSlug = hash.slice(7); }
@@ -2351,17 +2458,22 @@ function route() {
     else if (authorSlug) renderAuthor(authorSlug);
     else if (article) renderArticle(article);
     else if (magazine) { setJournalMode("magazine"); renderMagazine.token = ++magToken; renderMagazine(magMonth); }
+    else if (guidesHash) { setJournalMode("guides"); renderGuides(); }
+    else if (guideSlug) { setJournalMode("guides"); renderGuide(guideSlug); }
     else { $("#articleReader").hidden = true; renderJournal(); }
-    if (!magazine) setJournalMode("journal");
+    if (!magazine && !guidesHash && !guideSlug) setJournalMode("journal");
   }
   if (guideAnchor) setTimeout(() => document.getElementById(guideAnchor)?.scrollIntoView({ behavior: "smooth", block: "start" }), 60);
-  else if ((changed || magazine) && !article) window.scrollTo(0, 0);
+  else if ((changed || magazine || guidesHash) && !article && !guideSlug) window.scrollTo(0, 0);
 }
 
 function renderAll() {
   renderGallery();
   const mm = location.hash.match(/^#magazine(?:-(\d{4}-\d{2}))?$/);
-  if (mm) { renderMagazine.token = ++magToken; renderMagazine(mm[1] || ""); } else renderJournal();
+  if (mm) { renderMagazine.token = ++magToken; renderMagazine(mm[1] || ""); }
+  else if (location.hash === "#guides") renderGuides();
+  else if (/^#g-/.test(location.hash)) renderGuide(location.hash.slice(3));
+  else renderJournal();
   renderAbout();
   drawHomePins();
   if (activeTripId && tripById(activeTripId)) drawPins("explore"); else if (maps.explore) renderPanelIntro();

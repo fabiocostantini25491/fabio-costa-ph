@@ -1,0 +1,484 @@
+{
+  "guide": [
+    {
+      "titolo": "Venice",
+      "sottotitolo": "A photographer's guide, zone by zone",
+      "slug": "venice",
+      "luogo": "Venice, Italy",
+      "copertina": "",
+      "aggiornata": "2026-11-07",
+      "intro": "Venice is small, but it is easy to shoot only the postcard. This guide follows the six areas I return to, with the places I've saved on my map over the years: for each one, when to go, what the light does and a tip to make the shot your own. Light times are a guide: plan the exact ones with the Tools on the site.",
+      "zone": [
+        {
+          "nome": "San Marco & Rialto",
+          "intro": "The postcard Venice: the square, the Basilica, the bridges around La Fenice and the Rialto. It is also the most crowded part of the city, so this is where timing matters most: come at sunrise, or after dark.",
+          "luoghi": [
+            {
+              "nome": "Piazza San Marco",
+              "lat": "45.4341668",
+              "lon": "12.3384717",
+              "luce": "Sunrise",
+              "consiglio": "Arrive before sunrise to find the square almost empty. A long exposure turns the few early walkers into ghosts.",
+              "nota": "",
+              "tipo": "Da fotografare",
+              "foto": ""
+            },
+            {
+              "nome": "Basilica di San Marco",
+              "lat": "45.4345606",
+              "lon": "12.3397125",
+              "luce": "Sunset",
+              "consiglio": "The facade faces west and warms up in the last hour of light. Step back towards the Procuratie to fit it with the bell tower.",
+              "nota": "",
+              "tipo": "Da fotografare",
+              "foto": ""
+            },
+            {
+              "nome": "Ponte della Paglia and the Bridge of Sighs",
+              "lat": "45.4336381",
+              "lon": "12.341012",
+              "luce": "Early morning",
+              "consiglio": "The classic view of the Bridge of Sighs is from Ponte della Paglia. By mid-morning it is shoulder to shoulder: go early.",
+              "nota": "",
+              "tipo": "Da fotografare",
+              "foto": ""
+            },
+            {
+              "nome": "Giardini Reali",
+              "lat": "45.4329839",
+              "lon": "12.3382915",
+              "luce": "Sunrise",
+              "consiglio": "A quiet garden on the water. Look across the basin to San Giorgio Maggiore as the sun comes up behind it in winter.",
+              "nota": "",
+              "tipo": "Da fotografare",
+              "foto": ""
+            },
+            {
+              "nome": "Ponte Tron and Ponte Goldoni",
+              "lat": "45.4347",
+              "lon": "12.3362",
+              "luce": "Blue hour",
+              "consiglio": "Two small bridges over the same canal: gondolas moored below, warm windows above. Perfect for the blue hour.",
+              "nota": "",
+              "tipo": "Da fotografare",
+              "foto": ""
+            },
+            {
+              "nome": "Ponte del Teatro (La Fenice)",
+              "lat": "45.4356222",
+              "lon": "12.3335718",
+              "luce": "Blue hour",
+              "consiglio": "The canal behind the opera house, with gondolas gliding past. Wait for one to cross the frame.",
+              "nota": "",
+              "tipo": "Da fotografare",
+              "foto": ""
+            },
+            {
+              "nome": "Ponte Maria Callas",
+              "lat": "45.4332238",
+              "lon": "12.3333154",
+              "luce": "Night",
+              "consiglio": "A tight canal with lamps and reflections: a good place to try a slow shutter after dark.",
+              "nota": "",
+              "tipo": "Da fotografare",
+              "foto": ""
+            },
+            {
+              "nome": "Campo Sant'Angelo",
+              "lat": "45.4342081",
+              "lon": "12.3320584",
+              "luce": "Sunset",
+              "consiglio": "An open campo with the leaning bell tower of Santo Stefano in the background.",
+              "nota": "Fabio's note: a sunset spot.",
+              "tipo": "Da fotografare",
+              "foto": ""
+            },
+            {
+              "nome": "Ponte di Rialto",
+              "lat": "45.4379842",
+              "lon": "12.335898",
+              "luce": "Sunset",
+              "consiglio": "From the top of the bridge, look south-west along the Grand Canal as the sun goes down. Busy at all hours: be patient for a clear spot at the parapet. The rooftop terrace of the Fondaco dei Tedeschi next door, once open to visitors, closed with the store in 2025 ([Il Post](https://www.ilpost.it/2024/11/15/venezia-fondaco-dei-tedeschi-chiude/)).",
+              "nota": "",
+              "tipo": "Da fotografare",
+              "foto": ""
+            }
+          ]
+        },
+        {
+          "nome": "Dorsoduro",
+          "intro": "South of the Grand Canal: the Accademia, the Salute, the Zattere promenade and quiet fondamenta where Venetians still live. The best sunsets in the centre are here.",
+          "luoghi": [
+            {
+              "nome": "Ponte dell'Accademia",
+              "lat": "45.4316689",
+              "lon": "12.3289173",
+              "luce": "Sunset",
+              "consiglio": "The most famous view of the Grand Canal, with the dome of the Salute at the end. Stay on after sunset for the blue hour.",
+              "nota": "",
+              "tipo": "Da fotografare",
+              "foto": ""
+            },
+            {
+              "nome": "Santa Maria della Salute",
+              "lat": "45.430675",
+              "lon": "12.3347626",
+              "luce": "Blue hour",
+              "consiglio": "The great white church at the mouth of the Grand Canal. Seen from across the water it glows after sunset.",
+              "nota": "Fabio's note: shoot it after sunset from the San Marco side, or keep it for your last day.",
+              "tipo": "Da fotografare",
+              "foto": ""
+            },
+            {
+              "nome": "Zattere allo Spirito Santo",
+              "lat": "45.4284128",
+              "lon": "12.3319309",
+              "luce": "Sunset",
+              "consiglio": "A long sunny promenade facing the Giudecca canal. At sunset the light rakes along the water and the Redentore.",
+              "nota": "",
+              "tipo": "Da fotografare",
+              "foto": ""
+            },
+            {
+              "nome": "Squero di San Trovaso",
+              "lat": "45.4302714",
+              "lon": "12.3258886",
+              "luce": "Afternoon",
+              "consiglio": "One of the last boatyards where gondolas are built and repaired. Shoot from the opposite fondamenta, without entering.",
+              "nota": "",
+              "tipo": "Da fotografare",
+              "foto": ""
+            },
+            {
+              "nome": "Ponte Longo and Ponte S. Trovaso",
+              "lat": "45.4303",
+              "lon": "12.3261",
+              "luce": "Afternoon",
+              "consiglio": "Small bridges along the Rio di San Trovaso, a few steps from the squero.",
+              "nota": "",
+              "tipo": "Da fotografare",
+              "foto": ""
+            },
+            {
+              "nome": "Ponte dei Pugni",
+              "lat": "45.4331675",
+              "lon": "12.3243688",
+              "luce": "Morning",
+              "consiglio": "The bridge of the fists, with marble footprints at the top. In the morning the canal is busy with the life of the neighbourhood.",
+              "nota": "",
+              "tipo": "Da fotografare",
+              "foto": ""
+            },
+            {
+              "nome": "Santa Maria del Carmelo (Carmini)",
+              "lat": "45.4336162",
+              "lon": "12.3221276",
+              "luce": "Morning",
+              "consiglio": "A tall bell tower over Campo Santa Margherita, the living room of Dorsoduro.",
+              "nota": "",
+              "tipo": "Da fotografare",
+              "foto": ""
+            },
+            {
+              "nome": "Ponte de San Basegio",
+              "lat": "45.4313154",
+              "lon": "12.3205896",
+              "luce": "Afternoon",
+              "consiglio": "The western end of Dorsoduro, far from the crowds, where the fondamenta open towards the Giudecca.",
+              "nota": "",
+              "tipo": "Da fotografare",
+              "foto": ""
+            },
+            {
+              "nome": "Fondamenta de la Pescheria",
+              "lat": "45.4325077",
+              "lon": "12.3184645",
+              "luce": "Morning",
+              "consiglio": "A quiet residential corner near Santa Marta, for everyday Venice.",
+              "nota": "",
+              "tipo": "Da fotografare",
+              "foto": ""
+            }
+          ]
+        },
+        {
+          "nome": "San Polo & Santa Croce",
+          "intro": "Behind the Rialto market: narrow calli, sotoporteghi and small bridges. The light here is soft and indirect, good in the morning and late afternoon.",
+          "luoghi": [
+            {
+              "nome": "San Giacomo di Rialto",
+              "lat": "45.4385242",
+              "lon": "12.3354694",
+              "luce": "Morning",
+              "consiglio": "Said to be the oldest church in Venice, at the heart of the Rialto market area. Come when the market is open.",
+              "nota": "",
+              "tipo": "Da fotografare",
+              "foto": ""
+            },
+            {
+              "nome": "Ponte Storto",
+              "lat": "45.4382043",
+              "lon": "12.3318077",
+              "luce": "Morning",
+              "consiglio": "A crooked little bridge over a narrow rio.",
+              "nota": "Fabio's note: the Porzioli spot.",
+              "tipo": "Da fotografare",
+              "foto": ""
+            },
+            {
+              "nome": "Ponte Bernardo",
+              "lat": "45.4386389",
+              "lon": "12.3294167",
+              "luce": "Afternoon",
+              "consiglio": "A small bridge with a classic view down a residential canal.",
+              "nota": "",
+              "tipo": "Da fotografare",
+              "foto": ""
+            },
+            {
+              "nome": "Ponte San Polo",
+              "lat": "45.4368645",
+              "lon": "12.3290658",
+              "luce": "Afternoon",
+              "consiglio": "Steps from Campo San Polo, the second largest square in the city.",
+              "nota": "",
+              "tipo": "Da fotografare",
+              "foto": ""
+            },
+            {
+              "nome": "Ponte de L'Anatomia",
+              "lat": "45.4396663",
+              "lon": "12.326954",
+              "luce": "Morning",
+              "consiglio": "A quiet corner of San Polo with a view along the rio.",
+              "nota": "",
+              "tipo": "Da fotografare",
+              "foto": ""
+            },
+            {
+              "nome": "Sotoportego Zane",
+              "lat": "45.4382664",
+              "lon": "12.3264017",
+              "luce": "Afternoon",
+              "consiglio": "A covered passage framing the light at the end: use it as a natural frame.",
+              "nota": "",
+              "tipo": "Da fotografare",
+              "foto": ""
+            },
+            {
+              "nome": "Ponte Canal",
+              "lat": "45.4388205",
+              "lon": "12.3236196",
+              "luce": "Afternoon",
+              "consiglio": "Santa Croce, towards Piazzale Roma: few tourists, real everyday life.",
+              "nota": "",
+              "tipo": "Da fotografare",
+              "foto": ""
+            }
+          ]
+        },
+        {
+          "nome": "Cannaregio",
+          "intro": "From the station to the northern lagoon: the Ghetto, long straight canals with reflections, and the Fondamente Nove looking out to the islands.",
+          "luoghi": [
+            {
+              "nome": "Ghetto",
+              "lat": "45.4453337",
+              "lon": "12.3263657",
+              "luce": "Morning",
+              "consiglio": "The historic Jewish Ghetto, with the tallest houses in Venice. Be respectful: it is a place of memory and of worship.",
+              "nota": "",
+              "tipo": "Da fotografare",
+              "foto": ""
+            },
+            {
+              "nome": "Ponte delle Guglie",
+              "lat": "45.443667",
+              "lon": "12.3255566",
+              "luce": "Morning",
+              "consiglio": "The bridge with the four obelisks over the Cannaregio canal.",
+              "nota": "",
+              "tipo": "Da fotografare",
+              "foto": ""
+            },
+            {
+              "nome": "Ponte degli Scalzi",
+              "lat": "45.4411516",
+              "lon": "12.3227414",
+              "luce": "Sunset",
+              "consiglio": "The Grand Canal near the station, with the green dome of San Simeon Piccolo. Backlit at sunset.",
+              "nota": "",
+              "tipo": "Da fotografare",
+              "foto": ""
+            },
+            {
+              "nome": "Ponte della Costituzione",
+              "lat": "45.4388095",
+              "lon": "12.3194111",
+              "luce": "Blue hour",
+              "consiglio": "The modern glass and steel bridge by Calatrava. Clean lines against the evening sky.",
+              "nota": "",
+              "tipo": "Da fotografare",
+              "foto": ""
+            },
+            {
+              "nome": "Santa Fosca, Misericordia and Ponte Diedo",
+              "lat": "45.4433",
+              "lon": "12.3325",
+              "luce": "Blue hour",
+              "consiglio": "Long straight canals where the water stays calm: the best reflections in the city.",
+              "nota": "",
+              "tipo": "Da fotografare",
+              "foto": ""
+            },
+            {
+              "nome": "Fondamente Nove",
+              "lat": "45.443958",
+              "lon": "12.339143",
+              "luce": "Sunrise",
+              "consiglio": "Looking north over the lagoon to the cemetery island of San Michele. In winter the sun rises to the east, out on the water.",
+              "nota": "Fabio's note: the boat to Burano leaves from here.",
+              "tipo": "Da fotografare",
+              "foto": ""
+            }
+          ]
+        },
+        {
+          "nome": "Castello",
+          "intro": "The eastern sestiere: the Arsenale, Santi Giovanni e Paolo and, further out, the green Venice of the Giardini. Far fewer people than San Marco, a short walk away.",
+          "luoghi": [
+            {
+              "nome": "Santi Giovanni e Paolo and Ponte Rosso",
+              "lat": "45.4391",
+              "lon": "12.3412",
+              "luce": "Morning",
+              "consiglio": "The great Gothic church and the red bridge in front of it, on the rio dei Mendicanti.",
+              "nota": "",
+              "tipo": "Da fotografare",
+              "foto": ""
+            },
+            {
+              "nome": "Ponte del Mondo Novo",
+              "lat": "45.4371829",
+              "lon": "12.3404445",
+              "luce": "Afternoon",
+              "consiglio": "A tiny bridge between Santa Maria Formosa and the Rialto: classic Venetian geometry.",
+              "nota": "",
+              "tipo": "Da fotografare",
+              "foto": ""
+            },
+            {
+              "nome": "Arsenale",
+              "lat": "45.4348469",
+              "lon": "12.3500799",
+              "luce": "Morning",
+              "consiglio": "The gate of the old shipyard, guarded by stone lions. Morning light falls on the entrance.",
+              "nota": "",
+              "tipo": "Da fotografare",
+              "foto": ""
+            },
+            {
+              "nome": "Giardino della Marinaressa",
+              "lat": "45.4314603",
+              "lon": "12.3525968",
+              "luce": "Sunset",
+              "consiglio": "On the waterfront towards the Giardini: look west to the San Marco basin at sunset.",
+              "nota": "",
+              "tipo": "Da fotografare",
+              "foto": ""
+            },
+            {
+              "nome": "San Pietro di Castello",
+              "lat": "45.4347041",
+              "lon": "12.3595072",
+              "luce": "Afternoon",
+              "consiglio": "Venice's former cathedral, on its own island at the far eastern edge. Grass, washing lines and silence.",
+              "nota": "",
+              "tipo": "Da fotografare",
+              "foto": ""
+            }
+          ]
+        },
+        {
+          "nome": "San Giorgio & the islands",
+          "intro": "Short boat rides away: the view from San Giorgio, the glass island of Murano and the Armenian monastery of San Lazzaro.",
+          "luoghi": [
+            {
+              "nome": "San Giorgio Maggiore",
+              "lat": "45.4294192",
+              "lon": "12.343204",
+              "luce": "Morning",
+              "consiglio": "The bell tower (lift, ticket) has one of the best views of San Marco and the basin. From the Piazzetta, the church is the classic sunrise subject.",
+              "nota": "",
+              "tipo": "Da fotografare",
+              "foto": ""
+            },
+            {
+              "nome": "Faro di Murano",
+              "lat": "45.4528615",
+              "lon": "12.3545991",
+              "luce": "Sunset",
+              "consiglio": "The lighthouse at the entrance of Murano, with the lagoon around it.",
+              "nota": "",
+              "tipo": "Da fotografare",
+              "foto": ""
+            },
+            {
+              "nome": "Ponte Longo, Murano",
+              "lat": "45.4559352",
+              "lon": "12.3525904",
+              "luce": "Afternoon",
+              "consiglio": "The long bridge over Murano's Grand Canal, with the glass workshops along the banks.",
+              "nota": "",
+              "tipo": "Da fotografare",
+              "foto": ""
+            },
+            {
+              "nome": "San Lazzaro degli Armeni",
+              "lat": "45.4123316",
+              "lon": "12.3608718",
+              "luce": "Afternoon",
+              "consiglio": "The Armenian monastery on its own island. Visits run at set times by boat: check before you go.",
+              "nota": "",
+              "tipo": "Da fotografare",
+              "foto": ""
+            }
+          ]
+        }
+      ],
+      "pause": [
+        {
+          "nome": "Caffè Poggi dal 1919",
+          "lat": "45.4306598",
+          "lon": "12.3293217",
+          "luce": "",
+          "consiglio": "A historic café near the Accademia.",
+          "nota": "Fabio's note: for a cappuccino after lunch.",
+          "tipo": "Pausa",
+          "foto": ""
+        },
+        {
+          "nome": "Pasticceria Al Theatro",
+          "lat": "45.4339223",
+          "lon": "12.333885",
+          "luce": "",
+          "consiglio": "A pastry shop next to La Fenice.",
+          "nota": "",
+          "tipo": "Pausa",
+          "foto": ""
+        },
+        {
+          "nome": "Ravioleria",
+          "lat": "45.4372199",
+          "lon": "12.3310105",
+          "luce": "",
+          "consiglio": "Fresh pasta for a quick lunch in San Polo.",
+          "nota": "",
+          "tipo": "Pausa",
+          "foto": ""
+        }
+      ],
+      "pratiche": "### Getting there\nBy train to **Venezia Santa Lucia**, on the Grand Canal. By car to **Piazzale Roma** or **Tronchetto**, then on foot or by vaporetto.\n\n### The access fee\nOn some days, day-trippers to the historic centre pay an access fee. In 2026 it applied on **60 days between April and July, from 8:30 to 16:00**: **€5** if paid at least 4 days ahead, **€10** after that. You pay online at [cda.ve.it](https://cda.ve.it/it/) and show the QR code at spot checks. Overnight guests, children under 14 and visitors to the minor islands (Murano, Burano, Torcello, Lido and others) are exempt, but some exemptions need a free registration. Check the calendar for the year of your visit. *Source: [QualityTravel, February 2026](https://www.qualitytravel.it/ticket-di-ingresso-a-venezia-2026-confermato-fino-a-10-euro-per-60-giornate-ecco-quando/178750).*\n\n### Getting around\nVenice is a walking city: most places in this guide are 10–20 minutes apart on foot. The vaporetto (ACTV) costs **€9.50** for a single 75-minute ride; passes cost **€25** for 24 hours, **€35** for 48 hours, **€45** for 72 hours and **€65** for 7 days. *Source: [Telepass – ACTV tickets](https://www.telepass.com/it/privati/servizi/venezia-unica/biglietti-actv).*\n\n### Rules worth knowing\n- Don't sit on bridge steps, monuments or canal walls, and don't eat sitting on the ground in public areas. No swimming, no cycling in the historic centre. Fines apply. *Source: [Finestre sull'Arte](https://www.finestresullarte.info/attualita/venezia-nuovo-regolamento-urbano-divieti).*\n- **Drones:** leave them at home. The historic centre is no place to fly, and drones have been seized at Rialto and San Marco. *Source: [Dronezine](https://www.dronezine.it/?p=41535).*\n- **Tripods:** keep them compact and never block a bridge or a narrow calle. If someone needs to pass, step aside.\n\n### Light and tides\nUse the **Tools** on fabiocostaph.com for sunrise, sunset and blue-hour times on the day of your visit. From autumn to early spring check the high-water (*acqua alta*) forecast before going out at dawn: some areas, San Marco first, can flood."
+    }
+  ]
+}

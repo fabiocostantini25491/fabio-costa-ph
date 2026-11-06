@@ -382,6 +382,79 @@ content:
             description: "Il codice del viaggio, es. islanda: aggiunge il pulsante «Vedi il viaggio sulla mappa»."
 
   # ---------------------------------------------------------------
+  # GUIDE (Journal → Guides): guide di viaggio per zone, scaricabili in PDF
+  # ---------------------------------------------------------------
+  - name: guide
+    label: Guide (per zone, con PDF)
+    type: file
+    path: content/guide.json
+    format: json
+    fields:
+      - name: guide
+        label: Guide
+        type: object
+        list:
+          collapsible:
+            collapsed: true
+            summary: "{titolo}"
+        description: "Ogni guida compare nello scaffale «Guides» del Journal e si scarica in PDF (impaginato al momento). Testi in inglese, come il resto del sito."
+        fields:
+          - { name: titolo, label: Titolo (es. Venice), type: string, required: true }
+          - { name: sottotitolo, label: Sottotitolo, type: string }
+          - { name: slug, label: Codice per il link (es. venice), type: string, required: true, description: "Solo lettere minuscole e trattini. Il link sarà fabiocostaph.com/#g-venice" }
+          - { name: luogo, label: Luogo (es. Venice, Italy), type: string }
+          - name: copertina
+            label: Foto di copertina
+            type: image
+            options: { extensions: [jpg, jpeg, png, webp], rename: true }
+          - { name: aggiornata, label: Aggiornata il (anno-mese-giorno), type: string }
+          - name: intro
+            label: Introduzione
+            type: text
+          - name: zone
+            label: Zone (capitoli della guida)
+            type: object
+            list:
+              collapsible: { collapsed: true, summary: "{nome}" }
+            fields:
+              - { name: nome, label: Nome della zona, type: string, required: true }
+              - { name: intro, label: Introduzione della zona, type: text }
+              - name: luoghi
+                label: Luoghi
+                type: object
+                list:
+                  collapsible: { collapsed: true, summary: "{nome}" }
+                fields:
+                  - { name: nome, label: Nome, type: string, required: true }
+                  - { name: lat, label: Latitudine, type: string, required: true }
+                  - { name: lon, label: Longitudine, type: string, required: true }
+                  - name: luce
+                    label: Luce migliore
+                    type: select
+                    options: { values: [Sunrise, Early morning, Morning, Afternoon, Sunset, Blue hour, Night, Any time] }
+                  - { name: consiglio, label: Consiglio (in inglese), type: text }
+                  - { name: nota, label: Nota personale (facoltativa), type: string }
+                  - name: foto
+                    label: Foto (facoltativa)
+                    type: image
+                    options: { extensions: [jpg, jpeg, png, webp], rename: true }
+          - name: pause
+            label: Dove fermarsi (bar, cibo)
+            type: object
+            list:
+              collapsible: { collapsed: true, summary: "{nome}" }
+            fields:
+              - { name: nome, label: Nome, type: string, required: true }
+              - { name: lat, label: Latitudine, type: string }
+              - { name: lon, label: Longitudine, type: string }
+              - { name: consiglio, label: Descrizione, type: text }
+              - { name: nota, label: Nota personale, type: string }
+          - name: pratiche
+            label: Informazioni pratiche
+            type: rich-text
+            options: { format: markdown }
+
+  # ---------------------------------------------------------------
   # RIVISTA DEL MESE (Field Notes From Planet Earth)
   # ---------------------------------------------------------------
   - name: rivista

@@ -1,0 +1,62 @@
+/* PDF delle guide (A4) — stile guida di viaggio */
+@page { size: A4; margin: 16mm 15mm 18mm;
+  @bottom-left { font: 500 7.5pt "Archivo Narrow", Arial, sans-serif; letter-spacing: .14em; text-transform: uppercase; color: #6b665e; }
+  @bottom-right { content: counter(page); font: 400 10pt Gelasio, Georgia, serif; } }
+:root { --ink: #111; --soft: #57524b; --rule: #b20d0d; --hair: #d6d0c6; --serif: Gelasio, Georgia, serif; --head: "Archivo Narrow", "Arial Narrow", Arial, sans-serif; }
+* { box-sizing: border-box; }
+body { margin: 0; color: var(--ink); font: 400 9.6pt/1.5 var(--serif); -webkit-print-color-adjust: exact; print-color-adjust: exact; background: #e9e5de; }
+.gp-loading { padding: 40px; font-family: var(--head); }
+.gp-part { break-before: page; }
+.gp-cover { position: relative; width: 210mm; height: 296mm; overflow: hidden; color: #fff; background: linear-gradient(160deg, #173247, #0d1b26 60%, #3a1d10); break-inside: avoid; }
+.gp-cover img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.gp-cover:not(.no-img)::after { content: ""; position: absolute; inset: 0; background: linear-gradient(rgba(0,0,0,.45), transparent 25%, transparent 50%, rgba(0,0,0,.75)); }
+.gp-cover-top { position: absolute; z-index: 1; top: 0; left: 15mm; right: 15mm; padding: 12mm 0 4mm; display: flex; justify-content: space-between; border-bottom: .4mm solid rgba(255,255,255,.6); font: 700 9pt var(--head); letter-spacing: .22em; text-transform: uppercase; }
+.gp-cover-t { position: absolute; z-index: 1; left: 15mm; right: 15mm; bottom: 16mm; }
+.gp-cover h1 { margin: 0; font: 700 84pt/.9 var(--serif); letter-spacing: -.045em; }
+.gp-cover-t > p { margin: 4mm 0 0; font: italic 400 20pt/1.2 var(--serif); }
+.gp-cover ul { list-style: none; margin: 8mm 0 0; padding: 4mm 0 0; border-top: .4mm solid rgba(255,255,255,.6); columns: 2; }
+.gp-cover li { font: 700 10pt var(--head); letter-spacing: .12em; text-transform: uppercase; margin-bottom: 1.5mm; }
+.gp-k { margin: 0; font: 700 8.5pt var(--head); letter-spacing: .2em; text-transform: uppercase; color: var(--zc, var(--rule)); }
+h2 { margin: 1mm 0 5mm; font: 700 30pt/1 var(--serif); letter-spacing: -.035em; }
+.gp-toc h2 { padding-bottom: 4mm; border-bottom: .8mm solid var(--ink); }
+.gp-toc ol { list-style: none; margin: 0; padding: 0; }
+.gp-toc li { display: flex; align-items: center; gap: 3mm; padding: 3mm 0; border-bottom: .2mm solid var(--hair); font: 700 14pt var(--serif); }
+.gp-toc li a { color: var(--ink); text-decoration: none; flex: 1; display: flex; }
+.gp-toc li a::after { content: target-counter(attr(href url), page); margin-left: auto; font-weight: 400; }
+.gp-dot { width: 4mm; height: 4mm; border-radius: 50%; display: inline-block; flex: none; }
+.gp-intro { margin: 8mm 0 0; font: italic 400 12pt/1.5 var(--serif); color: #3f3a34; }
+.gp-legend { margin: 8mm 0 0; display: flex; flex-wrap: wrap; gap: 2mm 6mm; font: 500 8pt var(--head); letter-spacing: .08em; text-transform: uppercase; color: var(--soft); }
+.gm { display: block; width: 100%; height: auto; border: .2mm solid #aaa49b; margin: 0 0 5mm; }
+.gm-num { font: 700 11px Arial, sans-serif; fill: #fff; }
+.gm-t { font: 700 11px Arial, sans-serif; fill: #333; }
+.gm-note { font: italic 11px Arial, sans-serif; fill: #5a7d8f; }
+.gp-glance .gm { max-height: 200mm; width: auto; margin: 0 auto 5mm; }
+.gp-zl { list-style: none; margin: 0; padding: 0; columns: 2; }
+.gp-zl li { display: flex; align-items: center; gap: 2.5mm; padding: 1.5mm 0; font: 700 11pt var(--serif); }
+.gp-zl small { margin-left: auto; font: 500 8pt var(--head); color: var(--soft); padding-right: 4mm; }
+.gp-zi { margin: 0 0 5mm; font: italic 400 11.5pt/1.5 var(--serif); color: #3f3a34; }
+.gp-zone .gm { max-height: 105mm; width: auto; max-width: 100%; margin: 0 auto 5mm; }
+.gp-spots { column-count: 2; column-gap: 7mm; column-rule: .2mm solid var(--hair); }
+.gp-spot { break-inside: avoid; padding: 2.5mm 0 3mm; border-top: .2mm solid var(--hair); }
+.gp-spot h3 { display: flex; align-items: center; gap: 2.5mm; margin: 0 0 1.5mm; font: 700 12pt/1.15 var(--serif); }
+.gp-n { flex: none; width: 6mm; height: 6mm; border-radius: 50%; display: inline-grid; place-items: center; color: #fff; font: 700 8pt Arial, sans-serif; }
+.gp-cup { background: #6b4a2b; }
+.gp-spot p { margin: 0 0 1.5mm; }
+.gp-spot a { color: var(--rule); text-decoration: none; }
+.gp-light { font: 700 7.5pt var(--head); letter-spacing: .12em; text-transform: uppercase; color: var(--soft); }
+.gp-note { font-style: italic; color: #5a2a1a; border-left: .8mm solid var(--zc, var(--rule)); padding-left: 2.5mm; }
+.gp-c { font: 500 7.5pt var(--head); color: var(--soft); letter-spacing: .06em; }
+.gp-spot figure { margin: 2mm 0; }
+.gp-spot img { display: block; max-width: 100%; max-height: 70mm; width: auto; height: auto; }
+.gp-rich { column-count: 2; column-gap: 7mm; }
+.gp-rich h3 { margin: 3mm 0 1.5mm; font: 700 12pt var(--serif); break-after: avoid; }
+.gp-rich p, .gp-rich li { margin: 0 0 2mm; }
+.gp-rich ul { padding-left: 4mm; margin: 0 0 2mm; }
+.gp-rich a { color: var(--rule); text-decoration: none; }
+.gp-back { display: flex; flex-direction: column; justify-content: center; min-height: 240mm; text-align: center; }
+.gp-back h2 span { display: block; font: italic 400 15pt var(--serif); letter-spacing: 0; margin-top: 2mm; }
+.gp-back p { max-width: 120mm; margin: 0 auto 4mm; font-size: 11pt; }
+.gp-foot { margin-top: 12mm !important; font: 700 8pt var(--head) !important; letter-spacing: .14em; text-transform: uppercase; color: var(--soft); }
+.gp-printbtn { position: fixed; z-index: 10; right: 16px; bottom: 16px; padding: 12px 18px; border: 0; background: #111; color: #fff; font: 700 13px var(--head); letter-spacing: .14em; text-transform: uppercase; cursor: pointer; }
+@media screen { .pagedjs_pages { padding: 20px 0; } .pagedjs_page { background: #fff; margin: 0 auto 20px; box-shadow: 0 6px 30px rgba(0,0,0,.15); } }
+@media print { body { background: none; } .gp-printbtn { display: none !important; } }
