@@ -1344,13 +1344,28 @@ function submissionToArticle(x) {
     author: (x.author_name || "").trim() === (about?.proprietario || "Fabio Costantini") ? { name: x.author_name, slug: "fabio", own: true }
       : { name: x.author_name, slug: slug(x.author_name), own: false, instagram: x.author_instagram || "", site: x.author_site || "", bio: x.author_bio || "", photo: "" } };
 }
+/* articoli scritti sul sito: restano sul dispositivo; a ogni visita si controlla solo un elenco minuscolo
+   (id + ultima modifica) e si scaricano soltanto gli articoli nuovi o cambiati — molto meno traffico su Supabase */
+const JOURNAL_CACHE = "fcph-journal-v1";
 async function loadCommunityArticles() {
   if (typeof SPOTS_CONFIG === "undefined" || !SPOTS_CONFIG.url) return;
+  const base = `${SPOTS_CONFIG.url.replace(/\/$/, "")}/rest/v1/journal_submissions`, headers = { apikey: SPOTS_CONFIG.anonKey };
+  const COLS = "id,slug,title,kind,topic,place,excerpt,body,cover_url,glance,author_name,author_instagram,author_site,author_bio,published_at,updated_at";
   try {
-    const res = await fetch(`${SPOTS_CONFIG.url.replace(/\/$/, "")}/rest/v1/journal_submissions?select=id,slug,title,kind,topic,place,excerpt,body,cover_url,glance,author_name,author_instagram,author_site,author_bio,published_at,updated_at&status=eq.published&order=published_at.desc&limit=200`,
-      { headers: { apikey: SPOTS_CONFIG.anonKey } });
+    let cache = {};
+    try { cache = JSON.parse(localStorage.getItem(JOURNAL_CACHE) || "{}") || {}; } catch {}
+    const res = await fetch(`${base}?select=id,updated_at&status=eq.published&order=published_at.desc&limit=200`, { headers });
     if (!res.ok) return;
-    const extra = (await res.json()).map(submissionToArticle);
+    const stubs = await res.json();
+    const want = stubs.filter(x => !cache[x.id] || cache[x.id].updated_at !== x.updated_at).map(x => x.id);
+    if (want.length) {
+      const r2 = await fetch(`${base}?select=${COLS}&status=eq.published&id=in.(${want.join(",")})`, { headers });
+      if (!r2.ok) return;
+      (await r2.json()).forEach(x => { cache[x.id] = x; });
+    }
+    const rows = stubs.map(x => cache[x.id]).filter(Boolean);
+    try { localStorage.setItem(JOURNAL_CACHE, JSON.stringify(Object.fromEntries(rows.map(x => [x.id, x])))); } catch {}
+    const extra = rows.map(submissionToArticle);
     articles = articles.filter(a => !a.id.startsWith("c-")).concat(extra);
     if (document.body.dataset.page === "journal") route();
   } catch {}

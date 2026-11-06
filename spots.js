@@ -198,34 +198,104 @@ const Spots = (() => {
   }
 
   /* ---------- dati ---------- */
-  async function fetchSpots() {
-    const cols = "id,source_key,name,lat,lon,list,note,url,created_at";
+  /* ---------- copia dei luoghi sul dispositivo (IndexedDB): si scaricano solo novità e modifiche ----------
+     Prima: a ogni apertura tutta la lista (migliaia di righe). Ora: la prima volta tutta, poi solo ciò che è
+     cambiato dall'ultima volta, più un controllo leggerissimo sul numero totale (per accorgersi delle eliminazioni).
+     Un aggiornamento completo resta ogni 7 giorni, o quando cambiano le colonne. Riduce molto il traffico Supabase. */
+  const idb = (() => {
+    let p = null;
+    const open = () => p || (p = new Promise((res, rej) => {
+      const r = indexedDB.open("fcph", 1);
+      r.onupgradeneeded = () => r.result.createObjectStore("kv");
+      r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+    }));
+    return {
+      get: async k => { try { const db = await open(); return await new Promise(res => { const q = db.transaction("kv").objectStore("kv").get(k); q.onsuccess = () => res(q.result || null); q.onerror = () => res(null); }); } catch { return null; } },
+      set: async (k, v) => { try { const db = await open(); await new Promise(res => { const t = db.transaction("kv", "readwrite"); t.objectStore("kv").put(v, k); t.oncomplete = res; t.onerror = res; t.onabort = res; }); } catch {} },
+      del: async k => { try { const db = await open(); await new Promise(res => { const t = db.transaction("kv", "readwrite"); t.objectStore("kv").delete(k); t.oncomplete = res; t.onerror = res; }); } catch {} }
+    };
+  })();
+  const FULL_EVERY = 7 * 864e5;
+  const spotCols = () => "id,source_key,name,lat,lon,list,note,url,created_at"
+    + (schemaV2 ? ",category,starts_on,ends_on,created_by,author_name" : "")
+    + (schemaV2 && socialV ? ",support_local,fragile,best_months" + (pubV ? ",public_pick" : "") : "")
+    + (schemaV2 && wsV ? ",ws_capacity,ws_enrolled,ws_price,ws_currency,ws_link,support_since,ws_offer,ws_offer_until" : "")
+    + (schemaV2 && tkV ? ",tk_difficulty,tk_minutes,tk_km,tk_gain,tk_route,tk_parking,tk_park_lat,tk_park_lon" : "")
+    + (schemaV2 && nodiV ? ",verified_at,verified_name,outdated" : "")
+    + (schemaV2 && profV ? ",subcategory,info,status,updated_at" : "");
+  /* scarica le righe (a pagine), adattandosi a un database non ancora aggiornato */
+  async function pullSpots(filter = "") {
     const all = [];
     for (let from = 0; ; from += PAGE_SIZE) {
       let data;
       try {
-        ({ data } = await api(`/rest/v1/spots?select=${cols}${schemaV2 ? ",category,starts_on,ends_on,created_by,author_name" : ""}${schemaV2 && socialV ? ",support_local,fragile,best_months" + (pubV ? ",public_pick" : "") : ""}${schemaV2 && wsV ? ",ws_capacity,ws_enrolled,ws_price,ws_currency,ws_link,support_since,ws_offer,ws_offer_until" : ""}${schemaV2 && tkV ? ",tk_difficulty,tk_minutes,tk_km,tk_gain,tk_route,tk_parking,tk_park_lat,tk_park_lon" : ""}${schemaV2 && nodiV ? ",verified_at,verified_name,outdated" : ""}${schemaV2 && profV ? ",subcategory,info,status,updated_at" : ""}&order=list.asc,name.asc`, {
+        ({ data } = await api(`/rest/v1/spots?select=${spotCols()}${filter}&order=id.asc`, {
           headers: { "Range-Unit": "items", Range: `${from}-${from + PAGE_SIZE - 1}` } }));
       } catch (err) {
         // database non ancora aggiornato (colonne nuove assenti): funziona come prima
-        if (profV && schemaV2 && err.status === 400 && from === 0) { profV = false; from -= PAGE_SIZE; continue; }
-        if (nodiV && schemaV2 && err.status === 400 && from === 0) { nodiV = false; from -= PAGE_SIZE; continue; }
-        if (tkV && schemaV2 && err.status === 400 && from === 0) { tkV = false; from -= PAGE_SIZE; continue; }
-        if (wsV && schemaV2 && err.status === 400 && from === 0) { wsV = false; from -= PAGE_SIZE; continue; }
-        if (pubV && socialV && schemaV2 && err.status === 400 && from === 0) { pubV = false; from -= PAGE_SIZE; continue; }
-        if (socialV && schemaV2 && err.status === 400 && from === 0) { socialV = false; from -= PAGE_SIZE; continue; }
-        if (schemaV2 && err.status === 400 && from === 0) { schemaV2 = false; from -= PAGE_SIZE; continue; }
+        if (err.status === 400 && from === 0) {
+          if (profV && schemaV2) { profV = false; from -= PAGE_SIZE; continue; }
+          if (nodiV && schemaV2) { nodiV = false; from -= PAGE_SIZE; continue; }
+          if (tkV && schemaV2) { tkV = false; from -= PAGE_SIZE; continue; }
+          if (wsV && schemaV2) { wsV = false; from -= PAGE_SIZE; continue; }
+          if (pubV && socialV && schemaV2) { pubV = false; from -= PAGE_SIZE; continue; }
+          if (socialV && schemaV2) { socialV = false; from -= PAGE_SIZE; continue; }
+          if (schemaV2) { schemaV2 = false; from -= PAGE_SIZE; continue; }
+        }
         throw err;
       }
       all.push(...(data || []));
       if (!data || data.length < PAGE_SIZE) break;
     }
+    return all;
+  }
+  async function countSpots() {
+    try {
+      const { res } = await api("/rest/v1/spots?select=id&limit=1", { headers: { Prefer: "count=exact", "Range-Unit": "items", Range: "0-0" } });
+      const n = +(res.headers.get("content-range") || "").split("/")[1];
+      return Number.isFinite(n) ? n : null;
+    } catch { return null; }
+  }
+  const stamp = r => [r.created_at, r.updated_at].filter(Boolean).sort().pop() || "";
+  async function fetchSpots() {
+    const key = `spots:${myUid() || "anon"}`;
+    const cache = await idb.get(key);
+    let rows = null, full = Date.now();
+    const sig0 = spotCols();
+    // solo con lo storico delle modifiche (colonna updated_at) si possono scaricare le sole differenze
+    if (cache && cache.sig === sig0 && profV && Date.now() - cache.full < FULL_EVERY && Array.isArray(cache.rows)) {
+      try {
+        const since = cache.mark || "1970-01-01T00:00:00Z";
+        const q = encodeURIComponent(`"${since}"`);
+        const delta = await pullSpots(`&or=(created_at.gt.${q},updated_at.gt.${q})`);
+        if (spotCols() === sig0) {
+          const byId = new Map(cache.rows.map(r => [r.id, r]));
+          delta.forEach(r => byId.set(r.id, r));
+          rows = [...byId.values()];
+          const total = await countSpots();
+          if (total != null && total !== rows.length) {   // qualcosa è stato eliminato: si allinea con i soli id
+            const ids = new Set();
+            for (let from = 0; ; from += PAGE_SIZE) {
+              const { data } = await api("/rest/v1/spots?select=id&order=id.asc", { headers: { "Range-Unit": "items", Range: `${from}-${from + PAGE_SIZE - 1}` } });
+              (data || []).forEach(x => ids.add(x.id));
+              if (!data || data.length < PAGE_SIZE) break;
+            }
+            rows = rows.filter(r => ids.has(r.id));
+          }
+          full = cache.full;
+        }
+      } catch { rows = null; }
+    }
+    if (!rows) rows = await pullSpots();
+    const mark = rows.reduce((m, r) => { const t = stamp(r); return t > m ? t : m; }, cache?.mark && rows === cache.rows ? cache.mark : "");
+    idb.set(key, { sig: spotCols(), full, mark, rows });
     const today = new Date().toISOString().slice(0, 10);
-    return all
+    return rows
       .filter(s => Number.isFinite(+s.lat) && Number.isFinite(+s.lon))
       .filter(s => s.category === "workshop" && s.starts_on ? s.starts_on > today                      // workshop: spariscono il giorno della partenza
         : !(s.ends_on || s.starts_on) || (s.ends_on || s.starts_on) >= today)                          // altri eventi: spariscono quando finiscono
-      .map(s => ({ ...s, lat: +s.lat, lon: +s.lon, list: s.list || "Spots", category: CATS[s.category] ? s.category : "spot" }));
+      .map(s => ({ ...s, lat: +s.lat, lon: +s.lon, list: s.list || "Spots", category: CATS[s.category] ? s.category : "spot" }))
+      .sort((a, b) => String(a.list).localeCompare(String(b.list)) || String(a.name).localeCompare(String(b.name)));
   }
   const ALERTS = {
     closed: { label: "Closed", icon: "⛔" }, works: { label: "Works or landslide", icon: "🚧" }, event: { label: "Event on", icon: "🎪" },
@@ -326,14 +396,21 @@ const Spots = (() => {
   async function loadPublic() {
     if (guestLoaded) { guest = true; return true; }
     try {
-      const all = [];
-      for (let from = 0; ; from += PAGE_SIZE) {
-        const { data } = await api("/rest/v1/public_spots?select=id,name,category,lat,lon,support_local,reviews,avg_rating", {
-          auth: false, headers: { "Range-Unit": "items", Range: `${from}-${from + PAGE_SIZE - 1}` } });
-        all.push(...(data || []));
-        if (!data || data.length < PAGE_SIZE) break;
+      // la selezione pubblica cambia di rado: resta sul dispositivo per 12 ore (meno traffico su Supabase)
+      const c = await idb.get("public");
+      let all = c && Date.now() - c.at < 12 * 36e5 && Array.isArray(c.rows) ? c.rows : null;
+      if (all) publicTotal = c.total || 0;
+      else {
+        all = [];
+        for (let from = 0; ; from += PAGE_SIZE) {
+          const { data } = await api("/rest/v1/public_spots?select=id,name,category,lat,lon,support_local,reviews,avg_rating", {
+            auth: false, headers: { "Range-Unit": "items", Range: `${from}-${from + PAGE_SIZE - 1}` } });
+          all.push(...(data || []));
+          if (!data || data.length < PAGE_SIZE) break;
+        }
+        try { const { data } = await api("/rest/v1/rpc/spots_total", { method: "POST", body: {}, auth: false }); publicTotal = +data || 0; } catch {}
+        idb.set("public", { at: Date.now(), rows: all, total: publicTotal });
       }
-      try { const { data } = await api("/rest/v1/rpc/spots_total", { method: "POST", body: {}, auth: false }); publicTotal = +data || 0; } catch {}
       spots = all.filter(x => Number.isFinite(+x.lat)).map(x => ({ ...x, lat: +x.lat, lon: +x.lon, list: "Public", category: CATS[x.category] ? x.category : "spot", fragile: false }));
       admin = false; guest = true; guestLoaded = true; reports = new Map();
       return true;
@@ -2834,7 +2911,7 @@ const Spots = (() => {
   const jSlug = t => String(t || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 70);
   async function uploadJournalImage(file) {
     if (!(await ensureSession())) throw new Error("please log in again");
-    const blob = await resizeImage(file, 2200, 0.84);
+    const blob = await resizeImage(file, 1800, 0.8);   // abbastanza nitida per tutto lo schermo, molto più leggera da servire
     const path = `${myUid()}/${Date.now()}-${crypto.randomUUID().slice(0, 8)}.jpg`;
     const res = await fetch(`${SPOTS_CONFIG.url.replace(/\/$/, "")}/storage/v1/object/journal/${path}`, { method: "POST",
       headers: { apikey: SPOTS_CONFIG.anonKey, Authorization: `Bearer ${session.access_token}`, "Content-Type": "image/jpeg", "x-upsert": "false" }, body: blob });
