@@ -228,8 +228,12 @@
       document.title = `${NAME} — N° ${info.number} · ${info.label}`;
       note.remove();
       window.PagedConfig = { auto: false };
+      // Paged.js applica i margini della pagina con nome solo dopo: per la copertina serve anche :first
+      const fs = document.createElement("style");
+      fs.textContent = "@page :first { margin: 0; @bottom-left { content: none; } @bottom-right { content: none; } }";
+      document.head.appendChild(fs);
       const sc = document.createElement("script");
-      sc.src = "https://unpkg.com/pagedjs@0.4.3/dist/paged.polyfill.min.js";
+      sc.src = "vendor/paged.polyfill.min.js";   // Paged.js 0.4.3 (licenza MIT), copiato nel sito
       sc.onload = async () => {
         try {
           await window.PagedPolyfill.preview();

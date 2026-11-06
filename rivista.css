@@ -112,3 +112,7 @@ body { margin: 0; color: var(--ink); font: 400 10pt/1.55 var(--serif); -webkit-p
   .rv-print .pagedjs_page { background: #fff; margin: 0 auto 20px; box-shadow: 0 6px 30px rgba(0,0,0,.15); }
 }
 @media print { .rv-printbtn, .rv-printnote { display: none !important; } }
+/* in Paged.js la pagina di copertina deve stare un filo sotto l'A4, altrimenti trabocca su una seconda pagina */
+.rv-print .rv-cover { height: 296mm; width: 210mm; break-inside: avoid; }
+.rv-print .rv-cover-text { position: absolute; left: 0; right: 0; bottom: 0; }
+.rv-print .rv-cover-top { position: absolute; left: 0; right: 0; top: 0; }
