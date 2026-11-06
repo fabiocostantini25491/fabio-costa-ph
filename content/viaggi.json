@@ -291,6 +291,22 @@
           "lon": "14.39053973172318"
         }
       ]
+    },
+    {
+      "nome": "Monti della Laga",
+      "id": "Monti della Laga",
+      "lat": "42.601377825518995",
+      "lon": "13.435339527129845",
+      "categoria": "Paesaggi",
+      "foto": [
+        {
+          "titolo": "Cascata della Morricana",
+          "immagine": "/img/foto/fb-untitled-3-jpg-3-2025-11-30t18-03-26-578-2026-08-12t00-07-59-098.jpg",
+          "categoria": "Paesaggi",
+          "lat": "42.66086307116666",
+          "lon": "13.402759940634063"
+        }
+      ]
     }
   ]
 }
