@@ -1108,6 +1108,7 @@ function showLightbox() {
     b.classList.toggle("on", on); b.setAttribute("aria-current", on ? "true" : "false");
     if (on) b.scrollIntoView({ block: "nearest", inline: "center", behavior: "smooth" });
   });
+  if (many) [1, -1].forEach(d => { const q = lightboxList[(lightboxIndex + d + lightboxList.length) % lightboxList.length]; if (q) new Image().src = q.src; });
   renderShot(p);
   renderJourneyFacts(p);
   renderInterest(p);
@@ -1322,8 +1323,112 @@ function openPickRequest() {
   if (!d.open) d.showModal();
 }
 function stepLightbox(d) {
+  if (lightboxList.length < 2) return;
   lightboxIndex = (lightboxIndex + d + lightboxList.length) % lightboxList.length;
   showLightbox();
+  const img = $("#dialogImage");
+  if (!img.dataset.swiping) { img.classList.remove("pv-fade"); void img.offsetWidth; img.classList.add("pv-fade"); }
+}
+
+/* Gesti sul telefono, sulla foto:
+   - orizzontale: la foto segue il dito; oltre la soglia passa alla successiva / precedente
+   - verso il basso: la foto segue il dito rimpicciolendosi; oltre la soglia il visualizzatore si chiude
+   Due dita = zoom del browser: nessun gesto. Con la pagina ingrandita lo spostamento resta al browser.
+   Sotto la foto (dettagli, miniature) lo scorrimento è quello normale. */
+function setupPhotoGestures(dlg) {
+  const stage = $("#pvStage"), img = $("#dialogImage");
+  let g = null;
+  const zoomed = () => (window.visualViewport?.scale || 1) > 1.02;
+  const syncTouchAction = () => { stage.style.touchAction = zoomed() ? "auto" : "pinch-zoom"; };
+  syncTouchAction();
+  window.visualViewport?.addEventListener("resize", syncTouchAction);
+  const rot = () => dlg.classList.contains("rot-90") ? " rotate(90deg)" : "";
+  const setT = (x, y, sc, op) => { img.style.transform = `translate3d(${x}px,${y}px,0) scale(${sc})${rot()}`; img.style.opacity = op; };
+  const reset = (anim = true) => {
+    img.style.transition = anim ? "transform .28s cubic-bezier(.2,.8,.2,1), opacity .28s" : "none";
+    img.style.transform = ""; img.style.opacity = "";
+    dlg.style.removeProperty("--pv-dim"); dlg.classList.remove("pv-dragging");
+    if (anim) setTimeout(() => { if (!g) img.style.transition = ""; }, 300);
+    else img.style.transition = "";
+  };
+  const end = () => { g = null; delete img.dataset.swiping; };
+
+  stage.addEventListener("touchstart", e => {
+    if (e.touches.length !== 1 || zoomed() || e.target.closest("button, a")) { if (g) { reset(); end(); } return; }
+    const t = e.touches[0];
+    g = { x: t.clientX, y: t.clientY, t: performance.now(), axis: null, dx: 0, dy: 0, scroll: dlg.classList.contains("pv-full") ? 0 : dlg.scrollTop };
+  }, { passive: true });
+
+  stage.addEventListener("touchmove", e => {
+    if (!g) return;
+    if (e.touches.length !== 1) { reset(); end(); return; }            // entra un secondo dito: è uno zoom
+    const t = e.touches[0];
+    g.dx = t.clientX - g.x; g.dy = t.clientY - g.y;
+    if (!g.axis) {
+      const ax = Math.abs(g.dx), ay = Math.abs(g.dy);
+      if (ax < 10 && ay < 10) return;
+      g.axis = ax > ay * 1.2 ? "x" : ay > ax * 1.2 ? "y" : null;
+      if (!g.axis) return;
+      // pagina già scorsa verso i dettagli: il dito sulla foto scorre (in su e in giù) invece di chiudere
+      if (g.axis === "y" && (g.scroll > 4 || g.dy < 0)) g.axis = "scroll";
+      img.style.transition = "none"; img.dataset.swiping = "1";
+    }
+    if (e.cancelable) e.preventDefault();
+    if (g.axis === "scroll") { dlg.scrollTop = g.scroll - g.dy; return; }
+    if (g.axis === "x") {
+      const many = lightboxList.length > 1;
+      const x = many ? g.dx : g.dx * 0.25;                               // una sola foto: resistenza
+      setT(x, 0, 1, 1);
+    } else {
+      const dy = Math.max(0, g.dy), p = Math.min(dy / (innerHeight * 0.6), 1);
+      dlg.classList.add("pv-dragging");
+      dlg.style.setProperty("--pv-dim", String(1 - p * 0.75));
+      setT(g.dx * 0.3, dy, 1 - p * 0.25, 1 - p * 0.45);
+    }
+  }, { passive: false });
+
+  const finish = () => {
+    if (!g) return;
+    const { axis, dx, dy } = g, dt = Math.max(1, performance.now() - g.t);
+    if (!axis || axis === "scroll") { end(); return; }
+    const W = stage.clientWidth || innerWidth;
+    if (axis === "x") {
+      const fast = Math.abs(dx) / dt > 0.45 && Math.abs(dx) > 30;
+      if (lightboxList.length > 1 && (Math.abs(dx) > W * 0.22 || fast)) {
+        const dir = dx < 0 ? 1 : -1;
+        const n = lightboxList.length, next = (lightboxIndex + dir + n) % n;
+        const cnt = `${next + 1} / ${n}`;
+        $("#dialogCount").textContent = cnt; $("#pvFsCount").textContent = cnt;   // contatore subito
+        img.style.transition = "transform .2s ease-out, opacity .2s";
+        setT(-dir * W, 0, 1, 0);
+        setTimeout(() => {
+          img.style.transition = "none";
+          stepLightbox(dir);
+          setT(dir * W * 0.6, 0, 1, 0);
+          void img.offsetWidth;
+          img.style.transition = "transform .26s cubic-bezier(.2,.8,.2,1), opacity .26s";
+          img.style.transform = rot().trim() || ""; img.style.opacity = "";
+          setTimeout(() => { img.style.transition = ""; }, 280);
+          end();
+        }, 190);
+        return;
+      }
+      reset(); end(); return;
+    }
+    // verso il basso
+    const fast = dy / dt > 0.5 && dy > 40;
+    if (dy > Math.min(130, innerHeight * 0.16) || fast) {
+      img.style.transition = "transform .22s ease-in, opacity .22s";
+      dlg.style.setProperty("--pv-dim", "0");
+      setT(dx * 0.3, innerHeight * 0.5, 0.7, 0);
+      setTimeout(() => { dlg.close(); reset(false); end(); }, 210);
+      return;
+    }
+    reset(); end();
+  };
+  stage.addEventListener("touchend", finish);
+  stage.addEventListener("touchcancel", () => { if (g) { reset(); end(); } });
+  dlg.addEventListener("close", () => { if (g) end(); reset(false); });
 }
 
 /* =========================================================
@@ -1884,16 +1989,7 @@ function bindEvents() {
     if (dlg.classList.contains("pv-full")) setImmersive(false);
     renderPickBar();
   });
-  // scorrimento col dito sulla foto
-  let touchX = null, touchY = null;
-  const stage = $("#pvStage");
-  stage.addEventListener("touchstart", e => { if (e.touches.length === 1) { touchX = e.touches[0].clientX; touchY = e.touches[0].clientY; } else touchX = null; }, { passive: true });
-  stage.addEventListener("touchend", e => {
-    if (touchX === null || lightboxList.length < 2) return;
-    const dx = e.changedTouches[0].clientX - touchX, dy = e.changedTouches[0].clientY - touchY;
-    if (Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy) * 1.3) stepLightbox(dx < 0 ? 1 : -1);
-    touchX = null;
-  });
+  setupPhotoGestures(dlg);
   $("#dialogPrev").addEventListener("click", e => { e.stopPropagation(); stepLightbox(-1); });
   $("#dialogNext").addEventListener("click", e => { e.stopPropagation(); stepLightbox(1); });
   dlg.addEventListener("keydown", e => {
