@@ -1797,6 +1797,162 @@ function articleHtml(a, t, back = true) {
     <p class="fn-end">Thanks for stopping by. Now, let's go explore.</p>` + (a.author && !a.author.own ? authorBox(a.author) : "");
 }
 
+/* =========================================================
+   7b. RIVISTA DEL MESE — «Field Notes From Planet Earth»
+   Il numero del mese in corso cresce con gli articoli; il 1° del mese si chiude e ne parte uno nuovo.
+   Il numero chiuso diventa un PDF (vedi rivista.html e .github/workflows/rivista.yml), scaricabile per un mese.
+   ========================================================= */
+const MAG_NAME = "Field Notes From Planet Earth";
+const MAG_REPO = "fabiocostantini25491/fabio-costa-ph";
+const romeMonth = (d = new Date()) => new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Rome", year: "numeric", month: "2-digit" }).format(d).slice(0, 7);
+const monthLabel = m => { const [y, mo] = m.split("-").map(Number); return new Intl.DateTimeFormat(window.I18N?.locale || "en-GB", { month: "long", year: "numeric" }).format(new Date(y, mo - 1, 15)); };
+/* numero progressivo: il mese del primo articolo è il N° 1 */
+function issueNumber(month) {
+  const first = articles.map(a => (a.date || "").slice(0, 7)).filter(Boolean).sort()[0] || month;
+  const [y1, m1] = first.split("-").map(Number), [y2, m2] = month.split("-").map(Number);
+  return Math.max(1, (y2 - y1) * 12 + (m2 - m1) + 1);
+}
+let magCovers = null, magPdf;
+async function loadMagCovers() {
+  if (magCovers) return magCovers;
+  try { const r = await getJSON("content/rivista.json"); magCovers = Array.isArray(r?.numeri) ? r.numeri : []; } catch { magCovers = []; }
+  return magCovers;
+}
+/* il PDF dell'ultimo numero chiuso: è un allegato della release «rivista-pdf» su GitHub (controllato al massimo ogni 6 ore) */
+async function loadMagPdf() {
+  if (magPdf !== undefined) return magPdf;
+  const KEY = "fcph-mag-pdf";
+  try { const c = JSON.parse(localStorage.getItem(KEY) || "null"); if (c && Date.now() - c.at < 6 * 3600e3) return (magPdf = c.v); } catch {}
+  magPdf = null;
+  try {
+    const r = await fetch(`https://api.github.com/repos/${MAG_REPO}/releases/tags/rivista-pdf`, { headers: { Accept: "application/vnd.github+json" } });
+    if (r.ok) {
+      const rel = await r.json(), asset = (rel.assets || []).find(x => /\.pdf$/i.test(x.name));
+      let info = {};
+      try { info = JSON.parse(String(rel.body || "").match(/\{[\s\S]*\}/)?.[0] || "{}"); } catch {}
+      if (asset) magPdf = { url: asset.browser_download_url, size: asset.size, month: info.month || "", number: info.number || 0, until: info.until || "" };
+    }
+  } catch {}
+  try { localStorage.setItem(KEY, JSON.stringify({ at: Date.now(), v: magPdf })); } catch {}
+  return magPdf;
+}
+function magPdfHtml(p) {
+  if (!p) return "";
+  const mb = p.size ? ` · ${(p.size / 1048576).toFixed(p.size > 10485760 ? 0 : 1)} MB` : "";
+  const until = p.until ? new Intl.DateTimeFormat(window.I18N?.locale || "en-GB", { day: "numeric", month: "long" }).format(new Date(p.until + "T12:00:00")) : "";
+  return `<a class="mz-pdf" href="${esc(p.url)}" target="_blank" rel="noopener" data-mag-pdf>
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 19h14"/></svg>
+    <span><b>${(window.I18N ? I18N.t("Download the last issue") : "Download the last issue")}</b><small>${p.number ? `N° ${p.number} · ` : ""}${p.month ? esc(monthLabel(p.month)) : ""} · PDF${mb}${until ? ` · available until ${esc(until)}` : ""}</small></span></a>`;
+}
+async function renderMagazine() {
+  const layout = $("#journalLayout");
+  layout.hidden = false;
+  $("#articleReader").hidden = true;
+  const month = romeMonth(), num = issueNumber(month);
+  const list = articles.filter(a => (a.date || "").slice(0, 7) === month).sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+  renderTopics([...new Set(articles.map(a => a.category))], "");
+  const covers = await loadMagCovers();
+  if (document.body.dataset.page !== "journal" || renderMagazine.token !== magToken) return;
+  const setCover = covers.find(c => String(c.mese || "").trim() === month);
+  const cover = setCover?.copertina ? mediaUrl(setCover.copertina) : (list.find(a => a.cover)?.cover || "");
+  const authors = new Set(list.map(a => a.author?.name).filter(Boolean)).size;
+  const T = s => window.I18N ? I18N.t(s) : s;
+  layout.innerHTML = `<div class="mz">
+    <header class="mz-cover${cover ? "" : " no-img"}">
+      ${cover ? `<img class="mz-cover-img" src="${esc(cover)}" alt="" data-zoom>` : ""}
+      <div class="mz-cover-text">
+        <p class="mz-issue">N° ${num} · ${esc(monthLabel(month))}</p>
+        <h2 class="mz-name">Field Notes<span>From Planet Earth</span></h2>
+        ${setCover?.titolo ? `<p class="mz-cover-title">${esc(setCover.titolo)}</p>` : ""}
+        <p class="mz-status"><span class="mz-live" aria-hidden="true"></span>${T("In progress")} · ${list.length === 1 ? T("1 story") : T("{n} stories").replace("{n}", list.length)}${authors > 1 ? ` · ${T("{n} authors").replace("{n}", authors)}` : ""}</p>
+      </div>
+    </header>
+    <div class="mz-pdfslot" id="mzPdf"></div>
+    <section class="mz-toc" id="mzToc" aria-label="Contents">
+      <h3>Contents</h3>
+      ${list.length ? `<ol>${list.map((a, i) => `<li><button type="button" data-goto="${esc(a.id)}">
+        <span class="mz-n">${String(i + 1).padStart(2, "0")}</span>
+        <span class="mz-t"><small>${a.type === "reportage" ? "Reportage" : esc(catLabel(a.category))}</small><strong>${esc(a.title)}</strong>
+          <em>${esc(a.author?.name || "")} · ${esc(fmtDate(a.date))}${a.minutes ? ` · ${a.minutes} min` : ""}</em></span></button></li>`).join("")}</ol>`
+        : `<p class="mz-empty">The first story of this issue is being written. It closes on the last day of the month.</p>`}
+      <p class="mz-note">This issue grows with every new story and closes at the end of the month. Then it becomes a PDF you can download for one month.</p>
+    </section>
+    ${list.map((a, i) => `<section class="mz-article" id="mz-${esc(a.id)}" data-title="${esc(a.title)}">
+      <p class="mz-runhead"><span>${String(i + 1).padStart(2, "0")}</span>${MAG_NAME} · N° ${num}</p>
+      <article class="full-article mag-article ${a.type === "reportage" ? "is-reportage" : "is-guide"}">${articleHtml(a, a.trip && tripById(a.trip), false)}</article>
+    </section>`).join("")}
+    ${list.length ? `<p class="fn-foot">${MAG_NAME} · N° ${num} · ${esc(monthLabel(month))}</p>` : ""}
+    <div class="mz-bar" id="mzBar" hidden><button type="button" id="mzTop">↑ Contents</button><span id="mzNow"></span></div>
+  </div>`;
+  layout.querySelectorAll("[data-goto]").forEach(b => b.addEventListener("click", () => {
+    document.getElementById("mz-" + b.dataset.goto)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    trackEvent("Magazine: open from contents");
+  }));
+  $("#mzTop").addEventListener("click", () => $("#mzToc").scrollIntoView({ behavior: "smooth", block: "start" }));
+  // barra in basso: dove sei nel numero
+  const bar = $("#mzBar"), now = $("#mzNow");
+  magObserver?.disconnect();
+  if (list.length && "IntersectionObserver" in window) {
+    magObserver = new IntersectionObserver(es => {
+      es.forEach(e => { if (e.isIntersecting) { now.textContent = e.target.dataset.title || ""; } });
+      const inArticles = [...layout.querySelectorAll(".mz-article")].some(s => { const r = s.getBoundingClientRect(); return r.top < innerHeight * 0.6 && r.bottom > 0; });
+      bar.hidden = !inArticles;
+    }, { rootMargin: "-40% 0px -55% 0px" });
+    layout.querySelectorAll(".mz-article").forEach(s => magObserver.observe(s));
+    const tocObs = new IntersectionObserver(([e]) => { if (e.isIntersecting) bar.hidden = true; });
+    tocObs.observe($("#mzToc"));
+    magObserver._toc = tocObs;
+  }
+  const pdf = await loadMagPdf();
+  if ($("#mzPdf")) $("#mzPdf").innerHTML = magPdfHtml(pdf);
+}
+let magObserver = null, magToken = 0;
+function setJournalMode(mode) {
+  $$(".fn-modes [data-jmode]").forEach(a => { const on = a.dataset.jmode === mode; a.classList.toggle("on", on); if (on) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current"); });
+  $("#journalMag")?.classList.toggle("is-magazine", mode === "magazine");
+  if (mode !== "magazine") { magObserver?.disconnect(); magObserver?._toc?.disconnect(); }
+}
+
+/* ---------- foto degli articoli: si ingrandiscono a tutto schermo ---------- */
+function setupArticleZoom() {
+  const d = $("#zoomDialog");
+  if (!d) return;
+  let list = [], i = 0;
+  const show = () => {
+    const im = list[i]; if (!im) return;
+    $("#zmImg").src = im.currentSrc || im.src; $("#zmImg").alt = im.alt || "";
+    const cap = im.closest("figure")?.querySelector("figcaption")?.textContent || im.alt || "";
+    $("#zmCap").textContent = cap; $("#zmCap").hidden = !cap;
+    $("#zmCount").textContent = list.length > 1 ? `${i + 1} / ${list.length}` : "";
+    $("#zmPrev").hidden = $("#zmNext").hidden = list.length < 2;
+  };
+  const step = k => { if (list.length > 1) { i = (i + k + list.length) % list.length; show(); } };
+  document.addEventListener("click", e => {
+    const img = e.target.closest?.("#journalMag .mag-body img, #journalMag .fn-hero img, #journalMag .mz-cover-img");
+    if (!img || img.closest("a")) return;
+    const scope = img.closest(".mag-article, .mz-cover") || document;
+    list = [...scope.querySelectorAll(".mag-body img, .fn-hero img, .mz-cover-img")];
+    i = Math.max(0, list.indexOf(img));
+    show(); d.showModal(); document.documentElement.classList.add("no-scroll");
+    trackEvent("Journal: zoom photo");
+  });
+  $("#zmClose").addEventListener("click", () => d.close());
+  $("#zmPrev").addEventListener("click", () => step(-1));
+  $("#zmNext").addEventListener("click", () => step(1));
+  d.addEventListener("click", e => { if (e.target === d || e.target.id === "zmStage") d.close(); });
+  d.addEventListener("close", () => document.documentElement.classList.remove("no-scroll"));
+  d.addEventListener("keydown", e => { if (e.key === "ArrowLeft") step(-1); if (e.key === "ArrowRight") step(1); });
+  let x0 = null, y0 = null;
+  const st = $("#zmStage");
+  st.addEventListener("touchstart", e => { if (e.touches.length === 1 && (visualViewport?.scale || 1) <= 1.02) { x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; } else x0 = null; }, { passive: true });
+  st.addEventListener("touchend", e => {
+    if (x0 === null) return;
+    const dx = e.changedTouches[0].clientX - x0, dy = e.changedTouches[0].clientY - y0; x0 = null;
+    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.3) step(dx < 0 ? 1 : -1);
+    else if (dy > 90 && dy > Math.abs(dx) * 1.3) d.close();
+  });
+}
+
 /* ---------- articoli dei contributor approvati (Supabase) ---------- */
 const TOPIC_OF = { "Attualità": "Attualità", Luoghi: "Luoghi", Viaggi: "Viaggi", Persone: "Persone", Natura: "Natura", Fotografia: "Fotografia", Tecnica: "Tecnica", "Guide pratiche": "Guide pratiche", Ispirazione: "Ispirazione" };
 function submissionToArticle(x) {
@@ -2097,6 +2253,8 @@ function route() {
   if (hash.startsWith("art-")) { page = "journal"; article = hash.slice(4); }
   let authorSlug = null;
   const writeMode = hash === "write";
+  const magazine = hash === "magazine";
+  if (magazine) page = "journal";
   if (writeMode) page = "journal";
   if (hash.startsWith("author-")) { page = "journal"; authorSlug = hash.slice(7); }
   const join = hash === "join";
@@ -2138,15 +2296,17 @@ function route() {
     if (writeMode) { $("#journalLayout").hidden = true; const r = $("#articleReader"); r.hidden = false; r.className = "full-article mag-article is-write"; window.Spots?.renderWrite?.(r); }
     else if (authorSlug) renderAuthor(authorSlug);
     else if (article) renderArticle(article);
+    else if (magazine) { setJournalMode("magazine"); renderMagazine.token = ++magToken; renderMagazine(); }
     else { $("#articleReader").hidden = true; renderJournal(); }
+    if (!magazine) setJournalMode("journal");
   }
   if (guideAnchor) setTimeout(() => document.getElementById(guideAnchor)?.scrollIntoView({ behavior: "smooth", block: "start" }), 60);
-  else if (changed && !article) window.scrollTo(0, 0);
+  else if ((changed || magazine) && !article) window.scrollTo(0, 0);
 }
 
 function renderAll() {
   renderGallery();
-  renderJournal();
+  if (location.hash === "#magazine") { renderMagazine.token = ++magToken; renderMagazine(); } else renderJournal();
   renderAbout();
   drawHomePins();
   if (activeTripId && tripById(activeTripId)) drawPins("explore"); else if (maps.explore) renderPanelIntro();
@@ -2156,6 +2316,7 @@ function renderAll() {
    11. AVVIO
    ========================================================= */
 function bindEvents() {
+  setupArticleZoom();
   $$(".gl-vbtn").forEach(b => b.addEventListener("click", () => {
     gallery.view = b.dataset.view; try { localStorage.setItem("fcph-gallery-view", gallery.view); } catch {}
     renderGallery();

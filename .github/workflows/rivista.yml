@@ -1,0 +1,60 @@
+name: Rivista del mese (PDF)
+# Il 1° di ogni mese impagina il numero del mese appena chiuso di «Field Notes From Planet Earth»
+# e lo pubblica come PDF scaricabile (allegato della release «rivista-pdf»), al posto di quello del mese prima.
+# Si può anche lanciare a mano da GitHub → Actions → «Rivista del mese (PDF)» → Run workflow (es. per un'anteprima).
+on:
+  schedule:
+    - cron: "30 0 1 * *"   # 1° del mese, 01:30 (inverno) / 02:30 (estate) ora italiana
+  workflow_dispatch:
+    inputs:
+      mese:
+        description: "Mese da impaginare, es. 2026-11 (vuoto = il mese appena chiuso)"
+        required: false
+        default: ""
+      pubblica:
+        description: "Pubblicare sul sito (sostituisce il PDF attuale)? Se no, il PDF resta solo come anteprima scaricabile qui."
+        type: boolean
+        default: false
+permissions:
+  contents: write
+concurrency: rivista
+jobs:
+  rivista:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - name: Strumenti di stampa
+        run: |
+          npm install --no-save --no-package-lock playwright@1
+          npx playwright install --with-deps chromium
+      - name: Impagina
+        run: node scripts/build-rivista.cjs --mese "${{ inputs.mese }}" --out dist/rivista.pdf --meta dist/rivista.json
+      - name: Anteprima scaricabile (resta 30 giorni tra gli artifact)
+        if: hashFiles('dist/rivista.pdf') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: rivista-anteprima
+          path: dist/
+          retention-days: 30
+      - name: Pubblica sul sito
+        if: github.event_name == 'schedule' || inputs.pubblica
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          TAG=rivista-pdf
+          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --title "Field Notes From Planet Earth — PDF del mese" --notes "{}" --latest=false
+          # il PDF del mese prima viene cancellato
+          for a in $(gh release view "$TAG" --json assets -q '.assets[].name'); do gh release delete-asset "$TAG" "$a" -y; done
+          if [ -f dist/rivista.pdf ]; then
+            NAME=$(jq -r .file dist/rivista.json)
+            cp dist/rivista.pdf "dist/$NAME"
+            gh release upload "$TAG" "dist/$NAME" --clobber
+            gh release edit "$TAG" --notes "$(jq -c '{month,number,until,pages,stories}' dist/rivista.json)"
+            echo "Pubblicato $NAME"
+          else
+            gh release edit "$TAG" --notes "{}"
+            echo "Nessun articolo nel mese: nessun PDF pubblicato."
+          fi

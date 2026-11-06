@@ -322,6 +322,41 @@ content:
             description: "Il codice del viaggio, es. islanda: aggiunge il pulsante «Vedi il viaggio sulla mappa»."
 
   # ---------------------------------------------------------------
+  # RIVISTA DEL MESE (Field Notes From Planet Earth)
+  # ---------------------------------------------------------------
+  - name: rivista
+    label: Rivista del mese (copertine)
+    type: file
+    path: content/rivista.json
+    format: json
+    fields:
+      - name: numeri
+        label: Copertine dei numeri
+        type: object
+        list:
+          collapsible:
+            collapsed: true
+            summary: "{mese}"
+        description: "Ogni mese gli articoli del Journal diventano un numero di «Field Notes From Planet Earth». Qui scegli la foto di copertina di quel mese: compare sul sito (modalità rivista) e sulla prima pagina del PDF. Se non la metti, si usa la copertina dell'articolo più recente."
+        fields:
+          - name: mese
+            label: Mese (anno-mese)
+            type: string
+            required: true
+            description: "Es. 2026-11 per novembre 2026."
+          - name: copertina
+            label: Foto di copertina
+            type: image
+            required: true
+            options:
+              extensions: [jpg, jpeg, png, webp]
+              rename: true
+          - name: titolo
+            label: Titolo di copertina (facoltativo)
+            type: string
+            description: "Una riga sulla copertina, es. «Inverno sulle Dolomiti»."
+
+  # ---------------------------------------------------------------
   # PAGINA CHI SONO
   # ---------------------------------------------------------------
   - name: chi-sono
