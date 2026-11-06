@@ -1,0 +1,17 @@
+name: Leggi spot di un'area (dati pubblici)
+# Legge solo ciò che chiunque vede sul sito senza account (la selezione pubblica di Spots).
+on:
+  workflow_dispatch:
+    inputs:
+      bbox: { description: "lat_min,lat_max,lon_min,lon_max", required: true, default: "45.38,45.52,12.20,12.45" }
+jobs:
+  leggi:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          URL=$(grep -oP 'url:\s*"\K[^"]+' spots.js | head -1); KEY=$(grep -oP 'anonKey:\s*"\K[^"]+' spots.js | head -1)
+          IFS=, read A B C D <<< "${{ inputs.bbox }}"
+          Q="lat=gte.$A&lat=lte.$B&lon=gte.$C&lon=lte.$D"
+          echo "== public_spots"; curl -s "$URL/rest/v1/public_spots?select=*&$Q&limit=500" -H "apikey: $KEY" | jq -c '.[] | {name,category,lat,lon,support_local,reviews,avg_rating}'
+          echo "== spots (anonimo)"; curl -s "$URL/rest/v1/spots?select=name,category,subcategory,lat,lon,note,status&$Q&limit=500" -H "apikey: $KEY" | jq -c 'if type=="array" then .[] else . end'
