@@ -1,0 +1,19 @@
+name: Copia Paged.js nel sito (una tantum)
+on: workflow_dispatch
+permissions:
+  contents: write
+jobs:
+  vendor:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          mkdir -p vendor
+          curl -fsSL https://unpkg.com/pagedjs@0.4.3/dist/paged.polyfill.min.js -o vendor/paged.polyfill.min.js
+          curl -fsSL https://unpkg.com/pagedjs@0.4.3/LICENSE.md -o vendor/pagedjs-LICENSE.md || true
+          ls -la vendor
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add vendor
+          git commit -m "Paged.js 0.4.3 (MIT) per i PDF su richiesta [skip ci]" || exit 0
+          git push
