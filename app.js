@@ -27,7 +27,7 @@ const slug = s => norm(s).replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "
 
 const MONTHS = Array.from({ length: 12 }, (_, i) => new Intl.DateTimeFormat(window.I18N?.locale || "en-GB", { month: "short" }).format(new Date(2026, i, 15)));
 /* Le categorie restano in italiano nel pannello, sul sito si leggono in inglese */
-const CATEGORY_EN = { Paesaggi: "Landscapes", Urban: "Urban", Viaggi: "Travel", Fotografia: "Photography", Tecnica: "Technique", Ispirazione: "Inspiration",
+const CATEGORY_EN = { Paesaggi: "Landscapes", Urban: "Urban", Astrofotografia: "Astrophotography", "Lunga esposizione": "Long Exposure", Altro: "Other", Viaggi: "Travel", Fotografia: "Photography", Tecnica: "Technique", Ispirazione: "Inspiration",
   "Attualità": "Current affairs", Luoghi: "Places", "Guide pratiche": "Field guides", Persone: "People", Natura: "Nature" };
 const catLabel = c => (window.I18N?.t || (x => x))(CATEGORY_EN[c] || c || "");
 function parseDate(d) { return d ? new Date(d + "T00:00:00") : null; }
@@ -133,7 +133,8 @@ async function loadContent() {
   trips = []; photos = [];
   // immagini caricate in blocco: Pages CMS salva un elenco di percorsi (o un solo percorso)
   const pathsOf = v => (Array.isArray(v) ? v : v ? [v] : []).map(x => typeof x === "string" ? x : x?.immagine || x?.src || "").filter(Boolean);
-  const okCat = c => (c === "Urban" ? "Urban" : "Paesaggi");
+  const PHOTO_CATS = ["Paesaggi", "Urban", "Astrofotografia", "Lunga esposizione", "Altro"];
+  const okCat = c => (PHOTO_CATS.includes(c) ? c : "Paesaggi");
   rawTrips.forEach((t, ti) => {
     if (!t || !t.nome) return;
     const id = slug(t.id || t.nome) + (trips.some(x => x.id === slug(t.id || t.nome)) ? "-" + ti : "");
@@ -151,7 +152,7 @@ async function loadContent() {
         photos.push({ id: `${prefix}-${fi}`, trip: id, sub: sub?.id || "", raw: f.immagine, title: f.titolo || base.name, src: mediaUrl(f.immagine),
           date: f.data || trip.start, category: f.categoria ? okCat(f.categoria) : (sub?.category || cat0),
           lat: own ? num(f.lat) : base.lat, lon: own ? num(f.lon) : base.lon, description: f.descrizione || "",
-          ownCoords: own || !!sub?.ownCoords });
+          ownCoords: own || !!sub?.ownCoords, camera: String(f.fotocamera || "").trim(), lens: String(f.obiettivo || "").trim(), settings: String(f.scatto || "").trim() });
       });
       pathsOf(bulk).forEach((src, k) => {
         photos.push({ id: `${prefix}-i${k}`, trip: id, sub: sub?.id || "", raw: src, title: base.name, src: mediaUrl(src),
@@ -916,9 +917,31 @@ function galleryItems() {
     .sort((a, b) => (b.date || "").localeCompare(a.date || ""));
 }
 
+const GALLERY_CATS = ["Paesaggi", "Urban", "Astrofotografia", "Lunga esposizione", "Altro"];
+const GL_ICON = {
+  Tutte: '<path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"/>',
+  Paesaggi: '<path d="M3 19l6-9 4 6 3-4 5 7z"/><circle cx="17" cy="7" r="2"/>',
+  Urban: '<path d="M4 20V9l5-3v14M9 20V4h7v16M16 20v-9h4v9M3 20h18"/>',
+  Astrofotografia: '<path d="M12 3l1.6 4.6L18 9l-4.4 1.4L12 15l-1.6-4.6L6 9l4.4-1.4z"/><path d="M18 15l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7z"/>',
+  "Lunga esposizione": '<circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3.5 2"/>',
+  Altro: '<circle cx="6" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="18" cy="12" r="1.4"/>'
+};
+const glIcon = k => `<svg viewBox="0 0 24 24" aria-hidden="true">${GL_ICON[k] || GL_ICON.Altro}</svg>`;
+gallery.view = (() => { try { return localStorage.getItem("fcph-gallery-view") === "list" ? "list" : "grid"; } catch { return "grid"; } })();
+gallery.allJourneys = false;
+
 function renderGallery() {
+  const tr = s => window.I18N ? I18N.t(s) : s;
+  // filtri: solo le categorie che hanno almeno una foto
+  const fbox = $("#galleryFilters");
+  if (fbox) {
+    const cats = GALLERY_CATS.filter(c => photos.some(p => p.category === c));
+    if (gallery.category !== "Tutte" && !cats.includes(gallery.category)) gallery.category = "Tutte";
+    fbox.innerHTML = [["Tutte", "All Photos"], ...cats.map(c => [c, CATEGORY_EN[c] || c])].map(([k, l]) =>
+      `<button type="button" class="filter gl-pill${gallery.category === k ? " active" : ""}" data-filter="${esc(k)}" aria-pressed="${gallery.category === k}">${glIcon(k)}<span>${esc(tr(l))}</span></button>`).join("");
+    fbox.querySelectorAll("[data-filter]").forEach(b => b.addEventListener("click", () => { gallery.category = b.dataset.filter; renderGallery(); }));
+  }
   const items = galleryItems();
-  $$(".filter").forEach(b => b.classList.toggle("active", b.dataset.filter === gallery.category));
   const chip = $("#tripChip"), t = gallery.trip && tripById(gallery.trip);
   chip.hidden = !t;
   if (t) {
@@ -936,9 +959,20 @@ function renderGallery() {
       cols.map(c => `<button type="button" data-coll="${esc(c)}"${c === gallery.collection ? ' class="on"' : ""}>${esc(c)}</button>`).join("") : "";
     cbox.querySelectorAll("[data-coll]").forEach(b => b.addEventListener("click", () => { gallery.collection = b.dataset.coll; gallery.trip = null; gallery.sub = ""; renderGallery(); }));
   }
-  const tr = s => window.I18N ? I18N.t(s) : s;
+  renderJourneys();
   $("#photoCount").textContent = items.length === 1 ? tr("1 photograph") : tr("{n} photographs").replace("{n}", items.length);
-  $("#photoGrid").innerHTML = items.map(p => `
+  $$(".gl-vbtn").forEach(b => { const on = b.dataset.view === gallery.view; b.classList.toggle("on", on); b.setAttribute("aria-pressed", String(on)); });
+  const grid = $("#photoGrid");
+  grid.classList.toggle("is-list", gallery.view === "list");
+  grid.innerHTML = items.map(p => gallery.view === "list" ? `
+    <div class="photo-cell gl-row">
+      <button class="photo-card" type="button" data-id="${esc(p.id)}">
+        <img src="${esc(p.src)}" alt="${esc(p.title)}" data-cat="${esc(p.category)}" loading="lazy">
+        <span class="gl-rowtext"><small class="gl-rowcat">${esc(catLabel(p.category))}</small><strong>${esc(p.title)}</strong>
+          <small>${esc([placeOf(p), p.date ? fmtDate(p.date) : ""].filter(Boolean).join(" · "))}</small></span>
+      </button>
+      <button class="photo-pick" type="button" data-pick="${esc(p.id)}" aria-pressed="${picks.has(p.id)}" aria-label="Add “${esc(p.title)}” to your selection" title="Add to your selection">${ICON_PICK}</button>
+    </div>` : `
     <div class="photo-cell">
       <button class="photo-card" type="button" data-id="${esc(p.id)}">
         <img src="${esc(p.src)}" alt="${esc(p.title)}" data-cat="${esc(p.category)}" loading="lazy">
@@ -952,87 +986,104 @@ function renderGallery() {
   renderPickBar();
 }
 
+/* Riga dei viaggi: copertina, nome e numero di foto; un clic filtra la galleria */
+function renderJourneys() {
+  const box = $("#galleryJourneys");
+  if (!box) return;
+  const list = trips.filter(x => photosOfTrip(x.id).length && (!gallery.collection || x.collection === gallery.collection))
+    .sort((a, b) => (b.start || "").localeCompare(a.start || ""));
+  box.hidden = !list.length;
+  if (!list.length) { box.innerHTML = ""; return; }
+  const tr = s => window.I18N ? I18N.t(s) : s;
+  const card = x => {
+    const ph = photosOfTrip(x.id), cover = ph[0];
+    return `<button type="button" class="gl-jcard${gallery.trip === x.id ? " on" : ""}" data-journey="${esc(x.id)}" aria-pressed="${gallery.trip === x.id}">
+      <img src="${esc(cover.src)}" alt="" loading="lazy" data-cat="${esc(cover.category)}">
+      <span class="gl-jtext"><strong>${esc(x.name)}</strong><small>${ph.length === 1 ? tr("1 photo") : tr("{n} photos").replace("{n}", ph.length)}</small></span></button>`;
+  };
+  box.classList.toggle("all", gallery.allJourneys);
+  box.innerHTML = `<div class="gl-jhead"><h2>Journeys</h2>${list.length > 3 ? `<button type="button" class="text-link gl-jall" aria-expanded="${gallery.allJourneys}">${gallery.allJourneys ? "Show less" : "See all"} <span aria-hidden="true">→</span></button>` : ""}</div>
+    <div class="gl-jrow">${list.map(card).join("")}</div>`;
+  box.querySelector(".gl-jall")?.addEventListener("click", () => { gallery.allJourneys = !gallery.allJourneys; renderJourneys(); });
+  box.querySelectorAll("[data-journey]").forEach(b => b.addEventListener("click", () => {
+    const id = b.dataset.journey;
+    gallery.trip = gallery.trip === id ? null : id; gallery.sub = "";
+    renderGallery();
+    if (gallery.trip) $("#photoGrid")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }));
+}
+
 let lightboxList = [], lightboxIndex = 0;
 
-/* Aggiunge al riquadro della foto: coordinate, contatore e pulsante schermo intero */
+/* ---------- Visualizzatore foto ---------- */
 function setupLightbox() {
-  const d = $("#photoDialog");
-  d.classList.add("lightbox-full");
-  $("#dialogMeta").insertAdjacentHTML("afterend", `<p class="lightbox-coords" id="dialogCoords"></p>`);
-  const tools = document.createElement("div");
-  tools.className = "lightbox-tools";
-  tools.innerHTML = `<span class="lightbox-count" id="dialogCount"></span>
-    <button class="lightbox-btn" type="button" id="dialogInfo" aria-label="Hide details" title="Show/hide details (I)">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5M12 8h.01"/></svg></button>
-    <button class="lightbox-btn" type="button" id="dialogRotate" aria-label="Rotate photo" title="Rotate (R)">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg></button>
-    <button class="lightbox-btn" type="button" id="dialogFull" aria-label="Full screen" title="Full screen (F)">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>`;
-  d.prepend(tools);
-  const close = $("#dialogClose");
-  tools.appendChild(close);   // tutti i pulsanti in alto a destra, in fila
-  if (!(d.requestFullscreen || d.webkitRequestFullscreen)) $("#dialogFull").hidden = true;
+  // nascondo il pulsante solo se non c'è nessun modo di ingrandire (non succede: c'è sempre la modalità immersiva)
 }
 let interestTimer = null, interestGone = false;
-function syncInterest() {
-  const d = $("#photoDialog"), box = $("#photoInterest");
-  if (!box) return;
-  const gone = interestGone && d.classList.contains("info-hidden") && !box.classList.contains("open");
-  box.classList.toggle("pi-gone", gone);
-  box.inert = gone;
-}
-function toggleInfo(force) {
+function syncInterest() {}
+function toggleInfo() {
   const d = $("#photoDialog");
-  const hide = force ?? !d.classList.contains("info-hidden");
-  d.classList.toggle("info-hidden", hide);
-  $("#dialogInfo").setAttribute("aria-label", hide ? "Show details" : "Hide details");
-  syncInterest();
+  if (d.classList.contains("pv-full")) setImmersive(false);
+  const info = $("#pvInfo");
+  d.classList.remove("info-hidden");
+  info.scrollIntoView({ behavior: "smooth", block: "start" });
+  info.classList.remove("pv-flash"); void info.offsetWidth; info.classList.add("pv-flash");
 }
 function isFullscreen() { return !!(document.fullscreenElement || document.webkitFullscreenElement); }
-/* Ruotare la foto: sul telefono, se il sistema lo consente, si gira davvero lo schermo (Android a schermo intero);
-   altrimenti (iPhone o rotazione bloccata) si gira la foto di 90° dentro lo schermo. */
 const isTouch = () => matchMedia("(pointer: coarse)").matches;
+/* Ruotare: sul telefono, se il sistema lo consente, si gira lo schermo; altrimenti si gira la foto di 90° */
 async function rotatePhoto() {
   const d = $("#photoDialog"), so = screen.orientation;
   if (isTouch() && so?.lock) {
     try {
-      if (!isFullscreen()) await (d.requestFullscreen || d.webkitRequestFullscreen).call(d);
+      if (!d.classList.contains("pv-full")) await setImmersive(true);
       await so.lock(so.type.startsWith("portrait") ? "landscape" : "portrait");
       d.classList.remove("rot-90");
       return;
     } catch { /* non permesso: si ruota la foto */ }
   }
   d.classList.toggle("rot-90");
-  toggleInfo(d.classList.contains("rot-90") ? true : undefined);
 }
-function toggleFullscreen() {
+/* Schermo intero: la foto da sola, su sfondo nero. Usa lo schermo intero del browser quando c'è
+   (computer, Android); su iPhone, dove non esiste, la stessa vista occupa tutta la finestra.
+   Si esce con la stessa icona, con l'icona in alto a destra o con ESC. */
+let fsLeftAt = 0;
+async function setImmersive(on) {
   const d = $("#photoDialog");
+  d.classList.toggle("pv-full", on);
+  const b = $("#dialogFull");
+  b.setAttribute("aria-label", on ? "Exit full screen" : "Full screen");
+  b.setAttribute("aria-pressed", String(on));
+  $("#pvFsCount").textContent = $("#dialogCount").textContent;
+  const root = document.documentElement;
   try {
-    if (isFullscreen()) (document.exitFullscreen || document.webkitExitFullscreen).call(document);
-    else (d.requestFullscreen || d.webkitRequestFullscreen).call(d)?.catch?.(() => {});
-  } catch {}
+    if (on && !isFullscreen()) await (root.requestFullscreen || root.webkitRequestFullscreen)?.call(root, { navigationUI: "hide" });
+    else if (!on && isFullscreen()) await (document.exitFullscreen || document.webkitExitFullscreen)?.call(document);
+  } catch { /* non disponibile: resta la vista a tutta finestra */ }
+  if (on) $("#pvExitFs").focus({ preventScroll: true });
+  else b.focus({ preventScroll: true });
 }
+function toggleFullscreen() { setImmersive(!$("#photoDialog").classList.contains("pv-full")); }
 function openPhoto(id, list = photos) {
   trackEvent("Gallery: open photo");
   lightboxList = list;
   lightboxIndex = Math.max(0, list.findIndex(p => p.id === id));
-  showLightbox();
   const d = $("#photoDialog");
-  d.classList.remove("rot-90");
-  // solo la foto, a tutto schermo (anche senza la barra del browser); i dettagli si aprono con «i» o toccando la foto
-  interestGone = false;
-  toggleInfo(true);
+  d.classList.remove("rot-90", "pv-full", "info-hidden");
+  $("#pvMenuList").hidden = true; $("#pvMenu").setAttribute("aria-expanded", "false");
+  renderThumbs();
+  showLightbox();
   if (!d.open) d.showModal();
-  if (!isFullscreen()) { try { (d.requestFullscreen || d.webkitRequestFullscreen)?.call(d)?.catch?.(() => {}); } catch {} }
-  // «Interested in this photo?»: un banner di 10 secondi, poi sparisce (torna mostrando i dettagli)
-  clearTimeout(interestTimer);
-  interestTimer = setTimeout(() => {
-    const box = $("#photoInterest");
-    if (box && (box.classList.contains("open") || box.matches(":hover"))) return;
-    interestGone = true; syncInterest();
-  }, 10000);
+  d.scrollTop = 0;
   document.documentElement.classList.add("no-scroll");
   renderPickBar();
+}
+function renderThumbs() {
+  const box = $("#pvThumbs");
+  box.hidden = lightboxList.length < 2;
+  box.innerHTML = lightboxList.length < 2 ? "" : lightboxList.map((p, i) =>
+    `<button type="button" class="pv-thumb" data-i="${i}" aria-label="${esc(p.title)} (${i + 1})"><img src="${esc(p.src)}" alt="" loading="lazy" data-cat="${esc(p.category)}"></button>`).join("");
+  box.querySelectorAll("[data-i]").forEach(b => b.addEventListener("click", () => { lightboxIndex = +b.dataset.i; showLightbox(); }));
 }
 function showLightbox() {
   const p = lightboxList[lightboxIndex];
@@ -1042,15 +1093,109 @@ function showLightbox() {
   img.dataset.cat = p.category;
   img.alt = p.title;
   img.src = p.src;
+  $("#photoDialog").classList.remove("rot-90");
   $("#dialogTitle").textContent = p.title;
   $("#dialogCategory").textContent = catLabel(p.category);
   $("#dialogMeta").textContent = [placeOf(p), p.date ? fmtDate(p.date) : ""].filter(Boolean).join(" · ");
   $("#dialogCoords").innerHTML = photoCoordsHtml(p);
-  $("#dialogCount").textContent = lightboxList.length > 1 ? `${lightboxIndex + 1} / ${lightboxList.length}` : "";
+  const count = lightboxList.length > 1 ? `${lightboxIndex + 1} / ${lightboxList.length}` : "";
+  $("#dialogCount").textContent = count; $("#pvFsCount").textContent = count;
   $("#dialogDescription").textContent = p.description || "";
   const many = lightboxList.length > 1;
   $("#dialogPrev").hidden = $("#dialogNext").hidden = !many;
+  $$("#pvThumbs .pv-thumb").forEach((b, i) => {
+    const on = i === lightboxIndex;
+    b.classList.toggle("on", on); b.setAttribute("aria-current", on ? "true" : "false");
+    if (on) b.scrollIntoView({ block: "nearest", inline: "center", behavior: "smooth" });
+  });
+  renderShot(p);
+  renderJourneyFacts(p);
   renderInterest(p);
+}
+/* Fotocamera e parametri: quelli scritti nel pannello, altrimenti letti dalla foto (EXIF) */
+function renderShot(p) {
+  const box = $("#pvShot");
+  const draw = x => {
+    if (lightboxList[lightboxIndex] !== p) return;
+    const rows = [["Camera", x.camera], ["Lens", x.lens], ["Settings", x.settings]].filter(r => r[1]);
+    box.hidden = !rows.length;
+    box.innerHTML = rows.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join("");
+  };
+  const own = { camera: p.camera, lens: p.lens, settings: p.settings };
+  draw(own);
+  if (own.camera && own.settings) return;
+  readExif(p.src).then(e => e && draw({ camera: own.camera || e.camera, lens: own.lens || e.lens, settings: own.settings || e.settings }));
+}
+function renderJourneyFacts(p) {
+  const box = $("#pvJourney"), t = tripById(p.trip);
+  if (!t) { box.innerHTML = ""; return; }
+  const n = photosOfTrip(t.id).length, sb = subOf(p);
+  const tr = s => window.I18N ? I18N.t(s) : s;
+  box.innerHTML = `<p class="pv-jlabel">Journey</p>
+    <button type="button" class="pv-jlink" data-open-trip="${esc(t.id)}"><strong>${esc(t.name)}</strong><span aria-hidden="true">→</span></button>
+    <ul>${[t.country, t.start ? fmtRange(t.start, t.end) : "", n === 1 ? tr("1 photo") : tr("{n} photos").replace("{n}", n), sb ? sb.name : ""].filter(Boolean).map(x => `<li>${esc(x)}</li>`).join("")}</ul>`;
+  box.querySelector("[data-open-trip]").addEventListener("click", () => {
+    $("#photoDialog").close();
+    location.hash = "explore"; setTimeout(() => openTrip(t.id), 60);
+  });
+}
+/* Lettore EXIF minimo (JPEG): marca, modello, obiettivo, focale, diaframma, tempo, ISO.
+   Scarica solo l'inizio del file (i dati sono lì) e ricorda il risultato. */
+const exifCache = new Map();
+function readExif(src) {
+  if (!/\.jpe?g($|\?)/i.test(src)) return Promise.resolve(null);
+  if (exifCache.has(src)) return exifCache.get(src);
+  const job = fetch(src, { headers: { Range: "bytes=0-196607" } }).then(r => r.ok ? r.arrayBuffer() : null).then(buf => buf && parseExif(buf)).catch(() => null);
+  exifCache.set(src, job);
+  return job;
+}
+function parseExif(buf) {
+  const v = new DataView(buf);
+  if (v.byteLength < 4 || v.getUint16(0) !== 0xFFD8) return null;
+  let o = 2;
+  while (o + 4 < v.byteLength) {
+    if (v.getUint8(o) !== 0xFF) return null;
+    const m = v.getUint8(o + 1), len = v.getUint16(o + 2);
+    if (m === 0xE1 && v.getUint32(o + 4) === 0x45786966) return exifTiff(v, o + 10);
+    if (m === 0xDA) return null;
+    o += 2 + len;
+  }
+  return null;
+}
+function exifTiff(v, t) {
+  const le = v.getUint16(t) === 0x4949;
+  const u16 = x => v.getUint16(x, le), u32 = x => v.getUint32(x, le);
+  const tags = {};
+  const val = (type, cnt, at) => {
+    const off = (type === 2 && cnt > 4) || (type === 3 && cnt > 2) || type === 5 || type === 10 ? t + u32(at) : at;
+    if (off + 8 > v.byteLength) return null;
+    if (type === 2) { let s = ""; for (let i = 0; i < cnt - 1 && off + i < v.byteLength; i++) s += String.fromCharCode(v.getUint8(off + i)); return s.trim(); }
+    if (type === 3) return u16(off);
+    if (type === 4) return u32(off);
+    if (type === 5) { const d = u32(off + 4); return d ? u32(off) / d : null; }
+    if (type === 10) { const d = v.getInt32(off + 4, le); return d ? v.getInt32(off, le) / d : null; }
+    return null;
+  };
+  const ifd = at => {
+    if (at + 2 > v.byteLength) return;
+    const n = u16(at);
+    for (let i = 0; i < n; i++) {
+      const e = at + 2 + i * 12;
+      if (e + 12 > v.byteLength) return;
+      tags[u16(e)] = val(u16(e + 2), u32(e + 4), e + 8);
+    }
+  };
+  try {
+    ifd(t + u32(t + 4));
+    if (tags[0x8769]) ifd(t + tags[0x8769]);
+  } catch { /* file troncato */ }
+  const make = tags[0x010F] || "", model = tags[0x0110] || "";
+  const camera = model ? (model.toLowerCase().startsWith(make.split(" ")[0].toLowerCase()) ? model : `${make} ${model}`).trim() : "";
+  const exp = tags[0x829A], f = tags[0x829D], iso = tags[0x8827], fl = tags[0x920A];
+  const settings = [fl ? `${Math.round(fl)}mm` : "", f ? `f/${+f.toFixed(1)}` : "",
+    exp ? (exp >= 1 ? `${+exp.toFixed(1)}s` : `1/${Math.round(1 / exp)}s`) : "", iso ? `ISO ${iso}` : ""].filter(Boolean).join(" · ");
+  const lens = tags[0xA434] || "";
+  return camera || settings || lens ? { camera, lens, settings } : null;
 }
 
 /* «Ti interessa questa foto? Contattami»: stampe e licenze, via email o Instagram */
@@ -1536,8 +1681,18 @@ function renderContacts() {
     const T = s => window.I18N ? I18N.t(s) : s;
     const intro = T("LIC_INTRO") === "LIC_INTRO" ? `<strong>All my photographs are available for licensing</strong>, for editorial and commercial use, and as <strong>fine-art prints</strong>.` : T("LIC_INTRO");
     const write = T("LIC_WRITE") === "LIC_WRITE" ? "For licences and prints, just write to me" : T("LIC_WRITE");
-    note.innerHTML = `${ICON_SPARK}<p>${intro}
-      ${write}${okMail ? `${T(" at ")}<a href="mailto:${esc(mail)}?subject=${encodeURIComponent("Photo licensing / prints")}" data-lic="email">${esc(mail)}</a>` : ""}${okMail && ig ? T(" or") : ""}${ig ? `${T(" on ")}<a href="https://ig.me/m/${encodeURIComponent(ig)}" target="_blank" rel="noopener" data-lic="instagram">Instagram @${esc(ig)}</a>` : ""}.</p>`;
+    let closed = false; try { closed = localStorage.getItem("fcph-lic-closed") === "1"; } catch {}
+    if (closed) note.hidden = true;
+    note.innerHTML = `<span class="gl-lic-ic">${ICON_SPARK}</span>
+      <div class="gl-lic-body"><p class="gl-lic-lead">${intro}</p>
+        <p class="gl-lic-more" id="licMore" hidden>${write}${okMail ? `${T(" at ")}<a href="mailto:${esc(mail)}?subject=${encodeURIComponent("Photo licensing / prints")}" data-lic="email">${esc(mail)}</a>` : ""}${okMail && ig ? T(" or") : ""}${ig ? `${T(" on ")}<a href="https://ig.me/m/${encodeURIComponent(ig)}" target="_blank" rel="noopener" data-lic="instagram">Instagram @${esc(ig)}</a>` : ""}.</p></div>
+      <button type="button" class="outline-link gl-lic-go" aria-expanded="false" aria-controls="licMore">Learn more <span aria-hidden="true">→</span></button>
+      <button type="button" class="gl-lic-x" aria-label="Close">${ICON.close}</button>`;
+    note.querySelector(".gl-lic-go").addEventListener("click", e => {
+      const m = $("#licMore"), open = m.hidden; m.hidden = !open; e.currentTarget.setAttribute("aria-expanded", String(open));
+      if (open) trackEvent("Gallery: licensing learn more");
+    });
+    note.querySelector(".gl-lic-x").addEventListener("click", () => { note.hidden = true; try { localStorage.setItem("fcph-lic-closed", "1"); } catch {} });
     note.querySelectorAll("[data-lic]").forEach(a => a.addEventListener("click", () => trackEvent(`Gallery: licensing via ${a.dataset.lic}`)));
   }
 }
@@ -1683,7 +1838,10 @@ function renderAll() {
    11. AVVIO
    ========================================================= */
 function bindEvents() {
-  $$(".filter").forEach(b => b.addEventListener("click", () => { gallery.category = b.dataset.filter; renderGallery(); }));
+  $$(".gl-vbtn").forEach(b => b.addEventListener("click", () => {
+    gallery.view = b.dataset.view; try { localStorage.setItem("fcph-gallery-view", gallery.view); } catch {}
+    renderGallery();
+  }));
   $("#menuToggle").addEventListener("click", () => {
     const open = $("#mainNav").classList.toggle("open");
     $("#menuToggle").setAttribute("aria-expanded", String(open));
@@ -1692,37 +1850,54 @@ function bindEvents() {
   const dlg = $("#photoDialog");
   setupLightbox();
   $("#dialogClose").addEventListener("click", () => dlg.close());
+  $("#pvBack").addEventListener("click", () => dlg.close());
   $("#dialogFull").addEventListener("click", toggleFullscreen);
+  $("#pvExitFs").addEventListener("click", () => setImmersive(false));
   $("#dialogRotate").addEventListener("click", rotatePhoto);
-  // quando si gira il telefono: in orizzontale si nascondono i dettagli per lasciare spazio alla foto
-  matchMedia("(orientation: landscape)").addEventListener?.("change", e => {
-    if (!dlg.open || !isTouch()) return;
-    dlg.classList.remove("rot-90");
-    toggleInfo(e.matches);
-  });
   $("#dialogInfo").addEventListener("click", () => toggleInfo());
-  $("#dialogImage").addEventListener("click", () => toggleInfo());          // clic sulla foto: solo immagine
+  // intestazione compatta: logo e voci del menu chiudono la foto e portano alla pagina; la lente apre la ricerca
+  dlg.querySelectorAll("[data-pvnav]").forEach(a => a.addEventListener("click", () => dlg.close()));
+  $("#pvSearch").addEventListener("click", () => { dlg.close(); openSearch(); });
+  $("#pvMenu").addEventListener("click", e => {
+    e.stopPropagation();
+    const m = $("#pvMenuList"), open = m.hidden;
+    m.hidden = !open; $("#pvMenu").setAttribute("aria-expanded", String(open));
+  });
+  dlg.addEventListener("click", e => { if (!e.target.closest("#pvMenu, #pvMenuList")) { $("#pvMenuList").hidden = true; $("#pvMenu").setAttribute("aria-expanded", "false"); } });
+  // clic sulla foto: entra/esce dalla vista a schermo intero
+  $("#dialogImage").addEventListener("click", toggleFullscreen);
+  // se si esce dallo schermo intero del browser (ESC, gesto di sistema) si esce anche dalla vista immersiva
+  const onFs = () => { if (!isFullscreen() && dlg.classList.contains("pv-full")) { fsLeftAt = Date.now(); setImmersive(false); } };
+  document.addEventListener("fullscreenchange", onFs);
+  document.addEventListener("webkitfullscreenchange", onFs);
+  // ESC: prima esce dallo schermo intero, solo dopo chiude la foto
+  dlg.addEventListener("cancel", e => {
+    if (dlg.classList.contains("pv-full") || Date.now() - fsLeftAt < 400) { e.preventDefault(); setImmersive(false); }
+    else if (!$("#pvMenuList").hidden) { e.preventDefault(); $("#pvMenuList").hidden = true; }
+  });
+  matchMedia("(orientation: landscape)").addEventListener?.("change", () => { if (dlg.open) dlg.classList.remove("rot-90"); });
   dlg.addEventListener("close", () => {
-    clearTimeout(interestTimer);
     document.documentElement.classList.remove("no-scroll");
-    renderPickBar();
+    $("#pvMenuList").hidden = true;
     try { screen.orientation?.unlock?.(); } catch {}
     dlg.classList.remove("rot-90");
-    if (isFullscreen()) try { (document.exitFullscreen || document.webkitExitFullscreen).call(document); } catch {}
+    if (dlg.classList.contains("pv-full")) setImmersive(false);
+    renderPickBar();
   });
-  // scorrimento col dito sul telefono
-  let touchX = null;
-  dlg.addEventListener("touchstart", e => { touchX = e.touches.length === 1 ? e.touches[0].clientX : null; }, { passive: true });
-  dlg.addEventListener("touchend", e => {
+  // scorrimento col dito sulla foto
+  let touchX = null, touchY = null;
+  const stage = $("#pvStage");
+  stage.addEventListener("touchstart", e => { if (e.touches.length === 1) { touchX = e.touches[0].clientX; touchY = e.touches[0].clientY; } else touchX = null; }, { passive: true });
+  stage.addEventListener("touchend", e => {
     if (touchX === null || lightboxList.length < 2) return;
-    const dx = e.changedTouches[0].clientX - touchX;
-    if (Math.abs(dx) > 50) stepLightbox(dx < 0 ? 1 : -1);
+    const dx = e.changedTouches[0].clientX - touchX, dy = e.changedTouches[0].clientY - touchY;
+    if (Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy) * 1.3) stepLightbox(dx < 0 ? 1 : -1);
     touchX = null;
   });
-  $("#dialogPrev").addEventListener("click", () => stepLightbox(-1));
-  $("#dialogNext").addEventListener("click", () => stepLightbox(1));
-  dlg.addEventListener("click", e => { if (e.target === dlg) dlg.close(); });
+  $("#dialogPrev").addEventListener("click", e => { e.stopPropagation(); stepLightbox(-1); });
+  $("#dialogNext").addEventListener("click", e => { e.stopPropagation(); stepLightbox(1); });
   dlg.addEventListener("keydown", e => {
+    if (e.target.closest("input, textarea")) return;
     if (e.key === "ArrowLeft") stepLightbox(-1);
     if (e.key === "ArrowRight") stepLightbox(1);
     if (e.key === "f" || e.key === "F") toggleFullscreen();

@@ -72,7 +72,7 @@ content:
             type: select
             default: Paesaggi
             options:
-              values: [Paesaggi, Urban]
+              values: [Paesaggi, Urban, Astrofotografia, Lunga esposizione, Altro]
             description: "Vale per le foto qui sotto in «Carica più foto insieme» (e per le sottosezioni, se non scegli altro)."
           - name: immagini
             label: Carica più foto insieme
@@ -110,7 +110,7 @@ content:
                 type: select
                 default: Paesaggi
                 options:
-                  values: [Paesaggi, Urban]
+                  values: [Paesaggi, Urban, Astrofotografia, Lunga esposizione, Altro]
               - name: lat
                 label: Latitudine dello scatto (facoltativa)
                 type: string
@@ -118,6 +118,18 @@ content:
               - name: lon
                 label: Longitudine dello scatto (facoltativa)
                 type: string
+              - name: fotocamera
+                label: Fotocamera (facoltativa)
+                type: string
+                description: "Es. Sony A7 IV. Se la lasci vuota il sito prova a leggerla dalla foto (dati EXIF)."
+              - name: obiettivo
+                label: Obiettivo (facoltativo)
+                type: string
+                description: "Es. 16-35mm f/2.8"
+              - name: scatto
+                label: Parametri di scatto (facoltativi)
+                type: string
+                description: "Es. 24mm · f/8 · 1/250s · ISO 100"
               - name: descrizione
                 label: Descrizione
                 type: text
@@ -150,7 +162,7 @@ content:
                 label: Categoria delle foto
                 type: select
                 options:
-                  values: [Paesaggi, Urban]
+                  values: [Paesaggi, Urban, Astrofotografia, Lunga esposizione, Altro]
                 description: "Lascia vuoto per usare quella del viaggio."
               - name: immagini
                 label: Carica più foto insieme
@@ -188,7 +200,7 @@ content:
                       type: select
                       default: Paesaggi
                       options:
-                        values: [Paesaggi, Urban]
+                        values: [Paesaggi, Urban, Astrofotografia, Lunga esposizione, Altro]
                     - name: lat
                       label: Latitudine dello scatto (facoltativa)
                       type: string
@@ -196,6 +208,18 @@ content:
                     - name: lon
                       label: Longitudine dello scatto (facoltativa)
                       type: string
+                    - name: fotocamera
+                      label: Fotocamera (facoltativa)
+                      type: string
+                      description: "Es. Sony A7 IV. Se la lasci vuota il sito prova a leggerla dalla foto (dati EXIF)."
+                    - name: obiettivo
+                      label: Obiettivo (facoltativo)
+                      type: string
+                      description: "Es. 16-35mm f/2.8"
+                    - name: scatto
+                      label: Parametri di scatto (facoltativi)
+                      type: string
+                      description: "Es. 24mm · f/8 · 1/250s · ISO 100"
                     - name: descrizione
                       label: Descrizione
                       type: text

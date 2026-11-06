@@ -43,7 +43,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,500&family=Oswald:wght@500;700&family=Libre+Caslon+Text:ital,wght@0,400;0,700;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap">
-  <link rel="stylesheet" href="style.css?v=20261106g">
+  <link rel="stylesheet" href="style.css?v=20261106h">
   <!-- statistiche anonime, senza cookie (Umami): le pagine e i clic li segnala app.js -->
   <script defer src="https://cloud.umami.is/script.js" data-website-id="2ca8d3a5-91c1-4544-a327-d8469e3e4313" data-auto-track="false" data-domains="fabiocostaph.com,www.fabiocostaph.com"></script>
 </head>
@@ -136,25 +136,30 @@
 
     <!-- GALLERY -->
     <section class="page content-page" id="gallery" data-page="gallery" hidden>
-      <div class="section-heading">
-        <div><span class="eyebrow">SELECTED PHOTOGRAPHS</span><h1>Gallery</h1></div>
-        <p>Take your Jetpack and Explore</p>
-      </div>
-      <aside class="license-note" id="licenseNote" hidden></aside>
-      <div class="gallery-toolbar">
-        <div class="filters" role="group" aria-label="Filter by category">
-          <button class="filter active" type="button" data-filter="Tutte">All</button>
-          <button class="filter" type="button" data-filter="Paesaggi">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m2 19 7-10 4 6 3-4 6 8z"/></svg>Landscapes</button>
-          <button class="filter" type="button" data-filter="Urban">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 21V9h5v12M8 21V4h7v17M15 21v-9h6v9M2 21h20"/></svg>Urban</button>
-          <span class="trip-chip" id="tripChip" hidden></span>
-        </div>
-        <p class="photo-count" id="photoCount"></p>
-      </div>
+      <!-- GALLERY: il pianeta è Venere (vedi il sistema solare della home) -->
+      <header class="gl-head">
+        <svg class="gl-sym" viewBox="0 0 120 120" aria-hidden="true">
+          <circle cx="60" cy="60" r="56" class="o1"/><circle cx="60" cy="60" r="40" class="o2"/>
+          <circle cx="60" cy="4" r="2.6" class="dot"/><circle cx="4" cy="60" r="2.2" class="dot"/><circle cx="116" cy="60" r="2.2" class="dot"/><circle cx="60" cy="100" r="2" class="dot"/>
+          <circle cx="60" cy="50" r="15" class="v"/><path d="M60 65v23M50 78h20" class="v"/>
+        </svg>
+        <div class="gl-text"><h1 class="gl-title">Gallery</h1><p class="gl-sub">Take your Jetpack and Explore</p></div>
+        <div class="gl-planet" aria-hidden="true"></div>
+      </header>
+      <div class="gl-filters filters" id="galleryFilters" role="group" aria-label="Filter by category"></div>
+      <section class="gl-journeys" id="galleryJourneys" aria-label="Journeys" hidden></section>
       <nav class="gallery-collections" id="galleryCollections" aria-label="Collections" hidden></nav>
+      <div class="gl-bar">
+        <span class="trip-chip" id="tripChip" hidden></span>
+        <p class="photo-count" id="photoCount"></p>
+        <div class="gl-view" role="group" aria-label="View">
+          <button type="button" class="gl-vbtn on" data-view="grid" aria-label="Grid" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></svg></button>
+          <button type="button" class="gl-vbtn" data-view="list" aria-label="List" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="18" r="1"/></svg></button>
+        </div>
+      </div>
       <div class="photo-grid" id="photoGrid"></div>
       <p class="empty-state" id="galleryEmpty" hidden>No photographs match these filters yet.</p>
+      <aside class="license-note gl-license" id="licenseNote" hidden></aside>
     </section>
 
     <!-- JOURNAL -->
@@ -457,25 +462,45 @@
   </footer>
 
   <!-- Lightbox -->
-  <dialog id="photoDialog" class="lightbox" aria-labelledby="dialogTitle">
-    <button class="dialog-close" id="dialogClose" type="button" aria-label="Close">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
-    </button>
-    <div class="lightbox-stage">
-      <img id="dialogImage" alt="">
-      <button class="nav-arrow prev" id="dialogPrev" type="button" aria-label="Previous photo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></button>
-      <button class="nav-arrow next" id="dialogNext" type="button" aria-label="Next photo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>
-      <div class="photo-interest" id="photoInterest" hidden></div>
-    </div>
-    <div class="lightbox-info">
-      <div>
-        <span class="eyebrow" id="dialogCategory"></span>
-        <h2 id="dialogTitle"></h2>
-        <p class="lightbox-meta" id="dialogMeta"></p>
-        <p id="dialogDescription"></p>
+  <dialog id="photoDialog" class="pv" aria-labelledby="dialogTitle">
+    <header class="pv-top">
+      <a class="pv-brand" href="#home" data-pvnav><img src="img/logo.png" alt="" width="288" height="192"><span><strong>Fabio Costa Ph</strong><small>PHOTOGRAPHY · TRAVEL · EXPLORATION</small></span></a>
+      <div class="pv-topact">
+        <button class="pv-ic" type="button" id="pvSearch" aria-label="Search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 21 21"/></svg></button>
+        <button class="pv-ic" type="button" id="pvMenu" aria-label="Menu" aria-expanded="false" aria-controls="pvMenuList"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
       </div>
-      <button class="outline-link" id="dialogMapButton" type="button">VIEW ON MAP <span aria-hidden="true">→</span></button>
+      <nav class="pv-menu" id="pvMenuList" hidden>
+        <a href="#home" data-pvnav>Home</a><a href="#explore" data-pvnav>Explore</a><a href="#gallery" data-pvnav>Gallery</a><a href="#journal" data-pvnav>Journal</a><a href="#tools" data-pvnav>Tools</a><a href="#spots" data-pvnav>Spots</a><a href="#crew" data-pvnav>The crew</a><a href="#about" data-pvnav>About</a>
+      </nav>
+    </header>
+    <div class="pv-bar">
+      <button class="pv-back" type="button" id="pvBack"><span class="pv-circ"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg></span><span>Back to gallery</span></button>
+      <div class="pv-tools">
+        <span class="pv-count" id="dialogCount"></span>
+        <button class="pv-ic" type="button" id="dialogInfo" aria-label="Details" title="Details (I)"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5M12 8h.01"/></svg></button>
+        <button class="pv-ic" type="button" id="dialogRotate" aria-label="Rotate photo" title="Rotate (R)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg></button>
+        <button class="pv-ic" type="button" id="dialogFull" aria-label="Full screen" title="Full screen (F)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+        <button class="pv-ic" type="button" id="dialogClose" aria-label="Close" title="Close (Esc)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+      </div>
     </div>
+    <div class="pv-stage" id="pvStage">
+      <img id="dialogImage" alt="">
+      <button class="pv-nav prev" id="dialogPrev" type="button" aria-label="Previous photo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></button>
+      <button class="pv-nav next" id="dialogNext" type="button" aria-label="Next photo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>
+      <div class="pv-fsbar"><span class="pv-count" id="pvFsCount"></span><button class="pv-ic" type="button" id="pvExitFs" aria-label="Exit full screen" title="Exit full screen (Esc)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg></button></div>
+    </div>
+    <div class="pv-actions photo-interest" id="photoInterest" hidden></div>
+    <div class="pv-thumbs" id="pvThumbs"></div>
+    <section class="pv-info" id="pvInfo">
+      <p class="pv-cat" id="dialogCategory"></p>
+      <h2 id="dialogTitle"></h2>
+      <p class="pv-place" id="dialogMeta"></p>
+      <p class="pv-coords" id="dialogCoords"></p>
+      <p class="pv-desc" id="dialogDescription"></p>
+      <dl class="pv-shot" id="pvShot" hidden></dl>
+      <div class="pv-facts" id="pvJourney"></div>
+      <button class="outline-link pv-map" id="dialogMapButton" type="button">VIEW ON MAP <span aria-hidden="true">→</span></button>
+    </section>
   </dialog>
 
   <!-- Ricerca -->
@@ -496,12 +521,12 @@
 <!--BODY-END-->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
-  <script src="i18n.js?v=20261106g"></script>
-  <script src="app.js?v=20261106g"></script>
-  <script src="spots.js?v=20261106g"></script>
-  <script src="tools.js?v=20261106g"></script>
-  <script src="pwa.js?v=20261106g"></script>
-  <script src="feedback.js?v=20261106g"></script>
-  <script src="system.js?v=20261106g"></script>
+  <script src="i18n.js?v=20261106h"></script>
+  <script src="app.js?v=20261106h"></script>
+  <script src="spots.js?v=20261106h"></script>
+  <script src="tools.js?v=20261106h"></script>
+  <script src="pwa.js?v=20261106h"></script>
+  <script src="feedback.js?v=20261106h"></script>
+  <script src="system.js?v=20261106h"></script>
 </body>
 </html>
