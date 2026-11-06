@@ -9,7 +9,7 @@
     Luoghi: "Places", "Guide pratiche": "Field guides", Persone: "People", Natura: "Nature" };
   const GLANCE = [["periodo", "Best time"], ["arrivare", "Getting there"], ["parcheggio", "Parking"], ["camminata", "The walk"],
     ["difficolta", "Difficulty"], ["permessi", "Permits & rules"], ["attrezzatura", "Gear"], ["impostazioni", "Settings"]];
-  const MAX_PX = 2000;          // lato lungo massimo delle foto nel PDF (circa 240 dpi su una pagina A4)
+  const MAX_PX = 3000;          // lato lungo massimo delle foto nel PDF: circa 300 dpi anche a pagina intera (A4)
 
   const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const norm = s => String(s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").trim();
@@ -101,8 +101,14 @@
           if (w && h && Math.max(w, h) > MAX_PX) {
             const k = MAX_PX / Math.max(w, h), c = document.createElement("canvas");
             c.width = Math.round(w * k); c.height = Math.round(h * k);
-            c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
-            img.onload = img.onerror = () => res(); img.src = c.toDataURL("image/jpeg", 0.82); return;
+            // riduzione a passi con ricampionamento di qualità: foto nitide in stampa
+            let src = img, sw = w, sh = h;
+            while (sw / 2 >= c.width * 1.05) {
+              const t = document.createElement("canvas"); t.width = Math.round(sw / 2); t.height = Math.round(sh / 2);
+              const tx = t.getContext("2d"); tx.imageSmoothingQuality = "high"; tx.drawImage(src, 0, 0, t.width, t.height); src = t; sw = t.width; sh = t.height;
+            }
+            const cx = c.getContext("2d"); cx.imageSmoothingQuality = "high"; cx.drawImage(src, 0, 0, c.width, c.height);
+            img.onload = img.onerror = () => res(); img.src = c.toDataURL("image/jpeg", 0.92); return;
           }
         } catch { /* immagine di un altro sito senza permessi: resta com'è */ }
         res();
@@ -127,6 +133,11 @@
       return "";
     }).join("");
   }
+  const textLang = t => {
+    const w = " " + String(t || "").toLowerCase().replace(/[^a-zà-ú' ]+/g, " ") + " ";
+    const n = re => (w.match(re) || []).length;
+    return n(/ (il|che|della|delle|di|per|non|una|sono|nel|alla|gli) /g) > n(/ (the|and|of|to|is|with|that|this|for|you) /g) ? "it" : "en";
+  };
   const glanceHtml = g => {
     const rows = GLANCE.filter(([k]) => g && g[k] && String(g[k]).trim());
     return rows.length ? `<aside class="rv-glance"><p>At a glance</p><dl>${rows.map(([k, l]) => `<div><dt>${l}</dt><dd>${esc(g[k])}</dd></div>`).join("")}</dl></aside>` : "";
@@ -177,7 +188,7 @@
         <p class="rv-byline">Text and photographs by <b>${esc(a.author.name)}</b> · ${esc(fmtDate(a.date))}${a.minutes ? ` · ${a.minutes} min read` : ""}</p>
         ${a.cover ? `<figure class="rv-fig rv-hero"><img src="${esc(a.cover)}" alt=""></figure>` : ""}
         ${glanceHtml(a.glance)}
-        <div class="rv-body">${a.blocks?.length ? blocksHtml(a.blocks) : figures(md(a.text))}</div>
+        <div class="rv-body" lang="${textLang(a.text + " " + (a.blocks || []).map(b => b.testo || "").join(" "))}">${a.blocks?.length ? blocksHtml(a.blocks) : figures(md(a.text))}</div>
         ${!a.author.own ? `<aside class="rv-author"><b>${esc(a.author.name)}</b>${a.author.bio ? ` — ${esc(a.author.bio)}` : ""}${a.author.instagram ? ` · Instagram @${esc(a.author.instagram)}` : ""}</aside>` : ""}
       </section>`).join("")}
       <section class="rv-part rv-back" data-part="back">

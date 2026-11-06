@@ -66,7 +66,8 @@ body { margin: 0; color: var(--ink); font: 400 10pt/1.55 var(--serif); -webkit-p
 .rv-glance dt { font: 700 7pt var(--head); letter-spacing: .12em; text-transform: uppercase; color: var(--soft); }
 .rv-glance dd { margin: .5mm 0 0; font-size: 9.5pt; }
 .rv-body { column-count: 2; column-gap: 8mm; column-rule: .2mm solid var(--hair); orphans: 3; widows: 3; }
-.rv-body p { margin: 0 0 2.4mm; text-align: justify; hyphens: auto; }
+.rv-body p, .rv-body li { margin: 0 0 2.4mm; text-align: justify; hyphens: auto; -webkit-hyphens: auto; }
+.rv-body blockquote p { text-align: center; hyphens: manual; margin: 0; }
 .rv-body h2, .rv-body h3 { margin: 4mm 0 2mm; font: 700 13pt/1.15 var(--serif); letter-spacing: -.02em; break-after: avoid; }
 .rv-body h3 { font-size: 11.5pt; }
 .rv-body a { color: var(--rule); text-decoration: none; }

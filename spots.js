@@ -2911,7 +2911,7 @@ const Spots = (() => {
   const jSlug = t => String(t || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 70);
   async function uploadJournalImage(file) {
     if (!(await ensureSession())) throw new Error("please log in again");
-    const blob = await resizeImage(file, 2400, 0.86, true);   // nitida anche ingrandita a tutto schermo, comunque molto più leggera dell'originale
+    const blob = await resizeImage(file, 1800, 0.8);   // abbastanza nitida per tutto lo schermo, molto più leggera da servire
     const path = `${myUid()}/${Date.now()}-${crypto.randomUUID().slice(0, 8)}.jpg`;
     const res = await fetch(`${SPOTS_CONFIG.url.replace(/\/$/, "")}/storage/v1/object/journal/${path}`, { method: "POST",
       headers: { apikey: SPOTS_CONFIG.anonKey, Authorization: `Bearer ${session.access_token}`, "Content-Type": "image/jpeg", "x-upsert": "false" }, body: blob });

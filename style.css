@@ -2906,3 +2906,6 @@ body[data-page="explore"]::after{background:radial-gradient(90% 55% at 85% 0,rgb
 .fn-body blockquote cite{display:block;margin-top:8px;font:normal 700 11px var(--mag-head);letter-spacing:.14em;text-transform:uppercase;color:var(--ink-soft)}
 @media (max-width:760px){.fn-body .mag-fig.fig-left,.fn-body .mag-fig.fig-right{float:none;width:auto !important;margin:1em 0 !important}}
 .fn-body .mag-fig.fig-col,.fn-body .mag-fig.fig-left,.fn-body .mag-fig.fig-right{column-span:none !important}
+/* testo degli articoli giustificato, con la sillabazione della lingua dell'articolo */
+.fn-body p,.fn-body li{text-align:justify !important;hyphens:auto !important;-webkit-hyphens:auto !important;text-wrap:pretty}
+.fn-body blockquote p,.fn-body .fig-cap-shared{text-align:center !important;hyphens:manual !important}

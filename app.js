@@ -1800,6 +1800,13 @@ function blocksHtml(blocks) {
     return "";
   }).join("");
 }
+/* lingua del testo (per andare a capo con la sillabazione giusta nel testo giustificato) */
+function textLang(t) {
+  const w = " " + String(t || "").toLowerCase().replace(/[^a-zà-ú' ]+/g, " ") + " ";
+  const n = re => (w.match(re) || []).length;
+  const it = n(/ (il|che|della|delle|di|per|non|una|sono|nel|alla|gli) /g), en = n(/ (the|and|of|to|is|with|that|this|for|you) /g);
+  return it > en ? "it" : "en";
+}
 function articleHtml(a, t, back = true) {
   const rep = a.type === "reportage";
   const caption = t ? `<figcaption>${esc(t.name || "")} · ${fmtCoord(t.lat, t.lon).replace("  |  ", ", ")}</figcaption>` : "";
@@ -1811,7 +1818,7 @@ function articleHtml(a, t, back = true) {
     <p class="fn-byline">Text and photographs by ${authorLink(a)} · ${esc(fmtDate(a.date))}${a.minutes ? ` · ${a.minutes} min read` : ""}</p>
     ${a.cover ? `<figure class="fn-hero"><img src="${esc(a.cover)}" alt="${esc(a.title)}" data-cat="Paesaggi">${caption}</figure>` : ""}
     ${glance}
-    <div class="rich mag-body fn-body">${dropCap(a.blocks?.length ? blocksHtml(a.blocks) : magBody(md(a.text)))}</div>
+    <div class="rich mag-body fn-body" lang="${textLang(a.text + " " + (a.blocks || []).map(b => b.testo || "").join(" "))}">${dropCap(a.blocks?.length ? blocksHtml(a.blocks) : magBody(md(a.text)))}</div>
     <p class="fn-end">Thanks for stopping by. Now, let's go explore.</p>` + (a.author && !a.author.own ? authorBox(a.author) : "");
 }
 
