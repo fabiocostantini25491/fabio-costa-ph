@@ -443,6 +443,314 @@ const Spots = (() => {
       : "Thanks for joining! Your request is waiting for my approval — usually within a day. Until then, here is the public map.";
   }
 
+  /* =========================================================
+     «EXPLORE THE EARTH»: la nuova interfaccia di Spots
+     - un globo 3D (MapLibre 5) con le foto satellitari, come Google Earth: si parte dal pianeta e si scende
+     - avvicinandosi (o toccando uno spot) si passa da sé alla mappa satellitare di dettaglio (Leaflet),
+       che ha tutte le funzioni di sempre: schede, foto, recensioni, aggiungere posti, cerca nell'area…
+     - allontanandosi si torna al globo. Satellite e Terrain restano mappe piane; c'è anche la mappa classica.
+     ========================================================= */
+  const UI_KEY = "fcph-spots-ui", MODE_KEY = "fcph-spots-mode";
+  const lsGet = (k, d) => { try { return localStorage.getItem(k) || d; } catch { return d; } };
+  const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch {} };
+  let ui = lsGet(UI_KEY, "earth") === "classic" ? "classic" : "earth";
+  let viewMode = ["globe", "sat", "terrain"].includes(lsGet(MODE_KEY, "globe")) ? lsGet(MODE_KEY, "globe") : "globe";
+  let baseSat = null, baseTopo = null;
+  let globe = null, globeEl = null, onGlobe = false, handing = false, globeMarkers = [], globeFailed = false;
+  const sxTouch = matchMedia("(max-width: 700px), (pointer: coarse)").matches;
+  const sxOpen = new Set(matchMedia("(max-width: 980px)").matches ? [] : ["places"]);   // sul telefono i gruppi partono chiusi
+  const ML_VER = "5.24.0";
+  const GLOBE_TO_FLAT = 6.3;     // zoom del globo oltre il quale si scende sulla mappa di dettaglio
+  const FLAT_TO_GLOBE = 3.5;     // zoom della mappa piana sotto il quale si torna al globo
+  const SX_ICON = {
+    places: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m2.5 19.5 6.5-11 4 6.5 2.5-3.5 6 8z"/></svg>',
+    essentials: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5v15M21 20v-6.5a3 3 0 0 0-3-3h-7.5V14M3 14h18M3 17.5h18"/><circle cx="7" cy="11.2" r="1.7"/></svg>',
+    community: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.4"/><path d="M3.5 19c.6-3.4 3-5.3 5.5-5.3s4.9 1.9 5.5 5.3M14.6 14.3c.8-.4 1.6-.6 2.4-.6 2.1 0 3.9 1.5 4.5 4.3"/></svg>',
+    outdoors: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="13.5" cy="4.5" r="1.8"/><path d="m10 21 2.2-6.2L15 17v4M12.2 14.8l1-5.3-3.2 1.2L8.5 14M13.2 9.5l2.3 3 3 .5M17.5 8.5 19 21"/></svg>',
+    near: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 3.5 3.5 10.6l7.1 2.8 2.8 7.1z"/></svg>',
+    target: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="6.5"/><circle cx="12" cy="12" r="2"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3"/></svg>',
+    globe: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.5 2.6 3.5 5.4 3.5 8.5s-1 5.9-3.5 8.5c-2.5-2.6-3.5-5.4-3.5-8.5s1-5.9 3.5-8.5z"/></svg>',
+    sat: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m2.5 19.5 6.5-11 4 6.5 2.5-3.5 6 8z"/></svg>',
+    terrain: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 9 5-9 5-9-5z"/><path d="m3 12 9 5 9-5M3 16l9 5 9-5"/></svg>',
+    full: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>',
+    fullExit: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg>',
+    lock: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></svg>'
+  };
+  const SX_GROUPS = [
+    { id: "places", title: "Places", sub: "Photo spots · Viewpoints · Nature · Urban", cats: ["spot"] },
+    { id: "essentials", title: "Essentials", sub: "Stay · Food & drink", cats: ["hotel", "restaurant"] },
+    { id: "community", title: "Community", sub: "Photographers · Local experts · Meetups", cats: [] },
+    { id: "outdoors", title: "Outdoors", sub: "Trekking · Workshops · Experiences", cats: ["trekking", "workshop"] }
+  ];
+
+  function earthHtml({ searchHtml, userHtml, bannerHtml, tailHtml }) {
+    const n = k => spots.filter(s => s.category === k).length;
+    const item = k => `<button type="button" class="sx-item${activeCats.has(k) ? " on" : ""}" data-sxcat="${k}" style="--c:${CATS[k].color}" aria-pressed="${activeCats.has(k)}">
+        <span class="sx-ico">${CATS[k].icon}</span><span class="sx-name">${CATS[k].label}</span><small>${fmtN(n(k))}</small><span class="sx-check" aria-hidden="true"></span></button>`;
+    const lockItem = (label, ico) => `<button type="button" class="sx-item is-locked" data-sxjoin><span class="sx-ico">${ico}</span><span class="sx-name">${label}</span><span class="sx-lock">${SX_ICON.lock}Members</span></button>`;
+    const body = g => {
+      if (g.id === "places") return g.cats.map(item).join("") + (!guest && schemaV2 && socialV ? `
+        <button type="button" class="sx-item${onlySupport ? " on" : ""}" id="onlySupport" aria-pressed="${onlySupport}" style="--c:#9fe3c8"><span class="sx-ico">🌱</span><span class="sx-name">Support local</span><small>${spots.filter(x => x.support_local).length}</small><span class="sx-check" aria-hidden="true"></span></button>
+        <label class="sx-select">Alerts <select id="alertMode">
+          <option value="show"${alertMode === "show" ? " selected" : ""}>Show</option>
+          <option value="hide"${alertMode === "hide" ? " selected" : ""}>Hide places with alerts</option>
+          <option value="only"${alertMode === "only" ? " selected" : ""}>Only places with alerts</option></select></label>` : "")
+        + (!guest && commV ? `<button type="button" class="sx-item${onlyFavs ? " on" : ""}" id="onlyFavs" aria-pressed="${onlyFavs}" style="--c:#ff8fb1"><span class="sx-ico">♥</span><span class="sx-name">My spots</span><small>${favs.size}</small><span class="sx-check" aria-hidden="true"></span></button>` : "");
+      if (g.id === "community") {
+        if (guest || !commV) return lockItem("Photographers", "📷") + lockItem("Local experts", "🧭") + lockItem("Meetups", "👥");
+        return `<button type="button" class="sx-item${showPhotographers ? " on" : ""}" id="showPh" aria-pressed="${showPhotographers}" style="--c:#c9a7ff"><span class="sx-ico">📷</span><span class="sx-name">Photographers</span><small>${profiles.filter(p => p.visible && p.lat != null).length}</small><span class="sx-check" aria-hidden="true"></span></button>
+          <p class="sx-links"><button type="button" class="text-link" id="phList">List</button><button type="button" class="text-link" id="myProfile">${profiles.some(p => p.user_id === myUid()) ? "My photographer profile" : "Join the photographers' map"}</button>${nodiV && profiles.some(p => p.user_id === myUid()) ? `<button type="button" class="text-link" id="iPosted">📣 I just posted</button>` : ""}</p>
+          ${nodiV ? `<button type="button" class="sx-item" id="expList" style="--c:#ffd9a0"><span class="sx-ico">🧭</span><span class="sx-name">Local experts</span><small>${experts.size}</small><span class="sx-go" aria-hidden="true">›</span></button>` : ""}
+          ${nodiV && myExpert() ? `<button type="button" class="sx-item" id="myArea" style="--c:#ffd9a0"><span class="sx-ico">🧭</span><span class="sx-name">My area</span><span class="sx-go" aria-hidden="true">›</span></button>` : ""}
+          <button type="button" class="sx-item" id="meetList" style="--c:#ffd166"><span class="sx-ico">👥</span><span class="sx-name">Meetups</span><small>${upcomingMeetups().length}</small><span class="sx-go" aria-hidden="true">›</span></button>
+          <p class="sx-links"><button type="button" class="text-link" id="meetAdd">＋ Organise a meetup</button></p>`;
+      }
+      return g.cats.map(item).join("");
+    };
+    const groups = SX_GROUPS.map(g => {
+      const open = sxOpen.has(g.id), on = g.cats.some(k => activeCats.has(k)) || (g.id === "community" && showPhotographers);
+      const count = g.cats.reduce((a, k) => a + n(k), 0);
+      return `<section class="sx-group${open ? " open" : ""}${on ? " on" : ""}" data-g="${g.id}">
+        <button type="button" class="sx-ghead" data-sxg="${g.id}" aria-expanded="${open}">
+          <span class="sx-gico">${SX_ICON[g.id]}</span>
+          <span class="sx-gtext"><b>${g.title}</b><small>${g.sub}</small></span>
+          ${count ? `<span class="sx-gcount">${fmtN(count)}</span>` : ""}
+          <span class="sx-chev" aria-hidden="true"></span>
+        </button>
+        <div class="sx-gbody">${body(g)}</div>
+      </section>`;
+    }).join("");
+    return `<div class="sx">
+      <aside class="sx-side">
+        <p class="sx-kick">Spots <span aria-hidden="true">///</span></p>
+        <h2 class="sx-title">Explore the Earth</h2>
+        <p class="sx-lead">Photo spots, essential services and experiences for your next exploration.</p>
+        <div class="sx-panel">
+          ${searchHtml}
+          <div class="sx-groups">${groups}</div>
+          <div class="sx-foot">
+            <span>${ICON.pin}<span id="spotsCount"></span></span>
+            <a class="text-link" href="#guide-spots">How it works</a>
+          </div>
+        </div>
+        <div class="sx-user">${userHtml}</div>
+        <p class="sx-more">
+          ${!guest && schemaV2 && socialV ? `<button type="button" class="text-link" id="openConduct">Community code</button>` : ""}
+          <a class="text-link" href="guides/spots-quick-guide.pdf" target="_blank" rel="noopener">📄 Spots in one page</a>
+          <button type="button" class="text-link sx-switch" id="sxToClassic">Use the classic map</button>
+        </p>
+      </aside>
+      <div class="sx-stage spots-stage" data-mode="${viewMode}">
+        <div id="spotsMap" class="map map-spots" aria-label="Map of photo spots"></div>
+        <div class="sx-globe-slot" id="sxGlobeSlot"></div>
+        <div class="sx-ctrl">
+          <button type="button" class="sx-btn is-gold" id="sxNear" title="Spots near me" aria-label="Find spots near me">${SX_ICON.near}</button>
+          <div class="sx-zoom"><button type="button" class="sx-btn" id="sxIn" aria-label="Zoom in">+</button><button type="button" class="sx-btn" id="sxOut" aria-label="Zoom out">−</button></div>
+          <button type="button" class="sx-btn" id="sxHome" title="The whole Earth" aria-label="Back to the whole Earth">${SX_ICON.target}</button>
+          <button type="button" class="sx-btn" id="sxFull" title="Full screen" aria-label="Full screen">${SX_ICON.full}</button>
+        </div>
+        <div class="sx-modes" role="group" aria-label="Map view">
+          ${[["globe", "Globe"], ["sat", "Satellite"], ["terrain", "Terrain"]].map(([k, l]) => `<button type="button" data-sxmode="${k}" class="${viewMode === k ? "on" : ""}" aria-pressed="${viewMode === k}">${SX_ICON[k]}<span>${l}</span></button>`).join("")}
+        </div>
+        ${schemaV2 ? `<button type="button" class="osm-scan" id="osmScan">${ICON_SCAN}Scan this area</button>` : ""}
+        <p class="sx-hint" id="sxHint" hidden></p>
+      </div>
+    </div>
+    ${bannerHtml}
+    ${tailHtml}`;
+  }
+
+  /* fondo della mappa piana: satellite (con nomi) oppure rilievo */
+  function applyBase() {
+    if (!map || !baseSat) return;
+    const topo = ui === "earth" && viewMode === "terrain";
+    [baseSat, baseTopo, satLabels].forEach(l => l && map.hasLayer(l) && map.removeLayer(l));
+    (topo ? baseTopo : baseSat).addTo(map);
+    if (!topo) satLabels.addTo(map);
+  }
+
+  function loadMapLibre() {
+    if (window.maplibregl) return Promise.resolve(window.maplibregl);
+    if (loadMapLibre.p) return loadMapLibre.p;
+    loadMapLibre.p = new Promise((res, rej) => {
+      const css = document.createElement("link");
+      css.rel = "stylesheet"; css.href = `https://unpkg.com/maplibre-gl@${ML_VER}/dist/maplibre-gl.css`;
+      document.head.appendChild(css);
+      const js = document.createElement("script");
+      js.src = `https://unpkg.com/maplibre-gl@${ML_VER}/dist/maplibre-gl.js`;
+      js.onload = () => res(window.maplibregl); js.onerror = () => { loadMapLibre.p = null; rej(new Error("MapLibre not loaded")); };
+      document.head.appendChild(js);
+    });
+    return loadMapLibre.p;
+  }
+
+  async function ensureGlobe() {
+    if (globe) return globe;
+    if (globeFailed) throw new Error("globe unavailable");
+    const ml = await loadMapLibre();
+    if (!ml || !ml.Map || typeof ml.Map.prototype.setProjection !== "function") { globeFailed = true; throw new Error("old MapLibre"); }
+    globeEl = document.createElement("div");
+    globeEl.className = "sx-globe";
+    globeEl.setAttribute("aria-label", "3D globe of the spots");
+    $("#sxGlobeSlot")?.appendChild(globeEl);
+    const ESRI = "https://server.arcgisonline.com/ArcGIS/rest/services";
+    globe = new ml.Map({
+      container: globeEl, center: [12, 30], zoom: earthZoom(), minZoom: 0, maxZoom: 7.5, attributionControl: { compact: true },
+      dragRotate: false, pitchWithRotate: false, touchPitch: false,   // si gira e si avvicina, senza inclinare per sbaglio
+      style: {
+        version: 8, projection: { type: "globe" },
+        sky: { "atmosphere-blend": ["interpolate", ["linear"], ["zoom"], 0, 1, 5, 1, 7, 0] },
+        sources: {
+          sat: { type: "raster", tiles: [`${ESRI}/World_Imagery/MapServer/tile/{z}/{y}/{x}`], tileSize: 256, maxzoom: 18,
+            attribution: "Imagery &copy; Esri, Maxar, Earthstar Geographics and the GIS community" },
+          lbl: { type: "raster", tiles: [`${ESRI}/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}`], tileSize: 256, maxzoom: 18 }
+        },
+        layers: [{ id: "sat", type: "raster", source: "sat" }, { id: "lbl", type: "raster", source: "lbl", paint: { "raster-opacity": 0.8 } }]
+      }
+    });
+    globe.on("moveend", () => { drawGlobe(); maybeDescend(); });
+    globe.on("load", () => { try { globe.setProjection({ type: "globe" }); } catch {} drawGlobe(); });
+    return globe;
+  }
+
+  /* globo → mappa di dettaglio, nello stesso punto (lo zoom di Leaflet è più alto di 1 rispetto a MapLibre) */
+  function maybeDescend() {
+    if (!onGlobe || viewMode !== "globe" || handing) return;
+    if (globe.getZoom() >= GLOBE_TO_FLAT) { const c = globe.getCenter(); toFlat([c.lat, c.lng], globe.getZoom() + 1); }
+  }
+  function toFlat(center, zoom, opts = {}) {
+    if (!map) return;
+    onGlobe = false;
+    stageEl()?.classList.remove("on-globe");
+    if (center) { handing = true; map.setView(center, Math.max(3, Math.min(19, zoom)), { animate: false }); setTimeout(() => { handing = false; }, 60); }
+    map.invalidateSize();
+    if (!opts.quiet) hint(viewMode === "globe" ? "Zoom out to return to the globe." : "");
+    drawClusters();
+  }
+  async function toGlobe(center, zoom, fly) {
+    try { await ensureGlobe(); } catch { globeFailed = true; return toFlat(null); }
+    const slot = $("#sxGlobeSlot");
+    if (slot && globeEl && globeEl.parentElement !== slot) slot.appendChild(globeEl);
+    onGlobe = true;
+    stageEl()?.classList.add("on-globe");
+    globe.resize();
+    handing = true;
+    if (center) globe.jumpTo({ center: [center[1], center[0]], zoom: Math.max(earthZoom() - 0.3, zoom) });
+    if (fly) globe.flyTo({ center: globe.getCenter(), zoom: earthZoom(), duration: 1600, essential: true });
+    setTimeout(() => { handing = false; }, fly ? 1700 : 80);
+    hint("");
+    drawGlobe();
+  }
+  const stageEl = () => document.querySelector(".sx-stage");
+  /* zoom che mostra il pianeta intero nello spazio disponibile (il globo è largo ~470 px a zoom 1.35) */
+  const earthZoom = () => { const el = stageEl(); const m = el ? Math.min(el.clientWidth, el.clientHeight) : 700; return Math.max(0.1, 1.35 + Math.log2(m * 0.8 / 470)); };
+  function hint(t) { const h = $("#sxHint"); if (!h) return; h.textContent = t; h.hidden = !t; clearTimeout(hint.t); if (t) hint.t = setTimeout(() => { h.hidden = true; }, 4000); }
+
+  function setViewMode(m) {
+    viewMode = m; lsSet(MODE_KEY, m);
+    document.querySelectorAll("[data-sxmode]").forEach(b => { const on = b.dataset.sxmode === m; b.classList.toggle("on", on); b.setAttribute("aria-pressed", on); });
+    stageEl()?.setAttribute("data-mode", m);
+    applyBase();
+    if (m === "globe") { const c = map.getCenter(); toGlobe([c.lat, c.lng], Math.min(map.getZoom() - 1, GLOBE_TO_FLAT - 0.5), true); }
+    else if (onGlobe) { const c = globe.getCenter(); toFlat([c.lat, c.lng], Math.max(3, globe.getZoom() + 1), { quiet: true }); }
+  }
+
+  /* dopo ogni costruzione della mappa: comandi, gruppi e (se serve) il globo */
+  function earthAfterBuild() {
+    // mosse della mappa piana chieste dal sito (cerca, vicino a me, apri uno spot…) mentre si vede il globo: si scende sulla mappa
+    setTimeout(() => map && map.on("movestart", () => { if (onGlobe && !handing) toFlat(null); }), 120);
+    map.on("zoomend", () => {
+      if (viewMode === "globe" && !onGlobe && !handing && map.getZoom() <= FLAT_TO_GLOBE) { const c = map.getCenter(); toGlobe([c.lat, c.lng], map.getZoom() - 1); }
+    });
+    wireEarth();
+    if (viewMode === "globe" && !globeFailed) {
+      const c = map.getCenter();
+      if (globe && globeEl) { $("#sxGlobeSlot")?.appendChild(globeEl); }
+      // primo arrivo: il pianeta intero; dopo un aggiornamento della pagina resta dov'era
+      if (globe && onGlobe) toGlobe(null);
+      else if (!globe) toGlobe([c.lat, c.lng], earthZoom());
+      else if (map.getZoom() <= FLAT_TO_GLOBE + 1.5) toGlobe([c.lat, c.lng], Math.max(earthZoom(), map.getZoom() - 1));
+      else toFlat(null, null, { quiet: true });
+    } else toFlat(null, null, { quiet: true });
+  }
+
+  function wireEarth() {
+    document.querySelectorAll("[data-sxg]").forEach(b => b.addEventListener("click", () => {
+      const id = b.dataset.sxg, sec = b.closest(".sx-group"), open = !sec.classList.contains("open");
+      sec.classList.toggle("open", open); b.setAttribute("aria-expanded", open);
+      open ? sxOpen.add(id) : sxOpen.delete(id);
+    }));
+    document.querySelectorAll("[data-sxcat]").forEach(b => b.addEventListener("click", () => {
+      const k = b.dataset.sxcat;
+      activeCats.has(k) ? activeCats.delete(k) : activeCats.add(k);
+      b.classList.toggle("on", activeCats.has(k)); b.setAttribute("aria-pressed", activeCats.has(k));
+      document.querySelectorAll(".sx-group").forEach(sec => {
+        const g = SX_GROUPS.find(x => x.id === sec.dataset.g);
+        sec.classList.toggle("on", g.cats.some(c => activeCats.has(c)) || (g.id === "community" && showPhotographers));
+      });
+      drawClusters(); if (origin) renderNear();
+    }));
+    document.querySelectorAll("[data-sxjoin]").forEach(b => b.addEventListener("click", () => { wantJoin = true; render(); root().scrollIntoView({ behavior: "smooth" }); }));
+    document.querySelectorAll("[data-sxmode]").forEach(b => b.addEventListener("click", () => setViewMode(b.dataset.sxmode)));
+    $("#sxNear")?.addEventListener("click", locateMe);
+    $("#sxIn")?.addEventListener("click", () => onGlobe ? globe.zoomIn() : map.zoomIn());
+    $("#sxOut")?.addEventListener("click", () => onGlobe ? globe.zoomOut() : map.zoomOut());
+    $("#sxHome")?.addEventListener("click", () => { if (viewMode !== "globe") setViewMode("globe"); else if (onGlobe) globe.flyTo({ zoom: earthZoom(), duration: 1400 }); else { const c = map.getCenter(); toGlobe([c.lat, c.lng], Math.min(map.getZoom() - 1, 5), true); } });
+    $("#sxToClassic")?.addEventListener("click", () => { ui = "classic"; lsSet(UI_KEY, ui); onGlobe = false; renderApp(); });
+    $("#sxFull")?.addEventListener("click", () => document.querySelector(".sx-stage .map-full-ctrl a")?.click());
+    const st = stageEl();
+    if (st) new MutationObserver(() => {
+      const full = st.classList.contains("map-full"), b = $("#sxFull");
+      if (b) { b.innerHTML = full ? SX_ICON.fullExit : SX_ICON.full; b.title = full ? "Exit full screen" : "Full screen"; b.setAttribute("aria-label", b.title); }
+      [60, 350].forEach(t => setTimeout(() => { globe?.resize(); drawGlobe(); }, t));
+    }).observe(st, { attributes: true, attributeFilter: ["class"] });
+  }
+
+  /* marker sul globo: gruppi in pixel, solo sul lato visibile del pianeta */
+  function drawGlobe() {
+    if (!globe) return;
+    globeMarkers.forEach(m => m.remove()); globeMarkers = [];
+    if (!onGlobe) return;
+    const ml = window.maplibregl, c = globe.getCenter(), cell = sxTouch ? 50 : 58, w = globeEl.clientWidth, h = globeEl.clientHeight;
+    const rad = Math.PI / 180, cLat = c.lat * rad, cLon = c.lng * rad;
+    const far = s => {   // distanza angolare dal centro della vista: oltre ~80° è dietro al pianeta
+      const la = s.lat * rad, lo = s.lon * rad;
+      return Math.acos(Math.min(1, Math.sin(cLat) * Math.sin(la) + Math.cos(cLat) * Math.cos(la) * Math.cos(lo - cLon))) / rad > 80;
+    };
+    const cells = new Map();
+    visibleSpots().forEach(s => {
+      if (globe.getZoom() < 4 && far(s)) return;
+      const p = globe.project([s.lon, s.lat]);
+      if (p.x < -20 || p.y < -20 || p.x > w + 20 || p.y > h + 20) return;
+      const key = `${Math.floor(p.x / cell)}:${Math.floor(p.y / cell)}`;
+      (cells.get(key) || cells.set(key, []).get(key)).push(s);
+    });
+    cells.forEach(group => {
+      const el = document.createElement("button");
+      el.type = "button";
+      if (group.length === 1) {
+        const s = group[0], k = CATS[s.category] || CATS.spot;
+        el.className = "sx-gpin"; el.style.setProperty("--c", k.color); el.innerHTML = k.icon;
+        el.title = s.name; el.setAttribute("aria-label", s.name);
+        el.addEventListener("click", ev => { ev.stopPropagation(); openFromGlobe(s); });
+        globeMarkers.push(new ml.Marker({ element: el }).setLngLat([s.lon, s.lat]).addTo(globe));
+      } else {
+        const lat = group.reduce((a, s) => a + s.lat, 0) / group.length, lon = group.reduce((a, s) => a + s.lon, 0) / group.length;
+        const n = group.length, size = Math.round((n < 10 ? 38 : n < 100 ? 46 : n < 1000 ? 54 : 62) * (sxTouch ? .8 : 1));
+        el.className = "sx-gcl"; el.style.setProperty("--s", `${size}px`); el.textContent = fmtN(n);
+        el.setAttribute("aria-label", `${n} spots`);
+        el.addEventListener("click", ev => { ev.stopPropagation(); globe.flyTo({ center: [lon, lat], zoom: Math.min(globe.getZoom() + 2.2, GLOBE_TO_FLAT + 0.2), duration: 1200 }); });
+        globeMarkers.push(new ml.Marker({ element: el }).setLngLat([lon, lat]).addTo(globe));
+      }
+    });
+  }
+  /* tocco su uno spot del globo: si scende sulla mappa di dettaglio e si apre la sua scheda */
+  function openFromGlobe(s) {
+    const z = globe.getZoom();
+    globe.flyTo({ center: [s.lon, s.lat], zoom: Math.min(GLOBE_TO_FLAT, Math.max(z, 5)), duration: 900 });
+    setTimeout(() => { toFlat([s.lat, s.lon], Math.max(z + 1, 7), { quiet: true }); focusSpot(s); }, 950);
+  }
+
   function renderApp() {
     const lists = [...new Set(spots.map(s => s.list))].sort((a, b) => a.localeCompare(b));
     if (!activeLists) activeLists = new Set(lists);
@@ -450,7 +758,76 @@ const Spots = (() => {
     knownLists = new Set(lists);
     if (!activeCats) activeCats = new Set(CAT_KEYS);
     const email = session ? jwtEmail(session.access_token) : "";
-    root().innerHTML = `
+    const searchHtml = `
+        <div class="spots-search" id="spotsSearch">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 21 21"/></svg>
+          <input id="spotsQuery" type="search" placeholder="Search a spot or a place…" value="${esc(query)}" aria-label="Search a spot or a place"
+            autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="spotsSuggest">
+          <button type="button" class="spots-locate" id="spotsLocate" title="Spots near me" aria-label="Find spots near me">${ICON_LOCATE}<span>Near me</span></button>
+          <div class="spots-suggest" id="spotsSuggest" role="listbox" hidden></div>
+        </div>
+`;
+    const userHtml = `
+        <div class="spots-user">
+          ${guest && session ? `<span class="spots-email">${esc(memberName || email)}</span>
+          <button class="text-link" type="button" id="spotsLogout">Log out</button>` : guest ? `<button class="text-link" type="button" id="spotsLogin">Log in</button>
+          <button class="outline-link spots-add" type="button" id="spotsJoin">${LOCK_SVG}Join free</button>` : `
+          ${admin ? `<button class="outline-link spots-add req-btn${pendingMembers.length + openFlags ? " has" : ""}" type="button" id="spotsRequests">Admin <b>${pendingMembers.length + openFlags}</b></button>` : ""}
+          ${schemaV2 || admin ? `<button class="outline-link spots-add" type="button" id="spotsAdd">${ICON_PLUS}Add a place</button>` : ""}
+          ${admin ? `<button class="text-link" type="button" id="spotsImport">${ICON_UPLOAD}Importa da Google Maps</button>` : ""}
+          <span class="spots-email">${esc(email)}</span>
+          <button class="text-link" type="button" id="spotsLogout">Log out</button>`}
+        </div>
+`;
+    const bannerHtml = `
+      ${guest && session ? `<div class="guest-banner pending-banner">${LOCK_SVG}<p>${esc(pendingText())}</p></div>` : ""}
+      ${guest && !session ? `<div class="guest-banner">${LOCK_SVG}<p>${guestLoading || !spots.length ? `<strong>${guestLoading ? "Loading the shared spots…" : "The community map"}</strong>
+          Members see every spot with its exact location, photos, reviews, prices and live alerts — and can add their own.
+          <em>Membership is free:</em> <a href="#join">join in a minute</a>.` : (() => {
+          const tr = window.I18N ? I18N.t("GUEST_BANNER") : "GUEST_BANNER";
+          const tpl = tr !== "GUEST_BANNER" ? tr : `<strong>You're seeing {n} of {total} spots</strong>, in approximate positions.
+          Members see every spot with its exact location, photos, reviews, prices and live alerts — and can add their own.
+          <em>Membership is free:</em> <a href="#join">join in a minute</a>.`;
+          return tpl.replace("{n}", fmtN(spots.length)).replace("{total}", fmtN(Math.max(publicTotal, spots.length)));
+        })()}</p>
+          <button type="button" class="outline-link" id="guestJoin">JOIN FREE <span aria-hidden="true">→</span></button>
+          <a class="text-link guest-guide" href="#guide-spots">How Spots works</a> <a class="text-link guest-guide" href="guides/spots-quick-guide.pdf" target="_blank" rel="noopener">📄 One-page guide</a></div>` : ""}
+`;
+    const tailHtml = `
+      ${!guest ? workshopsHtml() : ""}
+      <section class="spots-around" id="spotsAround" aria-live="polite" hidden>
+        <header class="around-head">
+          <div><span class="eyebrow" id="aroundEyebrow"></span><h2 id="aroundTitle"></h2></div>
+          <label class="near-radius">Within
+            <select id="nearKm">${RADII.map(k => `<option value="${k}"${k === nearKm ? " selected" : ""}>${k} km</option>`).join("")}</select></label>
+          <button type="button" class="near-close" id="nearClose" aria-label="Close">${ICON.close}</button>
+        </header>
+        <div class="around-cols">
+          <div class="around-col" id="spotsNear"></div>
+          <div class="around-col osm-col" id="osmCol"></div>
+        </div>
+      </section>
+      <aside class="spots-disclaimer" role="note">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 2 21h20L12 3zm0 6v6m0 3v.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <div>
+          <strong>Before you go</strong>
+          <p>Many of these spots are places I have saved but <em>not visited myself</em>. Locations, access, opening times and conditions may be inaccurate or out of date.
+          Always check current information before you go — access rights, private property, permits, local rules, safety and weather.</p>
+          <p>Places, descriptions, photos and reviews added by members are their own responsibility and are not checked in advance.</p>
+          <p>The map is shared for inspiration only. You visit any spot entirely at your own risk: Fabio Costantini accepts no responsibility for any injury, damage, loss, fine or other consequence arising from the use of this information.</p>
+        </div>
+      </aside>
+      <aside class="spots-disclaimer photo-rights" id="photoRights" role="note"${guest ? " hidden" : ""}>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M14.8 9.6a3.6 3.6 0 1 0 0 4.8"/></svg>
+        <div>
+          <strong>Photo terms</strong>
+          <p>Every photo shows the name of the member who uploaded it. By uploading a photo you confirm that <em>you took it yourself</em>, or that you hold the rights to share it, and that it doesn't show identifiable people without their consent.</p>
+          <p><em>You keep the copyright.</em> You only grant Fabio Costa Ph a free, non-exclusive permission to show the photo to members inside this map, and you can withdraw it at any time by deleting the photo. Photos are not used elsewhere, sold or shared outside the map.</p>
+          <p>All photos remain the property of their authors: they may not be downloaded, copied or reused without the author's permission. Photos that break these terms will be removed.</p>
+        </div>
+      </aside>
+      ${spots.length || guest ? "" : `<p class="empty-state">No spots yet.${admin ? " Use «Importa da Google Maps» to add them." : ""}</p>`}`;
+    const classicHtml = () => `
       <div class="spots-toolbar">
         <div class="spots-search" id="spotsSearch">
           <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 21 21"/></svg>
@@ -511,6 +888,7 @@ const Spots = (() => {
         ${nodiV && profiles.some(p => p.user_id === myUid()) ? `<button type="button" class="filter comm-btn" id="iPosted">📣 I just posted</button>` : ""}
         <button type="button" class="text-link" id="myProfile">${profiles.some(p => p.user_id === myUid()) ? "My photographer profile" : "Join the photographers' map"}</button>
       </div>` : ""}
+      <p class="sx-switch-row"><button type="button" class="text-link sx-switch" id="sxToEarth">🌍 Try the new Earth view</button></p>
       <div class="spots-stage">
         <div id="spotsMap" class="map map-spots" aria-label="Members map of photo spots"></div>
         <span class="hud-frame" aria-hidden="true"></span>
@@ -549,7 +927,7 @@ const Spots = (() => {
         </div>
       </aside>
       ${spots.length || guest ? "" : `<p class="empty-state">No spots yet.${admin ? " Use «Importa da Google Maps» to add them." : ""}</p>`}`;
-
+    root().innerHTML = ui === "earth" ? earthHtml({ searchHtml, userHtml, bannerHtml, tailHtml }) : classicHtml();
     wireSearch();
     $("#nearKm")?.addEventListener("change", e => {
       nearKm = +e.target.value;
@@ -584,6 +962,7 @@ const Spots = (() => {
       focusSpot(s);
     }));
     $("#spotsImport")?.addEventListener("click", openImport);
+    $("#sxToEarth")?.addEventListener("click", () => { ui = "earth"; lsSet(UI_KEY, ui); renderApp(); });
     $("[data-addws]")?.addEventListener("click", () => withConduct(() => openAdd(null, { category: "workshop" })));
     $("#spotsAdd")?.addEventListener("click", () => withConduct(() => openAdd()));
     $("#alertMode")?.addEventListener("change", e => { alertMode = e.target.value; drawClusters(); renderNear(); });
@@ -615,11 +994,12 @@ const Spots = (() => {
   function wireSearch() {
     const input = $("#spotsQuery"), box = $("#spotsSuggest");
     input.addEventListener("input", () => {
-      query = input.value; drawClusters();
+      coordHit = parseCoordsInput(input.value);
+      query = coordHit ? "" : input.value; drawClusters();
       if (origin) renderNear();
       const q = query.trim();
       placeResults = []; clearTimeout(placeTimer);
-      if (q.length >= 3) placeTimer = setTimeout(() => searchPlaces(q).then(r => { if (input.value.trim() === q) { placeResults = r; renderSuggest(); } }), 380);
+      if (q.length >= 3 && !coordHit) placeTimer = setTimeout(() => searchPlaces(q).then(r => { if (input.value.trim() === q) { placeResults = r; renderSuggest(); } }), 380);
       renderSuggest();
     });
     input.addEventListener("focus", () => { if (input.value.trim()) renderSuggest(); });
@@ -637,6 +1017,8 @@ const Spots = (() => {
         if (suggestIdx >= 0 && items[suggestIdx]) return items[suggestIdx].click();
         const q = input.value.trim();
         if (!q) return;
+        const cc = parseCoordsInput(q);
+        if (cc) return goCoords(cc);
         const hits = visibleSpots();
         if (hits.length) { closeSuggest(); return map.flyToBounds(L.latLngBounds(hits.map(s => [s.lat, s.lon])).pad(0.2), { maxZoom: 15, duration: 1 }); }
         const places = placeResults.length ? placeResults : await searchPlaces(q);
@@ -680,15 +1062,18 @@ const Spots = (() => {
     const q = norm(input.value.trim());
     suggestIdx = -1;
     if (!q) return closeSuggest();
-    const spotHits = q.length >= 2 ? visibleSpots().slice(0, 6) : [];
+    const cc = parseCoordsInput(input.value);
+    const spotHits = q.length >= 2 && !cc ? visibleSpots().slice(0, 6) : [];
     let i = 0, html = "";
+    if (cc) html += `<p class="sg-head">Coordinates</p><button type="button" role="option" class="sg-item" data-i="${i++}" data-coords>
+        ${ICON.pin}<span class="sg-text"><strong>${fmtCoord(cc.lat, cc.lon).replace("  |  ", " · ")}</strong><small>Go to this point and see the spots around it</small></span></button>`;
     if (spotHits.length) html += `<p class="sg-head">Spots</p>` + spotHits.map(s =>
       `<button type="button" role="option" class="sg-item" data-i="${i++}" data-spot="${s.id}">
         <span class="sg-cat" style="--c:${(CATS[s.category] || CATS.spot).color}">${(CATS[s.category] || CATS.spot).icon}</span><span class="sg-text"><strong>${esc(s.name)}</strong><small>${(CATS[s.category] || CATS.spot).label}</small></span></button>`).join("");
     if (placeResults.length) html += `<p class="sg-head">Places</p>` + placeResults.map((p, k) =>
       `<button type="button" role="option" class="sg-item" data-i="${i++}" data-place="${k}">
         ${ICON.pin}<span class="sg-text"><strong>${esc(p.name)}</strong><small>${esc(p.context)}</small></span></button>`).join("");
-    else if (q.length >= 3) html += `<p class="sg-head sg-wait">Places · searching…</p>`;
+    else if (q.length >= 3 && !cc) html += `<p class="sg-head sg-wait">Places · searching…</p>`;
     box.innerHTML = html;
     box.hidden = !html;
     input.setAttribute("aria-expanded", html ? "true" : "false");
@@ -698,6 +1083,7 @@ const Spots = (() => {
       input.value = s.name; query = ""; drawClusters(); closeSuggest(); focusSpot(s);
     }));
     box.querySelectorAll("[data-place]").forEach(b => b.addEventListener("click", () => pickPlace(placeResults[+b.dataset.place])));
+    box.querySelector("[data-coords]")?.addEventListener("click", () => goCoords(cc));
   }
   function closeSuggest() {
     const box = $("#spotsSuggest");
@@ -706,6 +1092,15 @@ const Spots = (() => {
     suggestIdx = -1;
   }
 
+  /* ricerca per coordinate: si va su quel punto, con il cerchio dei dintorni */
+  let coordHit = null;
+  function goCoords(c) {
+    const input = $("#spotsQuery");
+    const label = `${c.lat.toFixed(5)}, ${c.lon.toFixed(5)}`;
+    if (input) { input.value = label; input.blur(); }
+    query = ""; coordHit = null; closeSuggest();
+    setOrigin({ lat: c.lat, lon: c.lon, label, kind: "place" });
+  }
   function pickPlace(p) {
     if (!p) return;
     const input = $("#spotsQuery");
@@ -1021,14 +1416,17 @@ const Spots = (() => {
     const keep = map && map.getCenter ? { c: map.getCenter(), z: map.getZoom() } : null;
     if (map) { try { map.remove(); } catch {} map = null; }
     map = L.map("spotsMap", { zoomControl: false, minZoom: 2, maxZoom: 19, worldCopyJump: true, zoomSnap: 0.5 });
-    L.control.zoom({ position: "topleft", zoomInTitle: "Zoom in", zoomOutTitle: "Zoom out" }).addTo(map);
+    if (ui !== "earth") L.control.zoom({ position: "topleft", zoomInTitle: "Zoom in", zoomOutTitle: "Zoom out" }).addTo(map);
     window.addMapFullscreen?.(map, document.querySelector(".spots-stage"));
     map.attributionControl.setPrefix(false);
-    L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
-      maxZoom: 19, maxNativeZoom: 18, attribution: "Imagery &copy; Esri, Maxar, Earthstar Geographics and the GIS community" }).addTo(map);
+    baseSat = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
+      maxZoom: 19, maxNativeZoom: 18, attribution: "Imagery &copy; Esri, Maxar, Earthstar Geographics and the GIS community" });
+    baseTopo = L.tileLayer("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19, maxNativeZoom: 17, subdomains: "abc", attribution: "Map &copy; OpenStreetMap contributors, SRTM · style &copy; OpenTopoMap (CC-BY-SA)" });
     map.createPane("spotLabels"); map.getPane("spotLabels").style.zIndex = 450; map.getPane("spotLabels").style.pointerEvents = "none";
     satLabels = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}", {
-      maxZoom: 19, maxNativeZoom: 18, pane: "spotLabels", opacity: .9 }).addTo(map);
+      maxZoom: 19, maxNativeZoom: 18, pane: "spotLabels", opacity: .9 });
+    applyBase();
     layer = L.layerGroup().addTo(map);
     originLayer = L.layerGroup().addTo(map);
     osmLayer = L.layerGroup().addTo(map);
@@ -1042,6 +1440,7 @@ const Spots = (() => {
     else if (pts.length) map.fitBounds(L.latLngBounds(pts).pad(0.1), { maxZoom: 12, animate: false });
     else map.setView([42.5, 12.5], 5);
     setTimeout(() => { map.invalidateSize(); drawClusters(); }, 30);
+    if (ui === "earth") earthAfterBuild();
   }
 
   /* raggruppa gli spot vicini (griglia in pixel), solo quelli nell'area visibile */
@@ -1075,6 +1474,7 @@ const Spots = (() => {
         .on("click", () => map.flyToBounds(L.latLngBounds(group.map(s => [s.lat, s.lon])).pad(0.3), { maxZoom: Math.min(19, z + 4), duration: .8 }));
     });
     drawCommunity();
+    if (ui === "earth") drawGlobe();
   }
 
   function addSpotMarker(s, front) {
@@ -2558,6 +2958,15 @@ const Spots = (() => {
     t = String(t || "").trim();
     const c = coordsFromText(t);
     if (c) return c;
+    // gradi, minuti, secondi: 41°54'10.0"N 12°29'46.0"E (anche con spazi o con ′ ″)
+    const dms = t.replace(/[′’]/g, "'").replace(/[″”]/g, '"').match(/^(\d{1,2})[°\s]+(\d{1,2})['\s]+(\d{1,2}(?:[.,]\d+)?)"?\s*([NS])[\s,;]+(\d{1,3})[°\s]+(\d{1,2})['\s]+(\d{1,2}(?:[.,]\d+)?)"?\s*([EOW])$/i);
+    if (dms) {
+      const v = (d, m, x) => +d + +m / 60 + +String(x).replace(",", ".") / 3600;
+      let lat = v(dms[1], dms[2], dms[3]), lon = v(dms[5], dms[6], dms[7]);
+      if (/s/i.test(dms[4])) lat = -lat;
+      if (/w/i.test(dms[8])) lon = -lon;
+      return Math.abs(lat) <= 90 && Math.abs(lon) <= 180 ? { lat, lon } : null;
+    }
     const m = t.replace(/[°]/g, "").match(/^\s*(-?\d{1,2}(?:[.]\d+)?)\s*([NS])?\s*[,;\s]\s*(-?\d{1,3}(?:[.]\d+)?)\s*([EOW])?\s*$/i);
     if (!m) return null;
     let lat = +m[1], lon = +m[3];
