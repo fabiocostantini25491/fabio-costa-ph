@@ -21,6 +21,7 @@
   const fmtDate = d => d ? new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "long", year: "numeric" }).format(new Date(d + "T12:00:00")) : "";
 
   const params = new URLSearchParams(location.search);
+  const PRINT = params.get("print") === "1";   // PDF su richiesta: impaginato qui nel browser (Paged.js) e poi «Salva come PDF»
   const month = /^\d{4}-\d{2}$/.test(params.get("mese") || "") ? params.get("mese") : prevMonth(romeMonth());
 
   function md(text) {
@@ -177,11 +178,11 @@
         <h2>Contents</h2>
         <ol>${list.map((a, i) => `<li><span class="rv-n">${String(i + 1).padStart(2, "0")}</span>
           <span class="rv-t"><small>${a.type === "reportage" ? "Reportage" : "Field guide"} · ${esc(CAT[a.category] || a.category)}</small><strong>${esc(a.title)}</strong>
-          <em>${esc(a.author.name)} · ${esc(fmtDate(a.date))}</em></span><span class="rv-dots"></span><span class="rv-p" data-page-of="art-${i}">—</span></li>`).join("")}</ol>
+          <em>${esc(a.author.name)} · ${esc(fmtDate(a.date))}</em></span><span class="rv-dots"></span>${PRINT ? `<a class="rv-p rv-pref" href="#rv-art-${i}"></a>` : `<span class="rv-p" data-page-of="art-${i}">—</span>`}</li>`).join("")}</ol>
         <p class="rv-editor">${authors.length > 1 ? `With stories by ${esc(authors.join(", "))}.` : ""} Every story in this issue was published on ${esc(SITE)} during ${esc(label)}.</p>
       </section>
       ${list.map((a, i) => `
-      <section class="rv-part rv-article" data-part="art-${i}">
+      <section class="rv-part rv-article" data-part="art-${i}" id="rv-art-${i}">
         <p class="rv-runhead"><span>${String(i + 1).padStart(2, "0")}</span>${a.type === "reportage" ? "Reportage" : "Field guide"} · ${esc(CAT[a.category] || a.category)}${a.place ? ` · ${esc(a.place)}` : ""}</p>
         <h2 class="rv-title">${esc(a.title)}</h2>
         ${a.excerpt ? `<p class="rv-deck">${esc(a.excerpt)}</p>` : ""}
@@ -212,4 +213,33 @@
     setPages(map) { document.querySelectorAll("[data-page-of]").forEach(el => { if (map[el.dataset.pageOf]) el.textContent = map[el.dataset.pageOf]; }); }
   };
   api.ready = build().then(info => (api.info = info)).catch(e => { console.error(e); document.getElementById("issue").textContent = "Error: " + e.message; api.info = { error: String(e) }; });
+
+  /* ---------- PDF su richiesta (numeri passati) ----------
+     Paged.js divide il numero in pagine A4 con le stesse regole del PDF mensile, scrive i numeri di pagina nel sommario,
+     poi si apre la finestra di stampa: lì si sceglie «Salva come PDF». Nulla viene salvato online. */
+  if (PRINT) {
+    document.documentElement.classList.add("rv-print");
+    const note = document.createElement("div");
+    note.className = "rv-printnote";
+    note.innerHTML = `<b>Preparing your PDF…</b><span>When the print window opens, choose <i>Save as PDF</i>.</span>`;
+    document.body.appendChild(note);
+    api.ready.then(info => {
+      if (!info || info.error || !info.count) { note.innerHTML = "<b>This issue has no stories.</b>"; return; }
+      document.title = `${NAME} — N° ${info.number} · ${info.label}`;
+      note.remove();
+      window.PagedConfig = { auto: false };
+      const sc = document.createElement("script");
+      sc.src = "https://unpkg.com/pagedjs@0.4.3/dist/paged.polyfill.min.js";
+      sc.onload = async () => {
+        try {
+          await window.PagedPolyfill.preview();
+          api.paged = { pages: document.querySelectorAll(".pagedjs_page").length };
+          document.body.appendChild(Object.assign(document.createElement("button"), { className: "rv-printbtn", textContent: "Save as PDF", onclick: () => window.print() }));
+          if (!params.has("noprint")) setTimeout(() => window.print(), 400);
+        } catch (e) { console.error(e); api.paged = { error: String(e) }; window.print(); }
+      };
+      sc.onerror = () => { api.paged = { error: "pagedjs not loaded" }; window.print(); };
+      document.head.appendChild(sc);
+    });
+  }
 })();

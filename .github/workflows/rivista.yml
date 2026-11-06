@@ -11,6 +11,10 @@ on:
         description: "Mese da impaginare, es. 2026-11 (vuoto = il mese appena chiuso)"
         required: false
         default: ""
+      verifica:
+        description: "Verifica anche il PDF su richiesta (quello dei numeri passati)"
+        type: boolean
+        default: false
       pubblica:
         description: "Pubblicare sul sito (sostituisce il PDF attuale)? Se no, il PDF resta solo come anteprima scaricabile qui."
         type: boolean
@@ -30,7 +34,7 @@ jobs:
           npm install --no-save --no-package-lock playwright@1
           npx playwright install --with-deps chromium
       - name: Impagina
-        run: node scripts/build-rivista.cjs --mese "${{ inputs.mese }}" --out dist/rivista.pdf --meta dist/rivista.json
+        run: node scripts/build-rivista.cjs --mese "${{ inputs.mese }}" --out dist/rivista.pdf --meta dist/rivista.json ${{ inputs.verifica && '--check-print' || '' }}
       - name: Anteprima scaricabile (resta 30 giorni tra gli artifact)
         if: hashFiles('dist/rivista.pdf') != ''
         uses: actions/upload-artifact@v4

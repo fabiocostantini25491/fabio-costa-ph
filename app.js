@@ -1869,11 +1869,21 @@ function magPdfHtml(p) {
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 19h14"/></svg>
     <span><b>${(window.I18N ? I18N.t("Download the last issue") : "Download the last issue")}</b><small>${p.number ? `N° ${p.number} · ` : ""}${p.month ? esc(monthLabel(p.month)) : ""} · PDF${mb}${until ? ` · available until ${esc(until)}` : ""}</small></span></a>`;
 }
-async function renderMagazine() {
+/* numeri passati: tutti i mesi con almeno un articolo, dal più recente */
+function pastIssues(current) {
+  const months = [...new Set(articles.map(a => (a.date || "").slice(0, 7)).filter(m => /^\d{4}-\d{2}$/.test(m) && m < current))].sort().reverse();
+  return months.map(m => ({ month: m, number: issueNumber(m), stories: articles.filter(a => (a.date || "").slice(0, 7) === m) }));
+}
+/* PDF di un numero: quello ufficiale (il mese appena chiuso, finché è disponibile) oppure impaginato al momento nel browser */
+function issuePdfLink(m, pdf, cls = "") {
+  if (pdf && pdf.month === m) return `<a class="${cls}" href="${esc(pdf.url)}" target="_blank" rel="noopener" data-mag-pdf>PDF</a>`;
+  return `<a class="${cls}" href="rivista.html?mese=${m}&amp;print=1" target="_blank" rel="noopener" data-mag-print>PDF</a>`;
+}
+async function renderMagazine(want) {
   const layout = $("#journalLayout");
   layout.hidden = false;
   $("#articleReader").hidden = true;
-  const month = romeMonth(), num = issueNumber(month);
+  const now = romeMonth(), month = want && want < now ? want : now, closed = month !== now, num = issueNumber(month);
   const list = articles.filter(a => (a.date || "").slice(0, 7) === month).sort((a, b) => (b.date || "").localeCompare(a.date || ""));
   renderTopics([...new Set(articles.map(a => a.category))], "");
   const covers = await loadMagCovers();
@@ -1889,7 +1899,7 @@ async function renderMagazine() {
         <p class="mz-issue">N° ${num} · ${esc(monthLabel(month))}</p>
         <h2 class="mz-name">Field Notes<span>From Planet Earth</span></h2>
         ${setCover?.titolo ? `<p class="mz-cover-title">${esc(setCover.titolo)}</p>` : ""}
-        <p class="mz-status"><span class="mz-live" aria-hidden="true"></span>${T("In progress")} · ${list.length === 1 ? T("1 story") : T("{n} stories").replace("{n}", list.length)}${authors > 1 ? ` · ${T("{n} authors").replace("{n}", authors)}` : ""}</p>
+        <p class="mz-status">${closed ? `${T("Closed issue")} · ` : `<span class="mz-live" aria-hidden="true"></span>${T("In progress")} · `}${list.length === 1 ? T("1 story") : T("{n} stories").replace("{n}", list.length)}${authors > 1 ? ` · ${T("{n} authors").replace("{n}", authors)}` : ""}</p>
       </div>
     </header>
     <div class="mz-pdfslot" id="mzPdf"></div>
@@ -1900,13 +1910,14 @@ async function renderMagazine() {
         <span class="mz-t"><small>${a.type === "reportage" ? "Reportage" : esc(catLabel(a.category))}</small><strong>${esc(a.title)}</strong>
           <em>${esc(a.author?.name || "")} · ${esc(fmtDate(a.date))}${a.minutes ? ` · ${a.minutes} min` : ""}</em></span></button></li>`).join("")}</ol>`
         : `<p class="mz-empty">The first story of this issue is being written. It closes on the last day of the month.</p>`}
-      <p class="mz-note">This issue grows with every new story and closes at the end of the month. Then it becomes a PDF you can download for one month.</p>
+      ${closed ? `<p class="mz-note"><a href="#magazine">← This month's issue</a></p>` : `<p class="mz-note">This issue grows with every new story and closes at the end of the month. Then it becomes a PDF you can download for one month.</p>`}
     </section>
     ${list.map((a, i) => `<section class="mz-article" id="mz-${esc(a.id)}" data-title="${esc(a.title)}">
       <p class="mz-runhead"><span>${String(i + 1).padStart(2, "0")}</span>${MAG_NAME} · N° ${num}</p>
       <article class="full-article mag-article ${a.type === "reportage" ? "is-reportage" : "is-guide"}">${articleHtml(a, a.trip && tripById(a.trip), false)}</article>
     </section>`).join("")}
     ${list.length ? `<p class="fn-foot">${MAG_NAME} · N° ${num} · ${esc(monthLabel(month))}</p>` : ""}
+    <section class="mz-archive" id="mzArchive" hidden></section>
     <div class="mz-bar" id="mzBar" hidden><button type="button" id="mzTop">↑ Contents</button><span id="mzNow"></span></div>
   </div>`;
   layout.querySelectorAll("[data-goto]").forEach(b => b.addEventListener("click", () => {
@@ -1915,11 +1926,11 @@ async function renderMagazine() {
   }));
   $("#mzTop").addEventListener("click", () => $("#mzToc").scrollIntoView({ behavior: "smooth", block: "start" }));
   // barra in basso: dove sei nel numero
-  const bar = $("#mzBar"), now = $("#mzNow");
+  const bar = $("#mzBar"), nowEl = $("#mzNow");
   magObserver?.disconnect();
   if (list.length && "IntersectionObserver" in window) {
     magObserver = new IntersectionObserver(es => {
-      es.forEach(e => { if (e.isIntersecting) { now.textContent = e.target.dataset.title || ""; } });
+      es.forEach(e => { if (e.isIntersecting) { nowEl.textContent = e.target.dataset.title || ""; } });
       const inArticles = [...layout.querySelectorAll(".mz-article")].some(s => { const r = s.getBoundingClientRect(); return r.top < innerHeight * 0.6 && r.bottom > 0; });
       bar.hidden = !inArticles;
     }, { rootMargin: "-40% 0px -55% 0px" });
@@ -1929,7 +1940,24 @@ async function renderMagazine() {
     magObserver._toc = tocObs;
   }
   const pdf = await loadMagPdf();
-  if ($("#mzPdf")) $("#mzPdf").innerHTML = magPdfHtml(pdf);
+  if (!$("#mzPdf")) return;
+  // in un numero chiuso: il PDF ufficiale se è ancora disponibile, altrimenti quello impaginato al momento
+  if (closed && list.length) $("#mzPdf").innerHTML = pdf && pdf.month === month ? magPdfHtml(pdf)
+    : `<a class="mz-pdf" href="rivista.html?mese=${month}&amp;print=1" target="_blank" rel="noopener" data-mag-print>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 19h14"/></svg>
+        <span><b>${T("Download this issue")}</b><small>N° ${num} · ${esc(monthLabel(month))} · ${T("PDF prepared on request: choose “Save as PDF” in the print window")}</small></span></a>`;
+  else $("#mzPdf").innerHTML = magPdfHtml(pdf);
+  // archivio dei numeri passati
+  const past = pastIssues(now).filter(x => x.month !== month);
+  const box = $("#mzArchive");
+  box.hidden = !past.length;
+  box.innerHTML = past.length ? `<h3>Past issues</h3><ul>${past.map(x => {
+    const cv = (magCovers || []).find(c => String(c.mese || "").trim() === x.month);
+    const img = cv?.copertina ? mediaUrl(cv.copertina) : (x.stories.find(a => a.cover)?.cover || "");
+    return `<li><a class="mz-arc" href="#magazine-${x.month}">${img ? `<img src="${esc(img)}" alt="" loading="lazy">` : `<span class="mz-arc-ph"></span>`}
+      <span><small>N° ${x.number}</small><strong>${esc(monthLabel(x.month))}</strong><em>${x.stories.length === 1 ? T("1 story") : T("{n} stories").replace("{n}", x.stories.length)}</em></span></a>
+      ${issuePdfLink(x.month, pdf, "mz-arc-pdf")}</li>`;
+  }).join("")}</ul>` : "";
 }
 let magObserver = null, magToken = 0;
 function setJournalMode(mode) {
@@ -2278,7 +2306,8 @@ function route() {
   if (hash.startsWith("art-")) { page = "journal"; article = hash.slice(4); }
   let authorSlug = null;
   const writeMode = hash === "write";
-  const magazine = hash === "magazine";
+  const magMonth = (hash.match(/^magazine-(\d{4}-\d{2})$/) || [])[1] || "";
+  const magazine = hash === "magazine" || !!magMonth;
   if (magazine) page = "journal";
   if (writeMode) page = "journal";
   if (hash.startsWith("author-")) { page = "journal"; authorSlug = hash.slice(7); }
@@ -2321,7 +2350,7 @@ function route() {
     if (writeMode) { $("#journalLayout").hidden = true; const r = $("#articleReader"); r.hidden = false; r.className = "full-article mag-article is-write"; window.Spots?.renderWrite?.(r); }
     else if (authorSlug) renderAuthor(authorSlug);
     else if (article) renderArticle(article);
-    else if (magazine) { setJournalMode("magazine"); renderMagazine.token = ++magToken; renderMagazine(); }
+    else if (magazine) { setJournalMode("magazine"); renderMagazine.token = ++magToken; renderMagazine(magMonth); }
     else { $("#articleReader").hidden = true; renderJournal(); }
     if (!magazine) setJournalMode("journal");
   }
@@ -2331,7 +2360,8 @@ function route() {
 
 function renderAll() {
   renderGallery();
-  if (location.hash === "#magazine") { renderMagazine.token = ++magToken; renderMagazine(); } else renderJournal();
+  const mm = location.hash.match(/^#magazine(?:-(\d{4}-\d{2}))?$/);
+  if (mm) { renderMagazine.token = ++magToken; renderMagazine(mm[1] || ""); } else renderJournal();
   renderAbout();
   drawHomePins();
   if (activeTripId && tripById(activeTripId)) drawPins("explore"); else if (maps.explore) renderPanelIntro();

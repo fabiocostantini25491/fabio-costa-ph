@@ -97,3 +97,18 @@ body { margin: 0; color: var(--ink); font: 400 10pt/1.55 var(--serif); -webkit-p
 .rv-spread img { display: block; width: 100%; height: auto; max-height: 120mm; object-fit: contain; }
 .rv-spread p { grid-column: 1 / -1; margin: 0; text-align: center; font: italic 400 9pt/1.4 var(--serif); color: var(--soft); }
 .rv-body blockquote cite { display: block; margin-top: 2mm; font: normal 700 7.5pt var(--head); letter-spacing: .14em; text-transform: uppercase; color: var(--soft); }
+
+/* ---------- PDF su richiesta (Paged.js nel browser) ---------- */
+.rv-pref::after { content: target-counter(attr(href url), page); }
+.rv-pref { color: var(--ink); text-decoration: none; }
+.rv-print #issue { padding: 0; box-shadow: none; margin: 0 auto; max-width: none; background: none; }
+.rv-print .rv-part + .rv-part { margin-top: 0; }
+.rv-print .rv-cover { margin: 0; }
+.rv-printnote { position: fixed; inset: 0; z-index: 10; display: grid; place-content: center; gap: 8px; text-align: center; background: #f7f3ec; font: 400 16px/1.5 var(--serif); }
+.rv-printnote b { font: 700 22px var(--serif); }
+.rv-printbtn { position: fixed; z-index: 10; right: 16px; bottom: 16px; padding: 12px 18px; border: 0; background: #111; color: #fff; font: 700 13px var(--head); letter-spacing: .14em; text-transform: uppercase; cursor: pointer; }
+@media screen {
+  .rv-print .pagedjs_pages { padding: 20px 0; }
+  .rv-print .pagedjs_page { background: #fff; margin: 0 auto 20px; box-shadow: 0 6px 30px rgba(0,0,0,.15); }
+}
+@media print { .rv-printbtn, .rv-printnote { display: none !important; } }

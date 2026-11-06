@@ -45,6 +45,24 @@ const lastDayOfNextMonth = m => { const [y, mo] = m.split("-").map(Number); retu
     await browser.close(); srv.close(); return;
   }
   const pdf = () => page.pdf({ preferCSSPageSize: true, printBackground: true });
+  // verifica del PDF su richiesta (quello impaginato nel browser con Paged.js), per confrontarlo con quello ufficiale
+  if (process.argv.includes("--check-print")) {
+    const p2 = await browser.newPage();
+    p2.on("console", m => console.log("[stampa]", m.type(), m.text().slice(0, 200)));
+    await p2.addInitScript(() => { window.print = () => { window.__printed = true; }; });
+    await p2.goto(url.replace("rivista.html", "rivista.html") + `${url.includes("?") ? "&" : "?"}print=1`, { waitUntil: "networkidle", timeout: 120000 });
+    await p2.waitForFunction(() => window.RIVISTA && window.RIVISTA.paged, null, { timeout: 180000 });
+    const r = await p2.evaluate(() => ({ paged: window.RIVISTA.paged, printed: !!window.__printed,
+      toc: [...document.querySelectorAll(".rv-pref")].map(a => getComputedStyle(a, "::after").content),
+      starts: [...document.querySelectorAll(".pagedjs_page")].map((pg, i) => pg.querySelector("[data-part^='art-']:not([data-split-from])") ? i + 1 : 0).filter(Boolean),
+      overflow: [...document.querySelectorAll(".pagedjs_page_content")].filter(c => c.scrollHeight > c.clientHeight + 2 || c.scrollWidth > c.clientWidth + 2).length }));
+    console.log("VERIFICA STAMPA:", JSON.stringify(r));
+    const b2 = await p2.pdf({ preferCSSPageSize: true, printBackground: true });
+    fs.mkdirSync(path.dirname(OUT), { recursive: true });
+    fs.writeFileSync(OUT.replace(/\.pdf$/, "-su-richiesta.pdf"), b2);
+    console.log("PDF su richiesta:", pageCount(b2), "pagine");
+    await p2.close();
+  }
   // 1) pagine di ogni parte
   const pages = {};
   for (const part of info.parts) {
