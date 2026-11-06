@@ -248,6 +248,8 @@ function showPhotoMarker(p) {
 }
 
 function pinIcon(active) {
+  if (window.innerWidth <= 900) return L.divIcon({ className: "", iconSize: [28, 31], iconAnchor: [14, 27], tooltipAnchor: [0, -24],
+    html: `<div class="ex-lander sm${active ? " is-active" : ""}">${LANDER_SVG}</div>` });
   return L.divIcon({ className: "", iconSize: [46, 50], iconAnchor: [23, 44], tooltipAnchor: [0, -40],
     html: `<div class="ex-lander${active ? " is-active" : ""}">${LANDER_SVG}</div>` });
 }
@@ -266,7 +268,8 @@ const ROVER_SVG = `<svg viewBox="0 0 40 34" aria-hidden="true">
   <rect class="rb" x="7" y="13" width="26" height="8" rx="2"/>
   <circle class="rw" cx="11" cy="25" r="3.4"/><circle class="rw" cx="20" cy="25" r="3.4"/><circle class="rw" cx="29" cy="25" r="3.4"/>
 </svg>`;
-const roverIcon = () => L.divIcon({ className: "", iconSize: [36, 31], iconAnchor: [18, 26], tooltipAnchor: [0, -22], html: `<div class="ex-rover">${ROVER_SVG}</div>` });
+const roverIcon = () => L.divIcon({ className: "", iconSize: [14, 14], iconAnchor: [7, 7], tooltipAnchor: [0, -6], html: '<div class="shot-dot"></div>' });
+const DOT_SVG = `<svg viewBox="0 0 40 40" aria-hidden="true"><circle class="dg" cx="20" cy="20" r="15"/><circle class="dd" cx="20" cy="20" r="6"/></svg>`;
 let roverLayer = null;
 const ROVER_ZOOM = 4.5;
 /* rover per ogni sottosezione con coordinate proprie, legato al suo lander con una linea tratteggiata */
@@ -345,8 +348,9 @@ function labelPoint(polys) {
   }
   return best ? { at: best, area: big.a } : null;
 }
-function createEarthDecor(map) {
+function createEarthDecor(map, lite) {
   const group = L.layerGroup();
+  const lineRenderer = L.canvas({ pane: "earthLines", padding: 0.3 });   // un solo disegno al posto di migliaia di tracciati SVG
   let shown = false, lines = null, linesLevel = "", labels = [], loading = false, withLines = true;
   const seaMarkers = SEA_LABELS.map(([n, lat, lon, z0, z1]) => ({ z0, z1, sea: true, m: L.marker([lat, lon], { pane: "earthLabels", interactive: false, keyboard: false,
     icon: L.divIcon({ className: "", iconSize: [0, 0], html: `<span class="ex-lab sea">${esc(n)}</span>` }) }) }));
@@ -369,7 +373,7 @@ function createEarthDecor(map) {
     });
   };
   const build = async () => {
-    const level = map.getZoom() >= 3.5 ? "high" : "low";
+    const level = !lite && map.getZoom() >= 3.5 ? "high" : "low";   // sui telefoni solo i confini leggeri
     if (level === linesLevel || loading) return;
     loading = true;
     const data = await loadCountries(level).catch(() => null);
@@ -377,7 +381,7 @@ function createEarthDecor(map) {
     if (!data) return;
     linesLevel = level;
     if (lines) group.removeLayer(lines);
-    lines = L.geoJSON(data.lines, { pane: "earthLines", interactive: false, style: { color: "#f0bd72", weight: 0.9, opacity: 0.62, className: "ex-border" } });
+    lines = L.geoJSON(data.lines, { pane: "earthLines", renderer: lineRenderer, interactive: false, smoothFactor: 1.5, style: { color: "#f0bd72", weight: 0.9, opacity: 0.62 } });
     if (withLines) group.addLayer(lines);
     if (!labels.length || level === "high") {
       labels.forEach(l => group.removeLayer(l.m));
@@ -602,17 +606,20 @@ function createMap(kind) {
   map.createPane("earthLabels");
   map.getPane("earthLabels").style.zIndex = 455;
   map.getPane("earthLabels").style.pointerEvents = "none";
+  // telefoni: meno tile tenute in memoria, niente aggiornamenti durante lo zoom, rilievo solo fino a zoom 13
+  const LITE = matchMedia("(pointer: coarse)").matches || window.innerWidth <= 900;
+  const tileOpt = LITE ? { updateWhenZooming: false, updateWhenIdle: true, keepBuffer: 1 } : { keepBuffer: 2 };
   const earthRef = L.tileLayer(ESRI + "Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}", {
-    maxZoom: 18, maxNativeZoom: 16, pane: "labels", className: "tiles-ref" });
+    ...tileOpt, maxZoom: 18, maxNativeZoom: 16, pane: "labels", className: "tiles-ref" });
   const earth = L.featureGroup([
-    L.tileLayer(ESRI + "World_Imagery/MapServer/tile/{z}/{y}/{x}", { maxZoom: 18, maxNativeZoom: 18, className: "tiles-earth", attribution: IMG_ATTR }),
-    L.tileLayer(ESRI + "Elevation/World_Hillshade/MapServer/tile/{z}/{y}/{x}", { maxZoom: 18, maxNativeZoom: 16, pane: "relief", className: "tiles-hill",
+    L.tileLayer(ESRI + "World_Imagery/MapServer/tile/{z}/{y}/{x}", { ...tileOpt, maxZoom: 18, maxNativeZoom: 18, className: "tiles-earth", attribution: IMG_ATTR }),
+    L.tileLayer(ESRI + "Elevation/World_Hillshade/MapServer/tile/{z}/{y}/{x}", { ...tileOpt, maxZoom: LITE ? 13 : 18, maxNativeZoom: LITE ? 13 : 16, pane: "relief", className: "tiles-hill",
       attribution: "Relief &copy; Esri, USGS, NASA SRTM" })
   ]);
   const bases = { earth };
   const mode = "earth";   // una sola vista: satellite con rilievo, confini e nomi
   const REF_ZOOM = 6.5;   // da qui in su: nomi e confini dettagliati di Esri
-  const earthDeco = createEarthDecor(map);
+  const earthDeco = createEarthDecor(map, LITE);
 
   function updateBase() {
     Object.entries(bases).forEach(([k, layer]) => {
@@ -906,7 +913,8 @@ function startHomeCycle(spots) {
 function mapPadding() {
   const wide = window.innerWidth > 900;
   const panel = $("#locationPanel");
-  const right = wide && panel ? panel.offsetWidth + 40 : 40;
+  const open = $(".explore-stage")?.classList.contains("ex-open");
+  const right = wide && panel && open ? panel.offsetWidth + 40 : 40;
   return { paddingTopLeft: [60, 60], paddingBottomRight: [right, 60] };
 }
 /* Inquadra tutti i viaggi */
@@ -970,16 +978,67 @@ function tripListHtml(list) {
   return cols.map(c => `<p class="trip-coll">${esc(c)}</p><ul class="trip-list">${list.filter(t => t.collection === c).map(li).join("")}</ul>`).join("")
     + (loose.length ? `<p class="trip-coll">More places</p><ul class="trip-list">${loose.map(li).join("")}</ul>` : "");
 }
-function renderPanelIntro() {
+/* Pannello a scomparsa da destra: si apre dalle linguette (lander / rover) o toccando un viaggio sulla mappa.
+   Da chiuso la mappa usa tutta la larghezza. */
+let exListView = "journeys";
+function exDrawer(open) {
+  const stage = $(".explore-stage"), panel = $("#locationPanel");
+  if (!stage || !panel) return;
+  if (open === undefined) open = !stage.classList.contains("ex-open");
+  stage.classList.toggle("ex-open", open);
+  panel.inert = !open; panel.setAttribute("aria-hidden", String(!open));
+  $$(".ex-tab, .ex-tab-toggle").forEach(b => b.setAttribute("aria-expanded", String(open && (!b.dataset.exlist || (!activeTripId && b.dataset.exlist === exListView)))));
+  $$(".ex-tab").forEach(b => b.classList.toggle("on", open && !activeTripId && b.dataset.exlist === exListView));
+  $("#exToggle")?.setAttribute("aria-label", open ? "Close the list" : "Open the list");
+}
+const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+function renderPanelIntro(view) {
   activeTripId = null;
+  if (view) exListView = view;
+  const T = s => window.I18N ? I18N.t(s) : s;
   const list = trips.filter(t => photosOfTrip(t.id).length)
     .sort((a, b) => (b.start || "").localeCompare(a.start || ""));
+  const places = list.flatMap(t => t.subs.map(sb => ({ t, sb, n: photos.filter(p => p.sub === sb.id).length }))).filter(x => x.n);
+  const nLoc = places.length;
+  const when = t => t.start ? fmtRange(t.start, t.end) : "";
+  const thumb = (src, cat) => src ? `<img src="${esc(src)}" alt="" loading="lazy" data-cat="${esc(cat || "")}">` : "<span></span>";
+  const chev = '<svg class="ex-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>';
+  const counts = [plural(list.length, T("journey"), T("journeys")), nLoc ? plural(nLoc, T("location"), T("locations")) : ""].filter(Boolean).join(" · ");
+  const isJ = exListView === "journeys";
+  const row = t => {
+    const ph = photosOfTrip(t.id), nl = t.subs.length;
+    const meta = [nl ? plural(nl, T("location"), T("locations")) : "", plural(ph.length, T("photograph"), T("photographs")), when(t)].filter(Boolean).join(" · ");
+    return `<li><button type="button" class="ex-row" data-trip="${esc(t.id)}">${thumb(ph[0]?.src, ph[0]?.category)}
+      <span class="ex-rowtext"><strong>${esc(t.name)}</strong><small>${esc(meta)}</small></span>${chev}</button></li>`;
+  };
+  const cols = [...new Set(list.map(t => t.collection).filter(Boolean))];
+  const jHtml = !cols.length ? `<ul class="ex-list">${list.map(row).join("")}</ul>`
+    : cols.map(c => `<p class="trip-coll">${esc(c)}</p><ul class="ex-list">${list.filter(t => t.collection === c).map(row).join("")}</ul>`).join("")
+      + (list.some(t => !t.collection) ? `<p class="trip-coll">${T("More places")}</p><ul class="ex-list">${list.filter(t => !t.collection).map(row).join("")}</ul>` : "");
+  const lHtml = `<ul class="ex-list">${places.map(({ t, sb, n }) => {
+    const ph = photos.find(p => p.sub === sb.id);
+    return `<li><button type="button" class="ex-row" data-trip="${esc(t.id)}" data-sub="${esc(sb.id)}">${thumb(ph?.src, ph?.category)}
+      <span class="ex-rowtext"><strong>${esc(sb.name)}</strong><small>${esc([t.name, plural(n, T("photograph"), T("photographs")), when(t)].filter(Boolean).join(" · "))}</small></span>${chev}</button></li>`;
+  }).join("")}</ul>`;
   $("#locationPanel").innerHTML = `
-    <span class="eyebrow">SELECT A LOCATION</span>
-    <h2 class="intro-title">Where I've been</h2>
-    <p class="trip-desc">${list.length ? "Tap a lander on the map, or pick a journey from the list. Rovers mark the places inside each journey." : "The first journeys are coming soon."}</p>
-    ${tripListHtml(list)}`;
-  $$("#locationPanel [data-trip]").forEach(b => b.addEventListener("click", () => openTrip(b.dataset.trip)));
+    <div class="ex-dhead">
+      <span class="ex-eyebrow2">EXPEDITIONS <i aria-hidden="true">///</i></span>
+      <button class="panel-close ex-close" type="button" id="exClose" aria-label="Close the list">${ICON.close}</button>
+    </div>
+    <div class="ex-dtitle">
+      <span class="ex-dicon">${isJ ? LANDER_SVG : DOT_SVG}</span>
+      <div><h2>${isJ ? "Journeys" : "Locations"}</h2>
+        <p>${isJ ? "All the photographic travels I've completed." : "The places I've photographed inside each journey."}</p>
+        ${list.length ? `<p class="ex-count">${esc(counts)}</p>` : ""}</div>
+    </div>
+    ${!list.length ? `<p class="trip-desc">The first journeys are coming soon.</p>` : isJ ? jHtml : (nLoc ? lHtml : `<p class="trip-desc">No locations yet: they appear when a journey has places with their own coordinates.</p>`)}
+    <button type="button" class="ex-gallery" id="exGallery">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg>
+      <span><b>CONNECTED WITH GALLERY</b><small>Explore the photographs from these journeys.</small></span>${chev}</button>`;
+  $$("#locationPanel [data-trip]").forEach(b => b.addEventListener("click", () => openTrip(b.dataset.trip, null, b.dataset.sub || "")));
+  $("#exClose").addEventListener("click", () => exDrawer(false));
+  $("#exGallery").addEventListener("click", () => { gallery.trip = null; gallery.sub = ""; gallery.collection = ""; gallery.category = "Tutte"; location.hash = "gallery"; });
+  exDrawer($(".explore-stage")?.classList.contains("ex-open"));
   drawPins("explore");
 }
 
@@ -1011,7 +1070,7 @@ function openTrip(id, photoId, subId) {
       <button type="button" data-i="${i}" aria-label="Show ${esc(p.title)}"><img src="${esc(p.src)}" alt="" data-cat="${esc(p.category)}" loading="lazy"></button>`).join("")}
     </div>
     <p class="shot-row" id="shotRow"></p>
-    <p class="trip-facts"><span>${ICON.cal}${esc(fmtRange(t.start, t.end))}</span><span>${ICON.img}${items.length} ${items.length === 1 ? "photo" : "photos"}</span></p>
+    <p class="trip-facts">${t.start ? `<span>${ICON.cal}${esc(fmtRange(t.start, t.end))}</span>` : ""}<span>${ICON.img}${items.length} ${items.length === 1 ? "photo" : "photos"}</span></p>
     <p class="trip-desc">${esc((sub && sub.description) || t.description || "A place from my photographic archive.")}</p>
     <div class="panel-actions">
       <button class="outline-link" type="button" id="viewPlacePhotos">VIEW PHOTOS <span aria-hidden="true">→</span></button>
@@ -1045,6 +1104,7 @@ function openTrip(id, photoId, subId) {
     location.hash = "gallery";
   });
 
+  exDrawer(true);
   const map = maps.explore;
   if (map) {
     drawPins("explore");
@@ -1053,7 +1113,7 @@ function openTrip(id, photoId, subId) {
     if (photoId && target && target.ownCoords) pts.splice(0, pts.length, [t.lat, t.lon], [target.lat, target.lon]);
     map.flyToBounds(L.latLngBounds(pts).pad(0.05), { ...mapPadding(), maxZoom: 13, duration: 1.1 });
   }
-  if (window.innerWidth <= 900) $("#locationPanel").scrollIntoView({ behavior: "smooth", block: "nearest" });
+  $("#locationPanel").scrollTop = 0;
 }
 
 /* =========================================================
@@ -2162,6 +2222,19 @@ function bindEvents() {
   const sdlg = $("#searchDialog");
   $("#searchToggle").addEventListener("click", () => openSearch());
   $("#mapSearch").addEventListener("click", () => openSearch());
+  // linguette del pannello Explore
+  $$(".ex-tab").forEach(b => b.addEventListener("click", () => {
+    const st = $(".explore-stage"), same = st.classList.contains("ex-open") && !activeTripId && exListView === b.dataset.exlist;
+    if (same) { exDrawer(false); return; }
+    photoMarker?.remove(); photoMarker = null;
+    renderPanelIntro(b.dataset.exlist); exDrawer(true);
+  }));
+  $("#exToggle")?.addEventListener("click", () => {
+    const st = $(".explore-stage");
+    if (!st.classList.contains("ex-open") && !activeTripId) renderPanelIntro();
+    exDrawer();
+  });
+  document.addEventListener("keydown", e => { if (e.key === "Escape" && document.body.dataset.page === "explore" && $(".explore-stage")?.classList.contains("ex-open") && !document.querySelector("dialog[open]")) exDrawer(false); });
   $("#searchClose").addEventListener("click", () => sdlg.close());
   sdlg.addEventListener("click", e => { if (e.target === sdlg) sdlg.close(); });
   $("#searchInput").addEventListener("input", e => {

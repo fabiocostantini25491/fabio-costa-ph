@@ -43,7 +43,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,500&family=Oswald:wght@500;700&family=Libre+Caslon+Text:ital,wght@0,400;0,700;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap">
-  <link rel="stylesheet" href="style.css?v=20261106l">
+  <link rel="stylesheet" href="style.css?v=20261106m">
   <!-- statistiche anonime, senza cookie (Umami): le pagine e i clic li segnala app.js -->
   <script defer src="https://cloud.umami.is/script.js" data-website-id="2ca8d3a5-91c1-4544-a327-d8469e3e4313" data-auto-track="false" data-domains="fabiocostaph.com,www.fabiocostaph.com"></script>
 </head>
@@ -136,7 +136,16 @@
         </button>
         <svg class="compass compass-small" viewBox="0 0 100 100" aria-hidden="true"><use href="#compassShape"/></svg>
         <span class="hud-frame" aria-hidden="true"></span>
-        <aside class="location-panel" id="locationPanel" aria-live="polite"></aside>
+        <div class="ex-tabs" aria-label="Map lists">
+          <button type="button" class="ex-tab" data-exlist="journeys" aria-controls="locationPanel" aria-expanded="false" title="Journeys">
+            <svg class="ex-tab-ic lander" viewBox="0 0 46 50" aria-hidden="true"><path d="M12 14h22l3 14H9z"/><path d="M17 17h12v6H17z"/><path d="M11 28 5 41M35 28l6 13M17 28l-3 13M29 28l3 13M2 41h7M37 41h7M15 14l2-5h12l2 5M30 9l6-6"/></svg>
+            <span>Journeys</span><small>(Landers)</small></button>
+          <button type="button" class="ex-tab rov" data-exlist="locations" aria-controls="locationPanel" aria-expanded="false" title="Locations">
+            <svg class="ex-tab-ic dot" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="14"/><circle cx="20" cy="20" r="5.5" class="f"/></svg>
+            <span>Locations</span><small>(Places)</small></button>
+          <button type="button" class="ex-tab-toggle" id="exToggle" aria-controls="locationPanel" aria-expanded="false" aria-label="Open the list"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>
+        </div>
+        <aside class="location-panel ex-drawer" id="locationPanel" aria-live="polite" aria-hidden="true" inert></aside>
       </div>
     </section>
 
@@ -527,12 +536,12 @@
 <!--BODY-END-->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
-  <script src="i18n.js?v=20261106l"></script>
-  <script src="app.js?v=20261106l"></script>
-  <script src="spots.js?v=20261106l"></script>
-  <script src="tools.js?v=20261106l"></script>
-  <script src="pwa.js?v=20261106l"></script>
-  <script src="feedback.js?v=20261106l"></script>
-  <script src="system.js?v=20261106l"></script>
+  <script src="i18n.js?v=20261106m"></script>
+  <script src="app.js?v=20261106m"></script>
+  <script src="spots.js?v=20261106m"></script>
+  <script src="tools.js?v=20261106m"></script>
+  <script src="pwa.js?v=20261106m"></script>
+  <script src="feedback.js?v=20261106m"></script>
+  <script src="system.js?v=20261106m"></script>
 </body>
 </html>
