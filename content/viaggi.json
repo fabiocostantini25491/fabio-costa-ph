@@ -257,6 +257,23 @@
           "lon": "12.33508671333569"
         }
       ]
+    },
+    {
+      "nome": "Terminillo",
+      "id": "Terminillo",
+      "paese": "Italia",
+      "lat": "42.466770271675635",
+      "lon": "13.00066261265056",
+      "categoria": "Paesaggi",
+      "foto": [
+        {
+          "titolo": "Monte Terminillo",
+          "immagine": "/img/foto/dsc02470-copy-2026-09-16t18-41-11-059.jpg",
+          "categoria": "Paesaggi",
+          "lat": "42.46898851258483",
+          "lon": "13.013929442891316"
+        }
+      ]
     }
   ]
 }
