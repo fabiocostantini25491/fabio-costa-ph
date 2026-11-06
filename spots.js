@@ -2911,7 +2911,7 @@ const Spots = (() => {
   const jSlug = t => String(t || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 70);
   async function uploadJournalImage(file) {
     if (!(await ensureSession())) throw new Error("please log in again");
-    const blob = await resizeImage(file, 1800, 0.8);   // abbastanza nitida per tutto lo schermo, molto più leggera da servire
+    const blob = await resizeImage(file, 2400, 0.86);   // nitida anche ingrandita a tutto schermo, comunque molto più leggera dell'originale
     const path = `${myUid()}/${Date.now()}-${crypto.randomUUID().slice(0, 8)}.jpg`;
     const res = await fetch(`${SPOTS_CONFIG.url.replace(/\/$/, "")}/storage/v1/object/journal/${path}`, { method: "POST",
       headers: { apikey: SPOTS_CONFIG.anonKey, Authorization: `Bearer ${session.access_token}`, "Content-Type": "image/jpeg", "x-upsert": "false" }, body: blob });
@@ -3158,9 +3158,18 @@ const Spots = (() => {
       const img = new Image(), url = URL.createObjectURL(file);
       img.onload = () => {
         const k = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+        const W = Math.round(img.naturalWidth * k), H = Math.round(img.naturalHeight * k);
+        // riduzione a passi (metà per volta) con ricampionamento di qualità: niente foto impastate o seghettate
+        let src = img, sw = img.naturalWidth, sh = img.naturalHeight;
+        while (sw / 2 >= W * 1.05) {
+          const t = document.createElement("canvas"); t.width = Math.round(sw / 2); t.height = Math.round(sh / 2);
+          const tx = t.getContext("2d"); tx.imageSmoothingEnabled = true; tx.imageSmoothingQuality = "high";
+          tx.drawImage(src, 0, 0, t.width, t.height); src = t; sw = t.width; sh = t.height;
+        }
         const c = document.createElement("canvas");
-        c.width = Math.round(img.naturalWidth * k); c.height = Math.round(img.naturalHeight * k);
-        c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+        c.width = W; c.height = H;
+        const cx = c.getContext("2d"); cx.imageSmoothingEnabled = true; cx.imageSmoothingQuality = "high";
+        cx.drawImage(src, 0, 0, W, H);
         URL.revokeObjectURL(url);
         c.toBlob(b => b ? resolve(b) : reject(new Error("could not read the image")), "image/jpeg", quality);
       };
