@@ -37,26 +37,27 @@ const Spots = (() => {
   const CAT_KEYS = Object.keys(CATS);
   /* CLUSTER: come viaggia ogni membro (anche più di uno); con i propri cluster si firmano i luoghi */
   const CLUSTERS = {
-    photo: { ico: "📷", label: "Photographer", long: "Travel photography", color: "#c9a7ff" },
-    hike: { ico: "🥾", label: "Hiker", long: "Hiking & outdoors", color: "#7ee081" },
-    slow: { ico: "🎒", label: "Backpacker", long: "Backpacking & slow travel", color: "#ffb347" },
-    road: { ico: "🚐", label: "Road tripper", long: "Road trips & vanlife", color: "#ff8a7a" },
-    nomad: { ico: "💻", label: "Digital nomad", long: "Digital nomad / expat", color: "#7fb2ff" },
-    food: { ico: "🍝", label: "Foodie", long: "Food & local flavours", color: "#ffd166" }
+    photo: { ico: "📷", label: "Photographer", long: "Travel photography", color: "#c9a7ff" , folk: "Photo folk" },
+    hike: { ico: "🥾", label: "Hiker", long: "Hiking & outdoors", color: "#7ee081" , folk: "Hiker folk" },
+    slow: { ico: "🎒", label: "Backpacker", long: "Backpacking & slow travel", color: "#ffb347" , folk: "Backpacker folk" },
+    road: { ico: "🚐", label: "Road tripper", long: "Road trips & vanlife", color: "#ff8a7a" , folk: "Road trip folk" },
+    nomad: { ico: "💻", label: "Digital nomad", long: "Digital nomad / expat", color: "#7fb2ff" , folk: "Nomad folk" },
+    food: { ico: "🍝", label: "Foodie", long: "Food & local flavours", color: "#ffd166" , folk: "Foodie folk" }
   };
   const CLUSTER_KEYS = Object.keys(CLUSTERS);
   // la stessa idea, raccontata a ogni cluster (porte d'ingresso: fabiocostaph.com/#spots-hikers ecc.)
   const DOOR_LEAD = {
-    photographers: "Thousands of places scouted for the light, signed by photographers.",
-    hikers: "The trail's best viewpoint, and when to be there. Places signed by hikers.",
-    backpackers: "Trips from people who stopped where the view was. Places signed by slow travellers.",
-    roadtrips: "Where to pull over: the places worth the detour, signed by road trippers.",
-    nomads: "The corners locals love, at the right hour. Places signed by nomads and expats.",
-    foodies: "Where locals eat, and the view that comes with it. Tables signed by foodies."
+    photographers: "Thousands of places scouted for the light, signed by photo folk.",
+    hikers: "The trail's best viewpoint, and when to be there. Places signed by hiker folk.",
+    backpackers: "Trips from people who stopped where the view was. Places signed by backpacker folk.",
+    roadtrips: "Where to pull over: the places worth the detour, signed by road trip folk.",
+    nomads: "The corners locals love, at the right hour. Places signed by nomad folk.",
+    foodies: "Where locals eat, and the view that comes with it. Tables signed by foodie folk."
   };
   const DOORS = { photographers: "photo", hikers: "hike", backpackers: "slow", roadtrips: "road", nomads: "nomad", foodies: "food" };
   const doorNow = () => { try { const d = localStorage.getItem("fcph-door"); return DOORS[d] ? d : ""; } catch { return ""; } };
-  let myStyles = [], clusterV = true, signV = true;
+  let myStyles = [], clusterV = true, signV = true, folkV = true;
+  const folkOf = k => CLUSTERS[k]?.folk || "";   // «folk»: il nome dei cluster (gente che viaggia allo stesso modo)
   const NAME_KEY = "fcph-display-name";
   const jwtClaims = () => { try { return JSON.parse(atob(session.access_token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/"))); } catch { return {}; } };
   const myUid = () => (session && jwtClaims().sub) || "";
@@ -470,7 +471,7 @@ const Spots = (() => {
         <input id="joinEmail" type="email" autocomplete="email" placeholder="you@example.com" required>
         <label for="joinPassword">Password</label>
         <input id="joinPassword" type="password" autocomplete="new-password" minlength="8" placeholder="At least 8 characters" required>
-        <fieldset class="cl-pick" id="joinStyles"><legend>How do you travel? <small>(pick all that fit)</small></legend>
+        <fieldset class="cl-pick" id="joinStyles"><legend>Choose your folk <small>(how you travel: pick all that fit)</small></legend>
           ${CLUSTER_KEYS.map(k => `<label><input type="checkbox" value="${k}"${DOORS[doorNow()] === k ? " checked" : ""}><span>${CLUSTERS[k].ico} ${CLUSTERS[k].long}</span></label>`).join("")}
         </fieldset>
         <label class="gate-check"><input type="checkbox" id="joinCode"> <span>I accept the <button type="button" class="text-link" id="joinShowCode">community code</button>, the <a href="#terms" target="_blank">terms</a> and the <a href="#privacy" target="_blank">privacy policy</a>. I'm 16 or older.</span></label>
@@ -489,7 +490,7 @@ const Spots = (() => {
       <div class="gate-google" id="gateGoogle" hidden><p class="gate-or"><span>or</span></p>
         <button type="button" class="google-btn" id="googleBtn">${GOOGLE_G}<span>Continue with Google</span></button>
         <p class="gate-help">${join ? "Your Google name and email are used to create the request — I still approve it personally." : "Works for accounts created with Google."}</p>
-        <p class="gate-note google-domain">🔒 Google will say <b>“Continue to hfidpbssartkmjlqcqvz.supabase.co”</b>: that's Supabase, the secure service that runs Spots accounts for fabiocostaph.com. It's safe to continue.</p>
+        <p class="gate-note google-domain">🔒 Google will say <b>“Continue to hfidpbssartkmjlqcqvz.supabase.co”</b>: that's Supabase, the secure service that runs Wayfolk accounts for fabiocostaph.com. It's safe to continue.</p>
         ${IN_APP ? `<p class="gate-note warn inapp-note">You're browsing inside ${IN_APP}: Google often blocks sign-in here. Tap <b>⋯</b> (top right) → <b>Open in browser</b>, then come back to this page. Email and password work fine here.</p>` : ""}</div>
       ${guestLoaded ? `<button type="button" class="text-link gate-back" id="gateBack">← Back to the public map</button>` : ""}`);
     checkGoogle().then(on => { const g = $("#gateGoogle"); if (g) g.hidden = !on; });
@@ -509,7 +510,7 @@ const Spots = (() => {
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { msg.textContent = "Please enter a valid email address."; return; }
       if (password.length < 8) { msg.textContent = "The password needs at least 8 characters."; return; }
       const styles = [...document.querySelectorAll("#joinStyles input:checked")].map(i => i.value);
-      if (!styles.length) { msg.textContent = "Tell us how you travel: pick at least one."; return; }
+      if (!styles.length) { msg.textContent = "Choose your folk: pick at least one."; return; }
       if (!$("#joinCode").checked) { msg.textContent = "Please accept the community code."; return; }
       btn.disabled = true; msg.className = "gate-note"; msg.textContent = "Sending your request…";
       try {
@@ -663,7 +664,7 @@ const Spots = (() => {
     }).join("");
     return `<div class="sx">
       <aside class="sx-side">
-        <p class="sx-kick">Spots <span aria-hidden="true">///</span></p>
+        <p class="sx-kick">Wayfolk <span aria-hidden="true">///</span></p>
         <h2 class="sx-title">Explore the Earth</h2>
         <p class="sx-lead">${esc(DOOR_LEAD[doorNow()] || "The travel toolkit built by travellers. Every place picked with a photographer's eye.")}</p>
         <div class="sx-panel">
@@ -677,7 +678,7 @@ const Spots = (() => {
         <div class="sx-user">${userHtml}</div>
         <p class="sx-more">
           ${!guest && schemaV2 && socialV ? `<button type="button" class="text-link" id="openConduct">Community code</button>` : ""}
-          <a class="text-link" href="guides/spots-quick-guide.pdf" target="_blank" rel="noopener">📄 Spots in one page</a>
+          <a class="text-link" href="guides/spots-quick-guide.pdf" target="_blank" rel="noopener">📄 Wayfolk in one page</a>
           <button type="button" class="text-link sx-switch" id="sxToClassic">Use the classic map</button>
           ${admin && !guest ? `<button type="button" class="text-link" id="sxExport" title="Admin only: download the spots in the current map view">⬇ Export this area (CSV)</button>` : ""}
         </p>
@@ -1129,7 +1130,7 @@ const Spots = (() => {
           return tpl.replace("{n}", fmtN(spots.length)).replace("{total}", fmtN(Math.max(publicTotal, spots.length)));
         })()}</p>
           <button type="button" class="outline-link" id="guestJoin">JOIN FREE <span aria-hidden="true">→</span></button>
-          <a class="text-link guest-guide" href="#guide-spots">How Spots works</a> <a class="text-link guest-guide" href="guides/spots-quick-guide.pdf" target="_blank" rel="noopener">📄 One-page guide</a></div>` : ""}
+          <a class="text-link guest-guide" href="#guide-spots">How Wayfolk works</a> <a class="text-link guest-guide" href="guides/spots-quick-guide.pdf" target="_blank" rel="noopener">📄 One-page guide</a></div>` : ""}
 `;
     const tailHtml = `
       ${!guest ? workshopsHtml() : ""}
@@ -1202,7 +1203,7 @@ const Spots = (() => {
           return tpl.replace("{n}", fmtN(spots.length)).replace("{total}", fmtN(Math.max(publicTotal, spots.length)));
         })()}</p>
           <button type="button" class="outline-link" id="guestJoin">JOIN FREE <span aria-hidden="true">→</span></button>
-          <a class="text-link guest-guide" href="#guide-spots">How Spots works</a> <a class="text-link guest-guide" href="guides/spots-quick-guide.pdf" target="_blank" rel="noopener">📄 One-page guide</a></div>` : ""}
+          <a class="text-link guest-guide" href="#guide-spots">How Wayfolk works</a> <a class="text-link guest-guide" href="guides/spots-quick-guide.pdf" target="_blank" rel="noopener">📄 One-page guide</a></div>` : ""}
       ${schemaV2 && socialV && !guest ? `<div class="spots-social" role="group" aria-label="Alerts and community">
         <label class="soc-pick">${ICON_ALERT}<span class="sr-only">Alerts</span>
           <select id="alertMode">
@@ -1212,8 +1213,8 @@ const Spots = (() => {
           </select></label>
         <button type="button" class="filter soc-support${onlySupport ? " active" : ""}" id="onlySupport" aria-pressed="${onlySupport}">🌱 Support local <small>${spots.filter(x => x.support_local).length}</small></button>
         <button type="button" class="text-link" id="openConduct">Community code</button>
-        <a class="text-link" href="#guide-spots">How Spots works</a>
-        <a class="text-link" href="guides/spots-quick-guide.pdf" target="_blank" rel="noopener">📄 Spots in one page</a>
+        <a class="text-link" href="#guide-spots">How Wayfolk works</a>
+        <a class="text-link" href="guides/spots-quick-guide.pdf" target="_blank" rel="noopener">📄 Wayfolk in one page</a>
       </div>` : ""}
       ${commV && !guest ? `<div class="spots-community" role="group" aria-label="Community">
         <button type="button" class="filter comm-btn${onlyFavs ? " active" : ""}" id="onlyFavs" aria-pressed="${onlyFavs}">♥ My spots <small>${favs.size}</small></button>
@@ -2141,6 +2142,7 @@ const Spots = (() => {
         <form class="pop-review" data-reviewform hidden>
           <div class="stars" role="radiogroup" aria-label="Rating">${[1, 2, 3, 4, 5].map(n =>
             `<button type="button" role="radio" aria-checked="false" aria-label="${n} star${n > 1 ? "s" : ""}" data-star="${n}">★</button>`).join("")}</div>
+          <label class="rev-folk" data-revfolk hidden>Reviewing as <select name="folk"></select></label>
           <textarea rows="3" maxlength="2000" placeholder="What is it like? Tips for others…" aria-label="Your review"></textarea>
           ${PRICED[s.category] ? `<fieldset class="pay">
             <legend>What did you pay? <small>(optional, helps others)</small></legend>
@@ -2272,7 +2274,7 @@ const Spots = (() => {
       btn.disabled = true;
       try {
         await api("/rest/v1/spot_reviews?on_conflict=spot_id,user_id", { method: "POST",
-          body: { spot_id: s.id, rating: rating || null, body: body || null, author_name: displayName(), ...extra },
+          body: { spot_id: s.id, rating: rating || null, body: body || null, author_name: displayName(), ...extra, ...(folkV && clusterV ? { folk: fv("folk") || null } : {}) },
           headers: { Prefer: "resolution=merge-duplicates,return=minimal" } });
         form.hidden = true; toast("Thanks for your review!");
         loadExtras(popup, s);
@@ -2294,7 +2296,11 @@ const Spots = (() => {
   let pricesV2 = true;
   const fmtMoney = (v, c) => { try { return new Intl.NumberFormat((window.I18N?.locale || "en-GB"), { style: "currency", currency: c || "EUR", maximumFractionDigits: v % 1 ? 2 : 0 }).format(v); } catch { return `${v} ${c || ""}`; } };
   async function fetchReviews(id) {
-    const base = "id,user_id,author_name,rating,body,created_at";
+    const base = `id,user_id,author_name,rating,body,created_at${folkV ? ",folk" : ""}`;
+    try { return await fetchReviews0(id, base); }
+    catch (err) { if (!folkV || err.status !== 400) throw err; folkV = false; return fetchReviews(id); }
+  }
+  async function fetchReviews0(id, base) {
     if (pricesV2) {
       try { return await api(`/rest/v1/spot_reviews?select=${base},paid,currency,people,nights,stay_type&spot_id=eq.${id}&order=created_at.desc`); }
       catch (err) { if (err.status !== 400) throw err; pricesV2 = false; }
@@ -2423,7 +2429,7 @@ const Spots = (() => {
     if (commV) return openAdmin();
     d.innerHTML = `<button class="dialog-close" type="button" data-close aria-label="Close">${ICON.close}</button>
       <div class="import-body" data-no-i18n>
-        <span class="eyebrow">Spots · solo per te</span>
+        <span class="eyebrow">Wayfolk · solo per te</span>
         <h2>Richieste di iscrizione</h2>
         ${pendingMembers.length ? `<ul class="req-list">${pendingMembers.map(row).join("")}</ul>`
           : `<p class="gate-help left">Nessuna richiesta in attesa.</p>`}
@@ -2500,7 +2506,7 @@ const Spots = (() => {
   const isDev = uid => contribs.has(uid) && rolesOf(uid).includes("developer");
   const isCo = uid => contribs.has(uid) && rolesOf(uid).some(r => r !== "developer");
   const coBadge = uid => (uid && isCo(uid) ? ` <span class="co-badge" title="Fabio Costa Ph contributor">${ICON_APERTURE}Contributor</span>` : "")
-    + (uid && isDev(uid) ? ` <span class="co-badge dev-badge" title="Helps build Spots">${ICON_DEV}Developer</span>` : "");
+    + (uid && isDev(uid) ? ` <span class="co-badge dev-badge" title="Helps build Wayfolk">${ICON_DEV}Developer</span>` : "");
   const xpBadge = uid => { const e = uid && experts.get(uid); return (e ? ` <span class="xp-badge" title="Local expert">🧭 ${esc(e.area_name)}</span>` : "") + coBadge(uid); };
   // il post brilla 24 ore per tutti, 3 giorni per i contributor
   const postFresh = p => p && p.last_post_at && Date.now() - Date.parse(p.last_post_at) < (contribs.has(p.user_id) ? 3 : 1) * 864e5;
@@ -2600,7 +2606,7 @@ const Spots = (() => {
     const list = profiles.filter(p => p.visible).sort((a, b) => (contribs.has(b.user_id) - contribs.has(a.user_id)) || a.display_name.localeCompare(b.display_name))
       .filter(p => tab === "all" || (tab === "co" ? contribs.has(p.user_id) : tab === "ph" ? isPhotoP(p) : isTravP(p)));
     const T = (k, l) => `<button type="button" class="${tab === k ? "on" : ""}" data-co="${k}">${l}</button>`;
-    const d = dlg("phListDialog", `<div class="import-body"><span class="eyebrow">Spots community</span><h2>Photographers &amp; travellers</h2>
+    const d = dlg("phListDialog", `<div class="import-body"><span class="eyebrow">Wayfolk community</span><h2>Photographers &amp; travellers</h2>
       <div class="gate-tabs">${T("all", "All")}${T("ph", "📷 Photographers")}${kindV ? T("tr", "🎒 Travellers") : ""}${T("co", `${ICON_APERTURE} Contributors`)}</div>
       <ul class="req-list">${list.map(p => `<li class="req-row${contribs.has(p.user_id) ? " co-row" : ""}"><div><b>${esc(p.display_name)}${coBadge(p.user_id)}${experts.has(p.user_id) ? ` <span class="xp-badge">🧭 ${esc(experts.get(p.user_id).area_name)}</span>` : ""}</b>
         <span>${p.base_name ? esc(p.base_name) : ""}${p.instagram ? ` · <a href="https://www.instagram.com/${encodeURIComponent(p.instagram)}/" target="_blank" rel="noopener">@${esc(p.instagram)}</a>` : ""}${p.website ? ` · <a href="${esc(p.website)}" target="_blank" rel="noopener">website</a>` : ""}${postFresh(p) ? ` · <a href="${esc(p.last_post_url)}" target="_blank" rel="noopener">📣 new post</a>` : ""}</span></div>
@@ -2615,7 +2621,7 @@ const Spots = (() => {
   const slugify = t => String(t || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
   function openExperts() {
     const list = [...experts.values()].sort((a, b) => a.area_name.localeCompare(b.area_name));
-    const d = dlg("expertsDialog", `<div class="import-body"><span class="eyebrow">Spots community</span><h2>🧭 Local experts</h2>
+    const d = dlg("expertsDialog", `<div class="import-body"><span class="eyebrow">Wayfolk community</span><h2>🧭 Local experts</h2>
       <p class="gate-help left">Trusted members who know their area: they verify places, keep information up to date and look after fragile spots.</p>
       <ul class="req-list">${list.map(e => { const p = profiles.find(x => x.user_id === e.user_id) || {};
         return `<li class="req-row"><div><b>${esc(e.display_name || p.display_name || "Local expert")}</b><span>🧭 ${esc(e.area_name)} · ${(+e.radius_km)} km${p.instagram ? ` · <a href="https://www.instagram.com/${encodeURIComponent(p.instagram)}/" target="_blank" rel="noopener">@${esc(p.instagram)}</a>` : ""}${p.website ? ` · <a href="${esc(p.website)}" target="_blank" rel="noopener">website</a>` : ""}</span></div>
@@ -2993,7 +2999,7 @@ const Spots = (() => {
       <div class="pop-actions">
         ${own || admin ? `<button type="button" class="pop-btn" data-delpass>${own ? "Gone: remove it" : "Delete"}</button>` : `<button type="button" class="text-link pop-flag" data-flagpass>⚑ Flag</button>`}
       </div>
-      <p class="gate-help left">Only members see it. It disappears on ${fmtDay(it.expires_on)}. The deal is only between you: Spots takes no payments and is not responsible. Meet in public, never pay in advance.</p>
+      <p class="gate-help left">Only members see it. It disappears on ${fmtDay(it.expires_on)}. The deal is only between you: Wayfolk takes no payments and is not responsible. Meet in public, never pay in advance.</p>
     </div>`;
   }
   function wirePass(popup, it) {
@@ -3032,7 +3038,7 @@ const Spots = (() => {
       <select id="paDays"><option value="3">3 days</option><option value="7">7 days</option><option value="14" selected>14 days</option><option value="30">30 days</option></select>
       <button class="outline-link" type="submit">POST IT <span aria-hidden="true">→</span></button>
       <p class="gate-note" id="paMsg" role="status"></p>
-      <p class="gate-help left">Only members see it, contact included. No food, medicines, weapons or anything illegal. Spots takes no payments and is not a party: the deal is only between you. By posting you accept the <a href="#terms" target="_blank">terms</a>.</p>
+      <p class="gate-help left">Only members see it, contact included. No food, medicines, weapons or anything illegal. Wayfolk takes no payments and is not a party: the deal is only between you. By posting you accept the <a href="#terms" target="_blank">terms</a>.</p>
     </form>`);
     let pos = pre && (pre.exact || pre.zoom >= 10) ? { lat: pre.lat, lon: pre.lon } : null;
     const priceRow = d.querySelector(".pass-price-row");
@@ -3088,7 +3094,7 @@ const Spots = (() => {
     const ig = p.instagram ? `https://www.instagram.com/${encodeURIComponent(p.instagram)}/` : "";
     return `<div class="spot-pop">
       <span class="spot-cat" style="--c:${isCo(p.user_id) ? "#ffc46e" : isDev(p.user_id) ? "#7fd8ff" : "#c9a7ff"}">${isCo(p.user_id) ? ICON_APERTURE : isDev(p.user_id) ? ICON_DEV : pKind(p) === "traveller" ? TR_ICON : PH_ICON}${isCo(p.user_id) ? "Contributor" : isDev(p.user_id) ? "Developer" : { photographer: "Photographer", traveller: "Traveller", both: "Photographer & traveller" }[pKind(p)]}</span>
-      ${isDev(p.user_id) ? `<p class="pop-dates co-line dev-line">${ICON_DEV}<span>Helps build Spots${p.website ? ` — <a href="${esc(p.website)}" target="_blank" rel="noopener">see their work</a>` : ""}</span></p>` : ""}
+      ${isDev(p.user_id) ? `<p class="pop-dates co-line dev-line">${ICON_DEV}<span>Helps build Wayfolk${p.website ? ` — <a href="${esc(p.website)}" target="_blank" rel="noopener">see their work</a>` : ""}</span></p>` : ""}
       <strong>${esc(p.display_name)}</strong>
       ${p.base_name ? `<p class="pop-dates">${ICON.pin}<span>${esc(p.base_name)}</span></p>` : ""}
       ${isCo(p.user_id) ? `<p class="pop-dates co-line">${ICON_APERTURE}<span>Contributor of Fabio Costa Ph — <a href="#author-${encodeURIComponent(slugify(p.display_name))}">see their work</a></span></p>` : ""}
@@ -3261,7 +3267,7 @@ const Spots = (() => {
   /* --- pannello admin: richieste, membri, segnalazioni --- */
   async function openAdmin(tab = "requests") {
     const d = dlg("adminDialog", `<div class="import-body" data-no-i18n>
-      <span class="eyebrow">Spots · solo per te</span><h2>Amministrazione</h2>
+      <span class="eyebrow">Wayfolk · solo per te</span><h2>Amministrazione</h2>
       <div class="gate-tabs adm-tabs" role="tablist">
         <button type="button" data-atab="requests" class="${tab === "requests" ? "on" : ""}">Richieste <b>${pendingMembers.length}</b></button>
         <button type="button" data-atab="members" class="${tab === "members" ? "on" : ""}">Membri</button>
@@ -3269,7 +3275,7 @@ const Spots = (() => {
         <button type="button" data-atab="feedback" class="${tab === "feedback" ? "on" : ""}">Feedback</button>
         <button type="button" data-atab="crew" class="${tab === "crew" ? "on" : ""}">Contributor</button>
         <button type="button" data-atab="articles" class="${tab === "articles" ? "on" : ""}">Articoli</button>
-        <button type="button" data-atab="clusters" class="${tab === "clusters" ? "on" : ""}">Cluster</button>
+        <button type="button" data-atab="clusters" class="${tab === "clusters" ? "on" : ""}">Folk</button>
       </div>
       <div class="adm-body"><p class="gate-help left">Caricamento…</p></div>
     </div>`);
@@ -3295,12 +3301,12 @@ const Spots = (() => {
         const table = (head, list, cols) => list.length ? `<table class="adm-table"><thead><tr>${head.map(h => `<th>${h}</th>`).join("")}</tr></thead><tbody>${list.map(r => `<tr>${cols(r).map(c => `<td>${c}</td>`).join("")}</tr>`).join("")}</tbody></table>` : `<p class="gate-help left">Ancora nessun dato.</p>`;
         body.innerHTML = `
           <p class="gate-help left">Totale: <b>${tot.signups}</b> iscritti · ${tot.approved} approvati · <b>${tot.active}</b> attivi nei primi 14 giorni (${pct(tot.active, tot.signups)}). «Attivo» = ha aggiunto, recensito o firmato qualcosa.</p>
-          <h3 class="adm-h">Come viaggiano</h3>
-          ${table(["Cluster", "Iscritti", "Approvati", "Attivi 14 gg", "% attivi"], rows("style"), r => [esc(nm(r.val)), r.signups, r.approved, r.active, pct(r.active, r.signups)])}
+          <h3 class="adm-h">Folk (come viaggiano)</h3>
+          ${table(["Folk", "Iscritti", "Approvati", "Attivi 14 gg", "% attivi"], rows("style"), r => [esc(nm(r.val)), r.signups, r.approved, r.active, pct(r.active, r.signups)])}
           <h3 class="adm-h">Da quale porta arrivano</h3>
           ${table(["Porta", "Iscritti", "Approvati", "Attivi 14 gg", "% attivi"], rows("source"), r => [esc(r.val === "(direct)" ? "Diretto (nessuna porta)" : nm(r.val)), r.signups, r.approved, r.active, pct(r.active, r.signups)])}
           <h3 class="adm-h">Firme</h3>
-          ${table(["Cluster", "Chi firma", "Firme", "Luoghi firmati"], rows("signs"), r => [esc(nm(r.val)), r.signups, r.approved, r.active])}
+          ${table(["Folk", "Chi firma", "Firme", "Luoghi firmati"], rows("signs"), r => [esc(nm(r.val)), r.signups, r.approved, r.active])}
           <h3 class="adm-h">🧭 Candidati Local expert</h3>
           <p class="gate-help left">Hanno firmato almeno 15 luoghi nella stessa zona (circa 50 km). Nominali con un tocco: potranno verificare e modificare i luoghi della loro zona.</p>
           ${cand.length ? `<ul class="req-list">${cand.map(c => `<li class="req-row" data-cand="${esc(c.user_id)}"><div><b>${esc(c.name || "—")}</b><span>${c.signs} firme nella zona · ${c.places} luoghi aggiunti lì · ${c.total_signs} firme in tutto · ${(+c.lat).toFixed(1)}, ${(+c.lon).toFixed(1)}</span></div>
@@ -3530,7 +3536,7 @@ const Spots = (() => {
     const head = `<a class="text-link mag-back" href="#journal">${ICON.prev}All stories</a><p class="mag-kicker">Contributors</p><h2>Write for the Journal</h2>`;
     box.innerHTML = `${head}<p class="mag-deck">Loading…</p>`;
     if (!configured() || !(await ensureSession())) {
-      box.innerHTML = `${head}<p class="mag-deck">This section is for Fabio Costa Ph contributors. Log in to Spots first, then come back here.</p>
+      box.innerHTML = `${head}<p class="mag-deck">This section is for Fabio Costa Ph contributors. Log in to Wayfolk first, then come back here.</p>
         <p><a class="outline-link" href="#spots">LOG IN TO SPOTS <span aria-hidden="true">→</span></a></p>`; return;
     }
     if (!loaded) { try { admin = await checkAdmin(); } catch {} }
@@ -3543,7 +3549,7 @@ const Spots = (() => {
     try { const { data } = await api(`/rest/v1/journal_submissions?select=id,title,status,review_note,updated_at,slug&author_id=eq.${encodeURIComponent(myUid())}&order=updated_at.desc`); mine = data || []; }
     catch (err) { box.innerHTML = `${head}<p class="mag-deck">Not available yet (${esc(err.message)}).</p>`; return; }
     box.innerHTML = `${head}
-      <p class="mag-deck">${admin ? "Scrivi direttamente nel Journal: salva in bozza, guarda l'anteprima e pubblica subito, senza passare da Pages CMS. Gli articoli dei contributor da approvare sono in Spots → Admin → Articoli." : "Write a reportage or a practical guide. Save it as a draft whenever you like; when it's ready, send it for review — I read every piece and publish it with your name, or send it back with a note."}</p>
+      <p class="mag-deck">${admin ? "Scrivi direttamente nel Journal: salva in bozza, guarda l'anteprima e pubblica subito, senza passare da Pages CMS. Gli articoli dei contributor da approvare sono in Wayfolk → Admin → Articoli." : "Write a reportage or a practical guide. Save it as a draft whenever you like; when it's ready, send it for review — I read every piece and publish it with your name, or send it back with a note."}</p>
       <p><button type="button" class="outline-link" data-jnew>✍ NEW ARTICLE <span aria-hidden="true">→</span></button></p>
       <p class="mag-section">Your articles</p>
       ${mine.length ? `<ul class="j-list">${mine.map(m => `<li><div><b>${esc(m.title)}</b><span class="j-st ${J_STATUS[m.status]?.[1] || ""}">${J_STATUS[m.status]?.[0] || m.status}</span>
@@ -3686,7 +3692,7 @@ const Spots = (() => {
     if (!d) { d = document.createElement("dialog"); d.id = "conductDialog"; d.className = "import-dialog conduct-dialog"; document.body.appendChild(d); }
     d.innerHTML = `<button class="dialog-close" type="button" data-close aria-label="Close">${ICON.close}</button>
       <div class="import-body">
-        <span class="eyebrow">Spots community</span>
+        <span class="eyebrow">Wayfolk community</span>
         <h2>Our code</h2>
         <ol class="conduct">
           <li><b>Leave no trace.</b> Take only photos, leave only footprints. Stay on paths and take your rubbish home.</li>
@@ -3695,7 +3701,7 @@ const Spots = (() => {
           <li><b>Support local.</b> Eat, sleep and buy from local businesses when you can.</li>
           <li><b>Share honestly.</b> Only your own photos, real prices and accurate reports. Update or close reports that are no longer true.</li>
           <li><b>Be kind.</b> Reviews describe places, not people. No insults, no spam.</li>
-          <li><b>Pass it on fairly.</b> Only your own things, described honestly, nothing forbidden (see the terms). Meet in public places, never pay in advance: deals are between you, Spots is not a party.</li>
+          <li><b>Pass it on fairly.</b> Only your own things, described honestly, nothing forbidden (see the terms). Meet in public places, never pay in advance: deals are between you, Wayfolk is not a party.</li>
         </ol>
         <p class="gate-help left">Places, photos or reviews that break the code can be removed, and accounts can be closed.</p>
         ${after ? `<button class="outline-link" type="button" data-agree>I AGREE <span aria-hidden="true">→</span></button>` : ""}
@@ -3724,10 +3730,10 @@ const Spots = (() => {
     const tips = signs.filter(g => g.tip).slice(0, 6);
     el.innerHTML = `
       ${by.fabio ? `<p class="sg-pick">★ Fabio's pick</p>` : ""}
-      ${CLUSTER_KEYS.some(k => by[k]) ? `<p class="sg-counts" aria-label="Signed by">${CLUSTER_KEYS.filter(k => by[k]).map(k => `<span style="--c:${CLUSTERS[k].color}" title="Signed by ${by[k]} ${CLUSTERS[k].label.toLowerCase()}${by[k] > 1 ? "s" : ""}">${CLUSTERS[k].ico} ${by[k]}</span>`).join("")}</p>` : `<p class="sg-none">No signatures yet: be the first to sign it.</p>`}
+      ${CLUSTER_KEYS.some(k => by[k]) ? `<p class="sg-counts" aria-label="Signed by">${CLUSTER_KEYS.filter(k => by[k]).map(k => `<span style="--c:${CLUSTERS[k].color}" title="Signed by ${by[k]} ${folkOf(k).toLowerCase()}">${CLUSTERS[k].ico} ${by[k]}</span>`).join("")}</p>` : `<p class="sg-none">No folk has signed it yet: be the first.</p>`}
       <div class="sg-acts">
-        ${order.map(k => mineOf(k) ? `<button type="button" class="pop-btn sg-on" data-unsign="${mineOf(k).id}" style="--c:${CLUSTERS[k].color}">✓ Signed as ${CLUSTERS[k].label}</button>`
-          : `<button type="button" class="pop-btn sg-btn" data-sign="${k}" style="--c:${CLUSTERS[k].color}">✍ Sign as ${CLUSTERS[k].ico} ${CLUSTERS[k].label}</button>`).join("")}
+        ${order.map(k => mineOf(k) ? `<button type="button" class="pop-btn sg-on" data-unsign="${mineOf(k).id}" style="--c:${CLUSTERS[k].color}">✓ Signed as ${folkOf(k).toLowerCase()}</button>`
+          : `<button type="button" class="pop-btn sg-btn" data-sign="${k}" style="--c:${CLUSTERS[k].color}">✍ Sign as ${CLUSTERS[k].ico} ${folkOf(k).toLowerCase()}</button>`).join("")}
         ${!myStyles.length && clusterV ? `<button type="button" class="pop-btn sg-btn" data-pickstyles>✍ Sign this place</button>` : ""}
         ${admin ? (mineOf("fabio") ? `<button type="button" class="pop-btn sg-on gold" data-unsign="${mineOf("fabio").id}">★ Remove Fabio's pick</button>` : `<button type="button" class="pop-btn sg-btn gold" data-sign="fabio">★ Fabio's pick</button>`) : ""}
       </div>
@@ -3741,7 +3747,7 @@ const Spots = (() => {
     const form = el.querySelector("[data-signform]");
     el.querySelectorAll("[data-sign]").forEach(b => b.addEventListener("click", () => {
       pending = b.dataset.sign; form.hidden = false;
-      form.querySelector("[data-signas]").textContent = pending === "fabio" ? "Fabio's pick" : `a ${CLUSTERS[pending].label.toLowerCase()}`;
+      form.querySelector("[data-signas]").textContent = pending === "fabio" ? "Fabio's pick" : folkOf(pending).toLowerCase();
       form.querySelector("input").focus();
     }));
     form.addEventListener("submit", async ev => {
@@ -3749,9 +3755,9 @@ const Spots = (() => {
       const btn = form.querySelector("button"); btn.disabled = true;
       try {
         await api("/rest/v1/place_signs", { method: "POST", body: { spot_id: s.id, cluster: pending, tip: form.querySelector("input").value.trim() || null, author_name: displayName() }, headers: { Prefer: "return=minimal" } });
-        toast(pending === "fabio" ? "Marked as Fabio's pick." : `Signed as ${CLUSTERS[pending].label}. Thanks!`); window.fcTrack?.("Spots: place signed", { cluster: pending });
+        toast(pending === "fabio" ? "Marked as Fabio's pick." : `Signed as ${folkOf(pending).toLowerCase()}. Thanks!`); window.fcTrack?.("Spots: place signed", { cluster: pending });
         loadSigns(popup, s);
-      } catch (err) { toast(/row-level|policy|42501/i.test(err.message) ? "You can sign only with your own travel styles: update them in My profile." : `Could not sign: ${err.message}`, true); btn.disabled = false; }
+      } catch (err) { toast(/row-level|policy|42501/i.test(err.message) ? "You can sign only with your own folk: choose them in My profile." : `Could not sign: ${err.message}`, true); btn.disabled = false; }
     });
     el.querySelectorAll("[data-unsign]").forEach(b => b.addEventListener("click", async () => {
       if (b.dataset.confirm !== "1") { b.dataset.confirm = "1"; b.textContent = "Remove signature?"; return; }
@@ -3763,8 +3769,8 @@ const Spots = (() => {
   // scegliere (o cambiare) i propri cluster: chi è già iscritto, chi entra con Google, dal profilo
   function openStyles(after) {
     const d = dlg("stylesDialog", `<form class="import-body gate-form" novalidate>
-      <span class="eyebrow">Spots community</span><h2>How do you travel?</h2>
-      <p class="gate-help left">Pick all that fit. With each style you can sign the places you recommend, so other travellers like you find them.</p>
+      <span class="eyebrow">Wayfolk community</span><h2>Choose your folk</h2>
+      <p class="gate-help left">Travellers who travel like you. Pick all that fit: with each folk you can sign and review the places you recommend, so people like you find them.</p>
       <fieldset class="cl-pick">${CLUSTER_KEYS.map(k => `<label><input type="checkbox" value="${k}"${myStyles.includes(k) ? " checked" : ""}><span>${CLUSTERS[k].ico} ${CLUSTERS[k].long}</span></label>`).join("")}</fieldset>
       <button class="outline-link" type="submit">SAVE <span aria-hidden="true">→</span></button>
       <p class="gate-note" id="stMsg" role="status"></p>
@@ -3775,7 +3781,7 @@ const Spots = (() => {
       if (!picked.length) { msg.className = "gate-note warn"; msg.textContent = "Pick at least one."; return; }
       try {
         await api("/rest/v1/rpc/set_my_travel", { method: "POST", body: { p_styles: picked, p_source: doorNow() || null } });
-        myStyles = picked; d.close(); toast("Saved: you can now sign places with your styles."); window.fcTrack?.("Spots: travel styles set", { styles: picked.join(",") });
+        myStyles = picked; d.close(); toast("Saved: you can now sign places with your folk."); window.fcTrack?.("Spots: folk chosen", { folk: picked.join(",") });
         after?.();
       } catch (err) { msg.className = "gate-note warn"; msg.textContent = `Could not save: ${err.message}`; }
     });
@@ -3804,7 +3810,10 @@ const Spots = (() => {
       if (rated.length) {
         const avg = rated.reduce((a, r) => a + r.rating, 0) / rated.length;
         rbox.hidden = false;
-        rbox.innerHTML = `<span class="stars-static" style="--v:${(avg / 5 * 100).toFixed(0)}%">★★★★★</span> <strong>${avg.toFixed(1)}</strong> · ${rated.length} review${rated.length > 1 ? "s" : ""}`;
+        const byF = {};
+        rated.filter(r => CLUSTERS[r.folk]).forEach(r => { (byF[r.folk] ||= []).push(r.rating); });
+        rbox.innerHTML = `<span class="stars-static" style="--v:${(avg / 5 * 100).toFixed(0)}%">★★★★★</span> <strong>${avg.toFixed(1)}</strong> · ${rated.length} review${rated.length > 1 ? "s" : ""}`
+          + (Object.keys(byF).length ? `<span class="rev-byfolk">${CLUSTER_KEYS.filter(k => byF[k]).map(k => `<span style="--c:${CLUSTERS[k].color}" title="${folkOf(k)}: ${byF[k].length} review${byF[k].length > 1 ? "s" : ""}">${CLUSTERS[k].ico} ${(byF[k].reduce((a, b) => a + b, 0) / byF[k].length).toFixed(1)}</span>`).join("")}</span>` : "");
       } else rbox.hidden = true;
       // quanto si spende: media di quanto hanno pagato i membri
       const pbox2 = el.querySelector("[data-spend]");
@@ -3813,7 +3822,7 @@ const Spots = (() => {
       reviews.sort((a, b) => (experts.has(b.user_id) ? 1 : 0) - (experts.has(a.user_id) ? 1 : 0));
       el.querySelector("[data-reviews]").innerHTML = reviews.map(r => `<div class="pop-rev${experts.has(r.user_id) ? " by-expert" : ""}">
         <p class="rev-head">${r.rating ? `<span class="rev-stars">${"★".repeat(r.rating)}<i>${"★".repeat(5 - r.rating)}</i></span>` : ""}
-          <b>${esc(r.author_name || "Member")}</b>${xpBadge(r.user_id)}<time>${fmtDay(r.created_at.slice(0, 10))}</time>
+          <b>${esc(r.author_name || "Member")}</b>${CLUSTERS[r.folk] ? ` <span class="rev-folktag" style="--c:${CLUSTERS[r.folk].color}">${CLUSTERS[r.folk].ico} ${folkOf(r.folk).toLowerCase()}</span>` : ""}${xpBadge(r.user_id)}<time>${fmtDay(r.created_at.slice(0, 10))}</time>
           ${r.user_id === uid || admin || canCurate(s) ? `<button type="button" class="rev-del" data-delrev="${r.id}" aria-label="Delete review">${ICON.close}</button>` : commV ? `<button type="button" class="rev-flag" data-flagrev="${r.id}" title="Flag this review" aria-label="Flag this review">⚑</button>` : ""}</p>
         ${r.body ? `<p>${esc(r.body)}</p>` : ""}
         ${r.paid != null ? `<p class="rev-paid">💶 Paid ${fmtMoney(r.paid, r.currency)}${r.people ? ` for ${r.people} ${r.people > 1 ? "people" : "person"}` : ""}${r.nights ? `, ${r.nights} night${r.nights > 1 ? "s" : ""}` : ""}${r.stay_type ? ` · ${esc(r.stay_type)}` : ""}</p>` : ""}</div>`).join("");
@@ -3826,6 +3835,13 @@ const Spots = (() => {
       const mine = reviews.find(r => r.user_id === uid);
       const form = el.querySelector("[data-reviewform]");
       form?._setMine?.(mine);
+      const rf = el.querySelector("[data-revfolk]");   // con quale folk recensisci (le medie si vedono per folk)
+      if (rf && folkV && clusterV && myStyles.length) {
+        const pref = PREFERRED[s.category] || [], opts = [...myStyles].sort((a, b) => (pref.includes(b) ? 1 : 0) - (pref.includes(a) ? 1 : 0));
+        const cur = mine?.folk && opts.includes(mine.folk) ? mine.folk : opts[0];
+        rf.querySelector("select").innerHTML = opts.map(k => `<option value="${k}"${k === cur ? " selected" : ""}>${CLUSTERS[k].ico} ${folkOf(k)}</option>`).join("");
+        rf.hidden = false;
+      }
       const rb = el.querySelector("[data-review]");
       if (rb) rb.lastChild.textContent = mine ? "Edit review" : "Review";
       popup.update();
@@ -3984,7 +4000,7 @@ const Spots = (() => {
     onGlobe = false;
     const el = root();
     if (guest) { el.innerHTML = gateHtml(`<p class="gate-note">${esc(pendingText())}</p>`); return; }
-    el.innerHTML = `<div class="me"><a class="text-link me-back" href="#spots">${ICON.prev}Back to the map</a><p class="gate-note">Loading your Spots…</p></div>`;
+    el.innerHTML = `<div class="me"><a class="text-link me-back" href="#spots">${ICON.prev}Back to the map</a><p class="gate-note">Loading your profile…</p></div>`;
     const data = await loadMe();
     if (!meView) return;
     const uid = myUid(), me = profiles.find(p => p.user_id === uid) || { display_name: displayName() };
@@ -3999,7 +4015,7 @@ const Spots = (() => {
           <h2>${esc(me.display_name || displayName())}</h2>
           <p class="me-sub">${me.username ? `<b>@${esc(me.username)}</b>` : `<button type="button" class="text-link" data-meedit>Choose a username</button>`}${me.base_name ? ` · ${esc(me.base_name)}` : ""}${data.since ? ` · Member since ${esc(fmtWhen(data.since))}` : ""}</p>
         </div>
-        ${clusterV ? `<p class="me-styles">${myStyles.length ? myStyles.map(k => `<span style="--c:${CLUSTERS[k].color}">${CLUSTERS[k].ico} ${CLUSTERS[k].label}</span>`).join("") : "<em>How do you travel?</em>"} <button type="button" class="text-link" data-mestyles>${myStyles.length ? "Change" : "Choose"}</button></p>` : ""}
+        ${clusterV ? `<p class="me-styles">${myStyles.length ? myStyles.map(k => `<span style="--c:${CLUSTERS[k].color}">${CLUSTERS[k].ico} ${folkOf(k)}</span>`).join("") : "<em>Choose your folk</em>"} <button type="button" class="text-link" data-mestyles>${myStyles.length ? "Change" : "Choose"}</button></p>` : ""}
         <div class="me-acts"><button type="button" class="pop-btn" data-meedit>✎ Edit profile</button><button type="button" class="text-link" data-mepublic>See my public profile</button></div>
       </header>
       <dl class="me-stats">${stats.map(([k, v]) => `<div><dt>${k}</dt><dd>${fmtN(+v || 0)}</dd></div>`).join("")}</dl>
@@ -4041,7 +4057,7 @@ const Spots = (() => {
           <div><dt>Website</dt><dd>${me.website ? `<a href="${esc(me.website)}" target="_blank" rel="noopener">${esc(me.website.replace(/^https?:\/\//, ""))}</a>` : "—"}</dd></div>
           <div><dt>Community map</dt><dd>${me.user_id && me.lat != null && me.on_map !== false && me.visible !== false ? "Shown (about 5 km precision)" : "Not shown"}</dd></div>
         </dl>
-        <p class="gate-help left">Your public profile is seen only by Spots members${contribs.has(uid) || experts.has(uid) ? ", and your name, username and photo also on The crew page" : ""}. Saved places, meetups you join and your activity history are private: only you see them.</p>
+        <p class="gate-help left">Your public profile is seen only by Wayfolk members${contribs.has(uid) || experts.has(uid) ? ", and your name, username and photo also on The crew page" : ""}. Saved places, meetups you join and your activity history are private: only you see them.</p>
         <button type="button" class="outline-link" data-meedit2>✎ Edit profile</button>
       </div>`;
       box.querySelector("[data-meedit2]").addEventListener("click", openProfile);
@@ -4168,7 +4184,7 @@ const Spots = (() => {
     const s = spotById(id), who = (uid, n) => uid === myUid() ? "you" : uid && !admin ? (n || "a member") : (n || "admin");
     const rows = [...ch.map(c => ({ at: c.created_at, t: `${who(c.user_id, c.user_name)}: ${fieldsText(c.fields)}` })),
       ...ph.map(p => ({ at: p.created_at, t: `${who(p.user_id, p.author_name)}: added a photo` })),
-      ...(s?.created_at ? [{ at: s.created_at, t: "added to Spots" }] : [])].sort((a, b) => String(b.at).localeCompare(String(a.at)));
+      ...(s?.created_at ? [{ at: s.created_at, t: "added to Wayfolk" }] : [])].sort((a, b) => String(b.at).localeCompare(String(a.at)));
     box.innerHTML = rows.length ? `<ol class="me-histl">${rows.map(r => `<li><time>${esc(fmtWhen(r.at))}</time><span>${esc(r.t)}</span></li>`).join("")}</ol>` : `<p class="muted">No changes yet.</p>`;
     if (!profV) box.insertAdjacentHTML("beforeend", `<p class="gate-help left">The full history of changes starts once the database is updated.</p>`);
   }
@@ -4499,7 +4515,7 @@ const Spots = (() => {
         ${WZ_GROUPS.map(x => `<button type="button" class="wz-group${x.id === g ? " on" : ""}" data-wzg="${x.id}">${SX_ICON[x.id]}<span>${x.label}</span></button>`).join("")}
       </fieldset>
       ${g === "community" ? `<div class="wz-community">
-          <p>Photographers, travellers, local experts and meetups have their own place in Spots:</p>
+          <p>Photographers, travellers, local experts and meetups have their own place in Wayfolk:</p>
           <button type="button" class="outline-link" data-wzmeet>👥 Organise a meetup here</button>
           <button type="button" class="outline-link" data-wzph>📷🎒 Join the community map</button>
           ${passV ? `<button type="button" class="outline-link" data-wzpass>🎁 Pass it on: sell or give away something here</button>` : ""}
@@ -4644,7 +4660,7 @@ const Spots = (() => {
     const sim = near.filter(x => x.dist <= 150 || similarName(wz.name, x.name)).slice(0, 5);
     const box = $("#wzSimilar");
     if (!box) return;
-    box.innerHTML = sim.length ? `<p class="wz-label">Already on Spots nearby — is it the same place?</p>
+    box.innerHTML = sim.length ? `<p class="wz-label">Already on Wayfolk nearby — is it the same place?</p>
       <ul class="wz-sim">${sim.map(x => `<li><span><b>${esc(x.name)}</b><small>${esc((CATS[x.category] || CATS.spot).label)} · ${x.dist < 1000 ? `${x.dist} m` : `${(x.dist / 1000).toFixed(1)} km`}</small></span>
         <button type="button" class="text-link" data-simopen="${x.id}">Same place: open it</button></li>`).join("")}</ul>
       <p class="gate-help left">If it's the same, open it and add your photos or a review instead. If it's a different place, just publish.</p>`

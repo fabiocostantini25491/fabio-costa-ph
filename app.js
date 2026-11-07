@@ -822,7 +822,7 @@ const NEWS_KIND = {
   article:  { icon: "✍", color: "#ffc46e", name: "New article" },
   workshop: { icon: "🎓", color: "#9fe3c8", name: "New workshop" },
   meetup:   { icon: "🤝", color: "#ffd166", name: "New meetup" },
-  spot:     { icon: "📍", color: "#ff8fb1", name: "New place in Spots" }
+  spot:     { icon: "📍", color: "#ff8fb1", name: "New place in Wayfolk" }
 };
 const SPOT_WORD = { spot: "photo spot", restaurant: "place to eat", hotel: "place to stay", trekking: "trek" };
 function newsItems() {
@@ -851,10 +851,10 @@ function newsItems() {
   (homeSpotNews || []).forEach(x => {
     if (!isFresh(x.created_at)) return;
     if (x.kind === "meetup") items.push({ kind: "meetup", when: x.created_at, lat: +x.lat, lon: +x.lon, label: "New meetup",
-      title: `Members meet${x.on_date ? ` on ${fmtDate(x.on_date)}` : ""} · open Spots to join`, go: () => { location.hash = "spots"; } });
+      title: `Members meet${x.on_date ? ` on ${fmtDate(x.on_date)}` : ""} · open Wayfolk to join`, go: () => { location.hash = "spots"; } });
     else {
       const w = SPOT_WORD[x.category] || "place", n = +x.n || 1;
-      items.push({ kind: "spot", when: x.created_at, lat: +x.lat, lon: +x.lon, label: n === 1 ? "New place in Spots" : `${n} new places in Spots`,
+      items.push({ kind: "spot", when: x.created_at, lat: +x.lat, lon: +x.lon, label: n === 1 ? "New place in Wayfolk" : `${n} new places in Wayfolk`,
         title: `${n === 1 ? `A new ${w}` : `New ${w}s`} in this area · members only`, go: () => { location.hash = "spots"; } });
     }
   });
@@ -2204,7 +2204,7 @@ async function renderCrew() {
         ${c.instagram ? `<a href="https://www.instagram.com/${encodeURIComponent(c.instagram)}/" target="_blank" rel="noopener">Instagram @${esc(c.instagram)}</a>` : ""}
         ${site ? `<a href="${esc(site)}" target="_blank" rel="noopener">${ICON.ext}Website</a>` : ""}
         ${c.articles ? `<a href="#author-${esc(slug(c.name))}">${c.articles} ${c.articles === 1 ? "story" : "stories"} in the Journal →</a>` : ""}
-        ${c.on_map ? `<a href="#spots">On the Spots map</a>` : ""}
+        ${c.on_map ? `<a href="#spots">On the Wayfolk map</a>` : ""}
       </p>
     </article>`;
   }).join("");
@@ -2386,7 +2386,7 @@ const PAGES = ["home", "explore", "gallery", "journal", "tools", "spots", "about
    STATISTICHE (Umami, anonime e senza cookie)
    Il sito usa gli indirizzi con # (es. #explore): ogni sezione viene registrata come una pagina.
    ========================================================= */
-const PAGE_TITLES = { home: "Home", explore: "Explore", gallery: "Gallery", journal: "Journal", tools: "Tools", spots: "Spots", about: "About" };
+const PAGE_TITLES = { home: "Home", explore: "Explore", gallery: "Gallery", journal: "Journal", tools: "Tools", spots: "Wayfolk", about: "About" };
 function whenUmami(fn, tries = 0) {
   if (window.umami?.track) { try { fn(window.umami); } catch {} return; }
   if (tries < 40) setTimeout(() => whenUmami(fn, tries + 1), 250);   // lo script arriva dopo: si aspetta fino a 10 s

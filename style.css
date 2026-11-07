@@ -3136,3 +3136,10 @@ body[data-page="explore"]::after{background:radial-gradient(90% 55% at 85% 0,rgb
 .adm-table td+td,.adm-table th+th{text-align:right}
 .cand-form{display:flex;gap:6px;flex-wrap:wrap}
 .cand-form input{min-width:160px}
+/* recensioni per folk */
+.rev-byfolk{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;width:100%}
+.rev-byfolk span{padding:2px 8px;border-radius:999px;border:1px solid var(--c);color:var(--c);font-weight:700;font-size:.8rem}
+.pop-rating:not([hidden]){display:flex;flex-wrap:wrap;align-items:center;gap:4px}
+.rev-folktag{padding:1px 7px;border-radius:999px;border:1px solid var(--c);color:var(--c);font-size:.72rem;font-weight:700}
+.rev-folk{display:flex;align-items:center;gap:8px;margin:6px 0;font-size:.86rem}
+.rev-folk select{flex:1;min-width:0}
