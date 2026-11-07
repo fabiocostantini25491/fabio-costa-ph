@@ -35,6 +35,28 @@ const Spots = (() => {
       icon: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m2.5 20 6.5-11 4 6.5 2.5-3.5 6 8z"/><path d="M8 13.5l1.6 1.2M14.5 16l1.5-1"/><circle cx="17" cy="5.5" r="1.8"/></svg>' }
   };
   const CAT_KEYS = Object.keys(CATS);
+  /* CLUSTER: come viaggia ogni membro (anche più di uno); con i propri cluster si firmano i luoghi */
+  const CLUSTERS = {
+    photo: { ico: "📷", label: "Photographer", long: "Travel photography", color: "#c9a7ff" },
+    hike: { ico: "🥾", label: "Hiker", long: "Hiking & outdoors", color: "#7ee081" },
+    slow: { ico: "🎒", label: "Backpacker", long: "Backpacking & slow travel", color: "#ffb347" },
+    road: { ico: "🚐", label: "Road tripper", long: "Road trips & vanlife", color: "#ff8a7a" },
+    nomad: { ico: "💻", label: "Digital nomad", long: "Digital nomad / expat", color: "#7fb2ff" },
+    food: { ico: "🍝", label: "Foodie", long: "Food & local flavours", color: "#ffd166" }
+  };
+  const CLUSTER_KEYS = Object.keys(CLUSTERS);
+  // la stessa idea, raccontata a ogni cluster (porte d'ingresso: fabiocostaph.com/#spots-hikers ecc.)
+  const DOOR_LEAD = {
+    photographers: "Thousands of places scouted for the light, signed by photographers.",
+    hikers: "The trail's best viewpoint, and when to be there. Places signed by hikers.",
+    backpackers: "Trips from people who stopped where the view was. Places signed by slow travellers.",
+    roadtrips: "Where to pull over: the places worth the detour, signed by road trippers.",
+    nomads: "The corners locals love, at the right hour. Places signed by nomads and expats.",
+    foodies: "Where locals eat, and the view that comes with it. Tables signed by foodies."
+  };
+  const DOORS = { photographers: "photo", hikers: "hike", backpackers: "slow", roadtrips: "road", nomads: "nomad", foodies: "food" };
+  const doorNow = () => { try { const d = localStorage.getItem("fcph-door"); return DOORS[d] ? d : ""; } catch { return ""; } };
+  let myStyles = [], clusterV = true, signV = true;
   const NAME_KEY = "fcph-display-name";
   const jwtClaims = () => { try { return JSON.parse(atob(session.access_token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/"))); } catch { return {}; } };
   const myUid = () => (session && jwtClaims().sub) || "";
@@ -153,9 +175,9 @@ const Spots = (() => {
     saveSession({ access_token: data.access_token, refresh_token: data.refresh_token, expires_at: Date.now() + data.expires_in * 1000 });
   }
   /* Iscrizione dal sito: nome, cognome, email, password. L'account entra «in attesa» finché non lo approvi */
-  async function signUp(first, last, email, password) {
+  async function signUp(first, last, email, password, styles = []) {
     const { data } = await api("/auth/v1/signup", { method: "POST", auth: false,
-      body: { email, password, data: { first_name: first, last_name: last, full_name: `${first} ${last}`.trim() } } });
+      body: { email, password, data: { first_name: first, last_name: last, full_name: `${first} ${last}`.trim(), travel_style: styles, source: doorNow() || null } } });
     if (data && data.access_token) {
       saveSession({ access_token: data.access_token, refresh_token: data.refresh_token, expires_at: Date.now() + data.expires_in * 1000 });
       return "session";
@@ -183,8 +205,11 @@ const Spots = (() => {
   async function fetchMemberStatus() {
     const uid = session ? jwtPayload(session.access_token).sub : "";
     try {
-      const { data } = await api(`/rest/v1/members?select=status,first_name,last_name&user_id=eq.${encodeURIComponent(uid)}`);
+      let data;
+      try { ({ data } = await api(`/rest/v1/members?select=status,first_name,last_name${clusterV ? ",travel_style" : ""}&user_id=eq.${encodeURIComponent(uid)}`)); }
+      catch (err) { if (!clusterV || err.status !== 400) throw err; clusterV = false; signV = false; ({ data } = await api(`/rest/v1/members?select=status,first_name,last_name&user_id=eq.${encodeURIComponent(uid)}`)); }
       const row = (data || [])[0];
+      myStyles = (row?.travel_style || []).filter(k => CLUSTERS[k]);
       memberName = row ? [row.first_name, row.last_name].filter(Boolean).join(" ") : "";
       return row ? row.status : "pending";
     } catch (err) {
@@ -372,6 +397,8 @@ const Spots = (() => {
       try {
         admin = await checkAdmin();
         memberStatus = admin ? "approved" : await fetchMemberStatus();
+        if (admin) { try { await fetchMemberStatus(); } catch {} }   // anche tu hai i tuoi cluster
+        if (memberStatus === "approved" || memberStatus === "pending") maybeAskStyles();
         if (memberStatus !== "approved") {
           // in attesa di approvazione: vede la mappa pubblica, come un visitatore
           wantLogin = false; wantJoin = false;
@@ -443,6 +470,9 @@ const Spots = (() => {
         <input id="joinEmail" type="email" autocomplete="email" placeholder="you@example.com" required>
         <label for="joinPassword">Password</label>
         <input id="joinPassword" type="password" autocomplete="new-password" minlength="8" placeholder="At least 8 characters" required>
+        <fieldset class="cl-pick" id="joinStyles"><legend>How do you travel? <small>(pick all that fit)</small></legend>
+          ${CLUSTER_KEYS.map(k => `<label><input type="checkbox" value="${k}"${DOORS[doorNow()] === k ? " checked" : ""}><span>${CLUSTERS[k].ico} ${CLUSTERS[k].long}</span></label>`).join("")}
+        </fieldset>
         <label class="gate-check"><input type="checkbox" id="joinCode"> <span>I accept the <button type="button" class="text-link" id="joinShowCode">community code</button>, the <a href="#terms" target="_blank">terms</a> and the <a href="#privacy" target="_blank">privacy policy</a>. I'm 16 or older.</span></label>
         <button class="outline-link" type="submit" id="joinSend">JOIN <span aria-hidden="true">→</span></button>
         <p class="gate-note" id="gateMsg" role="status"></p>
@@ -478,10 +508,12 @@ const Spots = (() => {
       if (!first || !last) { msg.textContent = "Please enter your first and last name."; return; }
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { msg.textContent = "Please enter a valid email address."; return; }
       if (password.length < 8) { msg.textContent = "The password needs at least 8 characters."; return; }
+      const styles = [...document.querySelectorAll("#joinStyles input:checked")].map(i => i.value);
+      if (!styles.length) { msg.textContent = "Tell us how you travel: pick at least one."; return; }
       if (!$("#joinCode").checked) { msg.textContent = "Please accept the community code."; return; }
       btn.disabled = true; msg.className = "gate-note"; msg.textContent = "Sending your request…";
       try {
-        const how = await signUp(first, last, email, password);
+        const how = await signUp(first, last, email, password, styles);
         window.fcTrack?.("Spots: signed up");
         try { localStorage.setItem(CONDUCT_KEY, "1"); } catch {}
         wantJoin = false; wantLogin = false; notice = ""; loaded = false; guestLoaded = false;
@@ -633,7 +665,7 @@ const Spots = (() => {
       <aside class="sx-side">
         <p class="sx-kick">Spots <span aria-hidden="true">///</span></p>
         <h2 class="sx-title">Explore the Earth</h2>
-        <p class="sx-lead">Photo spots, essential services and experiences for your next exploration.</p>
+        <p class="sx-lead">${esc(DOOR_LEAD[doorNow()] || "The travel toolkit built by travellers. Every place picked with a photographer's eye.")}</p>
         <div class="sx-panel">
           ${searchHtml}
           <div class="sx-groups">${groups}</div>
@@ -1896,6 +1928,7 @@ const Spots = (() => {
       { maxWidth: 320, minWidth: 260, className: "spot-popup" });
     m.on("popupopen", e => {
       openId = s.id;
+      if (!guest && signV && commV) setTimeout(() => loadSigns(e.popup, s), 0);
       if (guest) {
         node.querySelector("[data-login]")?.addEventListener("click", () => { map.closePopup(); wantLogin = true; wantJoin = false; render(); });
         node.querySelector("[data-join]")?.addEventListener("click", () => { map.closePopup(); wantJoin = true; render(); });
@@ -2079,6 +2112,7 @@ const Spots = (() => {
       <strong>${esc(s.name)}</strong>
       ${localNew(s) ? `<span class="ws-chip new local-chip">🌱 New in Support local</span>` : freshPlace(s) ? `<span class="ws-chip new local-chip">✨ New on the map</span>` : ""}
       ${dates ? `<p class="pop-dates">${ICON.cal}<span>${dates}</span></p>` : ""}
+      ${signV && commV ? `<div class="pop-signs" data-signs></div>` : ""}
       <div data-vfbox>${verifyHtml(s)}</div>
       <div data-wsbox>${wsBoxHtml(s)}</div>
       ${isTk(s) ? `<div data-tkbox>${tkBoxHtml(s)}</div>` : ""}
@@ -3235,6 +3269,7 @@ const Spots = (() => {
         <button type="button" data-atab="feedback" class="${tab === "feedback" ? "on" : ""}">Feedback</button>
         <button type="button" data-atab="crew" class="${tab === "crew" ? "on" : ""}">Contributor</button>
         <button type="button" data-atab="articles" class="${tab === "articles" ? "on" : ""}">Articoli</button>
+        <button type="button" data-atab="clusters" class="${tab === "clusters" ? "on" : ""}">Cluster</button>
       </div>
       <div class="adm-body"><p class="gate-help left">Caricamento…</p></div>
     </div>`);
@@ -3250,6 +3285,41 @@ const Spots = (() => {
       } catch (err) { toast(`Non riuscito (${err.message}).`, true); li.querySelectorAll("button").forEach(x => (x.disabled = false)); }
     };
     try {
+      if (tab === "clusters") {
+        const [{ data: st }, cand] = await Promise.all([api("/rest/v1/rpc/cluster_stats", { method: "POST", body: {} }),
+          api("/rest/v1/rpc/expert_candidates", { method: "POST", body: {} }).then(r => r.data || []).catch(() => [])]);
+        const rows = d => (st || []).filter(r => r.dim === d);
+        const tot = rows("total")[0] || { signups: 0, approved: 0, active: 0 };
+        const nm = v => CLUSTERS[v] ? `${CLUSTERS[v].ico} ${CLUSTERS[v].long}` : v === "fabio" ? "★ Fabio's pick" : DOORS[v] ? `#spots-${v}` : v;
+        const pct = (a, b) => b ? `${Math.round(a / b * 100)}%` : "—";
+        const table = (head, list, cols) => list.length ? `<table class="adm-table"><thead><tr>${head.map(h => `<th>${h}</th>`).join("")}</tr></thead><tbody>${list.map(r => `<tr>${cols(r).map(c => `<td>${c}</td>`).join("")}</tr>`).join("")}</tbody></table>` : `<p class="gate-help left">Ancora nessun dato.</p>`;
+        body.innerHTML = `
+          <p class="gate-help left">Totale: <b>${tot.signups}</b> iscritti · ${tot.approved} approvati · <b>${tot.active}</b> attivi nei primi 14 giorni (${pct(tot.active, tot.signups)}). «Attivo» = ha aggiunto, recensito o firmato qualcosa.</p>
+          <h3 class="adm-h">Come viaggiano</h3>
+          ${table(["Cluster", "Iscritti", "Approvati", "Attivi 14 gg", "% attivi"], rows("style"), r => [esc(nm(r.val)), r.signups, r.approved, r.active, pct(r.active, r.signups)])}
+          <h3 class="adm-h">Da quale porta arrivano</h3>
+          ${table(["Porta", "Iscritti", "Approvati", "Attivi 14 gg", "% attivi"], rows("source"), r => [esc(r.val === "(direct)" ? "Diretto (nessuna porta)" : nm(r.val)), r.signups, r.approved, r.active, pct(r.active, r.signups)])}
+          <h3 class="adm-h">Firme</h3>
+          ${table(["Cluster", "Chi firma", "Firme", "Luoghi firmati"], rows("signs"), r => [esc(nm(r.val)), r.signups, r.approved, r.active])}
+          <h3 class="adm-h">🧭 Candidati Local expert</h3>
+          <p class="gate-help left">Hanno firmato almeno 15 luoghi nella stessa zona (circa 50 km). Nominali con un tocco: potranno verificare e modificare i luoghi della loro zona.</p>
+          ${cand.length ? `<ul class="req-list">${cand.map(c => `<li class="req-row" data-cand="${esc(c.user_id)}"><div><b>${esc(c.name || "—")}</b><span>${c.signs} firme nella zona · ${c.places} luoghi aggiunti lì · ${c.total_signs} firme in tutto · ${(+c.lat).toFixed(1)}, ${(+c.lon).toFixed(1)}</span></div>
+            <form class="cand-form"><input name="area" maxlength="80" placeholder="Nome della zona" required><button type="submit" class="pop-btn primary">🧭 Nomina</button></form></li>`).join("")}</ul>` : `<p class="gate-help left">Nessun candidato per ora.</p>`}
+          <p class="gate-help left">Porte d'ingresso da usare nei post: ${Object.keys(DOORS).map(k => `<code>fabiocostaph.com/#spots-${k}</code>`).join(" · ")}</p>`;
+        body.querySelectorAll("[data-cand]").forEach(li => {
+          const c = cand.find(x => x.user_id === li.dataset.cand), f = li.querySelector("form");
+          reverseName(+c.lat, +c.lon).then(r => { if (!f.area.value) f.area.value = r.place.split(",")[0] || r.name || ""; });
+          f.addEventListener("submit", async ev => {
+            ev.preventDefault();
+            const row = { user_id: c.user_id, display_name: c.name, area_name: f.area.value.trim(), lat: +c.lat, lon: +c.lon, radius_km: 30 };
+            if (!row.area_name) return toast("Scrivi il nome della zona.", true);
+            try { await api("/rest/v1/local_experts?on_conflict=user_id", { method: "POST", body: row, headers: { Prefer: "return=minimal,resolution=merge-duplicates" } });
+              experts.set(c.user_id, row); li.innerHTML = `<p class="gate-help left">✓ ${esc(c.name)} è ora Local expert di ${esc(row.area_name)}.</p>`; }
+            catch (err) { toast(`Non riuscito (${err.message}).`, true); }
+          });
+        });
+        return;
+      }
       if (tab === "requests") {
         await fetchPending();
         body.innerHTML = pendingMembers.length ? `<ul class="req-list">${pendingMembers.map(m => `<li class="req-row" data-uid="${esc(m.user_id)}">
@@ -3392,7 +3462,7 @@ const Spots = (() => {
         }));
       } else {
         const { data } = await api("/rest/v1/content_flags?select=id,kind,target_id,label,reason,note,created_at&resolved=eq.false&order=created_at.desc&limit=500");
-        const KIND = { spot: "Posto", review: "Recensione", photo: "Foto", meetup: "Ritrovo", profile: "Profilo", pass_on: "Pass it on", trip: "Itinerario" };
+        const KIND = { spot: "Posto", review: "Recensione", photo: "Foto", meetup: "Ritrovo", profile: "Profilo", pass_on: "Pass it on", trip: "Itinerario", sign: "Firma / consiglio" };
         const REASON = { spam: "Spam", offensive: "Offensivo", wrong: "Sbagliato", not_theirs: "Foto non sua", danger: "Pericoloso", other: "Altro" };
         openFlags = (data || []).length; refreshBadge();
         body.innerHTML = (data || []).length ? `<ul class="req-list">${data.map(f => `<li class="req-row" data-flag="${f.id}" data-kind="${f.kind}" data-target="${esc(f.target_id)}">
@@ -3422,7 +3492,7 @@ const Spots = (() => {
           try {
             if (b.dataset.act === "remove") {
               const path = { spot: `spots?id=eq.${encodeURIComponent(target)}`, review: `spot_reviews?id=eq.${encodeURIComponent(target)}`, photo: `spot_photos?id=eq.${encodeURIComponent(target)}`,
-                meetup: `meetups?id=eq.${encodeURIComponent(target)}`, pass_on: `pass_on?id=eq.${encodeURIComponent(target)}`, trip: `trips?id=eq.${encodeURIComponent(target)}`, profile: `member_profiles?user_id=eq.${encodeURIComponent(target)}` }[kind];
+                meetup: `meetups?id=eq.${encodeURIComponent(target)}`, pass_on: `pass_on?id=eq.${encodeURIComponent(target)}`, trip: `trips?id=eq.${encodeURIComponent(target)}`, sign: `place_signs?id=eq.${encodeURIComponent(target)}`, profile: `member_profiles?user_id=eq.${encodeURIComponent(target)}` }[kind];
               await api(`/rest/v1/${path}`, { method: "DELETE" });
               if (kind === "spot") spots = spots.filter(x => String(x.id) !== target);
               if (kind === "meetup") meetups = meetups.filter(x => String(x.id) !== target);
@@ -3638,6 +3708,83 @@ const Spots = (() => {
     if (!d.open) d.showModal();
   }
 
+  /* --- FIRME DEI CLUSTER sui luoghi --- */
+  const PREFERRED = { trekking: ["hike"], spot: ["photo"], hotel: ["slow", "road"], restaurant: ["food", "slow"], experience: ["slow"], workshop: ["photo"] };
+  async function loadSigns(popup, s) {
+    const el = popup.getElement()?.querySelector("[data-signs]");
+    if (!el) return;
+    let signs = [];
+    try { signs = (await api(`/rest/v1/place_signs?select=id,cluster,tip,user_id,author_name,created_at&spot_id=eq.${s.id}&order=created_at.desc&limit=500`)).data || []; }
+    catch (err) { if ([400, 404].includes(err.status)) { signV = false; el.remove(); } return; }
+    const uid = myUid(), by = {};
+    signs.forEach(g => { by[g.cluster] = (by[g.cluster] || 0) + 1; });
+    const mineOf = k => signs.find(g => g.user_id === uid && g.cluster === k);
+    const pref = PREFERRED[s.category] || [];
+    const order = [...myStyles].sort((a, b) => (pref.includes(b) ? 1 : 0) - (pref.includes(a) ? 1 : 0));
+    const tips = signs.filter(g => g.tip).slice(0, 6);
+    el.innerHTML = `
+      ${by.fabio ? `<p class="sg-pick">★ Fabio's pick</p>` : ""}
+      ${CLUSTER_KEYS.some(k => by[k]) ? `<p class="sg-counts" aria-label="Signed by">${CLUSTER_KEYS.filter(k => by[k]).map(k => `<span style="--c:${CLUSTERS[k].color}" title="Signed by ${by[k]} ${CLUSTERS[k].label.toLowerCase()}${by[k] > 1 ? "s" : ""}">${CLUSTERS[k].ico} ${by[k]}</span>`).join("")}</p>` : `<p class="sg-none">No signatures yet: be the first to sign it.</p>`}
+      <div class="sg-acts">
+        ${order.map(k => mineOf(k) ? `<button type="button" class="pop-btn sg-on" data-unsign="${mineOf(k).id}" style="--c:${CLUSTERS[k].color}">✓ Signed as ${CLUSTERS[k].label}</button>`
+          : `<button type="button" class="pop-btn sg-btn" data-sign="${k}" style="--c:${CLUSTERS[k].color}">✍ Sign as ${CLUSTERS[k].ico} ${CLUSTERS[k].label}</button>`).join("")}
+        ${!myStyles.length && clusterV ? `<button type="button" class="pop-btn sg-btn" data-pickstyles>✍ Sign this place</button>` : ""}
+        ${admin ? (mineOf("fabio") ? `<button type="button" class="pop-btn sg-on gold" data-unsign="${mineOf("fabio").id}">★ Remove Fabio's pick</button>` : `<button type="button" class="pop-btn sg-btn gold" data-sign="fabio">★ Fabio's pick</button>`) : ""}
+      </div>
+      <form class="sg-form" data-signform hidden>
+        <p class="gate-help left">Sign only places you've been to. Your signature says: “I've been here, and I recommend it as <b data-signas></b>”.</p>
+        <input type="text" maxlength="140" placeholder="A tip in one line (optional), e.g. Go before 8, the car park fills up" aria-label="Your tip">
+        <button type="submit" class="pop-btn primary">Sign</button>
+      </form>
+      ${tips.length ? `<ul class="sg-tips">${tips.map(g => `<li><span style="--c:${(CLUSTERS[g.cluster] || { color: "#ffd27a" }).color}">${g.cluster === "fabio" ? "★" : CLUSTERS[g.cluster]?.ico || ""}</span><p>${esc(g.tip)}<small>${esc(g.author_name || "Member")}${g.user_id !== uid ? ` <button type="button" class="rev-flag" data-flagsign="${g.id}" title="Flag this tip" aria-label="Flag this tip">⚑</button>` : ""}</small></p></li>`).join("")}</ul>` : ""}`;
+    let pending = null;
+    const form = el.querySelector("[data-signform]");
+    el.querySelectorAll("[data-sign]").forEach(b => b.addEventListener("click", () => {
+      pending = b.dataset.sign; form.hidden = false;
+      form.querySelector("[data-signas]").textContent = pending === "fabio" ? "Fabio's pick" : `a ${CLUSTERS[pending].label.toLowerCase()}`;
+      form.querySelector("input").focus();
+    }));
+    form.addEventListener("submit", async ev => {
+      ev.preventDefault(); if (!pending) return;
+      const btn = form.querySelector("button"); btn.disabled = true;
+      try {
+        await api("/rest/v1/place_signs", { method: "POST", body: { spot_id: s.id, cluster: pending, tip: form.querySelector("input").value.trim() || null, author_name: displayName() }, headers: { Prefer: "return=minimal" } });
+        toast(pending === "fabio" ? "Marked as Fabio's pick." : `Signed as ${CLUSTERS[pending].label}. Thanks!`); window.fcTrack?.("Spots: place signed", { cluster: pending });
+        loadSigns(popup, s);
+      } catch (err) { toast(/row-level|policy|42501/i.test(err.message) ? "You can sign only with your own travel styles: update them in My profile." : `Could not sign: ${err.message}`, true); btn.disabled = false; }
+    });
+    el.querySelectorAll("[data-unsign]").forEach(b => b.addEventListener("click", async () => {
+      if (b.dataset.confirm !== "1") { b.dataset.confirm = "1"; b.textContent = "Remove signature?"; return; }
+      try { await api(`/rest/v1/place_signs?id=eq.${b.dataset.unsign}`, { method: "DELETE" }); loadSigns(popup, s); } catch (err) { toast(`Could not remove: ${err.message}`, true); }
+    }));
+    el.querySelector("[data-pickstyles]")?.addEventListener("click", () => openStyles(() => loadSigns(popup, s)));
+    el.querySelectorAll("[data-flagsign]").forEach(b => b.addEventListener("click", () => openFlag("sign", b.dataset.flagsign, `Tip on «${s.name}»`)));
+  }
+  // scegliere (o cambiare) i propri cluster: chi è già iscritto, chi entra con Google, dal profilo
+  function openStyles(after) {
+    const d = dlg("stylesDialog", `<form class="import-body gate-form" novalidate>
+      <span class="eyebrow">Spots community</span><h2>How do you travel?</h2>
+      <p class="gate-help left">Pick all that fit. With each style you can sign the places you recommend, so other travellers like you find them.</p>
+      <fieldset class="cl-pick">${CLUSTER_KEYS.map(k => `<label><input type="checkbox" value="${k}"${myStyles.includes(k) ? " checked" : ""}><span>${CLUSTERS[k].ico} ${CLUSTERS[k].long}</span></label>`).join("")}</fieldset>
+      <button class="outline-link" type="submit">SAVE <span aria-hidden="true">→</span></button>
+      <p class="gate-note" id="stMsg" role="status"></p>
+    </form>`);
+    d.querySelector("form").addEventListener("submit", async e => {
+      e.preventDefault();
+      const picked = [...d.querySelectorAll(".cl-pick input:checked")].map(i => i.value), msg = d.querySelector("#stMsg");
+      if (!picked.length) { msg.className = "gate-note warn"; msg.textContent = "Pick at least one."; return; }
+      try {
+        await api("/rest/v1/rpc/set_my_travel", { method: "POST", body: { p_styles: picked, p_source: doorNow() || null } });
+        myStyles = picked; d.close(); toast("Saved: you can now sign places with your styles."); window.fcTrack?.("Spots: travel styles set", { styles: picked.join(",") });
+        after?.();
+      } catch (err) { msg.className = "gate-note warn"; msg.textContent = `Could not save: ${err.message}`; }
+    });
+  }
+  function maybeAskStyles() {
+    if (!clusterV || guest || myStyles.length || !session) return;
+    try { const t = +localStorage.getItem("fcph-styles-asked") || 0; if (Date.now() - t < 7 * 864e5) return; localStorage.setItem("fcph-styles-asked", String(Date.now())); } catch { return; }
+    setTimeout(() => { if (!myStyles.length && !document.querySelector("dialog[open]")) openStyles(); }, 3000);
+  }
   async function loadExtras(popup, s) {
     const el = popup.getElement();
     if (!el) return;
@@ -3852,6 +3999,7 @@ const Spots = (() => {
           <h2>${esc(me.display_name || displayName())}</h2>
           <p class="me-sub">${me.username ? `<b>@${esc(me.username)}</b>` : `<button type="button" class="text-link" data-meedit>Choose a username</button>`}${me.base_name ? ` · ${esc(me.base_name)}` : ""}${data.since ? ` · Member since ${esc(fmtWhen(data.since))}` : ""}</p>
         </div>
+        ${clusterV ? `<p class="me-styles">${myStyles.length ? myStyles.map(k => `<span style="--c:${CLUSTERS[k].color}">${CLUSTERS[k].ico} ${CLUSTERS[k].label}</span>`).join("") : "<em>How do you travel?</em>"} <button type="button" class="text-link" data-mestyles>${myStyles.length ? "Change" : "Choose"}</button></p>` : ""}
         <div class="me-acts"><button type="button" class="pop-btn" data-meedit>✎ Edit profile</button><button type="button" class="text-link" data-mepublic>See my public profile</button></div>
       </header>
       <dl class="me-stats">${stats.map(([k, v]) => `<div><dt>${k}</dt><dd>${fmtN(+v || 0)}</dd></div>`).join("")}</dl>
@@ -3860,6 +4008,7 @@ const Spots = (() => {
     </div>`;
     el.querySelectorAll("[data-metab]").forEach(b => b.addEventListener("click", () => { meTab = b.dataset.metab; el.querySelectorAll("[data-metab]").forEach(x => { const on = x === b; x.classList.toggle("on", on); x.setAttribute("aria-selected", on); }); drawMeTab(); }));
     el.querySelectorAll("[data-meedit]").forEach(b => b.addEventListener("click", openProfile));
+    el.querySelectorAll("[data-mestyles]").forEach(b => b.addEventListener("click", () => openStyles(() => { meCache = null; renderMe(); })));
     el.querySelector("[data-mepublic]").addEventListener("click", () => openMemberProfile(uid));
     drawMeTab();
   }

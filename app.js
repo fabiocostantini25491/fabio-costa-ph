@@ -2441,6 +2441,9 @@ function route() {
   if (magazine) page = "journal";
   if (writeMode) page = "journal";
   if (hash.startsWith("author-")) { page = "journal"; authorSlug = hash.slice(7); }
+  // porte d'ingresso dei cluster (link nei post): #spots-hikers, #spots-backpackers…
+  const door = (hash.match(/^spots-(photographers|hikers|backpackers|roadtrips|nomads|foodies)$/) || [])[1];
+  if (door) { page = "spots"; try { if (localStorage.getItem("fcph-door") !== door) { localStorage.setItem("fcph-door", door); trackEvent("Spots door", { door }); } } catch {} }
   const join = hash === "join";
   const meHash = hash === "me";
   if (meHash) page = "spots";

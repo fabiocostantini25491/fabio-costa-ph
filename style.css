@@ -3101,3 +3101,38 @@ body[data-page="explore"]::after{background:radial-gradient(90% 55% at 85% 0,rgb
 .pf-kind span{display:block;text-align:center;padding:10px 6px;border-radius:12px;border:1px solid rgba(255,255,255,.18);font-weight:600;font-size:.9rem}
 .pf-kind input:checked + span{border-color:#c9a7ff;background:rgba(201,167,255,.14)}
 .pf-kind input:focus-visible + span{outline:2px solid #c9a7ff;outline-offset:2px}
+/* cluster: scelta all'iscrizione e nel profilo */
+.cl-pick{border:0;margin:6px 0 10px;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px}
+.cl-pick legend{padding:0;margin-bottom:6px;font-size:.78rem;letter-spacing:.12em;text-transform:uppercase;opacity:.85}
+.cl-pick legend small{text-transform:none;letter-spacing:0;opacity:.75}
+.cl-pick label{position:relative;cursor:pointer}
+.cl-pick input{position:absolute;opacity:0;pointer-events:none}
+.cl-pick span{display:block;padding:11px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.18);font-weight:600;font-size:.92rem}
+.cl-pick input:checked + span{border-color:#ffd27a;background:rgba(255,210,122,.12)}
+.cl-pick input:focus-visible + span{outline:2px solid #ffd27a;outline-offset:2px}
+.me-styles{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:6px 0 0}
+.me-styles span{padding:3px 9px;border-radius:999px;border:1px solid var(--c);color:var(--c);font-size:.8rem;font-weight:600}
+/* firme dei cluster sui luoghi */
+.pop-signs{margin:6px 0 8px;padding:8px 10px;border-radius:12px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1)}
+.pop-signs:empty{display:none}
+.sg-pick{display:inline-block;margin:0 0 6px;padding:3px 10px;border-radius:999px;background:linear-gradient(90deg,#ffd27a,#ffb347);color:#2b1a02;font-weight:700;font-size:.78rem;letter-spacing:.06em}
+.sg-counts{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 6px}
+.sg-counts span{padding:2px 8px;border-radius:999px;border:1px solid var(--c);color:var(--c);font-weight:700;font-size:.8rem}
+.sg-none{margin:0 0 6px;font-size:.82rem;opacity:.75}
+.sg-acts{display:flex;flex-wrap:wrap;gap:6px}
+.sg-acts .pop-btn{border-color:var(--c,rgba(255,255,255,.25))}
+.sg-acts .sg-on{background:color-mix(in srgb,var(--c,#ffd27a) 18%,transparent)}
+.sg-acts .gold{--c:#ffd27a}
+.sg-form{display:grid;gap:6px;margin-top:8px}
+.sg-form input{width:100%;box-sizing:border-box}
+.sg-tips{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:6px}
+.sg-tips li{display:grid;grid-template-columns:22px 1fr;gap:6px;font-size:.86rem}
+.sg-tips li>span{color:var(--c)}
+.sg-tips p{margin:0}.sg-tips small{display:block;opacity:.7}
+/* admin: tabelle cluster */
+.adm-h{margin:16px 0 6px;font-size:1rem}
+.adm-table{width:100%;border-collapse:collapse;font-size:.88rem}
+.adm-table th,.adm-table td{padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.1);text-align:left}
+.adm-table td+td,.adm-table th+th{text-align:right}
+.cand-form{display:flex;gap:6px;flex-wrap:wrap}
+.cand-form input{min-width:160px}
