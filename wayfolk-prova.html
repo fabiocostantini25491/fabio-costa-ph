@@ -1,0 +1,512 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Wayfolk — the community map · test</title>
+<link rel="icon" href="img/favicon-32.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500;1,600&family=Oswald:wght@500;700&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">
+<style>
+:root{
+  --bg:#050b14; --bg2:#08121f; --bg3:#0d1b2c; --deep:#02060c;
+  --head:#f2f6fb; --text:#e6ecf3; --soft:#b8c4d2; --muted:#8a99ab;
+  --blue:#9cc8ff; --warm:#ffbe7a; --fire:#f28c1e; --ink:#1a1206;
+  --line:rgba(156,200,255,.14); --wline:rgba(255,190,122,.32);
+  --serif:'Cormorant Garamond',Georgia,serif; --cap:Oswald,'Arial Narrow',sans-serif; --sans:'DM Sans',system-ui,sans-serif;
+  --bars:112px;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;background:var(--bg)}
+body{margin:0;background:var(--bg);color:var(--text);font:400 16px/1.5 var(--sans);-webkit-font-smoothing:antialiased}
+a{color:var(--warm)}a:hover{color:#ffd7ad}
+img{max-width:100%;display:block}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--warm);outline-offset:3px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.wrap{max-width:1240px;margin:0 auto;padding:0 32px}
+.kick{margin:0;font:500 13px/1.2 var(--cap);letter-spacing:.24em;text-transform:uppercase;color:var(--warm)}
+.h2{margin:0;font:600 clamp(36px,5vw,62px)/1.02 var(--serif);color:var(--head)}
+.h2 em,.hero-card h1 em{font-style:italic;color:var(--warm)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:0 22px;border-radius:999px;font:700 15px/1 var(--sans);text-decoration:none;border:0;cursor:pointer;white-space:nowrap}
+.btn-fire{background:var(--fire);color:var(--ink)}.btn-fire:hover{background:#ffa041;color:var(--ink)}
+.btn-ghost{background:transparent;color:var(--warm);border:1px solid var(--wline)}.btn-ghost:hover{background:rgba(255,190,122,.08)}
+.btn-line{background:transparent;color:var(--text);border:1px solid rgba(230,236,243,.3)}.btn-line:hover{color:#fff;border-color:rgba(230,236,243,.6)}
+
+/* back strip + own menu */
+.back{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:7px 32px;background:var(--deep);font-size:13px;color:var(--muted)}
+.back a{display:flex;align-items:center;gap:8px;color:var(--soft);text-decoration:none}
+.back a:hover{color:var(--head)}
+.back img{width:24px;height:auto}
+.bar{position:sticky;top:0;z-index:1000;display:flex;align-items:center;gap:20px;padding:10px 32px;background:rgba(5,11,20,.94);backdrop-filter:blur(10px);border-bottom:1px solid rgba(255,190,122,.18)}
+.bar .logo img{width:104px;height:auto}
+.bar nav{flex:1;display:flex;justify-content:center;gap:4px;flex-wrap:wrap}
+.bar nav a{padding:10px 14px;border-radius:999px;color:var(--text);text-decoration:none;font-weight:500;font-size:15px}
+.bar nav a:hover{background:rgba(255,255,255,.06)}
+.bar nav a.map-link{background:rgba(242,140,30,.14);color:var(--warm);display:flex;gap:7px;align-items:center}
+.bar .acts{display:flex;gap:8px}
+.bar .btn{min-height:42px;padding:0 16px;font-size:14px}
+
+/* the map stage */
+.stage{position:relative;height:calc(100svh - var(--bars));min-height:540px;max-height:980px;background:var(--bg2);overflow:hidden}
+#wpMap,#wpGlobe{position:absolute;inset:0}
+#wpMap{background:#0a1626}
+#wpGlobe{display:none;background:radial-gradient(circle at 50% 50%,#0b1a2e 0,#02060c 70%)}
+.stage.is-globe #wpGlobe{display:block}.stage.is-globe #wpMap{visibility:hidden}
+.leaflet-container{font-family:var(--sans)}
+.leaflet-control-attribution{background:rgba(5,11,20,.7)!important;color:var(--muted)!important;font-size:10px}
+.leaflet-control-attribution a{color:var(--soft)!important}
+.leaflet-popup-content-wrapper,.leaflet-popup-tip{background:var(--bg3);color:var(--text);border:1px solid var(--line)}
+.leaflet-popup-content{margin:14px 16px;min-width:210px}
+.leaflet-container a.leaflet-popup-close-button{color:var(--soft)}
+.pp-cat{margin:0;font:500 11px var(--cap);letter-spacing:.18em;text-transform:uppercase}
+.pp-name{margin:4px 0 8px;font:600 21px/1.15 var(--serif);color:var(--head)}
+.pp-lock{margin:0 0 10px;padding:8px 10px;border-radius:10px;background:var(--bg2);font-size:13px;color:var(--soft)}
+.pp-lock b{color:var(--warm)}
+.pp-go{display:inline-flex;min-height:38px;align-items:center;padding:0 14px;border-radius:999px;background:var(--fire);color:var(--ink)!important;text-decoration:none;font-weight:700;font-size:13px}
+
+.tools{position:absolute;z-index:500;left:20px;top:20px;right:20px;display:flex;flex-wrap:wrap;gap:10px;align-items:flex-start;pointer-events:none}
+.tools>*{pointer-events:auto}
+.search{position:relative;width:min(360px,100%)}
+.search label{display:flex;align-items:center;gap:10px;min-height:48px;padding:0 16px;border-radius:999px;background:rgba(8,18,31,.94);border:1px solid var(--line);box-shadow:0 10px 30px -14px #000}
+.search input{flex:1;min-width:0;border:0;outline:0;background:transparent;color:var(--head);font:400 15px var(--sans)}
+.search input::placeholder{color:var(--muted)}
+.sugg{position:absolute;left:0;right:0;top:54px;margin:0;padding:6px;list-style:none;border-radius:18px;background:rgba(8,18,31,.97);border:1px solid var(--line);max-height:300px;overflow:auto}
+.sugg button{width:100%;display:flex;justify-content:space-between;gap:10px;padding:10px 12px;border:0;border-radius:12px;background:transparent;text-align:left;cursor:pointer}
+.sugg button:hover,.sugg button:focus-visible{background:rgba(255,255,255,.06)}
+.sugg small{color:var(--muted)}
+.views{display:flex;gap:4px;padding:4px;border-radius:16px;background:rgba(8,18,31,.94);border:1px solid var(--line)}
+.views button{display:flex;align-items:center;gap:7px;min-height:40px;padding:0 13px;border:0;border-radius:12px;background:transparent;color:var(--soft);font-weight:500;font-size:14px;cursor:pointer}
+.views button[aria-pressed="true"]{background:var(--head);color:var(--bg);font-weight:700}
+.views svg{width:16px;height:16px}
+
+.hero-card{position:absolute;z-index:500;left:20px;bottom:20px;width:min(460px,calc(100% - 40px));padding:22px 24px;border-radius:26px;background:rgba(5,11,20,.9);border:1px solid var(--wline);box-shadow:0 30px 60px -30px #000;backdrop-filter:blur(8px);transition:transform .35s ease,opacity .35s}
+.hero-card h1{margin:8px 0 10px;font:600 clamp(28px,3.2vw,42px)/1.02 var(--serif);color:var(--head)}
+.hero-card p.lead{margin:0 0 16px;color:var(--soft);font-size:15px}
+.hero-card .row{display:flex;flex-wrap:wrap;gap:10px}
+.hero-card .stats{margin:16px 0 0;font-size:13px;color:var(--muted);display:flex;gap:14px;flex-wrap:wrap}
+.hero-card .stats b{color:var(--warm);font-weight:700}
+.hero-card .fold{position:absolute;top:12px;right:12px;width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:transparent;color:var(--soft);cursor:pointer;display:flex;align-items:center;justify-content:center}
+.stage.card-off .hero-card{transform:translateY(calc(100% + 30px));opacity:0;pointer-events:none}
+.card-open{position:absolute;z-index:500;left:20px;bottom:20px;display:none}
+.stage.card-off .card-open{display:inline-flex}
+.legend{position:absolute;z-index:500;right:20px;bottom:24px;display:flex;flex-direction:column;gap:6px;padding:12px 14px;border-radius:16px;background:rgba(8,18,31,.9);border:1px solid var(--line);font-size:12px;color:var(--soft)}
+.legend span{display:flex;align-items:center;gap:8px}
+.legend i{width:10px;height:10px;border-radius:50%;display:inline-block}
+.scrollcue{position:absolute;z-index:500;left:50%;bottom:16px;transform:translateX(-50%);display:flex;align-items:center;gap:6px;padding:8px 14px;border-radius:999px;background:rgba(8,18,31,.85);color:var(--soft);font-size:13px;text-decoration:none}
+.status{position:absolute;z-index:500;right:20px;top:20px;padding:8px 12px;border-radius:999px;background:rgba(8,18,31,.9);font-size:12px;color:var(--soft)}
+
+/* floating map button (always findable) */
+.tomap{position:fixed;z-index:1100;right:18px;bottom:18px;display:flex;align-items:center;gap:8px;min-height:52px;padding:0 20px;border-radius:999px;background:var(--fire);color:var(--ink);font-weight:700;text-decoration:none;box-shadow:0 14px 30px -10px rgba(0,0,0,.7);transform:translateY(120px);transition:transform .3s}
+.tomap.on{transform:none}
+.tomap svg{width:20px;height:20px}
+
+/* sections */
+section.blk{padding:110px 0}
+.stage,section{scroll-margin-top:80px}
+.folk-wrap{text-align:center;display:flex;flex-direction:column;align-items:center;gap:26px}
+.folks{display:flex;flex-wrap:wrap;justify-content:center;gap:22px;margin-top:10px}
+.folk{width:132px;padding:0;border:0;background:transparent;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:10px}
+.folk .ring{width:118px;height:118px;border-radius:50%;padding:4px;border:1px solid rgba(156,200,255,.25);transition:box-shadow .25s,border-color .25s}
+.folk img{width:100%;height:100%;border-radius:50%;object-fit:cover}
+.folk span.n{font:600 23px var(--serif);color:var(--head)}
+.folk[aria-pressed="true"] .ring{border:3px solid var(--fire);box-shadow:0 0 30px 6px rgba(242,140,30,.45)}
+.folk:hover .ring{border-color:var(--warm)}
+.pick{width:min(720px,100%);min-height:150px;padding:24px 28px;border-radius:22px;background:var(--bg3);border:1px solid var(--wline);display:flex;flex-direction:column;align-items:center;gap:10px}
+.pick .l{margin:0;font:italic 600 28px/1.2 var(--serif);color:var(--head)}
+.pick .s{margin:0;color:var(--soft);font-size:15px}
+
+.split{display:flex;flex-wrap:wrap;gap:56px;align-items:center}
+.split>div{flex:1 1 400px}
+.split p.body{margin:18px 0 0;font-size:18px;color:var(--soft);max-width:540px}
+.place{flex:1 1 440px;border-radius:26px;overflow:hidden;background:var(--bg3);border:1px solid var(--line)}
+.place .ph{position:relative;height:230px}
+.place .ph img{width:100%;height:100%;object-fit:cover}
+.place .pick-badge{position:absolute;left:16px;top:16px;padding:6px 11px;border-radius:999px;background:#ffd27a;color:var(--ink);font-size:12px;font-weight:700}
+.place .in{padding:22px 24px 26px;display:flex;flex-direction:column;gap:12px}
+.place .t{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
+.place .t b{font:600 29px var(--serif);color:var(--head)}
+.place .t span{font-size:13px;color:var(--warm)}
+.tip{padding:12px 14px;border-radius:14px;background:var(--bg2);display:flex;flex-direction:column;gap:5px}
+.tip small{color:var(--muted);font-size:12px}
+.tip q{quotes:none;font:italic 500 19px/1.35 var(--serif);color:var(--head)}
+.tip.lock q{filter:blur(5px);user-select:none}
+.place .foot{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;padding-top:4px;font-size:14px;color:var(--soft)}
+
+.inside{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:16px;margin-top:40px}
+.inside article{padding:24px;border-radius:20px;background:var(--bg3);border:1px solid var(--line);display:flex;flex-direction:column;gap:8px}
+.inside article.new{border-color:var(--wline)}
+.inside h3{margin:0;font:600 25px var(--serif);color:var(--head);display:flex;gap:8px;align-items:center}
+.inside h3 .tag{padding:3px 8px;border-radius:999px;background:var(--fire);color:var(--ink);font:700 10px var(--sans);letter-spacing:.1em}
+.inside p{margin:0;color:var(--soft);font-size:15px}
+.steps{background:var(--bg2);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.steps ol{list-style:none;margin:40px 0 0;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:18px}
+.steps li{padding:28px;border-radius:22px;background:var(--bg3);display:flex;flex-direction:column;gap:10px}
+.steps li:last-child{border:1px solid var(--wline)}
+.steps .num{font:600 54px/1 var(--serif);color:var(--warm)}
+.steps b{font-size:20px;color:var(--head)}
+.steps span.d{color:var(--soft);font-size:15px}
+.closing{background:linear-gradient(180deg,rgba(5,11,20,.95),rgba(5,11,20,.5) 50%,rgba(5,11,20,.95)),url("img/wf/night.jpg") center/cover;text-align:center}
+.closing .wrap{display:flex;flex-direction:column;align-items:center;gap:22px;padding-top:130px;padding-bottom:130px}
+.closing p{max-width:560px;margin:0;color:var(--soft);font-size:18px}
+footer{background:var(--deep);padding:36px 0 90px;font-size:14px;color:var(--muted)}
+footer .wrap{display:flex;flex-wrap:wrap;gap:16px 28px;justify-content:space-between;align-items:center}
+footer a{color:var(--soft)}
+.test-flag{position:fixed;z-index:1200;left:12px;bottom:12px;padding:6px 10px;border-radius:8px;background:#2a1a05;border:1px solid var(--wline);color:var(--warm);font:700 11px var(--sans);letter-spacing:.1em}
+
+@media (max-width:900px){
+  :root{--bars:104px}
+  .bar{padding:8px 16px;gap:8px 10px;flex-wrap:wrap}
+  .bar nav{order:3;flex-basis:100%;justify-content:flex-start;overflow-x:auto;flex-wrap:nowrap;scrollbar-width:none}
+  .bar nav a{flex:0 0 auto;padding:8px 12px;font-size:14px}
+  .bar .acts .btn-line{display:none}
+  .stage,section{scroll-margin-top:118px}
+  .bar .acts{margin-left:auto}
+  .back{padding:7px 16px}.back span{font-size:0}.back span b{font-size:12px}
+  .wrap{padding:0 20px}
+  :root{--bars:148px}
+  .tools{left:12px;right:12px;top:12px}
+  .search{width:100%}
+  .hero-card{left:12px;bottom:12px;width:calc(100% - 24px);padding:20px}
+  .hero-card .lead{display:none}
+  .hero-card h1{font-size:27px}
+  .hero-card .row .btn{min-height:44px;padding:0 16px;font-size:14px}
+  .hero-card .stats{margin-top:12px;font-size:12px}
+  .leaflet-control-zoom{display:none}
+  .legend,.scrollcue{display:none}
+  .card-open{left:12px;bottom:12px}
+  section.blk{padding:72px 0}
+  .folks{gap:14px}.folk{width:96px}.folk .ring{width:88px;height:88px}.folk span.n{font-size:18px}
+}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}.hero-card,.tomap{transition:none}}
+</style>
+</head>
+<body>
+
+<div class="back">
+  <a href="/"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg><img src="img/logo.png" alt="">Back to Fabio Costa Ph</a>
+  <span><b style="color:#ffbe7a">Test page</b> · Wayfolk is a community born from the map of photographer Fabio Costantini</span>
+</div>
+
+<header class="bar">
+  <a class="logo" href="#map" aria-label="Wayfolk, the map"><img src="img/wayfolk-logo.png" alt="WayFolk" width="640" height="365"></a>
+  <nav aria-label="Wayfolk">
+    <a class="map-link" href="#map"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2zM9 4v14M15 6v14"/></svg>The map</a>
+    <a href="#folk">The folk</a>
+    <a href="#secret">Tips</a>
+    <a href="#inside">Inside</a>
+    <a href="#join">Our code</a>
+  </nav>
+  <div class="acts">
+    <a class="btn btn-line" href="/#wayfolk">Log in</a>
+    <a class="btn btn-fire" href="#folk">Become folk</a>
+  </div>
+</header>
+
+<main>
+  <!-- THE MAP: the protagonist -->
+  <section class="stage" id="map" aria-label="The Wayfolk map">
+    <div id="wpMap"></div>
+    <div id="wpGlobe" aria-label="3D Earth"></div>
+
+    <div class="tools">
+      <div class="search">
+        <label><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8a99ab" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><path d="M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM20 20l-4-4"/></svg>
+          <span class="sr">Search a place on the map</span>
+          <input id="wpSearch" type="search" placeholder="Search a place on the map" autocomplete="off" aria-controls="wpSugg"></label>
+        <ul class="sugg" id="wpSugg" hidden></ul>
+      </div>
+      <div class="views" role="group" aria-label="Map view">
+        <button type="button" data-view="map" aria-pressed="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2zM9 4v14M15 6v14"/></svg>Map</button>
+        <button type="button" data-view="sat" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 9l4-4 4 4-4 4zM11 15l4-4 4 4-4 4zM13 5l2-2M7 17l-3 3"/></svg>Satellite</button>
+        <button type="button" data-view="globe" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/></svg>3D Earth</button>
+      </div>
+    </div>
+    <p class="status" id="wpStatus" role="status">Loading the places…</p>
+
+    <div class="hero-card" id="wpCard">
+      <button class="fold" type="button" id="wpFold" aria-label="Hide this card and explore the map"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
+      <p class="kick">The community map</p>
+      <h1>I scouted 8,000 places. <em>Now the folk keep them alive.</em></h1>
+      <p class="lead">Wayfolk is my map, opened to everyone who travels. Folk sign the places they've actually been, leave one honest tip, and pass the way on to whoever comes next.</p>
+      <div class="row">
+        <a class="btn btn-fire" href="/#wayfolk">Open the full map</a>
+        <a class="btn btn-ghost" href="#folk">Find your folk — free</a>
+      </div>
+      <p class="stats" id="wpStats" hidden></p>
+    </div>
+    <button class="btn btn-fire card-open" type="button" id="wpUnfold">What is Wayfolk?</button>
+
+    <div class="legend" aria-label="Legend">
+      <span><i style="background:#9cc8ff"></i>Photo spots and places</span>
+      <span><i style="background:#ffbe7a"></i>Food and drink</span>
+      <span><i style="background:#d2b8ff"></i>Stay</span>
+      <span><i style="background:#f7a6c4"></i>Trekking</span>
+    </div>
+    <a class="scrollcue" href="#folk">Which folk are you? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></a>
+  </section>
+
+  <!-- WHICH FOLK -->
+  <section class="blk" id="folk">
+    <div class="wrap folk-wrap">
+      <p class="kick">You don't join as a user</p>
+      <h2 class="h2">Which folk <em>are you?</em></h2>
+      <div class="folks" role="group" aria-label="Pick your folk" id="wpFolks"></div>
+      <div class="pick" aria-live="polite">
+        <p class="l" id="wpPickL">Tap the way you travel.</p>
+        <p class="s" id="wpPickS">Your folk becomes your voice on the map. You can belong to more than one.</p>
+        <a class="btn btn-fire" id="wpJoin" href="/#join">Become folk</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- THE SECRET -->
+  <section class="blk" id="secret" style="padding-top:20px">
+    <div class="wrap split">
+      <div>
+        <p class="kick">What the maps don't tell you</p>
+        <h2 class="h2" style="margin-top:16px">Every place has a secret. <em>The folk who went know it.</em></h2>
+        <p class="body">Which hour, which bench, which trattoria the locals actually use. One line each, from people who stood there. The map is open to everyone; the signatures and the tips are for folk.</p>
+      </div>
+      <article class="place" aria-label="Example of a place card">
+        <div class="ph"><img src="img/wf/photo.jpg" alt="The Odle peaks above Val di Funes" loading="lazy" width="900" height="600"><span class="pick-badge">Fabio's pick</span></div>
+        <div class="in">
+          <div class="t"><b>Santa Maddalena viewpoint</b><span>Signed by the folk</span></div>
+          <div class="tip"><small>Photo folk · on the spot</small><q>Come at first light in October, stand by the wooden fence above the church.</q></div>
+          <div class="tip lock" aria-hidden="true"><small>Hiker folk · useful</small><q>Park lower down and take the trail through the meadows, twenty minutes.</q></div>
+          <div class="tip lock" aria-hidden="true"><small>Foodie folk · support local</small><q>The farm below sells cheese and speck, ask for the aged one.</q></div>
+          <div class="foot"><span>The other tips are for folk</span><a class="btn btn-fire" href="#folk">Become folk to read them</a></div>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <!-- INSIDE -->
+  <section class="blk" id="inside" style="padding-top:20px">
+    <div class="wrap">
+      <h2 class="h2">One toolkit for the road, <em>kept alive by its folk.</em></h2>
+      <div class="inside">
+        <article><h3>Places</h3><p>Photo spots, points of interest and trekking, with best months, live alerts and protection for fragile places.</p></article>
+        <article><h3>Essentials</h3><p>Where to sleep and eat, with real prices, reviews by folk and Support local.</p></article>
+        <article><h3>Trips</h3><p>Journeys stop by stop, with how you got there, on the map and on the 3D Earth.</p></article>
+        <article class="new"><h3>Pass it on <span class="tag">NEW</span></h3><p>Leaving? Sell or give away what you won't take home to the folk arriving after you.</p></article>
+        <article><h3>Passport</h3><p>Every place you sign is a stamp. Wanderer, Pathfinder, Trusted, and Local expert in your area.</p></article>
+        <article><h3>Journal</h3><p>Every folk can write. Stories go into the <a href="/#journal">Journal on fabiocostaph.com</a> and the monthly magazine.</p></article>
+      </div>
+    </div>
+  </section>
+
+  <!-- STEPS -->
+  <section class="blk steps">
+    <div class="wrap">
+      <h2 class="h2">Three steps to the fire.</h2>
+      <ol>
+        <li><span class="num">01</span><b>Pick your folk</b><span class="d">One or more. Sign up with email or Google in a minute.</span></li>
+        <li><span class="num">02</span><b>Sign three places you've been</b><span class="d">That's your welcome. Be the first to sign one and your name stays on it.</span></li>
+        <li><span class="num">03</span><b>Get your passport</b><span class="d" id="wpFounders">Stamps, levels, Local expert. The first 100 folk get a founding number for good.</span></li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- CLOSING -->
+  <section class="closing" id="join">
+    <div class="wrap">
+      <h2 class="h2">The fire is lit. <em>Pull up a seat.</em></h2>
+      <p>Leave no trace, protect fragile places, respect people, support local, share honestly, be kind. That's the whole code.</p>
+      <a class="btn btn-fire" href="#folk" style="min-height:56px;padding:0 30px;font-size:17px">Become folk — it's free</a>
+      <a href="/#wayfolk">Already folk? Log in</a>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <a href="/">← Back to fabiocostaph.com</a>
+    <span><a href="/#journal">Journal</a> · <a href="/#terms">Terms</a> · <a href="/#privacy">Privacy</a></span>
+    <span><a href="mailto:fabio.costantini25491@gmail.com">fabio.costantini25491@gmail.com</a> · <a href="https://instagram.com/fabiocostaph">@fabiocostaph</a></span>
+  </div>
+</footer>
+
+<a class="tomap" id="wpToMap" href="#map" aria-label="Back to the map"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2zM9 4v14M15 6v14"/></svg>Map</a>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+<script>
+(() => {
+  const SB = "https://hfidpbssartkmjlqcqvz.supabase.co";
+  const KEY = "sb_publishable_5vB1AGpYjMyh2Kv5TgPD0w_xfFzUdXV";   // public key: the database rules do the protecting
+  const ESRI = "https://server.arcgisonline.com/ArcGIS/rest/services";
+  const CAT = {
+    spot: ["Photo spot", "#9cc8ff"], restaurant: ["Food and drink", "#ffbe7a"], hotel: ["Stay", "#d2b8ff"],
+    workshop: ["Workshop", "#9fe3c8"], experience: ["Experience", "#7fd8ff"], trekking: ["Trekking", "#f7a6c4"]
+  };
+  const $ = s => document.querySelector(s);
+  const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const stage = $("#map"), status = $("#wpStatus");
+  const say = t => { status.textContent = t; status.hidden = !t; };
+
+  /* ---------- map ---------- */
+  const map = L.map("wpMap", { zoomControl: false, minZoom: 2, maxZoom: 19, worldCopyJump: true, preferCanvas: true }).setView([45.2, 10.5], 5);
+  L.control.zoom({ position: "topright" }).addTo(map);
+  map.attributionControl.setPrefix(false);
+  const topo = L.tileLayer(`${ESRI}/World_Topo_Map/MapServer/tile/{z}/{y}/{x}`, { maxZoom: 19, maxNativeZoom: 18, className: "wp-topo", attribution: "Map &copy; Esri" });
+  const sat = L.tileLayer(`${ESRI}/World_Imagery/MapServer/tile/{z}/{y}/{x}`, { maxZoom: 19, maxNativeZoom: 18, attribution: "Imagery &copy; Esri, Maxar, Earthstar Geographics" });
+  const lbl = L.tileLayer(`${ESRI}/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}`, { maxZoom: 19, maxNativeZoom: 18, opacity: .85 });
+  const style = document.createElement("style");
+  style.textContent = ".wp-topo{filter:grayscale(1) invert(.92) brightness(.85) contrast(.95)}";
+  document.head.appendChild(style);
+  topo.addTo(map);
+  const dots = L.layerGroup().addTo(map);
+  let spots = [];
+
+  const popup = s => {
+    const c = CAT[s.category] || CAT.spot;
+    return `<p class="pp-cat" style="color:${c[1]}">${esc(c[0])}</p><p class="pp-name">${esc(s.name)}</p>
+      <p class="pp-lock">🔒 <b>Folk signatures and tips</b> on this place are for folk.</p>
+      <a class="pp-go" href="#folk">Become folk</a> &nbsp; <a href="/#wayfolk" style="font-size:13px">Open in Wayfolk</a>`;
+  };
+  function draw() {
+    dots.clearLayers();
+    for (const s of spots) {
+      const c = (CAT[s.category] || CAT.spot)[1];
+      L.circleMarker([s.lat, s.lon], { radius: 4.5, color: "#050b14", weight: 1, fillColor: c, fillOpacity: .95 })
+        .bindPopup(() => popup(s), { maxWidth: 280 }).addTo(dots);
+    }
+  }
+
+  async function api(path, opt = {}) {
+    const r = await fetch(SB + path, { method: opt.method || "GET", headers: { apikey: KEY, "Content-Type": "application/json", ...(opt.headers || {}) },
+      body: opt.body ? JSON.stringify(opt.body) : undefined });
+    if (!r.ok) throw new Error(r.status);
+    return r.json();
+  }
+  async function loadSpots() {
+    try {
+      const all = [];
+      for (let from = 0; ; from += 1000) {
+        const data = await api("/rest/v1/public_spots?select=id,name,category,lat,lon", { headers: { "Range-Unit": "items", Range: `${from}-${from + 999}` } });
+        all.push(...data);
+        if (data.length < 1000) break;
+      }
+      spots = all.filter(s => Number.isFinite(+s.lat) && Number.isFinite(+s.lon)).map(s => ({ ...s, lat: +s.lat, lon: +s.lon }));
+      draw(); say("");
+      if (globe) drawGlobe();
+    } catch { say("The places could not be loaded. Try again in a moment."); }
+    stats();
+  }
+  async function stats() {
+    const parts = [];
+    let total = null, folk = null;
+    try { total = +(await api("/rest/v1/rpc/spots_total", { method: "POST", body: {} })) || null; } catch {}
+    try { folk = +(await api("/rest/v1/rpc/members_count", { method: "POST", body: {} })) || null; } catch {}
+    if (total) parts.push(`<span><b>${total.toLocaleString("en")}</b> places on the map</span>`);
+    if (folk) parts.push(`<span><b>${folk}</b> folk so far</span>`);
+    if (folk && folk < 100) {
+      parts.push(`<span><b>${100 - folk}</b> founding numbers left</span>`);
+      $("#wpFounders").textContent = `Stamps, levels, Local expert. The first 100 folk get a founding number for good: ${100 - folk} left.`;
+    }
+    if (parts.length) { $("#wpStats").innerHTML = parts.join(""); $("#wpStats").hidden = false; }
+  }
+
+  /* ---------- search over the places ---------- */
+  const inp = $("#wpSearch"), sug = $("#wpSugg");
+  const norm = s => String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+  inp.addEventListener("input", () => {
+    const q = norm(inp.value.trim());
+    if (q.length < 2) { sug.hidden = true; return; }
+    const hits = spots.filter(s => norm(s.name).includes(q)).slice(0, 8);
+    sug.innerHTML = hits.length ? hits.map(s => `<li><button type="button" data-id="${s.id}"><span>${esc(s.name)}</span><small>${esc((CAT[s.category] || CAT.spot)[0])}</small></button></li>`).join("")
+      : `<li style="padding:10px 12px;color:#8a99ab;font-size:14px">No place with that name yet.</li>`;
+    sug.hidden = false;
+  });
+  sug.addEventListener("click", e => {
+    const b = e.target.closest("button[data-id]"); if (!b) return;
+    const s = spots.find(x => String(x.id) === b.dataset.id); if (!s) return;
+    sug.hidden = true; inp.value = s.name;
+    if (stage.classList.contains("is-globe")) setView("map");
+    stage.classList.add("card-off");
+    map.flyTo([s.lat, s.lon], 14, { duration: 1.2 });
+    map.once("moveend", () => L.popup({ maxWidth: 280 }).setLatLng([s.lat, s.lon]).setContent(popup(s)).openOn(map));
+  });
+  document.addEventListener("click", e => { if (!e.target.closest(".search")) sug.hidden = true; });
+
+  /* ---------- views: map / satellite / 3D Earth ---------- */
+  let globe = null;
+  function loadML() {
+    if (window.maplibregl) return Promise.resolve(window.maplibregl);
+    return new Promise((res, rej) => {
+      const css = document.createElement("link"); css.rel = "stylesheet"; css.href = "https://cdn.jsdelivr.net/npm/maplibre-gl@5.24.0/dist/maplibre-gl.css"; document.head.appendChild(css);
+      const js = document.createElement("script"); js.src = "https://cdn.jsdelivr.net/npm/maplibre-gl@5.24.0/dist/maplibre-gl.js";
+      js.onload = () => res(window.maplibregl); js.onerror = rej; document.head.appendChild(js);
+    });
+  }
+  const geo = () => ({ type: "FeatureCollection", features: spots.map(s => ({ type: "Feature", properties: { c: (CAT[s.category] || CAT.spot)[1] }, geometry: { type: "Point", coordinates: [s.lon, s.lat] } })) });
+  function drawGlobe() { const src = globe && globe.getSource && globe.getSource("spots"); if (src) src.setData(geo()); }
+  async function ensureGlobe() {
+    if (globe) return globe;
+    const ml = await loadML();
+    const c = map.getCenter();
+    globe = new ml.Map({
+      container: "wpGlobe", center: [c.lng, c.lat], zoom: 1.6, maxZoom: 7.5, renderWorldCopies: false, attributionControl: { compact: true },
+      style: { version: 8, projection: { type: "globe" },
+        sources: { sat: { type: "raster", tiles: [`${ESRI}/World_Imagery/MapServer/tile/{z}/{y}/{x}`], tileSize: 256, maxzoom: 18, attribution: "Imagery &copy; Esri, Maxar, Earthstar Geographics" } },
+        layers: [{ id: "sat", type: "raster", source: "sat" }] }
+    });
+    globe.on("load", () => {
+      try { globe.setProjection({ type: "globe" }); } catch {}
+      globe.addSource("spots", { type: "geojson", data: geo() });
+      globe.addLayer({ id: "spots", type: "circle", source: "spots", paint: { "circle-radius": 3, "circle-color": ["get", "c"], "circle-stroke-color": "#050b14", "circle-stroke-width": .6 } });
+    });
+    return globe;
+  }
+  async function setView(v) {
+    document.querySelectorAll(".views button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.view === v)));
+    if (v === "globe") {
+      stage.classList.add("is-globe");
+      try { await ensureGlobe(); globe.resize(); } catch { stage.classList.remove("is-globe"); say("The 3D Earth could not be loaded on this device."); }
+      return;
+    }
+    stage.classList.remove("is-globe");
+    map.invalidateSize();
+    if (v === "sat") { map.removeLayer(topo); sat.addTo(map); lbl.addTo(map); }
+    else { map.removeLayer(sat); map.removeLayer(lbl); topo.addTo(map); }
+  }
+  document.querySelectorAll(".views button").forEach(b => b.addEventListener("click", () => setView(b.dataset.view)));
+
+  /* ---------- the card over the map can step aside ---------- */
+  $("#wpFold").addEventListener("click", () => stage.classList.add("card-off"));
+  $("#wpUnfold").addEventListener("click", () => stage.classList.remove("card-off"));
+  map.on("dragstart zoomstart", () => { if (map._loaded && innerWidth < 900) stage.classList.add("card-off"); });
+
+  /* ---------- the map button follows you down the page ---------- */
+  const tomap = $("#wpToMap");
+  new IntersectionObserver(([e]) => tomap.classList.toggle("on", !e.isIntersecting), { threshold: .15 }).observe(stage);
+
+  /* ---------- which folk are you ---------- */
+  const FOLK = [
+    ["photo", "Photo", "photo.jpg", "You chase the light.", "Photo folk sign viewpoints with the right hour and where to stand."],
+    ["hike", "Hiker", "hike.jpg", "You go where the road ends.", "Hiker folk sign trails, huts and summits, with the conditions they found."],
+    ["slow", "Backpacker", "slow.jpg", "You travel slow, cheap and curious.", "Backpacker folk sign the stairways, hostels and corners nobody lists."],
+    ["road", "Road trip", "road.jpg", "The drive is the destination.", "Road trip folk sign passes, stops and the best pull-over at sunset."],
+    ["nomad", "Nomad", "nomad.jpg", "You work from wherever the view is.", "Nomad folk sign cafés with Wi-Fi, quiet rooms and towns worth a month."],
+    ["food", "Foodie", "food.jpg", "You plan trips around a plate.", "Foodie folk sign the places locals eat, with real prices."]
+  ];
+  const box = $("#wpFolks");
+  box.innerHTML = FOLK.map(([k, n, img]) => `<button type="button" class="folk" data-k="${k}" aria-pressed="false"><span class="ring"><img src="img/wf/${img}" alt="" loading="lazy" width="120" height="120"></span><span class="n">${n}</span></button>`).join("");
+  box.addEventListener("click", e => {
+    const b = e.target.closest(".folk"); if (!b) return;
+    box.querySelectorAll(".folk").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
+    const f = FOLK.find(x => x[0] === b.dataset.k);
+    $("#wpPickL").textContent = f[3];
+    $("#wpPickS").textContent = f[4] + " You can add more folk later.";
+    $("#wpJoin").textContent = `Join as ${f[1]} folk`;
+    try { localStorage.setItem("fcph-joinfolk", f[0]); } catch {}
+    try { window.umami && umami.track("Wayfolk test: folk picked", { folk: f[0] }); } catch {}
+  });
+
+  loadSpots();
+})();
+</script>
+</body>
+</html>
