@@ -94,8 +94,9 @@ button{font:inherit;color:inherit}
 .card-open{position:absolute;z-index:500;left:20px;bottom:20px;display:none}
 .stage.card-off .card-open{display:inline-flex}
 .legend{position:absolute;z-index:500;right:20px;bottom:24px;display:flex;flex-direction:column;gap:6px;padding:12px 14px;border-radius:16px;background:rgba(8,18,31,.9);border:1px solid var(--line);font-size:12px;color:var(--soft)}
-.legend span{display:flex;align-items:center;gap:8px}
+.legend>span{display:flex;align-items:center;gap:8px}
 .legend i{width:10px;height:10px;border-radius:50%;display:inline-block}
+.legend .spot-pin{transform:scale(.72);margin:-4px -3px;flex:none;cursor:default}
 .scrollcue{position:absolute;z-index:500;left:50%;bottom:16px;transform:translateX(-50%);display:flex;align-items:center;gap:6px;padding:8px 14px;border-radius:999px;background:rgba(8,18,31,.85);color:var(--soft);font-size:13px;text-decoration:none}
 .status{position:absolute;z-index:500;right:20px;top:20px;padding:8px 12px;border-radius:999px;background:rgba(8,18,31,.9);font-size:12px;color:var(--soft)}
 
@@ -115,9 +116,9 @@ section.blk{padding:110px 0}
 .folk span.n{font:600 23px var(--serif);color:var(--head)}
 .folk[aria-pressed="true"] .ring{border:3px solid var(--fire);box-shadow:0 0 30px 6px rgba(242,140,30,.45)}
 .folk:hover .ring{border-color:var(--warm)}
-.pick{width:min(720px,100%);min-height:150px;padding:24px 28px;border-radius:22px;background:var(--bg3);border:1px solid var(--wline);display:flex;flex-direction:column;align-items:center;gap:10px}
-.pick .l{margin:0;font:italic 600 28px/1.2 var(--serif);color:var(--head)}
-.pick .s{margin:0;color:var(--soft);font-size:15px}
+.pick-box{width:min(720px,100%);min-height:150px;padding:24px 28px;border-radius:22px;background:var(--bg3);border:1px solid var(--wline);display:flex;flex-direction:column;align-items:center;gap:10px}
+.pick-box .l{margin:0;font:italic 600 28px/1.2 var(--serif);color:var(--head)}
+.pick-box .s{margin:0;color:var(--soft);font-size:15px}
 
 .split{display:flex;flex-wrap:wrap;gap:56px;align-items:center}
 .split>div{flex:1 1 400px}
@@ -181,6 +182,56 @@ footer a{color:var(--soft)}
   section.blk{padding:72px 0}
   .folks{gap:14px}.folk{width:96px}.folk .ring{width:88px;height:88px}.folk span.n{font-size:18px}
 }
+/* the same pins as the Wayfolk map (from style.css) */
+.spot-pin{width:28px;height:28px;display:grid;place-items:center;border-radius:50%;background:#06101d;border:2px solid var(--c);
+  box-shadow:0 0 0 1.5px rgba(255,255,255,.75),0 0 14px var(--c);cursor:pointer;transition:transform .15s}
+.spot-pin:hover{transform:scale(1.18)}
+.spot-pin svg{width:15px;height:15px;fill:none;stroke:var(--c);stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.spot-pin{position:relative}
+.alert-dot{position:absolute;top:-4px;right:-4px;width:11px;height:11px;border-radius:50%;background:#ff4d4d;border:2px solid #06101d;box-shadow:0 0 8px #ff4d4d;animation:alertPulse 1.8s ease-in-out infinite}
+.spot-pin.local{box-shadow:0 0 0 1.5px rgba(255,255,255,.75),0 0 0 4px #7ed69b,0 0 14px var(--c)}
+.spot-pin.fragile{border-style:dashed}
+.spot-pin.shine{animation:pinShine 1.8s ease-in-out infinite}
+.spot-pin.shine-local{border-color:#7ed69b;animation:pinShineLocal 2.2s ease-in-out infinite}
+@keyframes pinShine{0%,100%{box-shadow:0 0 0 0 rgba(159,227,200,.0),0 0 8px var(--c)}50%{box-shadow:0 0 0 6px rgba(159,227,200,.18),0 0 22px 4px var(--c)}}
+@keyframes pinShineLocal{0%,100%{box-shadow:0 0 0 1.5px rgba(255,255,255,.7),0 0 8px #7ed69b}50%{box-shadow:0 0 0 1.5px rgba(255,255,255,.7),0 0 0 7px rgba(126,214,155,.2),0 0 24px 5px #7ed69b}}
+.spot-pin.plane{border-color:#ffc46e;box-shadow:0 0 14px rgba(255,196,110,.65);animation:planeIdle 1.6s ease-in-out infinite}
+.spot-pin.plane svg{stroke:#ffc46e}
+@media (prefers-reduced-motion:reduce){.spot-pin.shine,.spot-pin.shine-local,.spot-pin.plane{animation:none}}
+.spot-pin.offer{border-color:#ffc46e;animation:pinOffer 1.6s ease-in-out infinite}
+@keyframes pinOffer{0%,100%{box-shadow:0 0 6px rgba(255,196,110,.5)}50%{box-shadow:0 0 0 6px rgba(255,196,110,.16),0 0 22px 5px rgba(255,196,110,.75)}}
+@media (prefers-reduced-motion:reduce){.spot-pin.offer{animation:none}}
+.vf-dot{position:absolute;top:-6px;right:-7px;width:15px;height:15px;border-radius:50%;background:#7ed69b;color:#06101d;font-size:9px;font-weight:800;line-height:15px;text-align:center;box-shadow:0 0 0 2px #06101d}
+.spot-pin.outdated{opacity:.55;filter:grayscale(.7)}
+.sx-gcl{width:var(--s);height:var(--s);display:grid;place-items:center;padding:0;border-radius:50%;cursor:pointer;color:#fff;font:600 15px var(--sans);
+  background:radial-gradient(circle at 40% 35%,rgba(40,80,160,.95),rgba(8,20,48,.95));border:2px solid rgba(170,205,255,.85);box-shadow:0 0 0 5px rgba(120,170,255,.18),0 0 22px rgba(120,170,255,.55);transition:transform .2s}
+.sx-gcl:hover,.sx-gcl:focus-visible{transform:scale(1.1);outline:none;border-color:#ffd9a0}
+.sx-gpin{width:32px;height:32px;display:grid;place-items:center;padding:0;border-radius:50%;cursor:pointer;background:rgba(6,16,36,.9);border:2px solid var(--c);box-shadow:0 0 14px var(--c)}
+.sx-gpin svg{width:16px;height:16px;fill:none;stroke:var(--c);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.sx-gpin:hover{transform:scale(1.12)}
+.sx-gcl{position:relative;width:var(--s);height:var(--s);padding:0;border-radius:50%;font:600 11px var(--sans);color:transparent;
+  background:radial-gradient(circle,rgba(220,235,255,.95) 0,rgba(150,195,255,.55) 35%,rgba(110,160,255,.12) 70%,transparent 72%);
+  border:0;box-shadow:none;transition:transform .2s,color .2s}
+.sx-gcl::before,.sx-gpin::before{content:"";position:absolute;inset:-12px;border-radius:50%}   /* area di tocco comoda, invisibile */
+.sx-gcl span{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);white-space:nowrap;pointer-events:none}
+.sx-gcl.has-n{color:rgba(255,255,255,.88);text-shadow:0 0 4px #04102a,0 0 8px #04102a}
+.sx-gcl.has-n span{top:auto;bottom:calc(100% + 2px);transform:translateX(-50%);font-size:10.5px;letter-spacing:.02em}
+.sx-gcl:hover,.sx-gcl:focus-visible{transform:scale(1.35);color:#fff;outline:none;opacity:1 !important;
+  background:radial-gradient(circle,#fff 0,rgba(255,217,160,.75) 35%,rgba(255,196,110,.18) 70%,transparent 72%)}
+.sx-gpin{position:relative;width:12px;height:12px;padding:0;border:0;border-radius:50%;background:var(--c);box-shadow:0 0 0 2px rgba(4,12,28,.55),0 0 8px var(--c);transition:width .2s,height .2s,background .2s}
+.sx-gpin span{display:none}
+.sx-gpin:hover,.sx-gpin:focus-visible{width:30px;height:30px;background:rgba(6,16,36,.92);border:2px solid var(--c);outline:none;opacity:1 !important}
+.sx-gpin:hover span,.sx-gpin:focus-visible span{display:grid;place-items:center;width:100%;height:100%}
+.sx-gpin svg{width:15px;height:15px;fill:none;stroke:var(--c);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.sx-gpin:hover{transform:none}
+@media (max-width:700px){.sx-gcl,.sx-gpin{font-size:10px}.sx-gpin{width:11px;height:11px}}
+.spot-pin .folk-badge,.spot-pin .pick-star{position:absolute;top:-8px;left:-8px;width:17px;height:17px;border-radius:50%;display:grid;place-items:center;font-size:10px;line-height:1;background:#06101d;border:1.5px solid var(--fc,#ffd27a);box-shadow:0 1px 4px rgba(0,0,0,.5)}
+.spot-pin .pick-star{background:linear-gradient(135deg,#ffe08a,#ffb347);color:#3a2300;border-color:#fff;font-size:11px;font-weight:700}
+.spot-pin.signed.t2{outline:2px solid var(--fc);outline-offset:2px}
+.spot-pin.signed.t3{outline:2px solid var(--fc);outline-offset:2px;box-shadow:0 0 0 5px rgba(6,16,29,.85),0 0 0 7px var(--fc),0 0 18px var(--fc)}
+.spot-pin.pick{outline:2px solid #ffd27a;outline-offset:2px}
+.spot-pin.pick.t3{box-shadow:0 0 0 5px rgba(6,16,29,.85),0 0 0 7px #ffd27a,0 0 20px #ffd27a}
+.leaflet-div-icon{background:none;border:0}
 /* member view */
 body.is-folk .only-guest{display:none!important}
 body:not(.is-folk) .only-folk{display:none!important}
@@ -244,7 +295,7 @@ body:not(.is-folk) .only-folk{display:none!important}
 
 <main>
   <!-- THE MAP: the protagonist -->
-  <section class="stage" id="map" aria-label="The Wayfolk map">
+  <section class="stage is-globe" id="map" aria-label="The Wayfolk map">
     <div id="wpMap"></div>
     <div id="wpGlobe" aria-label="3D Earth"></div>
 
@@ -256,9 +307,8 @@ body:not(.is-folk) .only-folk{display:none!important}
         <ul class="sugg" id="wpSugg" hidden></ul>
       </div>
       <div class="views" role="group" aria-label="Map view">
-        <button type="button" data-view="map" aria-pressed="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2zM9 4v14M15 6v14"/></svg>Map</button>
+        <button type="button" data-view="globe" aria-pressed="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/></svg>3D Earth</button>
         <button type="button" data-view="sat" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 9l4-4 4 4-4 4zM11 15l4-4 4 4-4 4zM13 5l2-2M7 17l-3 3"/></svg>Satellite</button>
-        <button type="button" data-view="globe" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/></svg>3D Earth</button>
       </div>
     </div>
     <p class="status" id="wpStatus" role="status">Loading the places…</p>
@@ -288,14 +338,7 @@ body:not(.is-folk) .only-folk{display:none!important}
     </div>
     <button class="btn btn-fire card-open" type="button" id="wpUnfold"><span class="only-guest">What is Wayfolk?</span><span class="only-folk">Your card</span></button>
 
-    <div class="legend" aria-label="Legend">
-      <span><i style="background:#9cc8ff"></i>Photo spots and places</span>
-      <span><i style="background:#ffbe7a"></i>Food and drink</span>
-      <span><i style="background:#d2b8ff"></i>Stay</span>
-      <span><i style="background:#f7a6c4"></i>Trekking</span>
-      <span class="only-folk"><i style="background:#9cc8ff;box-shadow:0 0 0 2px #050b14,0 0 0 4px #f28c1e"></i>Signed by 5+ folk</span>
-      <span class="only-folk"><i style="background:#ffd27a;box-shadow:0 0 0 2px #050b14"></i>Fabio's pick</span>
-    </div>
+    <div class="legend" aria-label="Legend" id="wpLegend"></div>
     <a class="scrollcue only-folk" href="#me">Your passport <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></a>
     <a class="scrollcue only-guest" href="#folk">Which folk are you? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></a>
   </section>
@@ -319,7 +362,7 @@ body:not(.is-folk) .only-folk{display:none!important}
       <p class="kick">You don't join as a user</p>
       <h2 class="h2">Which folk <em>are you?</em></h2>
       <div class="folks" role="group" aria-label="Pick your folk" id="wpFolks"></div>
-      <div class="pick" aria-live="polite">
+      <div class="pick-box" aria-live="polite">
         <p class="l" id="wpPickL">Tap the way you travel.</p>
         <p class="s" id="wpPickS">Your folk becomes your voice on the map. You can belong to more than one.</p>
         <a class="btn btn-fire" id="wpJoin" href="/#join">Become folk</a>
@@ -403,27 +446,28 @@ body:not(.is-folk) .only-folk{display:none!important}
   const KEY = "sb_publishable_5vB1AGpYjMyh2Kv5TgPD0w_xfFzUdXV";   // public key: the database rules do the protecting
   const ESRI = "https://server.arcgisonline.com/ArcGIS/rest/services";
   const CAT = {
-    spot: ["Photo spot", "#9cc8ff"], restaurant: ["Food and drink", "#ffbe7a"], hotel: ["Stay", "#d2b8ff"],
-    workshop: ["Workshop", "#9fe3c8"], experience: ["Experience", "#7fd8ff"], trekking: ["Trekking", "#f7a6c4"]
+    spot: ["Photo spot", "#9cc8ff", '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8.5h3.2l1.8-2.5h6l1.8 2.5H20V19H4z"/><circle cx="12" cy="13" r="3.4"/></svg>'],
+    restaurant: ["Food and drink", "#ffbe7a", '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 3v18M4 3v5.5a2.5 2.5 0 0 0 5 0V3M17.5 21V3c-2.2 1.2-3.5 4-3.5 7.5V13h3.5"/></svg>'],
+    hotel: ["Stay", "#d2b8ff", '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5v15M21 20v-6.5a3 3 0 0 0-3-3h-7.5V14M3 14h18M3 17.5h18"/><circle cx="7" cy="11.2" r="1.7"/></svg>'],
+    workshop: ["Workshop", "#9fe3c8", '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="1.8"/><path d="M3.5 10h17M8 3v4M16 3v4M12 12.6l1 2 2.2.3-1.6 1.5.4 2.2-2-1-2 1 .4-2.2-1.6-1.5 2.2-.3z"/></svg>'],
+    experience: ["Experience", "#7fd8ff", '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5 14.5 9l6 .6-4.5 4 1.3 5.9L12 16.5l-5.3 3 1.3-5.9-4.5-4 6-.6z"/></svg>'],
+    trekking: ["Trekking", "#f7a6c4", '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m2.5 20 6.5-11 4 6.5 2.5-3.5 6 8z"/><path d="M8 13.5l1.6 1.2M14.5 16l1.5-1"/><circle cx="17" cy="5.5" r="1.8"/></svg>']
   };
   const $ = s => document.querySelector(s);
   const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const stage = $("#map"), status = $("#wpStatus");
   const say = t => { status.textContent = t; status.hidden = !t; };
 
-  /* ---------- map ---------- */
-  const map = L.map("wpMap", { zoomControl: false, minZoom: 2, maxZoom: 19, worldCopyJump: true, preferCanvas: true }).setView([45.2, 10.5], 5);
+  /* ---------- map: 3D Earth (globe) and the satellite map under it, like the Wayfolk map ---------- */
+  const map = L.map("wpMap", { zoomControl: false, minZoom: 2, maxZoom: 19, worldCopyJump: true, preferCanvas: true }).setView([45.2, 10.5], 6);
   L.control.zoom({ position: "topright" }).addTo(map);
   map.attributionControl.setPrefix(false);
-  const topo = L.tileLayer(`${ESRI}/World_Topo_Map/MapServer/tile/{z}/{y}/{x}`, { maxZoom: 19, maxNativeZoom: 18, className: "wp-topo", attribution: "Map &copy; Esri" });
-  const sat = L.tileLayer(`${ESRI}/World_Imagery/MapServer/tile/{z}/{y}/{x}`, { maxZoom: 19, maxNativeZoom: 18, attribution: "Imagery &copy; Esri, Maxar, Earthstar Geographics" });
-  const lbl = L.tileLayer(`${ESRI}/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}`, { maxZoom: 19, maxNativeZoom: 18, opacity: .85 });
-  const style = document.createElement("style");
-  style.textContent = ".wp-topo{filter:grayscale(1) invert(.92) brightness(.85) contrast(.95)}";
-  document.head.appendChild(style);
-  topo.addTo(map);
+  L.tileLayer(`${ESRI}/World_Imagery/MapServer/tile/{z}/{y}/{x}`, { maxZoom: 19, maxNativeZoom: 18, attribution: "Imagery &copy; Esri, Maxar, Earthstar Geographics" }).addTo(map);
+  L.tileLayer(`${ESRI}/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}`, { maxZoom: 19, maxNativeZoom: 18, opacity: .85 }).addTo(map);
   const dots = L.layerGroup().addTo(map);
   let spots = [];
+  let viewMode = "globe", onGlobe = true, handing = false;
+  const GLOBE_TO_FLAT = 6.3, FLAT_TO_GLOBE = 3.5;
 
   /* ---------- who is looking: a visitor or a folk (same login as the site) ---------- */
   const FOLKNAME = { photo: "Photo", hike: "Hiker", slow: "Backpacker", road: "Road trip", nomad: "Nomad", food: "Foodie" };
@@ -461,7 +505,7 @@ body:not(.is-folk) .only-folk{display:none!important}
       <a class="pp-go" href="#folk">Become folk</a> &nbsp; <a href="/#wayfolk" style="font-size:13px">Open in Wayfolk</a>`;
     const g = signs.get(s.id);
     const by = g ? Object.entries(g.by).sort((a, b) => b[1] - a[1]).map(([k, n]) => `${n} ${esc(FOLKNAME[k] || k)}`).join(" · ") : "";
-    return `<p class="pp-cat" style="color:${c[1]}">${esc(c[0])}${g && g.fabio ? ' · <span style="color:#ffd27a">★ Fabio\'s pick</span>' : ""}${s.fragile ? " · fragile" : ""}</p>
+    return `<p class="pp-cat" style="color:${c[1]}">${esc(c[0])}${g && g.fabio ? ' · <span style="color:#ffd27a">★ Fabio\'s pick</span>' : ""}${s.fragile ? " · fragile, no geotag" : ""}${s.support_local ? " · Support local" : ""}</p>
       <p class="pp-name">${esc(s.name)}</p>
       <p class="pp-signs">${g && g.total ? `<b>Signed by ${g.total} folk</b> · ${by}` : "No folk signature yet: be the first."}</p>
       <div data-tips="${s.id}"></div>
@@ -475,28 +519,46 @@ body:not(.is-folk) .only-folk{display:none!important}
   }
   map.on("popupopen", e => { const el = e.popup.getElement()?.querySelector("[data-tips]"); if (el && me) fillTips(el.dataset.tips, el); });
 
+  const FOLKC = { photo: "#c9a7ff", hike: "#7ee081", slow: "#ffb347", road: "#ff8a7a", nomad: "#7fb2ff", food: "#ffd166" };
+  const FOLKI = { photo: "📷", hike: "🥾", slow: "🎒", road: "🚐", nomad: "💻", food: "🍝" };
+  // the same pin as the Wayfolk map: category icon, folk badge, rings from 5 and 15 signatures, Fabio's pick, Support local, fragile, verified
+  function pinIcon(s) {
+    const k = CAT[s.category] || CAT.spot, g = me ? signs.get(s.id) : null;
+    const top = g && g.total ? Object.entries(g.by).sort((a, b) => b[1] - a[1])[0][0] : null;
+    const tier = !g ? 0 : g.total >= 15 ? 3 : g.total >= 5 ? 2 : g.total >= 1 ? 1 : 0;
+    const cls = ["spot-pin", tier ? `signed t${tier}` : "", g && g.fabio ? "pick" : "", s.support_local ? "local" : "", s.fragile ? "fragile" : ""].filter(Boolean).join(" ");
+    const badge = g && g.fabio ? `<span class="pick-star" aria-hidden="true">★</span>` : tier && top ? `<span class="folk-badge" aria-hidden="true">${FOLKI[top] || ""}</span>` : "";
+    return L.divIcon({ className: "", iconSize: [28, 28], iconAnchor: [14, 14], popupAnchor: [0, -12],
+      html: `<div class="${cls}" style="--c:${k[1]}${top ? `;--fc:${FOLKC[top]}` : ""}">${k[2]}${badge}${s.verified_at ? `<span class="vf-dot" aria-hidden="true">✓</span>` : ""}</div>` });
+  }
   function draw() {
     dots.clearLayers();
-    for (const s of spots) {
-      const c = (CAT[s.category] || CAT.spot)[1];
-      const g = me ? signs.get(s.id) : null, n = g ? g.total : 0;
-      if (n >= 15) L.circleMarker([s.lat, s.lon], { radius: 11, color: "#f28c1e", weight: 2, fill: false, interactive: false, opacity: .9 }).addTo(dots);
-      L.circleMarker([s.lat, s.lon], {
-        radius: n >= 5 ? 6.5 : 4.5,
-        color: n >= 5 ? "#f28c1e" : "#050b14", weight: n >= 5 ? 2.5 : 1,
-        fillColor: g && g.fabio ? "#ffd27a" : c, fillOpacity: .95
-      }).bindPopup(() => popup(s), { maxWidth: 290 }).addTo(dots);
+    if (onGlobe) return drawGlobe();
+    const b = map.getBounds().pad(0.15);
+    const inView = spots.filter(s => b.contains([s.lat, s.lon]));
+    const full = inView.length <= 700;   // the real icons when they fit; small dots only when one view holds thousands
+    for (const s of inView) {
+      const mk = full ? L.marker([s.lat, s.lon], { icon: pinIcon(s), title: s.name, riseOnHover: true })
+        : L.circleMarker([s.lat, s.lon], { radius: 4, color: "#06101d", weight: 1, fillColor: (CAT[s.category] || CAT.spot)[1], fillOpacity: .95 });
+      mk.bindPopup(() => popup(s), { maxWidth: 290 }).addTo(dots);
     }
   }
+  map.on("moveend", () => { if (!onGlobe && !(map._popup && map._popup.isOpen())) draw(); });
 
   async function loadSpots() {
     try {
       const all = [];
-      const path = me ? "/rest/v1/spots?select=id,name,category,lat,lon,fragile&order=id.asc" : "/rest/v1/public_spots?select=id,name,category,lat,lon";
-      for (let from = 0; ; from += 1000) {
-        const data = await A(path, { headers: { "Range-Unit": "items", Range: `${from}-${from + 999}` } });
-        all.push(...data);
-        if (data.length < 1000) break;
+      const paths = me ? ["/rest/v1/spots?select=id,name,category,lat,lon,fragile,support_local,verified_at&order=id.asc", "/rest/v1/spots?select=id,name,category,lat,lon&order=id.asc"]
+        : ["/rest/v1/public_spots?select=id,name,category,lat,lon,support_local", "/rest/v1/public_spots?select=id,name,category,lat,lon"];
+      for (const path of paths) {
+        try {
+          for (let from = 0; ; from += 1000) {
+            const data = await A(path, { headers: { "Range-Unit": "items", Range: `${from}-${from + 999}` } });
+            all.push(...data);
+            if (data.length < 1000) break;
+          }
+          break;
+        } catch (e) { all.length = 0; if (path === paths[paths.length - 1]) throw e; }
       }
       spots = all.filter(s => Number.isFinite(+s.lat) && Number.isFinite(+s.lon)).map(s => ({ ...s, lat: +s.lat, lon: +s.lon }));
       if (me) {
@@ -510,7 +572,6 @@ body:not(.is-folk) .only-folk{display:none!important}
         } catch {}
       }
       draw(); say("");
-      if (globe) drawGlobe();
     } catch { say("The places could not be loaded. Try again in a moment."); }
     stats();
   }
@@ -567,9 +628,8 @@ body:not(.is-folk) .only-folk{display:none!important}
     if (!navigator.geolocation) return say("Your browser can't share your position.");
     say("Finding you…");
     navigator.geolocation.getCurrentPosition(pos => {
-      say(""); if (stage.classList.contains("is-globe")) setView("map");
-      stage.classList.add("card-off");
-      map.flyTo([pos.coords.latitude, pos.coords.longitude], 12, { duration: 1.2 });
+      say(""); stage.classList.add("card-off");
+      goFlat([pos.coords.latitude, pos.coords.longitude], 12);
       L.circleMarker([pos.coords.latitude, pos.coords.longitude], { radius: 8, color: "#fff", weight: 3, fillColor: "#3d8bff", fillOpacity: 1 }).addTo(map);
     }, () => say("Position not available: allow location for this site."), { enableHighAccuracy: true, timeout: 10000 });
   });
@@ -603,15 +663,14 @@ body:not(.is-folk) .only-folk{display:none!important}
     const b = e.target.closest("button[data-id]"); if (!b) return;
     const s = spots.find(x => String(x.id) === b.dataset.id); if (!s) return;
     sug.hidden = true; inp.value = s.name;
-    if (stage.classList.contains("is-globe")) setView("map");
     stage.classList.add("card-off");
-    map.flyTo([s.lat, s.lon], 14, { duration: 1.2 });
+    goFlat([s.lat, s.lon], 14);
     map.once("moveend", () => L.popup({ maxWidth: 280 }).setLatLng([s.lat, s.lon]).setContent(popup(s)).openOn(map));
   });
   document.addEventListener("click", e => { if (!e.target.closest(".search")) sug.hidden = true; });
 
-  /* ---------- views: map / satellite / 3D Earth ---------- */
-  let globe = null;
+  /* ---------- views: 3D Earth (default) and Satellite ---------- */
+  let globe = null, globeMarkers = [];
   function loadML() {
     if (window.maplibregl) return Promise.resolve(window.maplibregl);
     return new Promise((res, rej) => {
@@ -620,38 +679,118 @@ body:not(.is-folk) .only-folk{display:none!important}
       js.onload = () => res(window.maplibregl); js.onerror = rej; document.head.appendChild(js);
     });
   }
-  const geo = () => ({ type: "FeatureCollection", features: spots.map(s => ({ type: "Feature", properties: { c: (CAT[s.category] || CAT.spot)[1] }, geometry: { type: "Point", coordinates: [s.lon, s.lat] } })) });
-  function drawGlobe() { const src = globe && globe.getSource && globe.getSource("spots"); if (src) src.setData(geo()); }
+  const touch = matchMedia("(pointer: coarse)").matches;
+  // the places on the globe: single icons, or groups that merge so nothing overlaps (as on the Wayfolk map)
+  function drawGlobe() {
+    globeMarkers.forEach(m => m.remove()); globeMarkers = [];
+    if (!globe || !onGlobe || !window.maplibregl) return;
+    const el0 = $("#wpGlobe"), c = globe.getCenter(), cell = touch ? 64 : 78, w = el0.clientWidth, h = el0.clientHeight;
+    const rad = Math.PI / 180, cLat = c.lat * rad, cLon = c.lng * rad;
+    const ang = (lat, lon) => Math.acos(Math.min(1, Math.sin(cLat) * Math.sin(lat * rad) + Math.cos(cLat) * Math.cos(lat * rad) * Math.cos(lon * rad - cLon))) / rad;
+    const fade = (lat, lon) => globe.getZoom() >= 4 ? 1 : Math.max(0.15, Math.min(1, (84 - ang(lat, lon)) / 30));
+    const cells = new Map();
+    spots.forEach(s => {
+      if (globe.getZoom() < 4 && ang(s.lat, s.lon) > 80) return;
+      const p = globe.project([s.lon, s.lat]);
+      if (p.x < -20 || p.y < -20 || p.x > w + 20 || p.y > h + 20) return;
+      const key = `${Math.floor(p.x / cell)}:${Math.floor(p.y / cell)}`;
+      const b = cells.get(key) || cells.set(key, { list: [], x: 0, y: 0 }).get(key);
+      b.list.push(s); b.x += p.x; b.y += p.y;
+    });
+    let blobs = [...cells.values()].map(b => ({ list: b.list, x: b.x / b.list.length, y: b.y / b.list.length }));
+    const gap = touch ? 40 : 46;
+    blobs.sort((a, b) => b.list.length - a.list.length);
+    for (let changed = true, guard = 0; changed && guard < 6; guard++) {
+      changed = false; const out = [];
+      blobs.forEach(b => {
+        const t = out.find(o => Math.hypot(o.x - b.x, o.y - b.y) < gap);
+        if (!t) return out.push(b);
+        const n = t.list.length + b.list.length;
+        t.x = (t.x * t.list.length + b.x * b.list.length) / n; t.y = (t.y * t.list.length + b.y * b.list.length) / n;
+        t.list = t.list.concat(b.list); changed = true;
+      });
+      blobs = out;
+    }
+    blobs.forEach(({ list }) => {
+      const el = document.createElement("button"); el.type = "button";
+      if (list.length === 1) {
+        const s = list[0], k = CAT[s.category] || CAT.spot;
+        el.className = "sx-gpin"; el.style.setProperty("--c", k[1]); el.style.opacity = fade(s.lat, s.lon); el.innerHTML = `<span>${k[2]}</span>`;
+        el.title = s.name; el.setAttribute("aria-label", s.name);
+        el.addEventListener("click", ev => { ev.stopPropagation(); stage.classList.add("card-off"); goFlat([s.lat, s.lon], 14, s); });
+        globeMarkers.push(new maplibregl.Marker({ element: el }).setLngLat([s.lon, s.lat]).addTo(globe));
+      } else {
+        const n = list.length, lat = list.reduce((a, s) => a + s.lat, 0) / n, lon = list.reduce((a, s) => a + s.lon, 0) / n;
+        const size = Math.round(Math.min(34, 10 + Math.log10(n) * 9) * (touch ? .9 : 1));
+        el.className = `sx-gcl${n >= 10 ? " has-n" : ""}`; el.style.setProperty("--s", `${size}px`); el.style.opacity = fade(lat, lon);
+        el.innerHTML = `<span>${n >= 1000 ? (n / 1000).toFixed(1).replace(/\.0$/, "") + "k" : n}</span>`; el.setAttribute("aria-label", `${n} places`);
+        el.addEventListener("click", ev => {
+          ev.stopPropagation();
+          const z = Math.min(globe.getZoom() + 2.2, GLOBE_TO_FLAT + 0.2);
+          if (z >= GLOBE_TO_FLAT) return goFlat([lat, lon], Math.min(12, z + 2.5));
+          globe.easeTo({ center: [lon, lat], zoom: z, duration: 1100 });
+        });
+        globeMarkers.push(new maplibregl.Marker({ element: el }).setLngLat([lon, lat]).addTo(globe));
+      }
+    });
+  }
   async function ensureGlobe() {
     if (globe) return globe;
     const ml = await loadML();
-    const c = map.getCenter();
+    if (!ml || !ml.Map || typeof ml.Map.prototype.setProjection !== "function") throw new Error("no globe");
     globe = new ml.Map({
-      container: "wpGlobe", center: [c.lng, c.lat], zoom: 1.6, maxZoom: 7.5, renderWorldCopies: false, attributionControl: { compact: true },
+      container: "wpGlobe", center: [12, 30], zoom: innerWidth < 700 ? 0.9 : 1.5, minZoom: 0, maxZoom: 7.5, renderWorldCopies: false, attributionControl: { compact: true },
+      dragRotate: false, pitchWithRotate: false, touchPitch: false,
       style: { version: 8, projection: { type: "globe" },
-        sources: { sat: { type: "raster", tiles: [`${ESRI}/World_Imagery/MapServer/tile/{z}/{y}/{x}`], tileSize: 256, maxzoom: 18, attribution: "Imagery &copy; Esri, Maxar, Earthstar Geographics" } },
-        layers: [{ id: "sat", type: "raster", source: "sat" }] }
+        sky: { "atmosphere-blend": ["interpolate", ["linear"], ["zoom"], 0, 1, 5, 1, 7, 0] },
+        sources: {
+          sat: { type: "raster", tiles: [`${ESRI}/World_Imagery/MapServer/tile/{z}/{y}/{x}`], tileSize: 256, maxzoom: 18, attribution: "Imagery &copy; Esri, Maxar, Earthstar Geographics" },
+          lbl: { type: "raster", tiles: [`${ESRI}/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}`], tileSize: 256, maxzoom: 18 } },
+        layers: [{ id: "sat", type: "raster", source: "sat" }, { id: "lbl", type: "raster", source: "lbl", paint: { "raster-opacity": 0.8 } }] }
     });
-    globe.on("load", () => {
-      try { globe.setProjection({ type: "globe" }); } catch {}
-      globe.addSource("spots", { type: "geojson", data: geo() });
-      globe.addLayer({ id: "spots", type: "circle", source: "spots", paint: { "circle-radius": 3, "circle-color": ["get", "c"], "circle-stroke-color": "#050b14", "circle-stroke-width": .6 } });
+    globe.on("load", () => { try { globe.setProjection({ type: "globe" }); } catch {} drawGlobe(); });
+    globe.on("moveend", () => {
+      drawGlobe();
+      if (onGlobe && viewMode === "globe" && !handing && globe.getZoom() >= GLOBE_TO_FLAT) { const c = globe.getCenter(); goFlat([c.lat, c.lng], globe.getZoom() + 1); }
     });
     return globe;
   }
-  async function setView(v) {
-    document.querySelectorAll(".views button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.view === v)));
-    if (v === "globe") {
-      stage.classList.add("is-globe");
-      try { await ensureGlobe(); globe.resize(); } catch { stage.classList.remove("is-globe"); say("The 3D Earth could not be loaded on this device."); }
-      return;
+  // from the globe down to the satellite map (and open a place, if given)
+  function goFlat(center, zoom, s) {
+    onGlobe = false; stage.classList.remove("is-globe");
+    globeMarkers.forEach(m => m.remove()); globeMarkers = [];
+    handing = true; map.invalidateSize(); map.setView(center, zoom, { animate: false }); setTimeout(() => { handing = false; }, 80);
+    draw();
+    if (s) setTimeout(() => L.popup({ maxWidth: 290 }).setLatLng([s.lat, s.lon]).setContent(popup(s)).openOn(map), 120);
+  }
+  const mark = () => document.querySelectorAll(".views button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.view === viewMode)));
+  async function toGlobe(center, zoom) {
+    try {
+      await ensureGlobe();
+      onGlobe = true; stage.classList.add("is-globe"); globe.resize();
+      if (center) { handing = true; globe.jumpTo({ center: [center[1], center[0]], zoom: Math.max(0.8, Math.min(zoom, GLOBE_TO_FLAT - 0.6)) }); setTimeout(() => { handing = false; }, 80); }
+      map.closePopup(); dots.clearLayers(); drawGlobe();
+    } catch {
+      viewMode = "sat"; mark(); onGlobe = false; stage.classList.remove("is-globe"); draw();
+      say("The 3D Earth isn't available on this device: here is the satellite map."); setTimeout(() => say(""), 4000);
     }
-    stage.classList.remove("is-globe");
-    map.invalidateSize();
-    if (v === "sat") { map.removeLayer(topo); sat.addTo(map); lbl.addTo(map); }
-    else { map.removeLayer(sat); map.removeLayer(lbl); topo.addTo(map); }
+  }
+  // zooming far out on the satellite map brings you back to the globe (in 3D Earth mode)
+  map.on("zoomend", () => { if (viewMode === "globe" && !onGlobe && !handing && map.getZoom() <= FLAT_TO_GLOBE) { const c = map.getCenter(); toGlobe([c.lat, c.lng], map.getZoom() - 1); } });
+  function setView(v) {
+    viewMode = v; mark();
+    if (v === "globe") { const c = map.getCenter(); return toGlobe(onGlobe ? null : [c.lat, c.lng], Math.min(map.getZoom() - 1, 3)); }
+    if (onGlobe) { const c = globe ? globe.getCenter() : { lat: 45.2, lng: 10.5 }; goFlat([c.lat, c.lng], Math.max(5, (globe ? globe.getZoom() : 4) + 1.5)); }
   }
   document.querySelectorAll(".views button").forEach(b => b.addEventListener("click", () => setView(b.dataset.view)));
+  toGlobe();
+  // legend with the same icons as the map
+  const lg = (cls, c, inner, label, only) => `<span${only ? ' class="only-folk"' : ""}><span class="spot-pin ${cls}" style="--c:${c};--fc:#7ee081">${inner}</span>${label}</span>`;
+  $("#wpLegend").innerHTML = ["spot", "restaurant", "hotel", "trekking", "experience", "workshop"].map(k => lg("", CAT[k][1], CAT[k][2], CAT[k][0])).join("")
+    + lg("signed t2", CAT.spot[1], CAT.spot[2] + '<span class="folk-badge">🥾</span>', "Signed by 5+ folk", true)
+    + lg("pick", CAT.spot[1], CAT.spot[2] + '<span class="pick-star">★</span>', "Fabio's pick", true)
+    + lg("local", CAT.restaurant[1], CAT.restaurant[2], "Support local", false)
+    + lg("fragile", CAT.spot[1], CAT.spot[2], "Fragile, no geotag", true);
 
   /* ---------- the card over the map can step aside ---------- */
   document.querySelectorAll("[data-fold]").forEach(b => b.addEventListener("click", () => stage.classList.add("card-off")));
