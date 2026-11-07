@@ -3023,3 +3023,6 @@ body[data-page="explore"]::after{background:radial-gradient(90% 55% at 85% 0,rgb
 @keyframes globeWait{50%{opacity:.6}}
 @media (prefers-reduced-motion:reduce){.sx-globe-slot::before{animation:none}}
 .sx-stage.globe-wait .sx-globe-slot{opacity:1}
+/* a tutto schermo il globo ha il suo cielo: niente testi della pagina dietro */
+.sx-stage.map-full,.sx-stage.spots-stage.map-full{background:radial-gradient(circle at 50% 45%,rgba(40,100,220,.22),transparent 60%),url("img/sfondo-stelle-mobile.jpg") center/cover no-repeat,#020818 !important}
+@media (min-width:901px){.sx-stage.map-full,.sx-stage.spots-stage.map-full{background:radial-gradient(circle at 50% 45%,rgba(40,100,220,.22),transparent 60%),url("img/sfondo-stelle.jpg") center/cover no-repeat,#020818 !important}}
