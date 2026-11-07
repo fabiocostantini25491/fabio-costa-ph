@@ -46,6 +46,14 @@
       if (/murano|lido|lazzaro|burano|torcello/i.test(p.zona) && !feats.length) s = null;
       return { ...p, sest: SEST.some(z => z.name === s) ? s : "The lagoon islands", isola: /san giorgio|murano|lido|lazzaro|giudecca/i.test(p.zona) ? p.zona : "" };
     });
+    // i "Viewpoint" senza nome prendono il nome del luogo vicino (entro 200 m)
+    const named = pts.filter(p => !/^viewpoint\b/i.test(p.nome));
+    for (const p of pts) {
+      if (!/^viewpoint$/i.test(p.nome.trim())) continue;
+      let best = null, bd = 200;
+      for (const q of named) { const d = Math.hypot((+q.lon - +p.lon) * K, (+q.lat - +p.lat) * KY); if (d < bd) { bd = d; best = q; } }
+      if (best) p.nome = `Viewpoint near ${best.nome}`;
+    }
     // numeri nuovi, sestiere per sestiere
     const order = SEST.map(s => s.name);
     pts.sort((a, b) => order.indexOf(a.sest) - order.indexOf(b.sest) || a.n - b.n).forEach((p, i) => { p.n = i + 1; });
@@ -66,7 +74,7 @@
           <p class="mp-tip">Tap a number to open the place in Google Maps.<br>Index with all the names on the next page.</p>
         </div>
         <div class="mp-inset"><div id="inset"></div><p>The lagoon islands</p></div>
-        <p class="mp-credit">Base map © OpenStreetMap contributors © CARTO · sestieri © OpenStreetMap contributors · fabiocostaph.com</p>
+        <p class="mp-credit">Base map © Esri, HERE, Garmin, © OpenStreetMap contributors · sestieri © OpenStreetMap contributors · fabiocostaph.com</p>
       </section>
       <section class="mp-page mp-index" id="index">
         <h2>${esc(g.titolo)} · Index <small>number → the place on the map · name → Google Maps</small></h2>
@@ -75,9 +83,9 @@
         <p class="mp-foot"><span>Field Notes · ${esc(g.titolo)} · <a href="#map-page">back to the map</a></span><span>fabiocostaph.com</span></p>
       </section>`;
 
-    const tileUrl = "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
+    const tileUrl = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}";
     const map = L.map("map", { zoomControl: false, attributionControl: false, zoomSnap: 0.1, fadeAnimation: false, zoomAnimation: false, markerZoomAnimation: false });
-    const tiles = L.tileLayer(tileUrl, { maxZoom: 20, subdomains: "abcd" }).addTo(map);
+    const tiles = L.tileLayer(tileUrl, { maxZoom: 20, maxNativeZoom: 19, detectRetina: true, className: "mp-tiles" }).addTo(map);
     const far = p => p.sest === "The lagoon islands" && !/giudecca|san giorgio/i.test(p.zona);
     const core = pts.filter(p => !far(p));
     map.fitBounds(L.latLngBounds(core.map(p => [+p.lat, +p.lon])), { paddingTopLeft: [520, 60], paddingBottomRight: [60, 60] });
@@ -88,7 +96,7 @@
       L.marker(labelPoint(f.geometry), { interactive: false, icon: L.divIcon({ className: "", iconSize: [0, 0], html: `<div class="mp-sname" style="--c:${c}">${esc(f.properties.name)}</div>` }) }).addTo(map);
     }
     // numeri che non si coprono: si scostano un poco e una linea sottile li lega al punto vero
-    const D = 25, inMap = core.filter(p => map.getBounds().contains([+p.lat, +p.lon]));
+    const D = 31, inMap = core.filter(p => map.getBounds().contains([+p.lat, +p.lon]));
     const nodes = inMap.map(p => { const a = map.latLngToContainerPoint([+p.lat, +p.lon]); return { p, ax: a.x, ay: a.y, x: a.x, y: a.y }; });
     for (let it = 0; it < 400; it++) {
       for (let i = 0; i < nodes.length; i++) for (let j = i + 1; j < nodes.length; j++) {
@@ -110,7 +118,7 @@
     }
     // riquadro della laguna: le isole lontane, cliccabili anche loro
     const inset = L.map("inset", { zoomControl: false, attributionControl: false, dragging: false, zoomSnap: 0.1, fadeAnimation: false, zoomAnimation: false });
-    const t2 = L.tileLayer(tileUrl, { maxZoom: 20, subdomains: "abcd" }).addTo(inset);
+    const t2 = L.tileLayer(tileUrl, { maxZoom: 20, maxNativeZoom: 19, className: "mp-tiles" }).addTo(inset);
     inset.fitBounds(L.latLngBounds(pts.map(p => [+p.lat, +p.lon])), { padding: [24, 24] });
     for (const f of feats) L.geoJSON(f, { style: { color: colOf(f.properties.name), weight: 1, fillColor: colOf(f.properties.name), fillOpacity: .25 }, interactive: false }).addTo(inset);
     L.rectangle(map.getBounds(), { color: "#111", weight: 1.4, fill: false, dashArray: "4 4" }).addTo(inset);

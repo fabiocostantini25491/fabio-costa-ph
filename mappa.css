@@ -28,9 +28,9 @@ a { color: inherit; text-decoration: none; }
 .mp-credit { position: absolute; z-index: 700; bottom: 5mm; right: 8mm; font: 500 8.5pt var(--head); color: #333; background: rgba(255,255,255,.88); padding: 1mm 2.5mm; }
 
 /* numeri: cerchi = luoghi, quadrati = caffè e cibo; ognuno è un link a Google Maps */
-.mp-pin { width: 25px; height: 25px; margin: -12.5px 0 0 -12.5px; border-radius: 50%; border: 2px solid #fff; background: var(--c); color: #fff; display: grid; place-items: center; font: 700 10.5px/1 Arial, sans-serif; letter-spacing: -.02em; box-shadow: 0 1px 3px rgba(0,0,0,.5); }
+.mp-pin { width: 30px; height: 30px; margin: -15px 0 0 -15px; border-radius: 50%; border: 2px solid #fff; background: var(--c); color: #fff; display: grid; place-items: center; font: 700 12.5px/1 Arial, sans-serif; letter-spacing: -.02em; box-shadow: 0 1px 3px rgba(0,0,0,.5); }
 .mp-pin.pausa { border-radius: 5px; }
-.mp-pin.small { width: 20px; height: 20px; margin: -10px 0 0 -10px; font-size: 9px; border-width: 1.5px; }
+.mp-pin.small { width: 24px; height: 24px; margin: -12px 0 0 -12px; font-size: 10.5px; border-width: 1.5px; }
 .mp-sname { transform: translate(-50%, -50%); white-space: nowrap; font: 700 30px/1 var(--head); letter-spacing: .32em; text-transform: uppercase; color: var(--c); opacity: .55; text-shadow: 0 0 4px #fff, 0 0 10px #fff; }
 
 .mp-inset { position: absolute; z-index: 700; right: 14mm; bottom: 16mm; width: 190mm; background: #fff; padding: 3mm; box-shadow: 0 2mm 8mm rgba(0,0,0,.2); }
@@ -41,13 +41,14 @@ a { color: inherit; text-decoration: none; }
 .mp-index { padding: 22mm 22mm 16mm; }
 .mp-index h2 { margin: 0 0 8mm; font: 700 40pt/1 var(--serif); letter-spacing: -.03em; border-bottom: 1.2mm solid var(--ink); padding-bottom: 5mm; display: flex; align-items: baseline; gap: 10mm; }
 .mp-index h2 small { margin-left: auto; font: italic 400 15pt var(--serif); letter-spacing: 0; color: var(--soft); }
-.mp-cols { column-count: 6; column-gap: 10mm; column-rule: .25mm solid #d6d0c6; column-fill: auto; height: 505mm; }
+.mp-cols { column-count: 5; column-gap: 12mm; column-rule: .25mm solid #d6d0c6; column-fill: balance; }
 .mp-group { margin-bottom: 4mm; }
 .mp-zone { break-inside: avoid-column; break-after: avoid; margin: 0 0 2mm; padding: 2mm 3mm; background: var(--c); color: #fff; font: 700 12pt var(--head); letter-spacing: .14em; text-transform: uppercase; }
-.mp-it { display: grid; grid-template-columns: 10mm 1fr; gap: 2.5mm; align-items: start; padding: 1.3mm 0; border-bottom: .2mm solid #ece7df; break-inside: avoid; font-size: 11pt; line-height: 1.3; }
+.mp-it { display: grid; grid-template-columns: 10mm 1fr; gap: 2.5mm; align-items: start; padding: 1.6mm 0; border-bottom: .2mm solid #ece7df; break-inside: avoid; font-size: 12pt; line-height: 1.3; }
 .mp-num { display: grid; place-items: center; width: 8.5mm; height: 8.5mm; border-radius: 50%; background: var(--c); color: #fff; font: 700 9.5pt Arial, sans-serif; }
 .mp-num.pausa { border-radius: 1.5mm; }
 .mp-it a u { text-decoration: none; color: var(--c); font-size: 9pt; }
 .mp-it span em { display: block; font-size: 9pt; color: var(--soft); }
 .mp-foot { position: absolute; bottom: 9mm; left: 22mm; right: 22mm; display: flex; justify-content: space-between; font: 500 9pt var(--head); letter-spacing: .12em; text-transform: uppercase; color: var(--soft); }
 .mp-foot a { color: var(--rule); }
+.mp-tiles { filter: grayscale(.85) brightness(1.06) contrast(.92); }
