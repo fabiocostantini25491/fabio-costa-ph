@@ -45,7 +45,7 @@ const Spots = (() => {
     food: { ico: "🍝", label: "Foodie", long: "Food & local flavours", color: "#ffd166" , folk: "Foodie folk" }
   };
   const CLUSTER_KEYS = Object.keys(CLUSTERS);
-  // la stessa idea, raccontata a ogni cluster (porte d'ingresso: fabiocostaph.com/#spots-hikers ecc.)
+  // la stessa idea, raccontata a ogni cluster (porte d'ingresso: fabiocostaph.com/#wayfolk-hikers ecc.)
   const DOOR_LEAD = {
     photographers: "Thousands of places scouted for the light, signed by photo folk.",
     hikers: "The trail's best viewpoint, and when to be there. Places signed by hiker folk.",
@@ -147,7 +147,7 @@ const Spots = (() => {
         ? "This login link has expired or was already used. Ask for a new one below."
         : p.get("error_description").replace(/\+/g, " ");
     }
-    history.replaceState(null, "", location.pathname + location.search + "#spots");
+    history.replaceState(null, "", location.pathname + location.search + "#wayfolk");
   }
 
   async function api(path, { method = "GET", body, headers = {}, auth = true } = {}) {
@@ -3296,7 +3296,7 @@ const Spots = (() => {
           api("/rest/v1/rpc/expert_candidates", { method: "POST", body: {} }).then(r => r.data || []).catch(() => [])]);
         const rows = d => (st || []).filter(r => r.dim === d);
         const tot = rows("total")[0] || { signups: 0, approved: 0, active: 0 };
-        const nm = v => CLUSTERS[v] ? `${CLUSTERS[v].ico} ${CLUSTERS[v].long}` : v === "fabio" ? "★ Fabio's pick" : DOORS[v] ? `#spots-${v}` : v;
+        const nm = v => CLUSTERS[v] ? `${CLUSTERS[v].ico} ${CLUSTERS[v].long}` : v === "fabio" ? "★ Fabio's pick" : DOORS[v] ? `#wayfolk-${v}` : v;
         const pct = (a, b) => b ? `${Math.round(a / b * 100)}%` : "—";
         const table = (head, list, cols) => list.length ? `<table class="adm-table"><thead><tr>${head.map(h => `<th>${h}</th>`).join("")}</tr></thead><tbody>${list.map(r => `<tr>${cols(r).map(c => `<td>${c}</td>`).join("")}</tr>`).join("")}</tbody></table>` : `<p class="gate-help left">Ancora nessun dato.</p>`;
         body.innerHTML = `
@@ -3311,7 +3311,7 @@ const Spots = (() => {
           <p class="gate-help left">Hanno firmato almeno 15 luoghi nella stessa zona (circa 50 km). Nominali con un tocco: potranno verificare e modificare i luoghi della loro zona.</p>
           ${cand.length ? `<ul class="req-list">${cand.map(c => `<li class="req-row" data-cand="${esc(c.user_id)}"><div><b>${esc(c.name || "—")}</b><span>${c.signs} firme nella zona · ${c.places} luoghi aggiunti lì · ${c.total_signs} firme in tutto · ${(+c.lat).toFixed(1)}, ${(+c.lon).toFixed(1)}</span></div>
             <form class="cand-form"><input name="area" maxlength="80" placeholder="Nome della zona" required><button type="submit" class="pop-btn primary">🧭 Nomina</button></form></li>`).join("")}</ul>` : `<p class="gate-help left">Nessun candidato per ora.</p>`}
-          <p class="gate-help left">Porte d'ingresso da usare nei post: ${Object.keys(DOORS).map(k => `<code>fabiocostaph.com/#spots-${k}</code>`).join(" · ")}</p>`;
+          <p class="gate-help left">Porte d'ingresso da usare nei post: ${Object.keys(DOORS).map(k => `<code>fabiocostaph.com/#wayfolk-${k}</code>`).join(" · ")}</p>`;
         body.querySelectorAll("[data-cand]").forEach(li => {
           const c = cand.find(x => x.user_id === li.dataset.cand), f = li.querySelector("form");
           reverseName(+c.lat, +c.lon).then(r => { if (!f.area.value) f.area.value = r.place.split(",")[0] || r.name || ""; });
@@ -3537,7 +3537,7 @@ const Spots = (() => {
     box.innerHTML = `${head}<p class="mag-deck">Loading…</p>`;
     if (!configured() || !(await ensureSession())) {
       box.innerHTML = `${head}<p class="mag-deck">This section is for Fabio Costa Ph contributors. Log in to Wayfolk first, then come back here.</p>
-        <p><a class="outline-link" href="#spots">LOG IN TO WAYFOLK <span aria-hidden="true">→</span></a></p>`; return;
+        <p><a class="outline-link" href="#wayfolk">LOG IN TO WAYFOLK <span aria-hidden="true">→</span></a></p>`; return;
     }
     if (!loaded) { try { admin = await checkAdmin(); } catch {} }
     if (!contribs.size) { try { const { data } = await api("/rest/v1/contributors?select=user_id,display_name,roles&limit=1000"); (data || []).forEach(c => contribs.set(c.user_id, c)); } catch {} }
@@ -3972,7 +3972,7 @@ const Spots = (() => {
   const fieldsText = arr => [...new Set((arr || []).map(fieldLabel))].join(", ");
 
   /* apre un luogo sulla mappa dalla dashboard */
-  function openOnMap(s) { pendingFocus = s.id; meView = false; location.hash = "spots"; }
+  function openOnMap(s) { pendingFocus = s.id; meView = false; location.hash = "wayfolk"; }
   function consumeFocus() {
     if (pendingFocus == null || !map) return;
     const s = spots.find(x => x.id === pendingFocus); pendingFocus = null;
@@ -4000,14 +4000,14 @@ const Spots = (() => {
     onGlobe = false;
     const el = root();
     if (guest) { el.innerHTML = gateHtml(`<p class="gate-note">${esc(pendingText())}</p>`); return; }
-    el.innerHTML = `<div class="me"><a class="text-link me-back" href="#spots">${ICON.prev}Back to the map</a><p class="gate-note">Loading your profile…</p></div>`;
+    el.innerHTML = `<div class="me"><a class="text-link me-back" href="#wayfolk">${ICON.prev}Back to the map</a><p class="gate-note">Loading your profile…</p></div>`;
     const data = await loadMe();
     if (!meView) return;
     const uid = myUid(), me = profiles.find(p => p.user_id === uid) || { display_name: displayName() };
     const mine = spots.filter(s => s.created_by === uid);
     const stats = [["Places", data.profile?.places ?? mine.length], ["Reviews", data.profile?.reviews ?? data.reviews.length], ["Photos", data.profile?.photos ?? data.photos.length], ["Saved", data.profile?.saved ?? favs.size]];
     el.innerHTML = `<div class="me">
-      <a class="text-link me-back" href="#spots">${ICON.prev}Back to the map</a>
+      <a class="text-link me-back" href="#wayfolk">${ICON.prev}Back to the map</a>
       <header class="me-head">
         ${avatarHtml(me, 84)}
         <div class="me-id">
@@ -4155,7 +4155,7 @@ const Spots = (() => {
           : `<p class="muted">${data.saved.length ? "No saved place matches." : "Tap ♡ Save on any place to keep it here. Organise them in lists like «Dolomites 2027»."}</p>`}`;
       const qi = box.querySelector("#meSavedQ");
       qi.addEventListener("input", () => { savedQuery = qi.value; const pos = qi.selectionStart; drawMeTab().then(() => { const n = $("#meSavedQ"); n?.focus(); n?.setSelectionRange(pos, pos); }); });
-      box.querySelector("[data-mesavedmap]").addEventListener("click", () => { onlyFavs = true; meView = false; location.hash = "spots"; });
+      box.querySelector("[data-mesavedmap]").addEventListener("click", () => { onlyFavs = true; meView = false; location.hash = "wayfolk"; });
       box.querySelectorAll("[data-melist]").forEach(inp => inp.addEventListener("change", async () => {
         const id = +inp.dataset.melist, name = inp.value.trim() || null;
         try { await api(`/rest/v1/spot_favorites?spot_id=eq.${id}&user_id=eq.${encodeURIComponent(uid)}`, { method: "PATCH", body: { list_name: name }, headers: { Prefer: "return=minimal" } });

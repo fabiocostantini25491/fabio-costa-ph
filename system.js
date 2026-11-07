@@ -45,9 +45,9 @@
       } },
     { id: "earth", x: 34.9, y: 48.8, r: 4.1, name: "Earth", section: "Wayfolk", label: "Wayfolk",
       desc: "The home planet of the community: Wayfolk, the travel toolkit built by travellers. Places signed by the folk, trips, Pass it on, places to eat and stay, meetups. Free to join.",
-      go: go("spots"), moons: () => [
+      go: go("wayfolk"), moons: () => [
         { name: "Join for free", go: go("join") },
-        { name: "Open the map", go: go("spots") },
+        { name: "Open the map", go: go("wayfolk") },
         { name: "How Wayfolk works", go: go("guide-spots") },
         { name: "Wayfolk in one page", go: pdf("spots-quick-guide.pdf") }] },
     { id: "mars", x: 44.0, y: 48.6, r: 2.6, name: "Mars", section: "Explore", label: "Explore",

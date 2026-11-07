@@ -846,16 +846,16 @@ function newsItems() {
     const date = w.starts_on ? fmtDate(w.starts_on) : "";
     items.push({ kind: "workshop", when: w.created_at, lat: +w.lat, lon: +w.lon, label: w.offer ? `Workshop offer · ${w.offer}` : "New workshop",
       title: `${w.name}${date ? ` · ${date}` : ""}${w.places_left != null ? ` · ${w.places_left} places left` : ""}`,
-      go: () => { if (w.ws_link && /^https?:\/\//.test(w.ws_link)) window.open(w.ws_link, "_blank", "noopener"); else location.hash = "spots"; } });
+      go: () => { if (w.ws_link && /^https?:\/\//.test(w.ws_link)) window.open(w.ws_link, "_blank", "noopener"); else location.hash = "wayfolk"; } });
   });
   (homeSpotNews || []).forEach(x => {
     if (!isFresh(x.created_at)) return;
     if (x.kind === "meetup") items.push({ kind: "meetup", when: x.created_at, lat: +x.lat, lon: +x.lon, label: "New meetup",
-      title: `Members meet${x.on_date ? ` on ${fmtDate(x.on_date)}` : ""} · open Wayfolk to join`, go: () => { location.hash = "spots"; } });
+      title: `Members meet${x.on_date ? ` on ${fmtDate(x.on_date)}` : ""} · open Wayfolk to join`, go: () => { location.hash = "wayfolk"; } });
     else {
       const w = SPOT_WORD[x.category] || "place", n = +x.n || 1;
       items.push({ kind: "spot", when: x.created_at, lat: +x.lat, lon: +x.lon, label: n === 1 ? "New place in Wayfolk" : `${n} new places in Wayfolk`,
-        title: `${n === 1 ? `A new ${w}` : `New ${w}s`} in this area · members only`, go: () => { location.hash = "spots"; } });
+        title: `${n === 1 ? `A new ${w}` : `New ${w}s`} in this area · members only`, go: () => { location.hash = "wayfolk"; } });
     }
   });
   return items.filter(i => Number.isFinite(i.lat) && Number.isFinite(i.lon)).sort((a, b) => String(b.when).localeCompare(String(a.when)));
@@ -2204,7 +2204,7 @@ async function renderCrew() {
         ${c.instagram ? `<a href="https://www.instagram.com/${encodeURIComponent(c.instagram)}/" target="_blank" rel="noopener">Instagram @${esc(c.instagram)}</a>` : ""}
         ${site ? `<a href="${esc(site)}" target="_blank" rel="noopener">${ICON.ext}Website</a>` : ""}
         ${c.articles ? `<a href="#author-${esc(slug(c.name))}">${c.articles} ${c.articles === 1 ? "story" : "stories"} in the Journal →</a>` : ""}
-        ${c.on_map ? `<a href="#spots">On the Wayfolk map</a>` : ""}
+        ${c.on_map ? `<a href="#wayfolk">On the Wayfolk map</a>` : ""}
       </p>
     </article>`;
   }).join("");
@@ -2430,7 +2430,7 @@ document.addEventListener("change", e => { if (e.target.id === "shotFile" && e.t
 
 function route() {
   // chi arriva da wayfolk.eu (inoltro del dominio a fabiocostaph.com/?wayfolk) va dritto a Wayfolk
-  if (/(^\?|&)wayfolk\b/.test(location.search) && !location.hash) { history.replaceState(null, "", location.pathname + "#spots"); trackEvent("Wayfolk domain"); }
+  if (/(^\?|&)wayfolk\b/.test(location.search) && !location.hash) { history.replaceState(null, "", location.pathname + "#wayfolk"); trackEvent("Wayfolk domain"); }
   let hash = decodeURIComponent(location.hash.slice(1));
   let page = hash, article = null;
   if (hash.startsWith("art-")) { page = "journal"; article = hash.slice(4); }
@@ -2443,8 +2443,9 @@ function route() {
   if (magazine) page = "journal";
   if (writeMode) page = "journal";
   if (hash.startsWith("author-")) { page = "journal"; authorSlug = hash.slice(7); }
-  // porte d'ingresso dei cluster (link nei post): #spots-hikers, #spots-backpackers…
-  const door = (hash.match(/^spots-(photographers|hikers|backpackers|roadtrips|nomads|foodies)$/) || [])[1];
+  // porte d'ingresso dei folk (link nei post): #wayfolk-hikers, #wayfolk-backpackers… (anche #spots-…)
+  if (hash === "wayfolk") page = "spots";   // #wayfolk è il nuovo indirizzo della sezione (#spots continua a funzionare)
+  const door = (hash.match(/^(?:spots|wayfolk)-(photographers|hikers|backpackers|roadtrips|nomads|foodies)$/) || [])[1];
   if (door) { page = "spots"; try { if (localStorage.getItem("fcph-door") !== door) { localStorage.setItem("fcph-door", door); trackEvent("Spots door", { door }); } } catch {} }
   const join = hash === "join";
   const meHash = hash === "me";
@@ -2513,7 +2514,7 @@ function renderAll() {
 function bindEvents() {
   setupArticleZoom();
   // chi sta per aprire Spots (dito o mouse sul link): il globo 3D inizia a scaricarsi subito
-  const preSpots = e => { if (e.target.closest?.('a[href="#spots"], a[href="#join"], a[href="#me"]')) window.Spots?.prefetch?.(); };
+  const preSpots = e => { if (e.target.closest?.('a[href="#wayfolk"], a[href="#join"], a[href="#me"]')) window.Spots?.prefetch?.(); };
   document.addEventListener("pointerdown", preSpots, { passive: true });
   document.addEventListener("mouseover", preSpots, { passive: true });
   $$(".gl-vbtn").forEach(b => b.addEventListener("click", () => {
