@@ -76,6 +76,7 @@ const Spots = (() => {
   let commV = true;         // false finché non è stato eseguito supabase-community2.sql
   let meetups = [], meetupJoins = new Map(), favs = new Set(), profiles = [], openFlags = 0;
   let onlyFavs = false, showPhotographers = false, commLayer = null;
+  let passItems = [], passV = true, showPass = true, commDirty = false;   // Pass it on (false finché non è stato eseguito supabase-pass-it-on.sql)
   let tkV = true;           // false finché non è stato eseguito supabase-trekking.sql
   let wsV = true;           // false finché non è stato eseguito supabase-workshop.sql
   let pubV = true;          // false finché non è stato eseguito supabase-pubblico.sql
@@ -562,7 +563,7 @@ const Spots = (() => {
   const SX_GROUPS = [
     { id: "places", title: "Places", sub: "Photo spots · Points of interest · Trekking", cats: ["spot", "trekking"] },
     { id: "essentials", title: "Essentials", sub: "Stay · Food & drink", cats: ["hotel", "restaurant"] },
-    { id: "community", title: "Community", sub: "Photographers · Local experts · Meetups", cats: [] },
+    { id: "community", title: "Community", sub: "Photographers · Local experts · Meetups · Pass it on", cats: [] },
     { id: "outdoors", title: "Outdoors", sub: "Workshops · Experiences", cats: ["workshop", "experience"] }
   ];
 
@@ -586,13 +587,15 @@ const Spots = (() => {
           <option value="only"${alertMode === "only" ? " selected" : ""}>Only places with alerts</option></select></label>` : "")
         + (!guest && commV ? `<button type="button" class="sx-item${onlyFavs ? " on" : ""}" id="onlyFavs" aria-pressed="${onlyFavs}" style="--c:#ff8fb1"><span class="sx-ico">♥</span><span class="sx-name">My spots</span><small>${favs.size}</small><span class="sx-check" aria-hidden="true"></span></button>` : "");
       if (g.id === "community") {
-        if (guest || !commV) return lockItem("Photographers", "📷") + lockItem("Local experts", "🧭") + lockItem("Meetups", "👥");
+        if (guest || !commV) return lockItem("Photographers", "📷") + lockItem("Local experts", "🧭") + lockItem("Meetups", "👥") + lockItem("Pass it on", "🎁");
         return `<button type="button" class="sx-item${showPhotographers ? " on" : ""}" id="showPh" aria-pressed="${showPhotographers}" style="--c:#c9a7ff"><span class="sx-ico">📷</span><span class="sx-name">Photographers</span><small>${profiles.filter(p => p.visible && p.on_map !== false && p.lat != null).length}</small><span class="sx-check" aria-hidden="true"></span></button>
           <p class="sx-links"><button type="button" class="text-link" id="phList">List</button><button type="button" class="text-link" id="myProfile">${profiles.some(p => p.user_id === myUid()) ? "My photographer profile" : "Join the photographers' map"}</button>${nodiV && profiles.some(p => p.user_id === myUid()) ? `<button type="button" class="text-link" id="iPosted">📣 I just posted</button>` : ""}</p>
           ${nodiV ? `<button type="button" class="sx-item" id="expList" style="--c:#ffd9a0"><span class="sx-ico">🧭</span><span class="sx-name">Local experts</span><small>${experts.size}</small><span class="sx-go" aria-hidden="true">›</span></button>` : ""}
           ${nodiV && myExpert() ? `<button type="button" class="sx-item" id="myArea" style="--c:#ffd9a0"><span class="sx-ico">🧭</span><span class="sx-name">My area</span><span class="sx-go" aria-hidden="true">›</span></button>` : ""}
           <button type="button" class="sx-item" id="meetList" style="--c:#ffd166"><span class="sx-ico">👥</span><span class="sx-name">Meetups</span><small>${upcomingMeetups().length}</small><span class="sx-go" aria-hidden="true">›</span></button>
-          <p class="sx-links"><button type="button" class="text-link" id="meetAdd">＋ Organise a meetup</button></p>`;
+          <p class="sx-links"><button type="button" class="text-link" id="meetAdd">＋ Organise a meetup</button></p>
+          ${passV ? `<button type="button" class="sx-item${showPass ? " on" : ""}" id="showPass" aria-pressed="${showPass}" style="--c:#8fe0a8"><span class="sx-ico">${PASS_ICON}</span><span class="sx-name">Pass it on</span><small>${livePass().length}</small><span class="sx-check" aria-hidden="true"></span></button>
+          <p class="sx-links"><button type="button" class="text-link" id="passList">List</button><button type="button" class="text-link" id="passAdd">＋ Sell or give away</button></p>` : ""}`;
       }
       if (g.id === "essentials") return g.cats.map(k => item(k)).join("") + (!guest && schemaV2 && socialV ? supportItem(g.cats) : "");
       return g.cats.map(k => item(k)).join("");
@@ -778,8 +781,9 @@ const Spots = (() => {
       box.className = "lp-add";
       box.innerHTML = guest
         ? `<button type="button" class="lp-add-btn">Log in to add a spot here</button><small>${lat.toFixed(5)}, ${lon.toFixed(5)}</small>`
-        : `<button type="button" class="lp-add-btn">＋ Add a spot here</button><small>${lat.toFixed(5)}, ${lon.toFixed(5)}${m.getZoom() < 12 ? " · zoom in for a precise point" : ""}</small>`;
+        : `<button type="button" class="lp-add-btn">＋ Add a spot here</button>${passV && commV ? `<button type="button" class="lp-add-btn lp-pass" data-lppass>🎁 Pass it on here</button>` : ""}<small>${lat.toFixed(5)}, ${lon.toFixed(5)}${m.getZoom() < 12 ? " · zoom in for a precise point" : ""}</small>`;
       pop = L.popup({ closeButton: true, autoPan: true, closeOnClick: false, className: "lp-pop", offset: [0, -6] }).setLatLng([lat, lon]).setContent(box).openOn(m);
+      box.querySelector("[data-lppass]")?.addEventListener("click", () => { m.closePopup(pop); withConduct(() => openPassOn({ lat, lon, exact: true })); });
       box.querySelector("button").addEventListener("click", () => {
         m.closePopup(pop);
         if (guest) { wantLogin = true; wantJoin = false; render(); root()?.scrollIntoView({ behavior: "smooth" }); return; }
@@ -1257,6 +1261,9 @@ const Spots = (() => {
       onlyFavs = !onlyFavs; renderApp();
     });
     $("#meetList")?.addEventListener("click", openMeetupList);
+    $("#passList")?.addEventListener("click", openPassList);
+    $("#passAdd")?.addEventListener("click", () => withConduct(() => openPassOn(map ? { lat: map.getCenter().lat, lon: L.Util.wrapNum(map.getCenter().lng, [-180, 180], true), zoom: map.getZoom() } : null)));
+    $("#showPass")?.addEventListener("click", () => { showPass = !showPass; const b = $("#showPass"); b.classList.toggle("on", showPass); b.setAttribute("aria-pressed", showPass); drawCommunity(); });
     $("#meetAdd")?.addEventListener("click", () => withConduct(() => openMeetup(map ? { lat: map.getCenter().lat, lon: L.Util.wrapNum(map.getCenter().lng, [-180, 180], true) } : null)));
     $("#showPh")?.addEventListener("click", () => {
       showPhotographers = !showPhotographers;
@@ -1783,6 +1790,7 @@ const Spots = (() => {
     originLayer = L.layerGroup().addTo(map);
     osmLayer = L.layerGroup().addTo(map);
     commLayer = L.layerGroup().addTo(map);
+    map.on("popupclose", () => setTimeout(() => { if (commDirty) drawCommunity(); }, 0));
     drawOsm();
     drawOrigin();
     map.on("moveend zoomend", drawClusters);
@@ -2217,7 +2225,7 @@ const Spots = (() => {
 
   /* ---------- prezzi pagati dai membri (ristoranti, bar, hotel, B&B…) ---------- */
   const PRICED = { restaurant: true, hotel: true };
-  const CURRENCIES = ["EUR", "USD", "GBP", "CHF", "NOK", "SEK", "DKK", "ISK", "JPY", "AUD", "CAD"];
+  const CURRENCIES = ["EUR", "USD", "GBP", "CHF", "NOK", "SEK", "DKK", "ISK", "JPY", "AUD", "CAD", "VND", "THB", "IDR", "INR", "CNY", "KRW", "MXN", "BRL"];
   const STAY_TYPES = ["Hotel", "B&B", "Agriturismo / farm stay", "Apartment", "Hostel", "Mountain hut", "Camping", "Guesthouse", "Other"];
   let pricesV2 = true;
   const fmtMoney = (v, c) => { try { return new Intl.NumberFormat((window.I18N?.locale || "en-GB"), { style: "currency", currency: c || "EUR", maximumFractionDigits: v % 1 ? 2 : 0 }).format(v); } catch { return `${v} ${c || ""}`; } };
@@ -2391,6 +2399,10 @@ const Spots = (() => {
           .catch(err => { if (nodiV && err.status === 400) { nodiV = false; return api("/rest/v1/member_profiles?select=user_id,display_name,instagram,website,bio,base_name,lat,lon,visible&limit=2000"); } throw err; })
       ]);
       meetups = mu.data || [];
+      if (passV) {
+        try { passItems = (await api(`/rest/v1/pass_on?select=id,kind,item,note,price,currency,place,contact,lat,lon,created_by,author_name,created_at,expires_on&expires_on=gte.${todayISO()}&order=created_at.desc&limit=500`)).data || []; }
+        catch (err) { if ([400, 401, 403, 404].includes(err.status)) passV = false; passItems = []; }
+      }
       meetupJoins = new Map();
       (jo.data || []).forEach(j => (meetupJoins.get(j.meetup_id) || meetupJoins.set(j.meetup_id, []).get(j.meetup_id)).push(j));
       favs = new Set((fa.data || []).map(f => f.spot_id));
@@ -2580,6 +2592,9 @@ const Spots = (() => {
   const shortDay = d => new Date(d + "T12:00:00").toLocaleDateString(window.I18N?.locale || "en-GB", { day: "numeric", month: "short" });
   function drawCommunity() {
     if (!commLayer || !map) return;
+    // con una scheda aperta (ritrovo, Pass it on, fotografo) non si ridisegna: lo spostamento della mappa la chiuderebbe
+    if (commLayer.getLayers().some(l => l.isPopupOpen?.())) { commDirty = true; return; }
+    commDirty = false;
     commLayer.clearLayers();
     if (guest || !commV) return;
     upcomingMeetups().forEach(m => {
@@ -2590,6 +2605,14 @@ const Spots = (() => {
       let node = null;
       mk.bindPopup(() => node || (node = Object.assign(document.createElement("div"), { innerHTML: meetupHtml(m) }).firstElementChild), { maxWidth: 300, minWidth: 240, className: "spot-popup" });
       mk.on("popupopen", e => wireMeetup(e.popup, m, () => { node = null; }));
+    });
+    if (passV && showPass) livePass().forEach(it => {
+      const mk = L.marker([it.lat, it.lon], { zIndexOffset: 1150, keyboard: true, title: it.item,
+        icon: L.divIcon({ className: "", iconSize: [30, 30], iconAnchor: [15, 15], popupAnchor: [0, -12],
+          html: `<div class="pass-pin ${it.kind}">${PASS_ICON}<span>${it.kind === "give" ? "FREE" : it.price != null ? esc(fmtPrice(it)) : "SALE"}</span></div>` }) }).addTo(commLayer);
+      mk.bindTooltip(`${it.kind === "give" ? "Free" : "For sale"} · ${esc(it.item)}`, { direction: "top" });
+      mk.bindPopup(() => Object.assign(document.createElement("div"), { innerHTML: passHtml(it) }).firstElementChild, { maxWidth: 300, minWidth: 240, className: "spot-popup" });
+      mk.on("popupopen", e => wirePass(e.popup, it));
     });
     const zoomOk = map.getZoom() >= 5;
     profiles.filter(p => p.visible && p.on_map !== false && p.lat != null && (showPhotographers || (postFresh(p) && (zoomOk || isCo(p.user_id))))).forEach(p => {
@@ -2644,6 +2667,116 @@ const Spots = (() => {
       catch (err) { toast(`Could not delete: ${err.message}`, true); }
     });
     el.querySelector("[data-flagmeet]")?.addEventListener("click", () => openFlag("meetup", String(m.id), m.title));
+  }
+  /* --- PASS IT ON: chi parte vende o regala ciò che non porta a casa (solo testo: niente foto, niente pagamenti sul sito) --- */
+  const PASS_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 11h15v9.5h-15zM3 7.5h18V11H3zM12 7.5v13M12 7.5C10.8 4 7 3.6 7.2 6c.1 1.2 2.4 1.5 4.8 1.5M12 7.5c1.2-3.5 5-3.9 4.8-1.5-.1 1.2-2.4 1.5-4.8 1.5"/></svg>';
+  const livePass = () => passItems.filter(it => it.expires_on >= todayISO());
+  const fmtPrice = it => it.price == null ? "" : `${(+it.price).toLocaleString(window.I18N?.locale || "en-GB", { maximumFractionDigits: 2 })} ${it.currency || "EUR"}`;
+  const linkify = t => esc(t).replace(/\bhttps?:\/\/[^\s<]+/g, u => `<a href="${u}" target="_blank" rel="noopener nofollow">${u}</a>`)
+    .replace(/[\w.+-]+@[\w-]+\.[\w.-]+/g, m => `<a href="mailto:${m}">${m}</a>`);
+  function passHtml(it) {
+    const own = it.created_by === myUid();
+    return `<div class="spot-pop">
+      <span class="spot-cat" style="--c:#8fe0a8">${PASS_ICON}Pass it on · ${it.kind === "give" ? "Free" : "For sale"}</span>
+      <strong>${esc(it.item)}</strong>
+      ${it.kind === "sell" && it.price != null ? `<p class="pass-price">${esc(fmtPrice(it))}</p>` : it.kind === "give" ? `<p class="pass-price free">Free</p>` : ""}
+      ${it.place ? `<p class="pop-dates">${ICON.pin}<span>${esc(it.place)}</span></p>` : ""}
+      ${it.note ? `<p class="pop-desc">${esc(it.note)}</p>` : ""}
+      <p class="pass-contact"><b>Contact</b> ${linkify(it.contact || "")}</p>
+      <p class="pop-author">Posted by ${esc(it.author_name || "a member")}${xpBadge(it.created_by)} · ${fmtDay(String(it.created_at).slice(0, 10))}</p>
+      <div class="pop-actions">
+        ${own || admin ? `<button type="button" class="pop-btn" data-delpass>${own ? "Gone: remove it" : "Delete"}</button>` : `<button type="button" class="text-link pop-flag" data-flagpass>⚑ Flag</button>`}
+      </div>
+      <p class="gate-help left">Only members see it. It disappears on ${fmtDay(it.expires_on)}. Arrange the handover between you: Spots takes no payments.</p>
+    </div>`;
+  }
+  function wirePass(popup, it) {
+    const el = popup.getElement(); if (!el || el.dataset.wired === "p" + it.id) return; el.dataset.wired = "p" + it.id;
+    el.querySelector("[data-delpass]")?.addEventListener("click", async ev => {
+      const b = ev.currentTarget;
+      if (b.dataset.confirm !== "1") { b.dataset.confirm = "1"; b.textContent = "Confirm"; return; }
+      try { await api(`/rest/v1/pass_on?id=eq.${it.id}`, { method: "DELETE" }); passItems = passItems.filter(x => x.id !== it.id); map.closePopup(); renderApp(); toast("Removed. Thanks for passing it on!"); }
+      catch (err) { toast(`Could not remove: ${err.message}`, true); }
+    });
+    el.querySelector("[data-flagpass]")?.addEventListener("click", () => openFlag("pass_on", String(it.id), it.item));
+  }
+  function openPassOn(pre) {
+    const d = dlg("passDialog", `<form class="import-body gate-form" novalidate>
+      <span class="eyebrow">Members only · Pass it on</span><h2>Sell or give away</h2>
+      <p class="gate-help left">Leaving and can't take it home? A charger, a SIM, a tent, a guidebook: someone arriving will need it.</p>
+      <div class="pass-kind" role="radiogroup" aria-label="Sell or give">
+        <label><input type="radio" name="pkind" value="give" checked><span>🎁 I give it away</span></label>
+        <label><input type="radio" name="pkind" value="sell"><span>🏷️ I sell it</span></label>
+      </div>
+      <label for="paItem">What</label>
+      <input id="paItem" maxlength="80" placeholder="e.g. Universal travel adapter" required>
+      <div class="ws-fields pass-price-row" hidden>
+        <label>Price<input type="number" id="paPrice" min="0" step="0.5" inputmode="decimal" placeholder="e.g. 10"></label>
+        <label>Currency<select id="paCur">${CURRENCIES.map(c => `<option${c === "EUR" ? " selected" : ""}>${c}</option>`).join("")}</select></label>
+      </div>
+      <label for="paNote">Details <small>(optional)</small></label>
+      <textarea id="paNote" rows="2" maxlength="600" placeholder="Condition, size, until when you're there…"></textarea>
+      <label for="paPlace">Where</label>
+      <input id="paPlace" maxlength="120" placeholder="e.g. Hanoi, Old Quarter — near Hoan Kiem lake" required>
+      <p class="pass-where"><span id="paWhere">${pre && pre.zoom >= 10 ? "📍 On the map where you are looking" : pre?.exact ? "📍 Where you pressed on the map" : "📍 Zoom the map on the place, or use your position"}</span>
+        <button type="button" class="text-link" id="paGps">Use my position</button></p>
+      <label for="paContact">How to reach you</label>
+      <input id="paContact" maxlength="120" placeholder="e.g. WhatsApp +39…, Instagram @…, email" required>
+      <label for="paDays">Visible for</label>
+      <select id="paDays"><option value="3">3 days</option><option value="7">7 days</option><option value="14" selected>14 days</option><option value="30">30 days</option></select>
+      <button class="outline-link" type="submit">POST IT <span aria-hidden="true">→</span></button>
+      <p class="gate-note" id="paMsg" role="status"></p>
+      <p class="gate-help left">Only members see it, contact included. No food, medicines, weapons or anything illegal. Spots takes no payments: you agree the handover between you.</p>
+    </form>`);
+    let pos = pre && (pre.exact || pre.zoom >= 10) ? { lat: pre.lat, lon: pre.lon } : null;
+    const priceRow = d.querySelector(".pass-price-row");
+    d.querySelectorAll("[name=pkind]").forEach(r => r.addEventListener("change", () => { priceRow.hidden = d.querySelector("[name=pkind]:checked").value !== "sell"; }));
+    d.querySelector("#paGps").addEventListener("click", () => {
+      const w = d.querySelector("#paWhere"); w.textContent = "📍 Finding you…";
+      navigator.geolocation?.getCurrentPosition(p => { pos = { lat: +p.coords.latitude.toFixed(5), lon: +p.coords.longitude.toFixed(5) }; w.textContent = "📍 Your position"; },
+        () => { w.textContent = "📍 Position not available: zoom the map on the place instead"; }, { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 });
+    });
+    d.querySelector("form").addEventListener("submit", async e => {
+      e.preventDefault();
+      const msg = d.querySelector("#paMsg"), warn = t => { msg.className = "gate-note warn"; msg.textContent = t; };
+      const kind = d.querySelector("[name=pkind]:checked").value, item = d.querySelector("#paItem").value.trim(), place = d.querySelector("#paPlace").value.trim(), contact = d.querySelector("#paContact").value.trim();
+      const price = d.querySelector("#paPrice").value === "" ? null : +d.querySelector("#paPrice").value;
+      if (item.length < 2) return warn("Write what you are passing on.");
+      if (place.length < 2) return warn("Write where it is (city, area).");
+      if (contact.length < 3) return warn("Add how people can reach you.");
+      if (kind === "sell" && (price == null || !(price >= 0))) return warn("Add a price, or choose «I give it away».");
+      if (!pos) return warn("Zoom the map on the place (or use your position), then post again.");
+      const days = +d.querySelector("#paDays").value, exp = new Date(Date.now() + days * 864e5).toISOString().slice(0, 10);
+      const row = { kind, item, place, contact, note: d.querySelector("#paNote").value.trim() || null, price: kind === "sell" ? price : null,
+        currency: kind === "sell" ? d.querySelector("#paCur").value : null, lat: pos.lat, lon: pos.lon, expires_on: exp, author_name: displayName() };
+      try {
+        const { data } = await api("/rest/v1/pass_on", { method: "POST", body: row, headers: { Prefer: "return=representation" } });
+        passItems.unshift((Array.isArray(data) ? data[0] : data) || { ...row, id: Date.now(), created_by: myUid(), created_at: new Date().toISOString() }); showPass = true;
+        d.close(); renderApp(); map?.flyTo([pos.lat, pos.lon], Math.max(map.getZoom(), 13), { duration: .8 });
+        toast("Posted: members around can now see it."); window.fcTrack?.("Spots: Pass it on posted");
+      } catch (err) { warn(`Could not save: ${err.message}`); }
+    });
+  }
+  function openPassList() {
+    const list = livePass();
+    const d = dlg("passListDialog", `<div class="import-body">
+      <span class="eyebrow">Members only</span><h2>Pass it on</h2>
+      <p class="gate-help left">Things travellers sell or give away before leaving. Newest first.</p>
+      ${list.length ? `<ul class="req-list">${list.map(it => `<li class="req-row"><div><b>${it.kind === "give" ? "🎁 Free" : `🏷️ ${esc(fmtPrice(it) || "For sale")}`} · ${esc(it.item)}</b>
+        <span>${esc(it.place || "")} · by ${esc(it.author_name || "a member")} · until ${fmtDay(it.expires_on)}</span></div>
+        <button type="button" class="pop-btn" data-goto="${it.id}">${ICON.pin}Show</button></li>`).join("")}</ul>`
+        : `<p class="gate-help left">Nothing yet. Leaving soon? Post what you can't take home.</p>`}
+      <button type="button" class="outline-link" data-new>＋ SELL OR GIVE AWAY</button>
+    </div>`);
+    d.querySelector("[data-new]").addEventListener("click", () => { d.close(); withConduct(() => openPassOn(map ? { lat: map.getCenter().lat, lon: L.Util.wrapNum(map.getCenter().lng, [-180, 180], true), zoom: map.getZoom() } : null)); });
+    d.querySelectorAll("[data-goto]").forEach(b => b.addEventListener("click", () => {
+      const it = passItems.find(x => x.id === +b.dataset.goto); d.close();
+      if (!it) return;
+      showPass = true; drawCommunity();
+      $("#spotsMap").scrollIntoView({ behavior: "smooth", block: "center" });
+      map.flyTo([it.lat, it.lon], Math.max(map.getZoom(), 14), { duration: .9 });
+      map.once("moveend", () => commLayer.eachLayer(l => { const ll = l.getLatLng?.(); if (ll && Math.abs(ll.lat - it.lat) < 1e-9 && Math.abs(ll.lng - it.lon) < 1e-9) l.openPopup(); }));
+    }));
   }
   function profileHtml(p) {
     const ig = p.instagram ? `https://www.instagram.com/${encodeURIComponent(p.instagram)}/` : "";
@@ -2983,12 +3116,12 @@ const Spots = (() => {
         }));
       } else {
         const { data } = await api("/rest/v1/content_flags?select=id,kind,target_id,label,reason,note,created_at&resolved=eq.false&order=created_at.desc&limit=500");
-        const KIND = { spot: "Posto", review: "Recensione", photo: "Foto", meetup: "Ritrovo", profile: "Profilo" };
+        const KIND = { spot: "Posto", review: "Recensione", photo: "Foto", meetup: "Ritrovo", profile: "Profilo", pass_on: "Pass it on" };
         const REASON = { spam: "Spam", offensive: "Offensivo", wrong: "Sbagliato", not_theirs: "Foto non sua", danger: "Pericoloso", other: "Altro" };
         openFlags = (data || []).length; refreshBadge();
         body.innerHTML = (data || []).length ? `<ul class="req-list">${data.map(f => `<li class="req-row" data-flag="${f.id}" data-kind="${f.kind}" data-target="${esc(f.target_id)}">
             <div><b>${KIND[f.kind] || f.kind} · ${REASON[f.reason] || f.reason}</b><span>${esc(f.label || "")}${f.note ? ` — “${esc(f.note)}”` : ""} · ${fmtDay(String(f.created_at).slice(0, 10))}</span></div>
-            ${["spot", "meetup", "profile"].includes(f.kind) || f.kind === "review" || f.kind === "photo" ? `<button type="button" class="pop-btn" data-act="show">Mostra</button>` : ""}
+            ${["spot", "meetup", "profile", "pass_on"].includes(f.kind) || f.kind === "review" || f.kind === "photo" ? `<button type="button" class="pop-btn" data-act="show">Mostra</button>` : ""}
             <button type="button" class="pop-btn" data-act="remove">Elimina contenuto</button>
             <button type="button" class="pop-btn" data-act="dismiss">Ignora</button></li>`).join("")}</ul>`
           : `<p class="gate-help left">Nessuna segnalazione aperta.</p>`;
@@ -2999,6 +3132,7 @@ const Spots = (() => {
             d.close();
             if (kind === "spot") { const s = spots.find(x => String(x.id) === target); if (s) focusSpot(s); }
             else if (kind === "meetup") { const m = meetups.find(x => String(x.id) === target); if (m) map.flyTo([m.lat, m.lon], 14); }
+            else if (kind === "pass_on") { const it = passItems.find(x => String(x.id) === target); if (it) { showPass = true; drawCommunity(); map.flyTo([it.lat, it.lon], 15); } else toast("Annuncio già scaduto o eliminato."); }
             else if (kind === "profile") { const p = profiles.find(x => x.user_id === target); if (p && p.lat != null) { showPhotographers = true; drawCommunity(); map.flyTo([p.lat, p.lon], 10); } }
             else {
               const table = kind === "review" ? "spot_reviews" : "spot_photos";
@@ -3011,10 +3145,11 @@ const Spots = (() => {
           try {
             if (b.dataset.act === "remove") {
               const path = { spot: `spots?id=eq.${encodeURIComponent(target)}`, review: `spot_reviews?id=eq.${encodeURIComponent(target)}`, photo: `spot_photos?id=eq.${encodeURIComponent(target)}`,
-                meetup: `meetups?id=eq.${encodeURIComponent(target)}`, profile: `member_profiles?user_id=eq.${encodeURIComponent(target)}` }[kind];
+                meetup: `meetups?id=eq.${encodeURIComponent(target)}`, pass_on: `pass_on?id=eq.${encodeURIComponent(target)}`, profile: `member_profiles?user_id=eq.${encodeURIComponent(target)}` }[kind];
               await api(`/rest/v1/${path}`, { method: "DELETE" });
               if (kind === "spot") spots = spots.filter(x => String(x.id) !== target);
               if (kind === "meetup") meetups = meetups.filter(x => String(x.id) !== target);
+              if (kind === "pass_on") passItems = passItems.filter(x => String(x.id) !== target);
               if (kind === "profile") profiles = profiles.filter(x => x.user_id !== target);
             }
             await resolve(id);
@@ -3939,6 +4074,7 @@ const Spots = (() => {
           <p>Photographers, local experts and meetups have their own place in Spots:</p>
           <button type="button" class="outline-link" data-wzmeet>👥 Organise a meetup here</button>
           <button type="button" class="outline-link" data-wzph>📷 Join the photographers' map</button>
+          ${passV ? `<button type="button" class="outline-link" data-wzpass>🎁 Pass it on: sell or give away something here</button>` : ""}
         </div>` : `
       ${g === "places" ? `<div class="wz-cats" role="group" aria-label="Category">${PLACE_KINDS.map(([c, sb, label, ico]) => `<button type="button" class="wz-cat${placeKind() === sb ? " on" : ""}" data-wzcat="${c}" data-wzkind="${sb}" style="--c:${CATS[c].color}">${ico}<span>${label}</span></button>`).join("")}</div>`
         : cats.length > 1 ? `<div class="wz-cats" role="group" aria-label="Category">${cats.map(k => `<button type="button" class="wz-cat${k === wz.cat ? " on" : ""}" data-wzcat="${k}" style="--c:${CATS[k].color}">${CATS[k].icon}<span>${CATS[k].label}</span></button>`).join("")}</div>` : ""}
@@ -3989,6 +4125,7 @@ const Spots = (() => {
     d.querySelectorAll("[data-wzsub]").forEach(b => b.addEventListener("click", () => { collect(); wz.sub = wz.sub === b.dataset.wzsub ? "" : b.dataset.wzsub; rerender(); }));
     d.querySelector("[data-wzmeet]")?.addEventListener("click", () => { const p = { lat: wz.lat, lon: wz.lon }; d.close(); withConduct(() => openMeetup(p.lat != null ? p : null)); });
     d.querySelector("[data-wzph]")?.addEventListener("click", () => { d.close(); openProfile(); });
+    d.querySelector("[data-wzpass]")?.addEventListener("click", () => { const p = { lat: wz.lat, lon: wz.lon, exact: wz.lat != null }; d.close(); withConduct(() => openPassOn(p.lat != null ? p : null)); });
     if (d.querySelector("#wzTk")) wireTkGrade(d, "wzTk");
     d.querySelector("#wzFiles")?.addEventListener("change", e => {
       const room = 4 - wz.files.length;

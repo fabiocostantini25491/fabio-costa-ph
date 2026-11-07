@@ -3033,3 +3033,20 @@ body[data-page="explore"]::after{background:radial-gradient(90% 55% at 85% 0,rgb
   .sx-stage.map-full .leaflet-left{left:env(safe-area-inset-left,0px)}
   .sx-stage.map-full .leaflet-right{right:env(safe-area-inset-right,0px)}
 }
+/* Pass it on: vendo / regalo tra viaggiatori */
+.pass-pin{position:relative;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:#0d2a1c;border:2px solid #8fe0a8;color:#8fe0a8;box-shadow:0 0 0 3px rgba(143,224,168,.18),0 4px 12px rgba(0,0,0,.45)}
+.pass-pin.sell{border-color:#ffd166;color:#ffd166;background:#2a2108;box-shadow:0 0 0 3px rgba(255,209,102,.18),0 4px 12px rgba(0,0,0,.45)}
+.pass-pin svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.pass-pin span{position:absolute;top:24px;left:50%;transform:translateX(-50%);white-space:nowrap;max-width:90px;overflow:hidden;text-overflow:ellipsis;padding:1px 5px;border-radius:6px;background:#8fe0a8;color:#0b1a12;font:700 9px/1.35 var(--sans);letter-spacing:.06em}
+.pass-pin.sell span{background:#ffd166;color:#241a02}
+.pass-price{margin:4px 0 6px;font-weight:700;font-size:1.05rem;color:#ffd166}.pass-price.free{color:#8fe0a8}
+.pass-contact{margin:6px 0;padding:8px 10px;border-radius:10px;background:rgba(143,224,168,.08);border:1px solid rgba(143,224,168,.25);word-break:break-word}
+.pass-contact b{display:block;font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;opacity:.7;margin-bottom:2px}
+.pass-kind{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:6px 0 4px}
+.pass-kind label{position:relative;cursor:pointer}
+.pass-kind input{position:absolute;opacity:0;pointer-events:none}
+.pass-kind span{display:block;text-align:center;padding:12px 8px;border-radius:12px;border:1px solid rgba(255,255,255,.18);font-weight:600}
+.pass-kind input:checked + span{border-color:#8fe0a8;background:rgba(143,224,168,.12);color:#c9f5d6}
+.pass-kind input:focus-visible + span{outline:2px solid #8fe0a8;outline-offset:2px}
+.pass-where{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;margin:2px 0 8px;font-size:.88rem;opacity:.9}
+.lp-add .lp-pass{display:block;width:100%;margin-top:6px;background:#8fe0a8;color:#0b1a12}
