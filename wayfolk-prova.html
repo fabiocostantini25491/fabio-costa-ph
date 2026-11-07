@@ -267,6 +267,10 @@ footer a{color:var(--soft)}
 @keyframes pinShine{0%,100%{box-shadow:0 0 0 0 rgba(159,227,200,.0),0 0 8px var(--c)}50%{box-shadow:0 0 0 6px rgba(159,227,200,.18),0 0 22px 4px var(--c)}}
 @keyframes pinShineLocal{0%,100%{box-shadow:0 0 0 1.5px rgba(255,255,255,.7),0 0 8px #7ed69b}50%{box-shadow:0 0 0 1.5px rgba(255,255,255,.7),0 0 0 7px rgba(126,214,155,.2),0 0 24px 5px #7ed69b}}
 @keyframes planeIdle{0%,100%{transform:translate(0,0) rotate(0)}25%{transform:translate(1.5px,-1px) rotate(-4deg)}50%{transform:translate(0,-2px) rotate(0)}75%{transform:translate(-1.5px,-1px) rotate(3deg)}}
+.spot-cluster{width:var(--s);height:var(--s);border-radius:50%;display:grid;place-items:center;font:600 13px var(--sans);color:#fff;cursor:pointer;
+  background:radial-gradient(circle,rgba(40,80,140,.95) 0%,rgba(14,34,64,.92) 70%);border:1.5px solid rgba(190,220,255,.85);
+  box-shadow:0 0 0 5px rgba(120,180,255,.18),0 0 18px rgba(120,180,255,.6);transition:transform .15s}
+.spot-cluster:hover{transform:scale(1.1)}
 .leaflet-div-icon{background:none;border:0}
 /* member view */
 body.is-folk .only-guest{display:none!important}
@@ -571,14 +575,38 @@ body:not(.is-folk) .only-folk{display:none!important}
   function draw() {
     dots.clearLayers(); drawCommunity();
     if (onGlobe) return drawGlobe();
-    const b = map.getBounds().pad(0.15);
-    const inView = spots.filter(s => b.contains([s.lat, s.lon]));
-    const full = inView.length <= 700;   // the real icons when they fit; small dots only when one view holds thousands
-    for (const s of inView) {
-      const mk = full ? L.marker([s.lat, s.lon], { icon: pinIcon(s), title: s.name, riseOnHover: true })
-        : L.circleMarker([s.lat, s.lon], { radius: 4, color: "#06101d", weight: 1, fillColor: (CAT[s.category] || CAT.spot)[1], fillOpacity: .95 });
-      mk.bindPopup(() => popup(s), { maxWidth: 290 }).addTo(dots);
+    // groups like the Wayfolk satellite map: numbered circles, single places with their own icon
+    const bounds = map.getBounds().pad(0.2), cell = 64, z = map.getZoom(), cells = new Map();
+    spots.forEach(s => {
+      if (!bounds.contains([s.lat, s.lon])) return;
+      const p = map.latLngToLayerPoint([s.lat, s.lon]);
+      const key = z >= 16 ? s.id : `${Math.floor(p.x / cell)}:${Math.floor(p.y / cell)}`;
+      (cells.get(key) || cells.set(key, []).get(key)).push(s);
+    });
+    let blobs = [...cells.values()].map(g => {
+      const pts = g.map(s => map.latLngToLayerPoint([s.lat, s.lon]));
+      return { list: g, x: pts.reduce((a, p) => a + p.x, 0) / g.length, y: pts.reduce((a, p) => a + p.y, 0) / g.length };
+    }).sort((a, b) => b.list.length - a.list.length);
+    if (z < 16) for (let changed = true, guard = 0; changed && guard < 5; guard++) {
+      changed = false; const out = [];
+      blobs.forEach(b => {
+        const t = out.find(o => Math.hypot(o.x - b.x, o.y - b.y) < 48);
+        if (!t) return out.push(b);
+        const n = t.list.length + b.list.length;
+        t.x = (t.x * t.list.length + b.x * b.list.length) / n; t.y = (t.y * t.list.length + b.y * b.list.length) / n;
+        t.list = t.list.concat(b.list); changed = true;
+      });
+      blobs = out;
     }
+    blobs.forEach(({ list: g }) => {
+      if (g.length === 1) { const s = g[0]; return L.marker([s.lat, s.lon], { icon: pinIcon(s), title: s.name, riseOnHover: true }).bindPopup(() => popup(s), { maxWidth: 290 }).addTo(dots); }
+      const lat = g.reduce((a, s) => a + s.lat, 0) / g.length, lon = g.reduce((a, s) => a + s.lon, 0) / g.length;
+      const size = g.length < 10 ? 36 : g.length < 100 ? 44 : 54;
+      L.marker([lat, lon], { title: `${g.length} places`,
+        icon: L.divIcon({ className: "", iconSize: [size, size], iconAnchor: [size / 2, size / 2], html: `<div class="spot-cluster" style="--s:${size}px">${g.length}</div>` }) })
+        .on("click", () => map.flyToBounds(L.latLngBounds(g.map(s => [s.lat, s.lon])).pad(0.3), { maxZoom: Math.min(19, z + 4), duration: .8 }))
+        .addTo(dots);
+    });
   }
   map.on("moveend", () => { if (!onGlobe && !(map._popup && map._popup.isOpen())) draw(); });
 
