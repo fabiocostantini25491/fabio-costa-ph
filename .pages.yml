@@ -459,7 +459,7 @@ content:
   # RIVISTA DEL MESE (Field Notes From Planet Earth)
   # ---------------------------------------------------------------
   - name: rivista
-    label: Rivista del mese (copertine)
+    label: Rivista del mese (copertine e Folk of the month)
     type: file
     path: content/rivista.json
     format: json
@@ -489,6 +489,66 @@ content:
             label: Titolo di copertina (facoltativo)
             type: string
             description: "Una riga sulla copertina, es. «Inverno sulle Dolomiti»."
+          - name: folk_nome
+            label: Folk of the month — nome e cognome
+            type: string
+            description: "Il membro del mese (Admin → Folk ti suggerisce i più attivi). Compare nella rivista di quel mese."
+          - name: folk_tipo
+            label: Folk of the month — folk
+            type: select
+            options:
+              values:
+                - { value: photo, label: "📷 Photo folk" }
+                - { value: hike, label: "🥾 Hiker folk" }
+                - { value: slow, label: "🎒 Backpacker folk" }
+                - { value: road, label: "🚐 Road trip folk" }
+                - { value: nomad, label: "💻 Nomad folk" }
+                - { value: food, label: "🍝 Foodie folk" }
+          - name: folk_testo
+            label: Folk of the month — due righe su di lui o lei
+            type: text
+          - name: folk_foto
+            label: Folk of the month — foto (facoltativa)
+            type: image
+            options:
+              extensions: [jpg, jpeg, png, webp]
+              rename: true
+
+  # ---------------------------------------------------------------
+  # WAYFOLK: sfide stagionali dei folk
+  # ---------------------------------------------------------------
+  - name: sfide
+    label: Wayfolk — sfide stagionali
+    type: file
+    path: content/sfide.json
+    format: json
+    fields:
+      - name: sfide
+        label: Sfide
+        type: object
+        list:
+          collapsible:
+            collapsed: true
+            summary: "{titolo}"
+        description: "Una sfida dura qualche settimana: chi firma abbastanza luoghi nel periodo ottiene il timbro nel passaporto. Testi in inglese, come il resto di Wayfolk."
+        fields:
+          - { name: titolo, label: Titolo (es. Autumn colours), type: string, required: true }
+          - { name: descrizione, label: Descrizione (es. Sign 5 places with autumn foliage), type: text }
+          - name: folk
+            label: Solo per un folk (facoltativo)
+            type: select
+            options:
+              values:
+                - { value: "", label: "Tutti i folk" }
+                - { value: photo, label: "📷 Photo folk" }
+                - { value: hike, label: "🥾 Hiker folk" }
+                - { value: slow, label: "🎒 Backpacker folk" }
+                - { value: road, label: "🚐 Road trip folk" }
+                - { value: nomad, label: "💻 Nomad folk" }
+                - { value: food, label: "🍝 Foodie folk" }
+          - { name: dal, label: Dal (anno-mese-giorno), type: string, required: true }
+          - { name: al, label: Al (anno-mese-giorno), type: string, required: true }
+          - { name: obiettivo, label: Quante firme servono, type: number, required: true }
 
   # ---------------------------------------------------------------
   # PAGINA CHI SONO

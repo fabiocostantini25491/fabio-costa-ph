@@ -195,7 +195,10 @@ function authorOf(a) {
   return { name: nm, slug: slug(nm), own: false, instagram: String(a.instagram || "").replace(/^@/, "").trim(),
     site: /^https?:\/\//.test(a.sito || "") ? a.sito : "", bio: a.bio || "", photo: a.foto ? mediaUrl(a.foto) : "" };
 }
-const authorLink = a => `<a class="mag-author" href="#author-${esc(a.author.slug)}">${esc(a.author.name)}</a>`;
+// firma degli articoli: nome e cognome, e il folk di chi scrive (Wayfolk Journal)
+const FOLK_LABEL = { photo: "📷 Photo folk", hike: "🥾 Hiker folk", slow: "🎒 Backpacker folk", road: "🚐 Road trip folk", nomad: "💻 Nomad folk", food: "🍝 Foodie folk" };
+const folkTag = a => (a.author?.folk && FOLK_LABEL[a.author.folk] ? ` <span class="mag-folk">${FOLK_LABEL[a.author.folk]}</span>` : "");
+const authorLink = a => `<a class="mag-author" href="#author-${esc(a.author.slug)}">${esc(a.author.name)}</a>${folkTag(a)}`;
 
 /* Testo con formattazione (grassetto, titoletti, elenchi, link) scritto nel pannello */
 function md(text) {
@@ -1694,7 +1697,7 @@ function renderJournal() {
         <p class="fn-cat">${a.type === "reportage" ? "Reportage" : esc(catLabel(a.category))}</p>
         <h2>${esc(a.title)}</h2>
         ${a.excerpt ? `<p class="fn-desc">${esc(a.excerpt)}</p>` : ""}
-        <p class="fn-meta">${a.author && !a.author.own ? `By ${esc(a.author.name)} · ` : ""}${esc(fmtDate(a.date))}${a.minutes ? ` · ${a.minutes} min read` : ""}</p>
+        <p class="fn-meta">${a.author && !a.author.own ? `By ${esc(a.author.name)}${a.author.folk && FOLK_LABEL[a.author.folk] ? ` (${FOLK_LABEL[a.author.folk]})` : ""} · ` : ""}${esc(fmtDate(a.date))}${a.minutes ? ` · ${a.minutes} min read` : ""}</p>
       </div>
       ${a.cover ? `<img src="${esc(a.cover)}" alt="" data-cat="Paesaggi" loading="lazy">` : `<span class="fn-noimg" aria-hidden="true">Field Notes</span>`}
     </a>`).join("")}</div>`;
@@ -1926,12 +1929,17 @@ async function renderMagazine(want) {
       </div>
     </header>
     <div class="mz-pdfslot" id="mzPdf"></div>
+    ${setCover?.folk_nome ? `<section class="mz-folk" aria-label="Folk of the month">
+      ${setCover.folk_foto ? `<img src="${esc(mediaUrl(setCover.folk_foto))}" alt="" loading="lazy">` : ""}
+      <div><p class="mz-folk-k">Folk of the month</p><h3>${esc(setCover.folk_nome)}</h3>${setCover.folk_tipo && FOLK_LABEL[setCover.folk_tipo] ? `<p class="mz-folk-t">${FOLK_LABEL[setCover.folk_tipo]}</p>` : ""}
+        ${setCover.folk_testo ? `<p>${esc(setCover.folk_testo)}</p>` : ""}<a class="text-link" href="#wayfolk">Meet the folk on Wayfolk →</a></div>
+    </section>` : ""}
     <section class="mz-toc" id="mzToc" aria-label="Contents">
       <h3>Contents</h3>
       ${list.length ? `<ol>${list.map((a, i) => `<li><button type="button" data-goto="${esc(a.id)}">
         <span class="mz-n">${String(i + 1).padStart(2, "0")}</span>
         <span class="mz-t"><small>${a.type === "reportage" ? "Reportage" : esc(catLabel(a.category))}</small><strong>${esc(a.title)}</strong>
-          <em>${esc(a.author?.name || "")} · ${esc(fmtDate(a.date))}${a.minutes ? ` · ${a.minutes} min` : ""}</em></span></button></li>`).join("")}</ol>`
+          <em>${esc(a.author?.name || "")}${a.author?.folk && FOLK_LABEL[a.author.folk] ? ` (${FOLK_LABEL[a.author.folk]})` : ""} · ${esc(fmtDate(a.date))}${a.minutes ? ` · ${a.minutes} min` : ""}</em></span></button></li>`).join("")}</ol>`
         : `<p class="mz-empty">The first story of this issue is being written. It closes on the last day of the month.</p>`}
       ${closed ? `<p class="mz-note"><a href="#magazine">← This month's issue</a></p>` : `<p class="mz-note">This issue grows with every new story and closes at the end of the month. Then it becomes a PDF you can download for one month.</p>`}
     </section>
@@ -2142,7 +2150,7 @@ function submissionToArticle(x) {
     minutes: Math.max(1, Math.round(words / 220)), cover: x.cover_url || "", trip: "", excerpt: x.excerpt || "", text: x.body || "",
     type: x.kind === "reportage" ? "reportage" : "guide", place: x.place || "", glance: x.glance || {},
     author: (x.author_name || "").trim() === (about?.proprietario || "Fabio Costantini") ? { name: x.author_name, slug: "fabio", own: true }
-      : { name: x.author_name, slug: slug(x.author_name), own: false, instagram: x.author_instagram || "", site: x.author_site || "", bio: x.author_bio || "", photo: "" } };
+      : { name: x.author_name, slug: slug(x.author_name), own: false, instagram: x.author_instagram || "", site: x.author_site || "", bio: x.author_bio || "", photo: "", folk: x.author_folk || "" } };
 }
 /* articoli scritti sul sito: restano sul dispositivo; a ogni visita si controlla solo un elenco minuscolo
    (id + ultima modifica) e si scaricano soltanto gli articoli nuovi o cambiati — molto meno traffico su Supabase */
@@ -2159,7 +2167,8 @@ async function loadCommunityArticles() {
     const stubs = await res.json();
     const want = stubs.filter(x => !cache[x.id] || cache[x.id].updated_at !== x.updated_at).map(x => x.id);
     if (want.length) {
-      const r2 = await fetch(`${base}?select=${COLS}&status=eq.published&id=in.(${want.join(",")})`, { headers });
+      let r2 = await fetch(`${base}?select=${COLS},author_folk&status=eq.published&id=in.(${want.join(",")})`, { headers });
+      if (r2.status === 400) r2 = await fetch(`${base}?select=${COLS}&status=eq.published&id=in.(${want.join(",")})`, { headers });   // colonna «author_folk» non ancora creata
       if (!r2.ok) return;
       (await r2.json()).forEach(x => { cache[x.id] = x; });
     }

@@ -661,6 +661,8 @@ const Spots = (() => {
           ${nodiV && myExpert() ? `<button type="button" class="sx-item" id="myArea" style="--c:#ffd9a0"><span class="sx-ico">🧭</span><span class="sx-name">My area</span><span class="sx-go" aria-hidden="true">›</span></button>` : ""}
           <button type="button" class="sx-item" id="meetList" style="--c:#ffd166"><span class="sx-ico">👥</span><span class="sx-name">Meetups</span><small>${upcomingMeetups().length}</small><span class="sx-go" aria-hidden="true">›</span></button>
           <p class="sx-links"><button type="button" class="text-link" id="meetAdd">＋ Organise a meetup</button></p>
+          ${signV && clusterV ? `<button type="button" class="sx-item" id="folkCollections" style="--c:#ffd27a"><span class="sx-ico">📚</span><span class="sx-name">Collections by folk</span><span class="sx-go" aria-hidden="true">›</span></button>
+          <button type="button" class="sx-item" id="folkLocal" style="--c:#ffd27a"><span class="sx-ico">🏅</span><span class="sx-name">Folk of this area</span><span class="sx-go" aria-hidden="true">›</span></button>` : ""}
           ${tripsV ? `<button type="button" class="sx-item${showTrips ? " on" : ""}" id="showTrips" aria-pressed="${showTrips}" style="--c:#ff9f6e"><span class="sx-ico">${TRIP_ICON}</span><span class="sx-name">Trips</span><small>${fmtN(trips ? trips.length : tripCount)}</small><span class="sx-check" aria-hidden="true"></span></button>
           <p class="sx-links"><button type="button" class="text-link" id="tripList">List</button><button type="button" class="text-link" id="tripAdd">＋ Add a trip</button></p>` : ""}
 `;
@@ -1336,6 +1338,8 @@ const Spots = (() => {
     $("#passList")?.addEventListener("click", openPassList);
     $("#showTrips")?.addEventListener("click", () => setTrips(!showTrips));
     $("#tripList")?.addEventListener("click", openTripList);
+    $("#folkCollections")?.addEventListener("click", () => openCollections());
+    $("#folkLocal")?.addEventListener("click", openLocalFolk);
     $("#tripAdd")?.addEventListener("click", () => withConduct(startTrip));
     $("#passAdd")?.addEventListener("click", () => withConduct(() => openPassOn(map ? { lat: map.getCenter().lat, lon: L.Util.wrapNum(map.getCenter().lng, [-180, 180], true), zoom: map.getZoom() } : null)));
     $("#showPass")?.addEventListener("click", () => { showPass = !showPass; const b = $("#showPass"); b.classList.toggle("on", showPass); b.setAttribute("aria-pressed", showPass); drawCommunity(); });
@@ -3333,11 +3337,20 @@ const Spots = (() => {
           ${table(["Porta", "Iscritti", "Approvati", "Attivi 14 gg", "% attivi"], rows("source"), r => [esc(r.val === "(direct)" ? "Diretto (nessuna porta)" : nm(r.val)), r.signups, r.approved, r.active, pct(r.active, r.signups)])}
           <h3 class="adm-h">Firme</h3>
           ${table(["Folk", "Chi firma", "Firme", "Luoghi firmati"], rows("signs"), r => [esc(nm(r.val)), r.signups, r.approved, r.active])}
+          <h3 class="adm-h">⭐ Suggerimenti per il Folk of the month</h3>
+          <div data-fotm><p class="gate-help left">Caricamento…</p></div>
+          <p class="gate-help left">I più attivi degli ultimi 30 giorni in tutto il mondo. Scegli tu chi mettere nella rivista: Pages CMS → Rivista del mese → «Folk of the month».</p>
           <h3 class="adm-h">🧭 Candidati Local expert</h3>
           <p class="gate-help left">Hanno almeno 50 luoghi (aggiunti o firmati) entro 50 km. Nominali con un tocco: potranno verificare e modificare i luoghi della loro zona.</p>
           ${cand.length ? `<ul class="req-list">${cand.map(c => `<li class="req-row" data-cand="${esc(c.user_id)}"><div><b>${esc(c.name || "—")}</b><span>${c.total_signs} luoghi entro 50 km (${c.signs} firmati, ${c.places} aggiunti) · ${(+c.lat).toFixed(1)}, ${(+c.lon).toFixed(1)}</span></div>
             <form class="cand-form"><input name="area" maxlength="80" placeholder="Nome della zona" required><button type="submit" class="pop-btn primary">🧭 Nomina</button></form></li>`).join("")}</ul>` : `<p class="gate-help left">Nessun candidato per ora.</p>`}
           <p class="gate-help left">Porte d'ingresso da usare nei post: ${Object.keys(DOORS).map(k => `<code>fabiocostaph.com/#wayfolk-${k}</code>`).join(" · ")}</p>`;
+        api("/rest/v1/rpc/local_folk", { method: "POST", body: { p_days: 30 } }).then(r => {
+          const box = body.querySelector("[data-fotm]"); if (!box) return;
+          const L2 = r.data || [];
+          box.innerHTML = L2.length ? `<ol class="coll-list">${L2.map(x => `<li><button type="button" data-member="${esc(x.user_id)}"><b>${esc(x.name || "—")}</b><small>${CLUSTERS[x.folk]?.ico || ""} ${esc(folkOf(x.folk))} · ${x.signs} firme · ${x.tips} consigli · 👍 ${x.useful}</small></button></li>`).join("")}</ol>` : `<p class="gate-help left">Nessuna firma negli ultimi 30 giorni.</p>`;
+          box.querySelectorAll("[data-member]").forEach(b => b.addEventListener("click", () => openMemberProfile(b.dataset.member)));
+        }).catch(() => { const box = body.querySelector("[data-fotm]"); if (box) box.innerHTML = `<p class="gate-help left">Disponibile dopo supabase-folk-evoluzione.sql.</p>`; });
         body.querySelectorAll("[data-cand]").forEach(li => {
           const c = cand.find(x => x.user_id === li.dataset.cand), f = li.querySelector("form");
           reverseName(+c.lat, +c.lon).then(r => { if (!f.area.value) f.area.value = r.place.split(",")[0] || r.name || ""; });
@@ -3559,16 +3572,18 @@ const Spots = (() => {
     return `${SPOTS_CONFIG.url.replace(/\/$/, "")}/storage/v1/object/public/journal/${path}`;
   }
   async function renderWrite(box) {
-    const head = `<a class="text-link mag-back" href="#journal">${ICON.prev}All stories</a><p class="mag-kicker">Contributors</p><h2>Write for the Journal</h2>`;
+    const head = `<a class="text-link mag-back" href="#journal">${ICON.prev}All stories</a><p class="mag-kicker">Wayfolk Journal</p><h2>Write for the Wayfolk Journal</h2>`;
     box.innerHTML = `${head}<p class="mag-deck">Loading…</p>`;
     if (!configured() || !(await ensureSession())) {
-      box.innerHTML = `${head}<p class="mag-deck">This section is for Fabio Costa Ph contributors. Log in to Wayfolk first, then come back here.</p>
+      box.innerHTML = `${head}<p class="mag-deck">Every folk can write for the Wayfolk Journal and for the monthly magazine. Log in to Wayfolk first, then come back here.</p>
         <p><a class="outline-link" href="#wayfolk">LOG IN TO WAYFOLK <span aria-hidden="true">→</span></a></p>`; return;
     }
     if (!loaded) { try { admin = await checkAdmin(); } catch {} }
     if (!contribs.size) { try { const { data } = await api("/rest/v1/contributors?select=user_id,display_name,roles&limit=1000"); (data || []).forEach(c => contribs.set(c.user_id, c)); } catch {} }
-    if (!admin && !contribs.has(myUid())) {
-      box.innerHTML = `${head}<p class="mag-deck">Writing for the Journal is open to contributors. Would you like to write reportage or practical guides? Tell me about you and your idea.</p>
+    // scrivono tutti i folk (membri approvati), oltre ai contributor
+    const okWriter = admin || contribs.has(myUid()) || (await fetchMemberStatus().catch(() => "")) === "approved";
+    if (!okWriter) {
+      box.innerHTML = `${head}<p class="mag-deck">Writing for the Wayfolk Journal opens as soon as your membership is approved. Would you like to write reportage or practical guides? Tell me about you and your idea.</p>
         <p><button type="button" class="outline-link" data-contribute="writer">BECOME A CONTRIBUTOR <span aria-hidden="true">→</span></button></p>`; return;
     }
     let mine = [];
@@ -3615,7 +3630,8 @@ const Spots = (() => {
         <details class="j-glance"${Object.keys(a.glance || {}).length ? " open" : ""}><summary>At a glance — practical box (optional)</summary>
           <div class="j-row">${J_GLANCE.map(([k, l]) => `<label>${l}<input name="g_${k}" maxlength="160" value="${v(a.glance?.[k])}"></label>`).join("")}</div></details>
         <details class="j-glance"><summary>About you — shown under the article</summary>
-          <div class="j-row"><label>Name<input name="author_name" maxlength="80" value="${v(a.author_name)}" required></label>
+          <div class="j-row"><label>Name and surname<input name="author_name" maxlength="80" value="${v(a.author_name)}" required></label>
+            ${myStyles.length && evoV ? `<label>Your folk<select name="author_folk">${myStyles.map(k => `<option value="${k}"${a.author_folk === k ? " selected" : ""}>${CLUSTERS[k].ico} ${folkOf(k)}</option>`).join("")}</select></label>` : ""}
             <label>Instagram<input name="author_instagram" maxlength="40" value="${v(a.author_instagram)}" placeholder="username"></label>
             <label>Website<input name="author_site" maxlength="300" value="${v(a.author_site)}" placeholder="https://…"></label></div>
           <label>Short bio<textarea name="author_bio" rows="2" maxlength="400">${v(a.author_bio)}</textarea></label></details>
@@ -3658,6 +3674,7 @@ const Spots = (() => {
       const site = f.author_site.value.trim();
       return { title: f.title.value.trim(), kind: f.kind.value, topic: f.topic.value, place: f.place.value.trim() || null, excerpt: f.excerpt.value.trim() || null,
         body: f.body.value, cover_url: cover || null, glance, author_name: f.author_name.value.trim() || displayName(),
+        ...(f.author_folk ? { author_folk: f.author_folk.value || null } : {}),
         author_instagram: f.author_instagram.value.trim().replace(/^@/, "") || null, author_site: /^https?:\/\//i.test(site) ? site : null, author_bio: f.author_bio.value.trim() || null };
     };
     const save = async status => {
@@ -3750,20 +3767,75 @@ const Spots = (() => {
   }
   function paintOnboarding() {
     const el = $("#onbFolk"); if (!el) return;
-    if (mySignCount == null || mySignCount >= 3 || !myStyles.length) { el.hidden = true; return; }
+    if (mySignCount != null && mySignCount >= 3 && myStyles.length) {   // dopo le prime 3 firme: la sfida del momento
+      challengesHtml(true).then(h => { if (!h) { el.hidden = true; return; } el.hidden = false; el.innerHTML = h; });
+      return;
+    }
+    if (mySignCount == null || !myStyles.length) { el.hidden = true; return; }
     el.hidden = false;
     el.innerHTML = `<p><b>Become folk:</b> sign 3 places you've been to.</p>
       <div class="onb-dots">${[0, 1, 2].map(i => `<span class="${i < mySignCount ? "on" : ""}"></span>`).join("")}<small>${mySignCount}/3</small></div>
       <p class="onb-help">Open any place you know on the map and tap “✍ Sign as ${esc(folkOf(myStyles[0]).toLowerCase())}”.</p>`;
+  }
+  /* --- RACCOLTE PER FOLK: i luoghi più firmati da un folk, nella zona che guardi --- */
+  function openCollections(folk) {
+    folk = folk || myStyles[0] || "photo";
+    const b = map ? map.getBounds().pad(0.2) : null;
+    const rows = spots.filter(sp => (signMap.get(sp.id)?.by || {})[folk] && (!b || b.contains([sp.lat, sp.lon])))
+      .sort((a, z) => signMap.get(z.id).by[folk] - signMap.get(a.id).by[folk]).slice(0, 25);
+    const d = dlg("collDialog", `<div class="import-body">
+      <span class="eyebrow">Wayfolk · collections</span><h2>${CLUSTERS[folk].ico} Most signed by ${esc(folkOf(folk).toLowerCase())}</h2>
+      <div class="gate-tabs coll-tabs">${CLUSTER_KEYS.map(k => `<button type="button" class="${k === folk ? "on" : ""}" data-cf="${k}">${CLUSTERS[k].ico}</button>`).join("")}</div>
+      <p class="gate-help left">In the area you're looking at on the map. Move the map to explore another area.</p>
+      ${rows.length ? `<ol class="coll-list">${rows.map((sp, i) => `<li><button type="button" data-cgo="${sp.id}"><span class="coll-n">${i + 1}</span><b>${esc(sp.name)}</b><small>${CLUSTERS[folk].ico} ${signMap.get(sp.id).by[folk]} · ${esc((CATS[sp.category] || CATS.spot).label)}${signMap.get(sp.id).fabio ? " · ★ Fabio's pick" : ""}</small></button></li>`).join("")}</ol>`
+        : `<p class="gate-help left">No ${esc(folkOf(folk).toLowerCase())} signatures here yet. Be the first to sign a place!</p>`}
+    </div>`);
+    d.querySelectorAll("[data-cf]").forEach(x => x.addEventListener("click", () => openCollections(x.dataset.cf)));
+    d.querySelectorAll("[data-cgo]").forEach(x => x.addEventListener("click", () => { const sp = spotById(+x.dataset.cgo); d.close(); if (sp) focusSpot(sp); }));
+  }
+  /* --- FOLK DI QUESTA ZONA: i più attivi entro 50 km, negli ultimi 30 giorni (niente classifiche globali) --- */
+  async function openLocalFolk() {
+    const c = map ? map.getCenter() : null;
+    const d = dlg("localFolkDialog", `<div class="import-body"><span class="eyebrow">Wayfolk · this month</span><h2>🏅 Folk of this area</h2><p class="gate-help left">Loading…</p></div>`);
+    let rows = [];
+    try { rows = (await api("/rest/v1/rpc/local_folk", { method: "POST", body: c ? { p_lat: c.lat, p_lon: L.Util.wrapNum(c.lng, [-180, 180], true), p_km: 50, p_days: 30 } : {} })).data || []; }
+    catch { d.querySelector(".gate-help").textContent = "Not available yet."; return; }
+    d.querySelector(".import-body").innerHTML = `<span class="eyebrow">Wayfolk · last 30 days · within 50 km</span><h2>🏅 Folk of this area</h2>
+      ${rows.length ? `<ol class="coll-list">${rows.map((r, i) => `<li><button type="button" data-member="${esc(r.user_id)}"><span class="coll-n">${i + 1}</span><b>${esc(r.name || "Member")}</b><small>${CLUSTERS[r.folk]?.ico || ""} ${esc(folkOf(r.folk))} · ${r.signs} signature${r.signs > 1 ? "s" : ""}${r.tips ? ` · ${r.tips} tip${r.tips > 1 ? "s" : ""}` : ""}${r.useful ? ` · 👍 ${r.useful}` : ""}</small></button></li>`).join("")}</ol>`
+        : `<p class="gate-help left">Nobody has signed places around here this month. Sign one and you're on top!</p>`}
+      <p class="gate-help left">Only the area you're looking at, only this month: move the map to see another area.</p>`;
+    d.querySelectorAll("[data-member]").forEach(x => x.addEventListener("click", () => openMemberProfile(x.dataset.member)));
+  }
+  /* --- SFIDE STAGIONALI (da Pages CMS → content/sfide.json): firma N luoghi nel periodo e ottieni il timbro --- */
+  let challenges = null;
+  async function loadChallenges() {
+    if (challenges) return challenges;
+    try { const r = await (await fetch("content/sfide.json", { cache: "no-cache" })).json(); challenges = (r.sfide || []).filter(c => c.titolo && c.dal && c.al && +c.obiettivo > 0); }
+    catch { challenges = []; }
+    return challenges;
+  }
+  async function challengeProgress(c) {
+    try { const { res } = await api(`/rest/v1/place_signs?select=id&user_id=eq.${encodeURIComponent(myUid())}&cluster=${c.folk ? `eq.${c.folk}` : "neq.fabio"}&created_at=gte.${c.dal}&created_at=lte.${c.al}T23:59:59`, { headers: { Prefer: "count=exact" } });
+      return +((res.headers.get("content-range") || "").split("/")[1]) || 0; } catch { return 0; }
+  }
+  async function challengesHtml(onlyActive) {
+    const today = todayISO(), list = (await loadChallenges()).filter(c => !c.folk || myStyles.includes(c.folk) || !myStyles.length);
+    const act = list.filter(c => c.dal <= today && c.al >= today), past = list.filter(c => c.al < today);
+    const show = onlyActive ? act : act.concat(past);
+    if (!show.length) return "";
+    const rows = await Promise.all(show.map(async c => ({ c, n: await challengeProgress(c) })));
+    return `<section class="pp ch"><p class="pp-kick">Challenges</p>${rows.map(({ c, n }) => { const goal = +c.obiettivo, done = n >= goal, live = c.dal <= today && c.al >= today;
+      return `<div class="ch-row${done ? " done" : ""}"><p><b>${done ? "🏆 " : ""}${esc(c.titolo)}</b>${c.folk && CLUSTERS[c.folk] ? ` · ${CLUSTERS[c.folk].ico} ${esc(folkOf(c.folk))}` : ""}<small>${live ? `until ${esc(fmtDay(c.al))}` : "ended"}</small></p>
+        ${c.descrizione ? `<p class="ch-d">${esc(c.descrizione)}</p>` : ""}<div class="ch-bar"><span style="width:${Math.min(100, n / goal * 100).toFixed(0)}%"></span></div><p class="ch-n">${Math.min(n, goal)}/${goal}${done ? " · stamp earned" : ""}</p></div>`; }).join("")}</section>`;
   }
   async function loadSignCounts() {
     try {
       const { data } = await api("/rest/v1/place_sign_counts?select=spot_id,cluster,n&limit=100000");
       const m = new Map();
       (data || []).forEach(r => {
-        const g = m.get(r.spot_id) || { total: 0, top: null, topN: 0, fabio: false };
+        const g = m.get(r.spot_id) || { total: 0, top: null, topN: 0, fabio: false, by: {} };
         if (r.cluster === "fabio") g.fabio = true;
-        else if (CLUSTERS[r.cluster]) { g.total += r.n; if (r.n > g.topN) { g.top = r.cluster; g.topN = r.n; } }
+        else if (CLUSTERS[r.cluster]) { g.total += r.n; g.by[r.cluster] = r.n; if (r.n > g.topN) { g.top = r.cluster; g.topN = r.n; } }
         m.set(r.spot_id, g);
       });
       signMap = m;
@@ -3780,7 +3852,7 @@ const Spots = (() => {
     const uid = myUid(), by = {};
     signs.forEach(g => { by[g.cluster] = (by[g.cluster] || 0) + 1; });
     { const tot = CLUSTER_KEYS.reduce((a, k) => a + (by[k] || 0), 0), top = CLUSTER_KEYS.filter(k => by[k]).sort((a, b) => by[b] - by[a])[0] || null;
-      if (tot || by.fabio) signMap.set(s.id, { total: tot, top, topN: top ? by[top] : 0, fabio: !!by.fabio }); else signMap.delete(s.id);
+      if (tot || by.fabio) signMap.set(s.id, { total: tot, top, topN: top ? by[top] : 0, fabio: !!by.fabio, by: Object.fromEntries(CLUSTER_KEYS.filter(k => by[k]).map(k => [k, by[k]])) }); else signMap.delete(s.id);
       markerById.get(s.id)?.setIcon(pinIcon(s)); }
     const mineOf = k => signs.find(g => g.user_id === uid && g.cluster === k);
     const pref = PREFERRED[s.category] || [];
@@ -4135,7 +4207,8 @@ const Spots = (() => {
       box.innerHTML = `<p class="muted">Loading your passport…</p>`;
       const [pp, sec] = await Promise.all([loadPassport(uid), evoV ? api("/rest/v1/rpc/my_seconded", { method: "POST", body: {} }).then(r => r.data || []).catch(() => []) : []]);
       if (!pp) { box.innerHTML = `<p class="gate-help left">The passport arrives once the database is updated.</p>`; return; }
-      box.innerHTML = passportHtml(pp, uid) + (sec.length ? `<section class="pp"><p class="pp-kick">Seconded</p><p class="gate-help left">Places you signed that other folk signed after you: your signature is guiding travellers.</p>
+      const chH = await challengesHtml(false);
+      box.innerHTML = passportHtml(pp, uid) + chH + (sec.length ? `<section class="pp"><p class="pp-kick">Seconded</p><p class="gate-help left">Places you signed that other folk signed after you: your signature is guiding travellers.</p>
         <ul class="me-list">${sec.map(x => `<li class="me-row" data-open="${x.spot_id}"><span class="me-ico" style="--c:#ffd27a">✍</span><span class="me-txt"><b>${esc(x.name)}</b><small>${x.n} folk signed after you · ${esc(fmtWhen(x.last_at))}</small></span></li>`).join("")}</ul></section>` : "");
       wireStamps(box);
       box.querySelectorAll("[data-open]").forEach(li => li.addEventListener("click", () => { const sp = spotById(+li.dataset.open); if (sp) openOnMap(sp); }));

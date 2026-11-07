@@ -3192,3 +3192,30 @@ body[data-page="explore"]::after{background:radial-gradient(90% 55% at 85% 0,rgb
 .pp-stamps small{opacity:.7;font-size:.72rem}
 @media (max-width:520px){.pp-stats{grid-template-columns:repeat(2,minmax(0,1fr)) !important}}
 .pp-stats dt{font-size:.62rem;letter-spacing:.1em}
+/* raccolte e folk della zona */
+.coll-tabs button{font-size:1.1rem;min-width:44px}
+.coll-list{list-style:none;margin:8px 0;padding:0;display:grid;gap:6px}
+.coll-list button{width:100%;display:grid;grid-template-columns:30px 1fr;column-gap:8px;text-align:left;padding:10px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.03);color:inherit;font:inherit;cursor:pointer}
+.coll-list button:hover{border-color:#ffd27a}
+.coll-list .coll-n{grid-row:span 2;font-weight:700;color:#ffd27a}
+.coll-list small{opacity:.75;font-size:.8rem}
+.coll-list button:not(:has(.coll-n)){grid-template-columns:1fr}
+/* sfide */
+.ch-row{padding:8px 0;border-top:1px solid rgba(255,255,255,.08)}
+.ch-row:first-of-type{border-top:0}
+.ch-row p{margin:0;display:flex;flex-wrap:wrap;gap:6px;align-items:baseline}
+.ch-row p small{margin-left:auto;opacity:.7;font-size:.75rem}
+.ch-d{opacity:.85;font-size:.85rem;margin-top:3px !important}
+.ch-bar{height:8px;border-radius:4px;background:rgba(255,255,255,.1);margin:6px 0 3px;overflow:hidden}
+.ch-bar span{display:block;height:100%;background:linear-gradient(90deg,#ffb347,#ffd27a)}
+.ch-n{font-size:.78rem;opacity:.8}
+.ch-row.done .ch-bar span{background:#7ee081}
+.onb-folk .pp{margin:0;padding:0;border:0;background:none}
+/* Folk of the month nella rivista */
+.mz-folk{display:flex;gap:18px;align-items:center;margin:18px 0;padding:16px;border-radius:16px;border:1px solid rgba(255,210,122,.4);background:rgba(255,210,122,.05)}
+.mz-folk img{width:110px;height:110px;object-fit:cover;border-radius:50%;flex:none}
+.mz-folk h3{margin:2px 0}
+.mz-folk p{margin:4px 0}
+.mz-folk-k{font-size:.72rem;letter-spacing:.2em;text-transform:uppercase;color:#ffd27a}
+.mz-folk-t{font-weight:600}
+.mag-folk{font-size:.85em;opacity:.85;white-space:nowrap}
