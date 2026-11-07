@@ -43,13 +43,13 @@
         const cols = [...new Set(trips.map(t => t.collection).filter(Boolean))].slice(0, 4);
         return [{ name: "Landscapes", go: show("Paesaggi") }, { name: "Urban", go: show("Urban") }, ...cols.map(c => ({ name: c, go: show("Tutte", c) }))];
       } },
-    { id: "earth", x: 34.9, y: 48.8, r: 4.1, name: "Earth", section: "Spots", label: "Spots",
-      desc: "The home planet of the community: a members-only map of photo spots, places to eat and stay, treks, workshops and meetups. Free to join.",
+    { id: "earth", x: 34.9, y: 48.8, r: 4.1, name: "Earth", section: "Wayfolk", label: "Wayfolk",
+      desc: "The home planet of the community: Wayfolk, the travel toolkit built by travellers. Places signed by the folk, trips, Pass it on, places to eat and stay, meetups. Free to join.",
       go: go("spots"), moons: () => [
         { name: "Join for free", go: go("join") },
         { name: "Open the map", go: go("spots") },
-        { name: "How Spots works", go: go("guide-spots") },
-        { name: "Spots in one page", go: pdf("spots-quick-guide.pdf") }] },
+        { name: "How Wayfolk works", go: go("guide-spots") },
+        { name: "Wayfolk in one page", go: pdf("spots-quick-guide.pdf") }] },
     { id: "mars", x: 44.0, y: 48.6, r: 2.6, name: "Mars", section: "Explore", label: "Explore",
       desc: "The explorer's planet: an interactive map of my journeys. Every astronaut is a place, with its photos, exact coordinates and stories.",
       go: go("explore"), moons: () => trips.filter(t => photosOfTrip(t.id).length)

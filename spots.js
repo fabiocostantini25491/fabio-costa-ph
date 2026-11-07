@@ -666,7 +666,7 @@ const Spots = (() => {
       <aside class="sx-side">
         <p class="sx-kick"><img class="sx-logo" src="img/wayfolk-logo.png" alt="Wayfolk" width="640" height="365"></p>
         <h2 class="sx-title">Explore the Earth</h2>
-        <p class="sx-lead">${esc(DOOR_LEAD[doorNow()] || "The travel toolkit built by travellers. Every place picked with a photographer's eye.")}</p>
+        <p class="sx-lead">${esc(DOOR_LEAD[doorNow()] || "Made by its community: travellers like you share, sign and review the places worth the trip, and look after them.")}</p>
         <div class="sx-panel">
           ${searchHtml}
           <div class="sx-groups">${groups}</div>
@@ -3537,7 +3537,7 @@ const Spots = (() => {
     box.innerHTML = `${head}<p class="mag-deck">Loading…</p>`;
     if (!configured() || !(await ensureSession())) {
       box.innerHTML = `${head}<p class="mag-deck">This section is for Fabio Costa Ph contributors. Log in to Wayfolk first, then come back here.</p>
-        <p><a class="outline-link" href="#spots">LOG IN TO SPOTS <span aria-hidden="true">→</span></a></p>`; return;
+        <p><a class="outline-link" href="#spots">LOG IN TO WAYFOLK <span aria-hidden="true">→</span></a></p>`; return;
     }
     if (!loaded) { try { admin = await checkAdmin(); } catch {} }
     if (!contribs.size) { try { const { data } = await api("/rest/v1/contributors?select=user_id,display_name,roles&limit=1000"); (data || []).forEach(c => contribs.set(c.user_id, c)); } catch {} }
