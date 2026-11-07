@@ -40,6 +40,7 @@ button{font:inherit;color:inherit}
 .back a{display:flex;align-items:center;gap:8px;color:var(--soft);text-decoration:none}
 .back a:hover{color:var(--head)}
 .back img{width:24px;height:auto}
+.back span a{display:inline;color:var(--warm)}
 .bar{position:sticky;top:0;z-index:1000;display:flex;align-items:center;gap:20px;padding:10px 32px;background:rgba(5,11,20,.94);backdrop-filter:blur(10px);border-bottom:1px solid rgba(255,190,122,.18)}
 .bar .logo img{width:104px;height:auto}
 .bar nav{flex:1;display:flex;justify-content:center;gap:4px;flex-wrap:wrap}
@@ -180,6 +181,34 @@ footer a{color:var(--soft)}
   section.blk{padding:72px 0}
   .folks{gap:14px}.folk{width:96px}.folk .ring{width:88px;height:88px}.folk span.n{font-size:18px}
 }
+/* member view */
+body.is-folk .only-guest{display:none!important}
+body:not(.is-folk) .only-folk{display:none!important}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 14px}
+.chips span{padding:6px 11px;border-radius:999px;background:rgba(255,190,122,.12);border:1px solid var(--wline);color:var(--warm);font-size:13px;font-weight:500}
+.nums{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin:0 0 16px}
+.nums div{padding:10px 6px;border-radius:14px;border:1px solid var(--line);text-align:center}
+.nums b{display:block;font:600 24px/1 var(--serif);color:var(--head)}
+.nums small{font-size:11px;color:var(--muted)}
+.me-btn{display:flex;align-items:center;gap:8px;min-height:42px;padding:0 14px 0 5px;border-radius:999px;border:1px solid rgba(230,236,243,.3);color:var(--text);text-decoration:none;font-size:14px;font-weight:500}
+.me-btn i{width:32px;height:32px;border-radius:50%;background:var(--fire);color:var(--ink);display:flex;align-items:center;justify-content:center;font:normal 600 17px var(--serif)}
+.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px;margin-top:36px}
+.panel{padding:24px;border-radius:22px;background:var(--bg3);border:1px solid var(--line);display:flex;flex-direction:column;gap:12px}
+.panel h3{margin:0;font:600 26px var(--serif);color:var(--head)}
+.panel p.d{margin:0;color:var(--soft);font-size:14px}
+.panel ol,.panel ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column}
+.panel li{display:flex;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);font-size:15px}
+.panel li:last-child{border-bottom:0}
+.panel li small{color:var(--muted);white-space:nowrap}
+.panel .empty{color:var(--muted);font-size:14px}
+.stamps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.stamp{aspect-ratio:1;border-radius:50%;border:2px dashed var(--c,#ffbe7a);color:var(--c,#ffbe7a);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:8px;font:600 15px/1.1 var(--serif);transform:rotate(var(--r,0deg))}
+.stamp small{font:700 9px var(--sans);letter-spacing:.14em;text-transform:uppercase;margin-bottom:3px}
+.pp-signs{margin:0 0 8px;font-size:13px;color:var(--soft)}
+.pp-signs b{color:var(--warm)}
+.pp-tip{margin:0 0 8px;padding:8px 10px;border-radius:10px;background:var(--bg2);font:italic 500 16px/1.3 var(--serif);color:var(--head)}
+.pp-tip small{display:block;font:normal 400 11px var(--sans);color:var(--muted);margin-top:3px}
+.viewas{color:var(--warm)}
 @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}.hero-card,.tomap{transition:none}}
 </style>
 </head>
@@ -187,19 +216,27 @@ footer a{color:var(--soft)}
 
 <div class="back">
   <a href="/"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg><img src="img/logo.png" alt="">Back to Fabio Costa Ph</a>
-  <span><b style="color:#ffbe7a">Test page</b> · Wayfolk is a community born from the map of photographer Fabio Costantini</span>
+  <span><b style="color:#ffbe7a">Test page</b> · <a class="viewas" id="wpViewAs" href="?guest" hidden>See it as a visitor</a> · Wayfolk is a community born from the map of photographer Fabio Costantini</span>
 </div>
 
 <header class="bar">
   <a class="logo" href="#map" aria-label="Wayfolk, the map"><img src="img/wayfolk-logo.png" alt="WayFolk" width="640" height="365"></a>
-  <nav aria-label="Wayfolk">
+  <nav aria-label="Wayfolk" class="only-guest">
     <a class="map-link" href="#map"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2zM9 4v14M15 6v14"/></svg>The map</a>
     <a href="#folk">The folk</a>
     <a href="#secret">Tips</a>
     <a href="#inside">Inside</a>
     <a href="#join">Our code</a>
   </nav>
-  <div class="acts">
+  <nav aria-label="Wayfolk" class="only-folk">
+    <a class="map-link" href="#map"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2zM9 4v14M15 6v14"/></svg>The map</a>
+    <a href="#me">Your passport</a>
+    <a href="#area">The folk</a>
+    <a href="#inside">Inside</a>
+    <a href="/#journal">Field Notes</a>
+  </nav>
+  <div class="acts only-folk"><a class="me-btn" href="/#wayfolk" id="wpMeBtn"><i id="wpMeI">F</i><span>Open Wayfolk</span></a></div>
+  <div class="acts only-guest">
     <a class="btn btn-line" href="/#wayfolk">Log in</a>
     <a class="btn btn-fire" href="#folk">Become folk</a>
   </div>
@@ -226,8 +263,8 @@ footer a{color:var(--soft)}
     </div>
     <p class="status" id="wpStatus" role="status">Loading the places…</p>
 
-    <div class="hero-card" id="wpCard">
-      <button class="fold" type="button" id="wpFold" aria-label="Hide this card and explore the map"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
+    <div class="hero-card only-guest" id="wpCard">
+      <button class="fold" type="button" data-fold aria-label="Hide this card and explore the map"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
       <p class="kick">The community map</p>
       <h1>I scouted 8,000 places. <em>Now the folk keep them alive.</em></h1>
       <p class="lead">Wayfolk is my map, opened to everyone who travels. Folk sign the places they've actually been, leave one honest tip, and pass the way on to whoever comes next.</p>
@@ -237,19 +274,47 @@ footer a{color:var(--soft)}
       </div>
       <p class="stats" id="wpStats" hidden></p>
     </div>
-    <button class="btn btn-fire card-open" type="button" id="wpUnfold">What is Wayfolk?</button>
+    <div class="hero-card only-folk" id="wpMeCard">
+      <button class="fold" type="button" data-fold aria-label="Hide this card and explore the map"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
+      <p class="kick">Your Wayfolk</p>
+      <h1 id="wpHello">Welcome back.</h1>
+      <div class="chips" id="wpChips"></div>
+      <div class="nums" id="wpNums" hidden></div>
+      <div class="row">
+        <button class="btn btn-fire" type="button" id="wpNear">Places near me</button>
+        <a class="btn btn-ghost" href="/#wayfolk">Sign, add, review</a>
+      </div>
+      <p class="stats" id="wpMeStats" hidden></p>
+    </div>
+    <button class="btn btn-fire card-open" type="button" id="wpUnfold"><span class="only-guest">What is Wayfolk?</span><span class="only-folk">Your card</span></button>
 
     <div class="legend" aria-label="Legend">
       <span><i style="background:#9cc8ff"></i>Photo spots and places</span>
       <span><i style="background:#ffbe7a"></i>Food and drink</span>
       <span><i style="background:#d2b8ff"></i>Stay</span>
       <span><i style="background:#f7a6c4"></i>Trekking</span>
+      <span class="only-folk"><i style="background:#9cc8ff;box-shadow:0 0 0 2px #050b14,0 0 0 4px #f28c1e"></i>Signed by 5+ folk</span>
+      <span class="only-folk"><i style="background:#ffd27a;box-shadow:0 0 0 2px #050b14"></i>Fabio's pick</span>
     </div>
-    <a class="scrollcue" href="#folk">Which folk are you? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></a>
+    <a class="scrollcue only-folk" href="#me">Your passport <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></a>
+    <a class="scrollcue only-guest" href="#folk">Which folk are you? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></a>
   </section>
 
   <!-- WHICH FOLK -->
-  <section class="blk" id="folk">
+  <!-- MEMBER: passport, seconded, folk of the area -->
+  <section class="blk only-folk" id="me">
+    <div class="wrap">
+      <p class="kick">Your passport</p>
+      <h2 class="h2" style="margin-top:14px">Every place you sign <em>is a stamp.</em></h2>
+      <div class="grid3">
+        <div class="panel"><h3>Latest stamps</h3><div class="stamps" id="wpStamps"><p class="empty">Loading…</p></div><a href="/#wayfolk">Open your full passport</a></div>
+        <div class="panel"><h3>Seconded</h3><p class="d">Places you signed first, and other folk signed after you.</p><ol id="wpSeconded"><li class="empty">Loading…</li></ol></div>
+        <div class="panel" id="area"><h3>Folk of the month</h3><p class="d">Who signed the most in the last 30 days, everywhere.</p><ol id="wpLocal"><li class="empty">Loading…</li></ol></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="blk only-guest" id="folk">
     <div class="wrap folk-wrap">
       <p class="kick">You don't join as a user</p>
       <h2 class="h2">Which folk <em>are you?</em></h2>
@@ -263,7 +328,7 @@ footer a{color:var(--soft)}
   </section>
 
   <!-- THE SECRET -->
-  <section class="blk" id="secret" style="padding-top:20px">
+  <section class="blk only-guest" id="secret" style="padding-top:20px">
     <div class="wrap split">
       <div>
         <p class="kick">What the maps don't tell you</p>
@@ -293,13 +358,13 @@ footer a{color:var(--soft)}
         <article><h3>Trips</h3><p>Journeys stop by stop, with how you got there, on the map and on the 3D Earth.</p></article>
         <article class="new"><h3>Pass it on <span class="tag">NEW</span></h3><p>Leaving? Sell or give away what you won't take home to the folk arriving after you.</p></article>
         <article><h3>Passport</h3><p>Every place you sign is a stamp. Wanderer, Pathfinder, Trusted, and Local expert in your area.</p></article>
-        <article><h3>Journal</h3><p>Every folk can write. Stories go into the <a href="/#journal">Journal on fabiocostaph.com</a> and the monthly magazine.</p></article>
+        <article><h3>Field Notes</h3><p>Every folk can write. Stories go into <a href="/#journal">Field Notes on fabiocostaph.com</a> and the monthly magazine.</p></article>
       </div>
     </div>
   </section>
 
   <!-- STEPS -->
-  <section class="blk steps">
+  <section class="blk steps only-guest">
     <div class="wrap">
       <h2 class="h2">Three steps to the fire.</h2>
       <ol>
@@ -311,7 +376,7 @@ footer a{color:var(--soft)}
   </section>
 
   <!-- CLOSING -->
-  <section class="closing" id="join">
+  <section class="closing only-guest" id="join">
     <div class="wrap">
       <h2 class="h2">The fire is lit. <em>Pull up a seat.</em></h2>
       <p>Leave no trace, protect fragile places, respect people, support local, share honestly, be kind. That's the whole code.</p>
@@ -360,41 +425,155 @@ footer a{color:var(--soft)}
   const dots = L.layerGroup().addTo(map);
   let spots = [];
 
+  /* ---------- who is looking: a visitor or a folk (same login as the site) ---------- */
+  const FOLKNAME = { photo: "Photo", hike: "Hiker", slow: "Backpacker", road: "Road trip", nomad: "Nomad", food: "Foodie" };
+  const FOLKCOL = { photo: "#9cc8ff", hike: "#ffbe7a", slow: "#d2b8ff", road: "#ff9f6e", nomad: "#7fd8ff", food: "#f7a6c4" };
+  const forceGuest = new URLSearchParams(location.search).has("guest");
+  let session = null, me = null, signs = new Map();
+  try { session = JSON.parse(localStorage.getItem("fcph-session") || "null"); } catch {}
+  const uid = () => { try { return JSON.parse(atob(session.access_token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/"))).sub; } catch { return ""; } };
+  async function ensureSession() {
+    if (!session || !session.access_token) return false;
+    if (session.expires_at - 60000 > Date.now()) return true;
+    try {
+      const r = await fetch(SB + "/auth/v1/token?grant_type=refresh_token", { method: "POST", headers: { apikey: KEY, "Content-Type": "application/json" }, body: JSON.stringify({ refresh_token: session.refresh_token }) });
+      if (!r.ok) throw 0;
+      const d = await r.json();
+      session = { access_token: d.access_token, refresh_token: d.refresh_token, expires_at: Date.now() + d.expires_in * 1000 };
+      try { localStorage.setItem("fcph-session", JSON.stringify(session)); } catch {}
+      return true;
+    } catch { session = null; return false; }
+  }
+
+  async function api(path, opt = {}) {
+    const h = { apikey: KEY, "Content-Type": "application/json", ...(opt.headers || {}) };
+    if (opt.auth && session) h.Authorization = "Bearer " + session.access_token;
+    const r = await fetch(SB + path, { method: opt.method || "GET", headers: h, body: opt.body ? JSON.stringify(opt.body) : undefined });
+    if (!r.ok) throw new Error(r.status);
+    return r.json();
+  }
+  const A = (path, opt = {}) => api(path, { ...opt, auth: !!me });
+
   const popup = s => {
     const c = CAT[s.category] || CAT.spot;
-    return `<p class="pp-cat" style="color:${c[1]}">${esc(c[0])}</p><p class="pp-name">${esc(s.name)}</p>
+    if (!me) return `<p class="pp-cat" style="color:${c[1]}">${esc(c[0])}</p><p class="pp-name">${esc(s.name)}</p>
       <p class="pp-lock">🔒 <b>Folk signatures and tips</b> on this place are for folk.</p>
       <a class="pp-go" href="#folk">Become folk</a> &nbsp; <a href="/#wayfolk" style="font-size:13px">Open in Wayfolk</a>`;
+    const g = signs.get(s.id);
+    const by = g ? Object.entries(g.by).sort((a, b) => b[1] - a[1]).map(([k, n]) => `${n} ${esc(FOLKNAME[k] || k)}`).join(" · ") : "";
+    return `<p class="pp-cat" style="color:${c[1]}">${esc(c[0])}${g && g.fabio ? ' · <span style="color:#ffd27a">★ Fabio\'s pick</span>' : ""}${s.fragile ? " · fragile" : ""}</p>
+      <p class="pp-name">${esc(s.name)}</p>
+      <p class="pp-signs">${g && g.total ? `<b>Signed by ${g.total} folk</b> · ${by}` : "No folk signature yet: be the first."}</p>
+      <div data-tips="${s.id}"></div>
+      <a class="pp-go" href="/#wayfolk">Sign or review in Wayfolk</a>`;
   };
+  async function fillTips(id, el) {
+    try {
+      const t = await A(`/rest/v1/place_signs?select=tip,cluster,author_name&spot_id=eq.${id}&tip=not.is.null&cluster=neq.fabio&order=created_at.desc&limit=2`);
+      el.innerHTML = t.filter(x => x.tip).map(x => `<p class="pp-tip">“${esc(x.tip)}”<small>${esc(x.author_name || "A folk")} · ${esc(FOLKNAME[x.cluster] || "")} folk</small></p>`).join("");
+    } catch {}
+  }
+  map.on("popupopen", e => { const el = e.popup.getElement()?.querySelector("[data-tips]"); if (el && me) fillTips(el.dataset.tips, el); });
+
   function draw() {
     dots.clearLayers();
     for (const s of spots) {
       const c = (CAT[s.category] || CAT.spot)[1];
-      L.circleMarker([s.lat, s.lon], { radius: 4.5, color: "#050b14", weight: 1, fillColor: c, fillOpacity: .95 })
-        .bindPopup(() => popup(s), { maxWidth: 280 }).addTo(dots);
+      const g = me ? signs.get(s.id) : null, n = g ? g.total : 0;
+      if (n >= 15) L.circleMarker([s.lat, s.lon], { radius: 11, color: "#f28c1e", weight: 2, fill: false, interactive: false, opacity: .9 }).addTo(dots);
+      L.circleMarker([s.lat, s.lon], {
+        radius: n >= 5 ? 6.5 : 4.5,
+        color: n >= 5 ? "#f28c1e" : "#050b14", weight: n >= 5 ? 2.5 : 1,
+        fillColor: g && g.fabio ? "#ffd27a" : c, fillOpacity: .95
+      }).bindPopup(() => popup(s), { maxWidth: 290 }).addTo(dots);
     }
   }
 
-  async function api(path, opt = {}) {
-    const r = await fetch(SB + path, { method: opt.method || "GET", headers: { apikey: KEY, "Content-Type": "application/json", ...(opt.headers || {}) },
-      body: opt.body ? JSON.stringify(opt.body) : undefined });
-    if (!r.ok) throw new Error(r.status);
-    return r.json();
-  }
   async function loadSpots() {
     try {
       const all = [];
+      const path = me ? "/rest/v1/spots?select=id,name,category,lat,lon,fragile&order=id.asc" : "/rest/v1/public_spots?select=id,name,category,lat,lon";
       for (let from = 0; ; from += 1000) {
-        const data = await api("/rest/v1/public_spots?select=id,name,category,lat,lon", { headers: { "Range-Unit": "items", Range: `${from}-${from + 999}` } });
+        const data = await A(path, { headers: { "Range-Unit": "items", Range: `${from}-${from + 999}` } });
         all.push(...data);
         if (data.length < 1000) break;
       }
       spots = all.filter(s => Number.isFinite(+s.lat) && Number.isFinite(+s.lon)).map(s => ({ ...s, lat: +s.lat, lon: +s.lon }));
+      if (me) {
+        try {
+          const rows = await A("/rest/v1/place_sign_counts?select=spot_id,cluster,n&limit=100000");
+          rows.forEach(r => {
+            const g = signs.get(r.spot_id) || { total: 0, fabio: false, by: {} };
+            if (r.cluster === "fabio") g.fabio = true; else { g.total += r.n; g.by[r.cluster] = r.n; }
+            signs.set(r.spot_id, g);
+          });
+        } catch {}
+      }
       draw(); say("");
       if (globe) drawGlobe();
     } catch { say("The places could not be loaded. Try again in a moment."); }
     stats();
   }
+
+  /* ---------- the folk view: card, passport, seconded, folk of the month ---------- */
+  async function startFolk() {
+    if (forceGuest || !(await ensureSession())) return false;
+    try {
+      const rows = await api(`/rest/v1/members?select=first_name,status,travel_style&user_id=eq.${uid()}`, { auth: true });
+      const m = rows && rows[0];
+      if (!m || !["approved", "pending"].includes(m.status)) return false;
+      me = m;
+    } catch { return false; }
+    document.body.classList.add("is-folk");
+    $("#wpViewAs").hidden = false;
+    const first = (me.first_name || "").trim();
+    $("#wpHello").innerHTML = first ? `Welcome back, <em>${esc(first)}.</em>` : "Welcome back, <em>folk.</em>";
+    $("#wpMeI").textContent = (first[0] || "F").toUpperCase();
+    $("#wpChips").innerHTML = (me.travel_style || []).map(k => `<span>${esc(FOLKNAME[k] || k)} folk</span>`).join("") || `<span>Pick your folk in Wayfolk</span>`;
+    passport(); seconded(); folkOfMonth();
+    return true;
+  }
+  async function passport() {
+    const box = $("#wpStamps");
+    try {
+      const p = await api("/rest/v1/rpc/passport", { method: "POST", body: { p_user: uid() }, auth: true });
+      if (!p) throw 0;
+      const by = p.by_folk || {};
+      const total = Object.values(by).reduce((a, f) => a + (f.signs || 0), 0);
+      $("#wpNums").innerHTML = [[total, "Signed"], [p.firsts || 0, "First"], [p.seconded || 0, "Seconded"], [p.useful || 0, "Useful"]]
+        .map(([n, l]) => `<div><b>${n}</b><small>${l}</small></div>`).join("");
+      $("#wpNums").hidden = false;
+      if (p.rank && p.rank <= 100) $("#wpChips").insertAdjacentHTML("beforeend", `<span>🏅 Founding folk #${p.rank}</span>`);
+      const st = (p.stamps || []).slice(0, 6);
+      box.innerHTML = st.length ? st.map((x, i) => `<div class="stamp" style="--c:${FOLKCOL[x.folk] || "#ffbe7a"};--r:${[-8, 6, -3, 9, -6, 4][i]}deg"><small>${x.on_spot ? "On the spot" : esc(FOLKNAME[x.folk] || "")}</small>${esc(x.name)}</div>`).join("")
+        : `<p class="empty">No stamps yet. Sign your first place on the map.</p>`;
+    } catch { box.innerHTML = `<p class="empty">The passport opens once the latest database update is in.</p>`; }
+  }
+  async function seconded() {
+    const ol = $("#wpSeconded");
+    try {
+      const r = await api("/rest/v1/rpc/my_seconded", { method: "POST", body: {}, auth: true });
+      ol.innerHTML = r.length ? r.slice(0, 6).map(x => `<li><span>${esc(x.name)}</span><small>+${x.n} folk</small></li>`).join("") : `<li class="empty">Nobody has followed your signatures yet. Sign a place first!</li>`;
+    } catch { ol.innerHTML = `<li class="empty">Available after the latest database update.</li>`; }
+  }
+  async function folkOfMonth() {
+    const ol = $("#wpLocal");
+    try {
+      const r = await api("/rest/v1/rpc/local_folk", { method: "POST", body: {}, auth: true });
+      ol.innerHTML = r.length ? r.slice(0, 6).map((x, i) => `<li><span>${i + 1}. ${esc(x.name || "A folk")} <small>· ${esc(FOLKNAME[x.folk] || "")}</small></span><small>${x.signs} signs</small></li>`).join("") : `<li class="empty">No signatures in the last 30 days yet.</li>`;
+    } catch { ol.innerHTML = `<li class="empty">Available after the latest database update.</li>`; }
+  }
+  $("#wpNear").addEventListener("click", () => {
+    if (!navigator.geolocation) return say("Your browser can't share your position.");
+    say("Finding you…");
+    navigator.geolocation.getCurrentPosition(pos => {
+      say(""); if (stage.classList.contains("is-globe")) setView("map");
+      stage.classList.add("card-off");
+      map.flyTo([pos.coords.latitude, pos.coords.longitude], 12, { duration: 1.2 });
+      L.circleMarker([pos.coords.latitude, pos.coords.longitude], { radius: 8, color: "#fff", weight: 3, fillColor: "#3d8bff", fillOpacity: 1 }).addTo(map);
+    }, () => say("Position not available: allow location for this site."), { enableHighAccuracy: true, timeout: 10000 });
+  });
+
   async function stats() {
     const parts = [];
     let total = null, folk = null;
@@ -475,7 +654,7 @@ footer a{color:var(--soft)}
   document.querySelectorAll(".views button").forEach(b => b.addEventListener("click", () => setView(b.dataset.view)));
 
   /* ---------- the card over the map can step aside ---------- */
-  $("#wpFold").addEventListener("click", () => stage.classList.add("card-off"));
+  document.querySelectorAll("[data-fold]").forEach(b => b.addEventListener("click", () => stage.classList.add("card-off")));
   $("#wpUnfold").addEventListener("click", () => stage.classList.remove("card-off"));
   map.on("dragstart zoomstart", () => { if (map._loaded && innerWidth < 900) stage.classList.add("card-off"); });
 
@@ -505,7 +684,7 @@ footer a{color:var(--soft)}
     try { window.umami && umami.track("Wayfolk test: folk picked", { folk: f[0] }); } catch {}
   });
 
-  loadSpots();
+  startFolk().then(() => loadSpots());
 })();
 </script>
 </body>
