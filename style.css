@@ -3143,3 +3143,10 @@ body[data-page="explore"]::after{background:radial-gradient(90% 55% at 85% 0,rgb
 .rev-folktag{padding:1px 7px;border-radius:999px;border:1px solid var(--c);color:var(--c);font-size:.72rem;font-weight:700}
 .rev-folk{display:flex;align-items:center;gap:8px;margin:6px 0;font-size:.86rem}
 .rev-folk select{flex:1;min-width:0}
+/* Wayfolk: logo nel menu (piccolo) e nella sezione */
+.site-header nav a.nav-spots .nav-wf{width:auto;height:14px;margin-top:-2px;display:block}
+.sx-kick .sx-logo{display:block;width:auto;height:96px;margin:0 0 6px}
+@media (max-width:700px){
+  .sx-kick{display:block !important;order:0}
+  .sx-kick .sx-logo{height:58px;margin:0 0 2px}
+}

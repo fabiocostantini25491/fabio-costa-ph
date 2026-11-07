@@ -664,7 +664,7 @@ const Spots = (() => {
     }).join("");
     return `<div class="sx">
       <aside class="sx-side">
-        <p class="sx-kick">Wayfolk <span aria-hidden="true">///</span></p>
+        <p class="sx-kick"><img class="sx-logo" src="img/wayfolk-logo.png" alt="Wayfolk" width="640" height="365"></p>
         <h2 class="sx-title">Explore the Earth</h2>
         <p class="sx-lead">${esc(DOOR_LEAD[doorNow()] || "The travel toolkit built by travellers. Every place picked with a photographer's eye.")}</p>
         <div class="sx-panel">
@@ -2473,7 +2473,7 @@ const Spots = (() => {
       if (passV) setTimeout(() => {   // la prima volta: far sapere che c'è
         if (!passV) return;
         try { if (localStorage.getItem("fcph-pass-seen")) return; localStorage.setItem("fcph-pass-seen", "1"); } catch { return; }
-        toast("New in Spots: 🎁 Pass it on — sell or give away what you don't take home. Find it on the left.");
+        toast("New in Wayfolk: 🎁 Pass it on — sell or give away what you don't take home. Find it on the left.");
       }, 2500);
       if (passV) {
         try { passItems = (await api(`/rest/v1/pass_on?select=id,kind,item,note,price,currency,place,contact,lat,lon,created_by,author_name,created_at,expires_on&expires_on=gte.${todayISO()}&order=created_at.desc&limit=500`)).data || []; }
@@ -3355,7 +3355,7 @@ const Spots = (() => {
             if (!next.length) { await api(`/rest/v1/contributors?user_id=eq.${encodeURIComponent(uid)}`, { method: "DELETE" }); contribs.delete(uid); }
             else { await api("/rest/v1/contributors?on_conflict=user_id", { method: "POST", body: { user_id: uid, display_name: nm, roles: next }, headers: { Prefer: "return=minimal,resolution=merge-duplicates" } }); contribs.set(uid, { user_id: uid, display_name: nm, roles: next }); }
             b.classList.toggle("on", !has); b.textContent = !has ? `✓ ${label}` : label;
-            toast(!has ? `${nm}: badge ${label} attivo. Per comparire sulla mappa deve creare il profilo su Spots.` : `${nm}: badge ${label} tolto.`);
+            toast(!has ? `${nm}: badge ${label} attivo. Per comparire sulla mappa deve creare il profilo su Wayfolk.` : `${nm}: badge ${label} tolto.`);
           } catch (err) { toast(`Non riuscito (${err.message}). Hai eseguito supabase-contributor-ruolo.sql?`, true); }
           b.disabled = false;
         }));
@@ -3367,7 +3367,7 @@ const Spots = (() => {
             <input name="coords" placeholder="Centro: 46.55, 11.75" value="${cur ? `${cur.lat}, ${cur.lon}` : `${c.lat.toFixed(3)}, ${L.Util.wrapNum(c.lng, [-180, 180], true).toFixed(3)}`}">
             <input name="km" type="number" min="1" max="500" step="1" value="${cur?.radius_km || 25}" aria-label="Raggio km"> km
             <button type="submit" class="pop-btn primary">Salva</button>${cur ? `<button type="button" class="pop-btn" data-unnode>Togli nodo</button>` : ""}
-            <p class="gate-help left">Il centro di default è il punto al centro della mappa Spots.</p></form>`);
+            <p class="gate-help left">Il centro di default è il punto al centro della mappa Wayfolk.</p></form>`);
           b.disabled = true;
           const f = li.querySelector("[data-nodeform]");
           f.addEventListener("submit", async ev => {
@@ -3440,8 +3440,8 @@ const Spots = (() => {
       } else if (tab === "feedback") {
         const { data } = await api("/rest/v1/feedback?select=id,answers,rating,message,email,lang,page,device,created_at&order=created_at.desc&limit=1000");
         const list = data || [];
-        const LBL = { came: "Cosa li ha portati qui", interest: "Cosa interessa di più", spots: "Come usano Spots", often: "Quanto spesso tornerebbero", missing: "Cosa vorrebbero" };
-        const OPT = { photos: "Le foto", spots: "La mappa Spots", tools: "I Tools", journal: "Articoli e guide", workshops: "Workshop e ritrovi", social: "Instagram o un amico",
+        const LBL = { came: "Cosa li ha portati qui", interest: "Cosa interessa di più", spots: "Come usano Wayfolk", often: "Quanto spesso tornerebbero", missing: "Cosa vorrebbero" };
+        const OPT = { photos: "Le foto", spots: "La mappa Wayfolk", tools: "I Tools", journal: "Articoli e guide", workshops: "Workshop e ritrovi", social: "Instagram o un amico",
           locations: "Spot e luoghi", light: "Pianificare la luce", guides: "Guide pratiche", stories: "Reportage e storie", community: "Workshop e altri fotografi", prints: "Stampe e licenze",
           trip: "Pianificare un viaggio", near: "Spot vicino a me", add: "Aggiungono posti", reviews: "Recensioni e prezzi", meet: "Ritrovi", notyet: "Non l'hanno ancora provato",
           weekly: "Ogni settimana", monthly: "Ogni mese", trips: "Prima di un viaggio", rarely: "Raramente",
