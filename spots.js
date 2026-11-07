@@ -334,6 +334,7 @@ const Spots = (() => {
   const listColor = name => { const lists = [...new Set(spots.map(s => s.list))].sort(); return LIST_COLORS[Math.max(0, lists.indexOf(name)) % LIST_COLORS.length]; };
 
   function show(join, me) {
+    if (ui === "earth" && viewMode === "globe" && !globeFailed) loadMapLibre().catch(() => {});   // il globo si scarica mentre arrivano i dati
     if (join && !session) { wantJoin = true; wantLogin = false; }
     meView = !!me;
     if (me && !session) { wantLogin = true; wantJoin = false; }
@@ -701,10 +702,10 @@ const Spots = (() => {
     if (before) delete window.maplibregl;
     loadMapLibre.p = new Promise((res, rej) => {
       const css = document.createElement("link");
-      css.rel = "stylesheet"; css.href = `https://unpkg.com/maplibre-gl@${ML_VER}/dist/maplibre-gl.css`;
+      css.rel = "stylesheet"; css.href = `https://cdn.jsdelivr.net/npm/maplibre-gl@${ML_VER}/dist/maplibre-gl.css`;
       document.head.appendChild(css);
       const js = document.createElement("script");
-      js.src = `https://unpkg.com/maplibre-gl@${ML_VER}/dist/maplibre-gl.js`;
+      js.src = `https://cdn.jsdelivr.net/npm/maplibre-gl@${ML_VER}/dist/maplibre-gl.js`;
       js.onload = () => {
         ML5 = window.maplibregl;
         if (before) window.maplibregl = before; else delete window.maplibregl;   // il planner troverà (o caricherà) la sua versione
@@ -748,7 +749,9 @@ const Spots = (() => {
     globeEl.addEventListener("touchmove", e => { if (gs && Math.hypot(e.touches[0].clientX - gs[0], e.touches[0].clientY - gs[1]) > 10) clearTimeout(gt); }, { passive: true });
     ["touchend", "touchcancel"].forEach(ev => globeEl.addEventListener(ev, () => clearTimeout(gt), { passive: true }));
     globeEl.classList.add("is-loading");   // si mostra solo quando è già una sfera (mai la mappa piana ripetuta)
-    globe.on("load", () => { try { globe.setProjection({ type: "globe" }); } catch {} globeEl.classList.remove("is-loading"); drawGlobe(); });
+    const reveal = () => { if (!globeEl.classList.contains("is-loading")) return; try { globe.setProjection({ type: "globe" }); } catch {} globeEl.classList.remove("is-loading"); drawGlobe(); };
+    globe.once("style.load", () => setTimeout(reveal, 120));
+    globe.on("load", reveal);
     return globe;
   }
 
@@ -814,7 +817,9 @@ const Spots = (() => {
     drawClusters();
   }
   async function toGlobe(center, zoom, fly) {
-    try { await ensureGlobe(); } catch { globeFailed = true; return toFlat(null); }
+    if (!globe) stageEl()?.classList.add("globe-wait");
+    try { await ensureGlobe(); } catch { globeFailed = true; stageEl()?.classList.remove("globe-wait"); return toFlat(null); }
+    stageEl()?.classList.remove("globe-wait");
     const slot = $("#sxGlobeSlot");
     if (slot && globeEl && globeEl.parentElement !== slot) slot.appendChild(globeEl);
     onGlobe = true;
@@ -4605,7 +4610,8 @@ const Spots = (() => {
     });
   }
 
-  return { show, handleCallback, loadSession, renderWrite, parse: { fromCSV, fromKML, fromGeoJSON, coordsFromText } };
+  const prefetch = () => { if (ui === "earth" && viewMode === "globe" && !globeFailed) loadMapLibre().catch(() => {}); };
+  return { show, prefetch, handleCallback, loadSession, renderWrite, parse: { fromCSV, fromKML, fromGeoJSON, coordsFromText } };
 })();
 
 const LOCK_SVG = '<svg viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/><circle cx="12" cy="15.5" r="1.3"/></svg>';

@@ -2484,6 +2484,10 @@ function renderAll() {
    ========================================================= */
 function bindEvents() {
   setupArticleZoom();
+  // chi sta per aprire Spots (dito o mouse sul link): il globo 3D inizia a scaricarsi subito
+  const preSpots = e => { if (e.target.closest?.('a[href="#spots"], a[href="#join"], a[href="#me"]')) window.Spots?.prefetch?.(); };
+  document.addEventListener("pointerdown", preSpots, { passive: true });
+  document.addEventListener("mouseover", preSpots, { passive: true });
   $$(".gl-vbtn").forEach(b => b.addEventListener("click", () => {
     gallery.view = b.dataset.view; try { localStorage.setItem("fcph-gallery-view", gallery.view); } catch {}
     renderGallery();

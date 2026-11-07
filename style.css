@@ -3017,3 +3017,9 @@ body[data-page="explore"]::after{background:radial-gradient(90% 55% at 85% 0,rgb
 .around-tab.pulse{animation:aroundPulse 1.4s ease 2}
 @keyframes aroundPulse{50%{box-shadow:0 0 0 8px rgba(255,210,122,.25)}}
 @media (prefers-reduced-motion:reduce){.sx-stage .spots-around.as-drawer{transition:none}.around-tab.pulse{animation:none}}
+/* mentre il globo si carica: una sfera che respira al posto dello schermo vuoto */
+.sx-globe-slot:empty::before,.sx-globe-slot:has(.sx-globe.is-loading)::before{content:"";position:absolute;left:50%;top:46%;width:min(62vw,420px);aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;
+  background:radial-gradient(circle at 35% 30%,#3d6fa8 0,#173a66 38%,#081a33 70%,#030b18 100%);box-shadow:0 0 60px rgba(90,150,255,.35),inset -20px -30px 60px rgba(0,0,0,.6);animation:globeWait 1.6s ease-in-out infinite;pointer-events:none}
+@keyframes globeWait{50%{opacity:.6}}
+@media (prefers-reduced-motion:reduce){.sx-globe-slot::before{animation:none}}
+.sx-stage.globe-wait .sx-globe-slot{opacity:1}
