@@ -3609,10 +3609,10 @@ const Spots = (() => {
     return `${SPOTS_CONFIG.url.replace(/\/$/, "")}/storage/v1/object/public/journal/${path}`;
   }
   async function renderWrite(box) {
-    const head = `<a class="text-link mag-back" href="#journal">${ICON.prev}All stories</a><p class="mag-kicker">Wayfolk Journal</p><h2>Write for the Wayfolk Journal</h2>`;
+    const head = `<a class="text-link mag-back" href="#journal">${ICON.prev}All stories</a><p class="mag-kicker">Field Notes</p><h2>Write for Field Notes</h2>`;
     box.innerHTML = `${head}<p class="mag-deck">Loading…</p>`;
     if (!configured() || !(await ensureSession())) {
-      box.innerHTML = `${head}<p class="mag-deck">Every folk can write for the Wayfolk Journal and for the monthly magazine. Log in to Wayfolk first, then come back here.</p>
+      box.innerHTML = `${head}<p class="mag-deck">Every folk can write for Field Notes and for the monthly magazine. Log in to Wayfolk first, then come back here.</p>
         <p><a class="outline-link" href="#wayfolk">LOG IN TO WAYFOLK <span aria-hidden="true">→</span></a></p>`; return;
     }
     if (!loaded) { try { admin = await checkAdmin(); } catch {} }
@@ -3620,7 +3620,7 @@ const Spots = (() => {
     // scrivono tutti i folk (membri approvati), oltre ai contributor
     const okWriter = admin || contribs.has(myUid()) || (await fetchMemberStatus().catch(() => "")) === "approved";
     if (!okWriter) {
-      box.innerHTML = `${head}<p class="mag-deck">Writing for the Wayfolk Journal opens as soon as your membership is approved. Would you like to write reportage or practical guides? Tell me about you and your idea.</p>
+      box.innerHTML = `${head}<p class="mag-deck">Writing for Field Notes opens in a moment: reload the page if it doesn't. Would you like to write reportage or practical guides? Tell me about you and your idea.</p>
         <p><button type="button" class="outline-link" data-contribute="writer">BECOME A CONTRIBUTOR <span aria-hidden="true">→</span></button></p>`; return;
     }
     let mine = [];

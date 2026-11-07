@@ -195,7 +195,7 @@ function authorOf(a) {
   return { name: nm, slug: slug(nm), own: false, instagram: String(a.instagram || "").replace(/^@/, "").trim(),
     site: /^https?:\/\//.test(a.sito || "") ? a.sito : "", bio: a.bio || "", photo: a.foto ? mediaUrl(a.foto) : "" };
 }
-// firma degli articoli: nome e cognome, e il folk di chi scrive (Wayfolk Journal)
+// firma degli articoli: nome e cognome, e il folk di chi scrive (Field Notes)
 const FOLK_LABEL = { photo: "📷 Photo folk", hike: "🥾 Hiker folk", slow: "🎒 Backpacker folk", road: "🚐 Road trip folk", nomad: "💻 Nomad folk", food: "🍝 Foodie folk" };
 const folkTag = a => (a.author?.folk && FOLK_LABEL[a.author.folk] ? ` <span class="mag-folk">${FOLK_LABEL[a.author.folk]}</span>` : "");
 const authorLink = a => `<a class="mag-author" href="#author-${esc(a.author.slug)}">${esc(a.author.name)}</a>${folkTag(a)}`;
