@@ -397,7 +397,7 @@ content:
           collapsible:
             collapsed: true
             summary: "{titolo}"
-        description: "Ogni guida compare nello scaffale «Guides» del Journal e si scarica in PDF (impaginato al momento). Testi in inglese, come il resto del sito."
+        description: "Ogni guida compare nello scaffale «Guides» del Journal e si scarica in PDF (impaginato al momento). Per chiunque viaggi, con l'occhio del fotografo. Testi in inglese, come il resto del sito."
         fields:
           - { name: titolo, label: Titolo (es. Venice), type: string, required: true }
           - { name: sottotitolo, label: Sottotitolo, type: string }
@@ -429,7 +429,7 @@ content:
                   - { name: lat, label: Latitudine, type: string, required: true }
                   - { name: lon, label: Longitudine, type: string, required: true }
                   - name: luce
-                    label: Luce migliore
+                    label: Momento migliore
                     type: select
                     options: { values: [Sunrise, Early morning, Morning, Afternoon, Sunset, Blue hour, Night, Any time] }
                   - { name: consiglio, label: Consiglio (in inglese), type: text }

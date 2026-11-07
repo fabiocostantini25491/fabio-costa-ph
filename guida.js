@@ -49,7 +49,7 @@
     const zones = (g.zone || []).map((z, i) => ({ ...z, color: COLORS[i % COLORS.length], luoghi: (z.luoghi || []).filter(l => l && l.nome).map(l => ({ ...l, n: ++n, lat: parseFloat(l.lat), lon: parseFloat(l.lon) })) }));
     const venice = /venice|venezia/i.test(g.slug + g.titolo);
     const all = zones.flatMap(z => z.luoghi.map(l => ({ ...l, color: z.color })));
-    document.title = `${g.titolo} — a photographer's guide · Fabio Costa Ph`;
+    document.title = `${g.titolo} — a travel guide · Fabio Costa Ph`;
     const st = document.createElement("style");
     st.textContent = `@page { @bottom-left { content: "${String(g.titolo).replace(/"/g, "")} · Field Notes guide · ${SITE}"; } }`;
     document.head.appendChild(st);
@@ -82,7 +82,7 @@
         ${mapSvg(z.luoghi, { color: z.color, canal: venice })}
         <div class="gp-spots">${z.luoghi.map(l => `<div class="gp-spot">
           <h3><span class="gp-n" style="background:${z.color}">${l.n}</span>${esc(l.nome)}</h3>
-          ${l.luce ? `<p class="gp-light">${ICON[l.luce] || "○"} Best light: <b>${esc(l.luce)}</b></p>` : ""}
+          ${l.luce ? `<p class="gp-light">${ICON[l.luce] || "○"} Best time: <b>${esc(l.luce)}</b></p>` : ""}
           ${l.consiglio ? `<p>${inline(l.consiglio)}</p>` : ""}
           ${l.nota ? `<p class="gp-note">${esc(l.nota)}</p>` : ""}
           ${l.foto ? `<figure><img src="${esc(media(l.foto))}" alt=""></figure>` : ""}
@@ -95,7 +95,7 @@
       ${g.pratiche ? `<section class="gp-part gp-prac" id="gp-prac"><p class="gp-k">Before you go</p><h2>Practical information</h2><div class="gp-rich">${md(g.pratiche)}</div></section>` : ""}
       <section class="gp-part gp-back">
         <h2>${esc(g.titolo)}<span>A Field Notes guide</span></h2>
-        <p>Every place in this guide is on the map at <b>${esc(SITE)}</b>, where you can also plan sunrise, sunset and the blue hour.</p>
+        <p>Every place in this guide is on the map at <b>${esc(SITE)}</b>, together with sunrise and sunset times for the day of your visit.</p>
         <p class="gp-foot">${g.aggiornata ? `Updated ${esc(fmtDate(g.aggiornata))} · ` : ""}© ${new Date().getFullYear()} Fabio Costa Ph</p>
       </section>`;
     // foto: ridotte prima della stampa (PDF più leggero, sempre nitido)

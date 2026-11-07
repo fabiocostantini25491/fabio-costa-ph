@@ -2995,3 +2995,9 @@ body[data-page="explore"]::after{background:radial-gradient(90% 55% at 85% 0,rgb
 @media (max-width:760px){.gd-spots{columns:1}}
 .gm text{stroke:none}
 .gm .gm-pt text{fill:#fff}
+/* Spots: aggiunta con pressione lunga sulla mappa */
+.lp-pop .leaflet-popup-content{margin:10px 12px}
+.lp-add{display:grid;gap:6px;justify-items:center}
+.lp-add-btn{border:0;border-radius:999px;padding:11px 18px;background:#ffd27a;color:#2b1a02;font:600 14px var(--sans);cursor:pointer;min-height:44px}
+.lp-add small{font-size:11px;color:#556}
+.map-spots,.sx-globe{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}

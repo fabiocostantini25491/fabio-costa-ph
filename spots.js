@@ -741,9 +741,45 @@ const Spots = (() => {
       }
     });
     globe.on("moveend", () => { drawGlobe(); maybeDescend(); });
+    // pressione lunga sul globo: per aggiungere uno spot serve la mappa di dettaglio
+    let gt = null, gs = null;
+    globeEl.addEventListener("touchstart", e => { clearTimeout(gt); if (e.touches.length !== 1) return; gs = [e.touches[0].clientX, e.touches[0].clientY];
+      gt = setTimeout(() => hint("Zoom in on the map, then press and hold to add a spot."), 600); }, { passive: true });
+    globeEl.addEventListener("touchmove", e => { if (gs && Math.hypot(e.touches[0].clientX - gs[0], e.touches[0].clientY - gs[1]) > 10) clearTimeout(gt); }, { passive: true });
+    ["touchend", "touchcancel"].forEach(ev => globeEl.addEventListener(ev, () => clearTimeout(gt), { passive: true }));
     globeEl.classList.add("is-loading");   // si mostra solo quando è già una sfera (mai la mappa piana ripetuta)
     globe.on("load", () => { try { globe.setProjection({ type: "globe" }); } catch {} globeEl.classList.remove("is-loading"); drawGlobe(); });
     return globe;
+  }
+
+  /* Telefono: tenendo premuto il dito su un punto della mappa compare «Add a spot here», senza passare dal pulsante Add.
+     Un tocco breve resta per i pin e per spostare la mappa; due dita = zoom (nessuna aggiunta). */
+  function setupLongPressAdd(m) {
+    const el = m.getContainer();
+    let t = null, start = null, pop = null;
+    const cancel = () => { clearTimeout(t); t = null; };
+    el.addEventListener("touchstart", e => {
+      cancel();
+      if (e.touches.length !== 1 || e.target.closest(".leaflet-marker-icon, .leaflet-popup, .leaflet-control, button, a")) return;
+      const tc = e.touches[0]; start = { x: tc.clientX, y: tc.clientY };
+      t = setTimeout(() => {
+        t = null; m._fcLong = Date.now();
+        const r = el.getBoundingClientRect(), ll = m.containerPointToLatLng([start.x - r.left, start.y - r.top]);
+        const lat = ll.lat, lon = L.Util.wrapNum(ll.lng, [-180, 180], true);
+        try { navigator.vibrate?.(15); } catch {}
+        if (guest) { hint("Log in to Spots to add a place."); return; }
+        pop?.remove();
+        const box = document.createElement("div");
+        box.className = "lp-add";
+        box.innerHTML = `<button type="button" class="lp-add-btn">＋ Add a spot here</button><small>${lat.toFixed(5)}, ${lon.toFixed(5)}${m.getZoom() < 12 ? " · zoom in for a precise point" : ""}</small>`;
+        pop = L.popup({ closeButton: true, autoPan: true, closeOnClick: false, className: "lp-pop", offset: [0, -6] }).setLatLng([lat, lon]).setContent(box).openOn(m);
+        box.querySelector("button").addEventListener("click", () => { m.closePopup(pop); withConduct(() => openAdd({ lat, lon })); });
+      }, 550);
+    }, { passive: true });
+    el.addEventListener("touchmove", e => { if (!t || !start) return; const tc = e.touches[0]; if (e.touches.length > 1 || Math.hypot(tc.clientX - start.x, tc.clientY - start.y) > 10) cancel(); }, { passive: true });
+    el.addEventListener("touchend", cancel, { passive: true });
+    el.addEventListener("touchcancel", cancel, { passive: true });
+    m.on("zoomstart", () => { if (t) cancel(); });
   }
 
   /* globo → mappa di dettaglio, nello stesso punto (lo zoom di Leaflet è più alto di 1 rispetto a MapLibre) */
@@ -1686,7 +1722,8 @@ const Spots = (() => {
     drawOsm();
     drawOrigin();
     map.on("moveend zoomend", drawClusters);
-    if (!guest && (admin || schemaV2)) map.on("contextmenu", e => withConduct(() => openAdd({ lat: e.latlng.lat, lon: L.Util.wrapNum(e.latlng.lng, [-180, 180], true) })));
+    if (!guest && (admin || schemaV2)) map.on("contextmenu", e => { if (Date.now() - (map._fcLong || 0) < 900) return; withConduct(() => openAdd({ lat: e.latlng.lat, lon: L.Util.wrapNum(e.latlng.lng, [-180, 180], true) })); });
+    setupLongPressAdd(map);
     const pts = visibleSpots().map(s => [s.lat, s.lon]);
     if (keep) map.setView(keep.c, keep.z, { animate: false });
     else if (pts.length) map.fitBounds(L.latLngBounds(pts).pad(0.1), { maxZoom: 12, animate: false });

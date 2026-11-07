@@ -2052,7 +2052,7 @@ async function renderGuides() {
   if (document.body.dataset.page !== "journal" || !/^#guides$/.test(location.hash)) return;
   const T = s => window.I18N ? I18N.t(s) : s;
   layout.innerHTML = `<div class="gd-shelf">
-    <p class="gd-shelf-lead">${T("Photographer's guides, zone by zone: where to stand, when the light is right, and the practical things to know. Read them here or download the PDF.")}</p>
+    <p class="gd-shelf-lead">${T("Travel guides, zone by zone: what to see, when to go, where to stop and the practical things to know — with a photographer's eye. Read them here or download the PDF.")}</p>
     ${list.length ? `<ul class="gd-books">${list.map(g => {
       const n = (g.zone || []).reduce((a, z) => a + (z.luoghi || []).length, 0);
       return `<li><a class="gd-book" href="#g-${esc(g.slug)}">
@@ -2094,7 +2094,7 @@ async function renderGuide(slugId) {
       <ol class="gd-spots">${z.luoghi.map(l => `<li class="gd-spot">
         <span class="gd-n" style="background:${z.color}">${l.n}</span>
         <div><h4>${esc(l.nome)}</h4>
-          ${l.luce ? `<p class="gd-light"><span aria-hidden="true">${LIGHT_ICON[l.luce] || "○"}</span> ${T("Best light")}: <b>${esc(T(l.luce))}</b></p>` : ""}
+          ${l.luce ? `<p class="gd-light"><span aria-hidden="true">${LIGHT_ICON[l.luce] || "○"}</span> ${T("Best time")}: <b>${esc(T(l.luce))}</b></p>` : ""}
           ${l.consiglio ? `<p>${mdInline(l.consiglio)}</p>` : ""}
           ${l.nota ? `<p class="gd-note">${esc(l.nota)}</p>` : ""}
           ${l.foto ? `<figure class="gd-photo"><img src="${esc(mediaUrl(l.foto))}" alt="${esc(l.nome)}" loading="lazy"></figure>` : ""}
