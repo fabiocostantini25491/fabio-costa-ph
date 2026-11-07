@@ -559,12 +559,14 @@ const Spots = (() => {
     terrain: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 9 5-9 5-9-5z"/><path d="m3 12 9 5 9-5M3 16l9 5 9-5"/></svg>',
     full: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>',
     fullExit: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg>',
+    pass: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 11h15v9.5h-15zM3 7.5h18V11H3zM12 7.5v13M12 7.5C10.8 4 7 3.6 7.2 6c.1 1.2 2.4 1.5 4.8 1.5M12 7.5c1.2-3.5 5-3.9 4.8-1.5-.1 1.2-2.4 1.5-4.8 1.5"/></svg>',
     lock: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></svg>'
   };
   const SX_GROUPS = [
+    { id: "pass", title: "Pass it on", sub: "Sell or give away to travellers", cats: [], isNew: "2027-01-31" },
     { id: "places", title: "Places", sub: "Photo spots · Points of interest · Trekking", cats: ["spot", "trekking"] },
     { id: "essentials", title: "Essentials", sub: "Stay · Food & drink", cats: ["hotel", "restaurant"] },
-    { id: "community", title: "Community", sub: "Photographers · Local experts · Meetups · Trips · Pass it on", cats: [] },
+    { id: "community", title: "Community", sub: "Photographers · Local experts · Meetups · Trips", cats: [] },
     { id: "outdoors", title: "Outdoors", sub: "Workshops · Experiences", cats: ["workshop", "experience"] }
   ];
 
@@ -587,8 +589,15 @@ const Spots = (() => {
           <option value="hide"${alertMode === "hide" ? " selected" : ""}>Hide places with alerts</option>
           <option value="only"${alertMode === "only" ? " selected" : ""}>Only places with alerts</option></select></label>` : "")
         + (!guest && commV ? `<button type="button" class="sx-item${onlyFavs ? " on" : ""}" id="onlyFavs" aria-pressed="${onlyFavs}" style="--c:#ff8fb1"><span class="sx-ico">♥</span><span class="sx-name">My spots</span><small>${favs.size}</small><span class="sx-check" aria-hidden="true"></span></button>` : "");
+      if (g.id === "pass") {
+        const intro = `<p class="sx-pass-intro">Leaving and can't take it home? Sell it or give it away to the travellers arriving after you: chargers, SIMs, tents, guidebooks…</p>`;
+        if (guest || !commV) return intro + lockItem("Pass it on", "🎁");
+        return intro + `<button type="button" class="sx-item${showPass ? " on" : ""}" id="showPass" aria-pressed="${showPass}" style="--c:#8fe0a8"><span class="sx-ico">${SX_ICON.pass}</span><span class="sx-name">Show on the map</span><small>${livePass().length}</small><span class="sx-check" aria-hidden="true"></span></button>
+          <button type="button" class="sx-item" id="passList" style="--c:#8fe0a8"><span class="sx-ico">☰</span><span class="sx-name">All the items</span><span class="sx-go" aria-hidden="true">›</span></button>
+          <button type="button" class="sx-pass-cta" id="passAdd">🎁 Sell or give away something</button>`;
+      }
       if (g.id === "community") {
-        if (guest || !commV) return lockItem("Photographers", "📷") + lockItem("Local experts", "🧭") + lockItem("Meetups", "👥") + lockItem("Trips", "🧭") + lockItem("Pass it on", "🎁");
+        if (guest || !commV) return lockItem("Photographers", "📷") + lockItem("Local experts", "🧭") + lockItem("Meetups", "👥") + lockItem("Trips", "🧭");
         return `<button type="button" class="sx-item${showPhotographers ? " on" : ""}" id="showPh" aria-pressed="${showPhotographers}" style="--c:#c9a7ff"><span class="sx-ico">📷</span><span class="sx-name">Photographers</span><small>${profiles.filter(p => p.visible && p.on_map !== false && p.lat != null).length}</small><span class="sx-check" aria-hidden="true"></span></button>
           <p class="sx-links"><button type="button" class="text-link" id="phList">List</button><button type="button" class="text-link" id="myProfile">${profiles.some(p => p.user_id === myUid()) ? "My photographer profile" : "Join the photographers' map"}</button>${nodiV && profiles.some(p => p.user_id === myUid()) ? `<button type="button" class="text-link" id="iPosted">📣 I just posted</button>` : ""}</p>
           ${nodiV ? `<button type="button" class="sx-item" id="expList" style="--c:#ffd9a0"><span class="sx-ico">🧭</span><span class="sx-name">Local experts</span><small>${experts.size}</small><span class="sx-go" aria-hidden="true">›</span></button>` : ""}
@@ -597,19 +606,18 @@ const Spots = (() => {
           <p class="sx-links"><button type="button" class="text-link" id="meetAdd">＋ Organise a meetup</button></p>
           ${tripsV ? `<button type="button" class="sx-item${showTrips ? " on" : ""}" id="showTrips" aria-pressed="${showTrips}" style="--c:#ff9f6e"><span class="sx-ico">${TRIP_ICON}</span><span class="sx-name">Trips</span><small>${fmtN(trips ? trips.length : tripCount)}</small><span class="sx-check" aria-hidden="true"></span></button>
           <p class="sx-links"><button type="button" class="text-link" id="tripList">List</button><button type="button" class="text-link" id="tripAdd">＋ Add a trip</button></p>` : ""}
-          ${passV ? `<button type="button" class="sx-item${showPass ? " on" : ""}" id="showPass" aria-pressed="${showPass}" style="--c:#8fe0a8"><span class="sx-ico">${PASS_ICON}</span><span class="sx-name">Pass it on</span><small>${livePass().length}</small><span class="sx-check" aria-hidden="true"></span></button>
-          <p class="sx-links"><button type="button" class="text-link" id="passList">List</button><button type="button" class="text-link" id="passAdd">＋ Sell or give away</button></p>` : ""}`;
+`;
       }
       if (g.id === "essentials") return g.cats.map(k => item(k)).join("") + (!guest && schemaV2 && socialV ? supportItem(g.cats) : "");
       return g.cats.map(k => item(k)).join("");
     };
-    const groups = SX_GROUPS.map(g => {
-      const open = sxOpen.has(g.id), on = g.cats.some(k => activeCats.has(k)) || (g.id === "community" && showPhotographers);
+    const groups = SX_GROUPS.filter(g => g.id !== "pass" || guest || !commV || passV).map(g => {
+      const open = sxOpen.has(g.id), on = g.cats.some(k => activeCats.has(k)) || (g.id === "community" && showPhotographers) || (g.id === "pass" && showPass && !guest && commV);
       const count = g.cats.reduce((a, k) => a + n(k), 0);
       return `<section class="sx-group${open ? " open" : ""}${on ? " on" : ""}" data-g="${g.id}">
         <button type="button" class="sx-ghead" data-sxg="${g.id}" aria-expanded="${open}">
           <span class="sx-gico">${SX_ICON[g.id]}</span>
-          <span class="sx-gtext"><b>${g.title}</b><small>${g.sub}</small></span>
+          <span class="sx-gtext"><b>${g.title}</b><small>${g.sub}</small></span>${g.isNew && todayISO() <= g.isNew ? `<span class="sx-new">New</span>` : ""}
           ${g.cats.length ? `<span class="sx-gcount" data-sxgcount="${g.id}">${fmtN(count)}</span>` : ""}
           <span class="sx-chev" aria-hidden="true"></span>
         </button>
@@ -2409,6 +2417,11 @@ const Spots = (() => {
           .catch(err => { if (nodiV && err.status === 400) { nodiV = false; return api("/rest/v1/member_profiles?select=user_id,display_name,instagram,website,bio,base_name,lat,lon,visible&limit=2000"); } throw err; })
       ]);
       meetups = mu.data || [];
+      if (passV) setTimeout(() => {   // la prima volta: far sapere che c'è
+        if (!passV) return;
+        try { if (localStorage.getItem("fcph-pass-seen")) return; localStorage.setItem("fcph-pass-seen", "1"); } catch { return; }
+        toast("New in Spots: 🎁 Pass it on — sell or give away what you don't take home. Find it on the left.");
+      }, 2500);
       if (passV) {
         try { passItems = (await api(`/rest/v1/pass_on?select=id,kind,item,note,price,currency,place,contact,lat,lon,created_by,author_name,created_at,expires_on&expires_on=gte.${todayISO()}&order=created_at.desc&limit=500`)).data || []; }
         catch (err) { if ([400, 401, 403, 404].includes(err.status)) passV = false; passItems = []; }

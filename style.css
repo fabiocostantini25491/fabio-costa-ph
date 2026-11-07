@@ -3079,3 +3079,17 @@ body[data-page="explore"]::after{background:radial-gradient(90% 55% at 85% 0,rgb
 .trip-ed-actions{display:flex;gap:6px;justify-content:flex-end;margin-top:8px;flex-wrap:wrap}
 .trip-ed-actions .pop-btn[disabled]{opacity:.4;pointer-events:none}
 .sx-stage .trip-ed ~ .sx-sheet{opacity:.35}
+/* Pass it on: categoria a sé, prima a sinistra */
+.sx-group[data-g="pass"] .sx-gico{color:#8fe0a8;background:rgba(143,224,168,.12);border-color:rgba(143,224,168,.45)}
+.sx-group[data-g="pass"] .sx-ghead{position:relative}
+.sx-new{flex:none;margin-left:auto;padding:2px 7px;border-radius:999px;background:#8fe0a8;color:#08170e;font:700 9px/1.4 var(--sans);letter-spacing:.12em;text-transform:uppercase;animation:sxNew 2.4s ease-in-out infinite}
+@keyframes sxNew{0%,100%{box-shadow:0 0 0 0 rgba(143,224,168,.55)}50%{box-shadow:0 0 0 5px rgba(143,224,168,0)}}
+@media (prefers-reduced-motion:reduce){.sx-new{animation:none}}
+.sx-pass-intro{margin:2px 2px 8px;font-size:.86rem;line-height:1.45;opacity:.85}
+.sx-pass-cta{display:block;width:100%;margin:8px 0 2px;padding:11px 12px;border:0;border-radius:12px;background:#8fe0a8;color:#08170e;font:700 13px var(--sans);cursor:pointer}
+.sx-pass-cta:hover{filter:brightness(1.06)}
+@media (max-width:700px){
+  .sx-sheet .sx-groups{grid-template-columns:none;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:4px}
+  .sx-sheet .sx-gtext b{font-size:8.6px;letter-spacing:.05em}
+  .sx-sheet .sx-new{position:absolute;top:1px;right:3px;margin:0;padding:1px 5px;font-size:7.5px}
+}
