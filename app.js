@@ -2429,6 +2429,8 @@ document.addEventListener("click", e => {
 document.addEventListener("change", e => { if (e.target.id === "shotFile" && e.target.files?.length) trackEvent("Analyze: photo loaded"); }, { capture: true });
 
 function route() {
+  // chi arriva da wayfolk.eu (inoltro del dominio a fabiocostaph.com/?wayfolk) va dritto a Wayfolk
+  if (/(^\?|&)wayfolk\b/.test(location.search) && !location.hash) { history.replaceState(null, "", location.pathname + "#spots"); trackEvent("Wayfolk domain"); }
   let hash = decodeURIComponent(location.hash.slice(1));
   let page = hash, article = null;
   if (hash.startsWith("art-")) { page = "journal"; article = hash.slice(4); }
