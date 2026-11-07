@@ -3161,3 +3161,34 @@ body[data-page="explore"]::after{background:radial-gradient(90% 55% at 85% 0,rgb
 .ph-pin[class*="folk-"]:not(.contrib):not(.dev){border-color:var(--fc);color:var(--fc);box-shadow:0 0 12px color-mix(in srgb,var(--fc) 55%,transparent)}
 .ph-pin[class*="folk-"]:not(.contrib):not(.dev) svg{stroke:var(--fc)}
 .ph-pin.multi::after{content:"+";position:absolute;right:-5px;bottom:-5px;width:14px;height:14px;border-radius:50%;display:grid;place-items:center;background:var(--fc);color:#0b1020;font:700 11px/1 var(--sans)}
+/* le prime 3 firme */
+.onb-folk{margin:0 0 10px;padding:12px 14px;border-radius:14px;background:rgba(255,210,122,.08);border:1px solid rgba(255,210,122,.45)}
+.onb-folk p{margin:0;font-size:.9rem}
+.onb-dots{display:flex;align-items:center;gap:6px;margin:8px 0}
+.onb-dots span{width:22px;height:8px;border-radius:4px;background:rgba(255,255,255,.15)}
+.onb-dots span.on{background:#ffd27a}
+.onb-dots small{margin-left:4px;opacity:.8}
+.onb-help{opacity:.8;font-size:.82rem !important}
+@media (max-width:700px){.sx-sheet .onb-folk{display:none}}
+/* firme: primo firmatario, chi firma, sul posto, utile */
+.sg-first{margin:0 0 6px;font-size:.82rem;opacity:.9}
+.sg-who{border:0;background:none;padding:0;color:inherit;font:inherit;font-weight:700;text-decoration:underline;text-decoration-color:rgba(255,255,255,.3);text-underline-offset:2px;cursor:pointer}
+.sg-spot{font-size:.75rem;color:#7ee081;white-space:nowrap}
+.sg-useful{margin-left:6px;padding:1px 8px;border-radius:999px;border:1px solid rgba(255,255,255,.25);background:none;color:inherit;font-size:.75rem;cursor:pointer}
+.sg-useful.on{background:rgba(255,210,122,.18);border-color:#ffd27a}
+.sg-useful[disabled]{opacity:.5;cursor:default}
+/* passaporto Wayfolk */
+.pp{margin:14px 0;padding:16px;border-radius:16px;background:rgba(255,255,255,.035);border:1px solid rgba(255,210,122,.3)}
+.pp-kick{margin:0 0 10px;font-size:.72rem;letter-spacing:.2em;text-transform:uppercase;color:#ffd27a}
+.pp-folks{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.pp-folk{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;border:1px solid var(--c);color:var(--c);font-weight:600;font-size:.85rem}
+.pp-folk b{padding:1px 7px;border-radius:999px;background:var(--c);color:#0b1020;font-size:.72rem;letter-spacing:.04em}
+.pp-stats{grid-template-columns:repeat(3,minmax(0,1fr)) !important}
+.pp-map{display:block;width:100%;height:auto;margin:10px 0;border-radius:12px;background:radial-gradient(circle at 50% 50%,rgba(60,110,200,.18),rgba(6,12,26,.9));border:1px solid rgba(255,255,255,.08)}
+.pp-h{margin:10px 0 6px;font-size:.78rem;letter-spacing:.14em;text-transform:uppercase;opacity:.8}
+.pp-stamps{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px}
+.pp-stamps button{width:100%;text-align:left;padding:8px 10px;border-radius:12px;border:1px dashed var(--c);background:rgba(0,0,0,.2);color:inherit;font:inherit;font-size:.85rem;cursor:pointer;display:grid;grid-template-columns:22px 1fr;column-gap:6px}
+.pp-stamps button span{grid-row:span 2}
+.pp-stamps small{opacity:.7;font-size:.72rem}
+@media (max-width:520px){.pp-stats{grid-template-columns:repeat(2,minmax(0,1fr)) !important}}
+.pp-stats dt{font-size:.62rem;letter-spacing:.1em}

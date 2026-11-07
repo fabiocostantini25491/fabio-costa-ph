@@ -57,7 +57,11 @@ const Spots = (() => {
   const DOORS = { photographers: "photo", hikers: "hike", backpackers: "slow", roadtrips: "road", nomads: "nomad", foodies: "food" };
   const doorNow = () => { try { const d = localStorage.getItem("fcph-door"); return DOORS[d] ? d : ""; } catch { return ""; } };
   let myStyles = [], clusterV = true, signV = true, folkV = true;
-  let signMap = new Map();   // firme per luogo: { total, top (folk più presente), fabio } — per le icone «evolute»
+  let signMap = new Map();
+  let evoV = true, mySignCount = null;   // evoV: false finché non è stato eseguito supabase-folk-evoluzione.sql
+  const LEVELS = [["trusted", "Trusted", 25], ["pathfinder", "Pathfinder", 10], ["wanderer", "Wanderer", 1]];
+  // livello in un folk: Wanderer (1 firma) · Pathfinder (10 firme e almeno un consiglio) · Trusted (25 firme in almeno 3 zone)
+  const levelOf = st => !st || !st.signs ? null : st.signs >= 25 && (st.areas || 0) >= 3 ? LEVELS[0] : st.signs >= 10 && (st.tips || 0) >= 1 ? LEVELS[1] : LEVELS[2];   // firme per luogo: { total, top (folk più presente), fabio } — per le icone «evolute»
   const signTier = s => { const g = signMap.get(s.id); if (!g) return 0; return g.total >= 15 ? 3 : g.total >= 5 ? 2 : g.total >= 1 ? 1 : 0; };
   const folkOf = k => CLUSTERS[k]?.folk || "";   // «folk»: il nome dei cluster (gente che viaggia allo stesso modo)
   const NAME_KEY = "fcph-display-name";
@@ -684,6 +688,7 @@ const Spots = (() => {
         <p class="sx-lead">${esc(DOOR_LEAD[doorNow()] || "Made by its community: travellers like you share, sign and review the places worth the trip, and look after them.")}</p>
         <div class="sx-panel">
           ${searchHtml}
+          <div class="onb-folk" id="onbFolk" hidden></div>
           <div class="sx-groups">${groups}</div>
           <div class="sx-foot">
             <span>${ICON.pin}<span id="spotsCount"></span></span>
@@ -2500,7 +2505,7 @@ const Spots = (() => {
         try { const { res } = await api("/rest/v1/trips?select=id&limit=1", { headers: { Prefer: "count=exact" } }); tripCount = +((res.headers.get("content-range") || "").split("/")[1]) || 0; }
         catch (err) { if ([400, 401, 403, 404].includes(err.status)) tripsV = false; }
       }
-      if (signV && clusterV) loadSignCounts();
+      if (signV && clusterV) { loadSignCounts(); loadMySignCount(); }
       meetupJoins = new Map();
       (jo.data || []).forEach(j => (meetupJoins.get(j.meetup_id) || meetupJoins.set(j.meetup_id, []).get(j.meetup_id)).push(j));
       favs = new Set((fa.data || []).map(f => f.spot_id));
@@ -2724,7 +2729,8 @@ const Spots = (() => {
           html: `<div class="ph-pin folk-${folkPinOf(p)}${pFolks(p).length > 1 ? " multi" : ""}${fresh ? " posted" : ""}${xp ? " expert" : ""}${co ? " contrib" : ""}${dev && !co ? " dev" : ""}" style="--fc:${CLUSTERS[folkPinOf(p)].color}">${co ? ICON_APERTURE : dev ? ICON_DEV : FOLK_ICON[folkPinOf(p)]}${fresh ? `<span class="ph-new">NEW POST</span>` : ""}</div>` }) }).addTo(commLayer);
       mk.bindTooltip(esc(p.display_name), { direction: "top" });
       mk.bindPopup(() => profileHtml(p), { maxWidth: 300, minWidth: 220, className: "spot-popup" });
-      mk.on("popupopen", e => e.popup.getElement()?.querySelector("[data-flagprofile]")?.addEventListener("click", () => openFlag("profile", p.user_id, p.display_name)));
+      mk.on("popupopen", e => { const el = e.popup.getElement(); el?.querySelector("[data-flagprofile]")?.addEventListener("click", () => openFlag("profile", p.user_id, p.display_name));
+        el?.querySelector("[data-passport]")?.addEventListener("click", () => openMemberProfile(p.user_id)); });
     });
   }
   function meetupHtml(m) {
@@ -3122,6 +3128,7 @@ const Spots = (() => {
       <div class="pop-actions">
         ${ig ? `<a class="pop-btn primary" href="${esc(ig)}" target="_blank" rel="noopener">Instagram @${esc(p.instagram)}</a>` : ""}
         ${p.website ? `<a class="pop-btn" href="${esc(p.website)}" target="_blank" rel="noopener">${ICON.ext}Website</a>` : ""}
+        <button type="button" class="pop-btn" data-passport>🛂 Passport</button>
         ${p.user_id !== myUid() ? `<button type="button" class="text-link pop-flag" data-flagprofile>⚑ Flag</button>` : ""}
       </div>
     </div>`;
@@ -3327,8 +3334,8 @@ const Spots = (() => {
           <h3 class="adm-h">Firme</h3>
           ${table(["Folk", "Chi firma", "Firme", "Luoghi firmati"], rows("signs"), r => [esc(nm(r.val)), r.signups, r.approved, r.active])}
           <h3 class="adm-h">🧭 Candidati Local expert</h3>
-          <p class="gate-help left">Hanno firmato almeno 15 luoghi nella stessa zona (circa 50 km). Nominali con un tocco: potranno verificare e modificare i luoghi della loro zona.</p>
-          ${cand.length ? `<ul class="req-list">${cand.map(c => `<li class="req-row" data-cand="${esc(c.user_id)}"><div><b>${esc(c.name || "—")}</b><span>${c.signs} firme nella zona · ${c.places} luoghi aggiunti lì · ${c.total_signs} firme in tutto · ${(+c.lat).toFixed(1)}, ${(+c.lon).toFixed(1)}</span></div>
+          <p class="gate-help left">Hanno almeno 50 luoghi (aggiunti o firmati) entro 50 km. Nominali con un tocco: potranno verificare e modificare i luoghi della loro zona.</p>
+          ${cand.length ? `<ul class="req-list">${cand.map(c => `<li class="req-row" data-cand="${esc(c.user_id)}"><div><b>${esc(c.name || "—")}</b><span>${c.total_signs} luoghi entro 50 km (${c.signs} firmati, ${c.places} aggiunti) · ${(+c.lat).toFixed(1)}, ${(+c.lon).toFixed(1)}</span></div>
             <form class="cand-form"><input name="area" maxlength="80" placeholder="Nome della zona" required><button type="submit" class="pop-btn primary">🧭 Nomina</button></form></li>`).join("")}</ul>` : `<p class="gate-help left">Nessun candidato per ora.</p>`}
           <p class="gate-help left">Porte d'ingresso da usare nei post: ${Object.keys(DOORS).map(k => `<code>fabiocostaph.com/#wayfolk-${k}</code>`).join(" · ")}</p>`;
         body.querySelectorAll("[data-cand]").forEach(li => {
@@ -3734,6 +3741,21 @@ const Spots = (() => {
   }
 
   /* --- FIRME DEI CLUSTER sui luoghi --- */
+  // le prime 3 firme: «Sign 3 places you've been to and become folk»
+  async function loadMySignCount() {
+    if (guest || !signV || !clusterV || !session) return;
+    try { const { res } = await api(`/rest/v1/place_signs?select=id&user_id=eq.${encodeURIComponent(myUid())}&cluster=neq.fabio&limit=1`, { headers: { Prefer: "count=exact" } });
+      mySignCount = +((res.headers.get("content-range") || "").split("/")[1]) || 0; } catch { mySignCount = null; }
+    paintOnboarding();
+  }
+  function paintOnboarding() {
+    const el = $("#onbFolk"); if (!el) return;
+    if (mySignCount == null || mySignCount >= 3 || !myStyles.length) { el.hidden = true; return; }
+    el.hidden = false;
+    el.innerHTML = `<p><b>Become folk:</b> sign 3 places you've been to.</p>
+      <div class="onb-dots">${[0, 1, 2].map(i => `<span class="${i < mySignCount ? "on" : ""}"></span>`).join("")}<small>${mySignCount}/3</small></div>
+      <p class="onb-help">Open any place you know on the map and tap “✍ Sign as ${esc(folkOf(myStyles[0]).toLowerCase())}”.</p>`;
+  }
   async function loadSignCounts() {
     try {
       const { data } = await api("/rest/v1/place_sign_counts?select=spot_id,cluster,n&limit=100000");
@@ -3753,8 +3775,8 @@ const Spots = (() => {
     const el = popup.getElement()?.querySelector("[data-signs]");
     if (!el) return;
     let signs = [];
-    try { signs = (await api(`/rest/v1/place_signs?select=id,cluster,tip,user_id,author_name,created_at&spot_id=eq.${s.id}&order=created_at.desc&limit=500`)).data || []; }
-    catch (err) { if ([400, 404].includes(err.status)) { signV = false; el.remove(); } return; }
+    try { signs = (await api(`/rest/v1/place_signs?select=id,cluster,tip,user_id,author_name,created_at${evoV ? ",on_spot" : ""}&spot_id=eq.${s.id}&order=created_at.desc&limit=500`)).data || []; }
+    catch (err) { if (evoV && err.status === 400) { evoV = false; return loadSigns(popup, s); } if ([400, 404].includes(err.status)) { signV = false; el.remove(); } return; }
     const uid = myUid(), by = {};
     signs.forEach(g => { by[g.cluster] = (by[g.cluster] || 0) + 1; });
     { const tot = CLUSTER_KEYS.reduce((a, k) => a + (by[k] || 0), 0), top = CLUSTER_KEYS.filter(k => by[k]).sort((a, b) => by[b] - by[a])[0] || null;
@@ -3763,9 +3785,18 @@ const Spots = (() => {
     const mineOf = k => signs.find(g => g.user_id === uid && g.cluster === k);
     const pref = PREFERRED[s.category] || [];
     const order = [...myStyles].sort((a, b) => (pref.includes(b) ? 1 : 0) - (pref.includes(a) ? 1 : 0));
-    const tips = signs.filter(g => g.tip).slice(0, 6);
+    // il primo a firmare (Fabio's pick escluso) resta scritto sulla scheda
+    const firstSign = signs.filter(g => g.cluster !== "fabio").sort((a, b) => String(a.created_at).localeCompare(String(b.created_at)))[0];
+    // «Useful» sui consigli: i più utili salgono in cima
+    let votes = [];
+    const tipIds = signs.filter(g => g.tip).map(g => g.id);
+    if (evoV && tipIds.length) { try { votes = (await api(`/rest/v1/sign_votes?select=sign_id,user_id&sign_id=in.(${tipIds.join(",")})`)).data || []; } catch (err) { if ([400, 404].includes(err.status)) evoV = false; } }
+    const vCount = id => votes.filter(v => v.sign_id === id).length, vMine = id => votes.some(v => v.sign_id === id && v.user_id === uid);
+    const tips = signs.filter(g => g.tip).sort((a, b) => vCount(b.id) - vCount(a.id) || String(b.created_at).localeCompare(String(a.created_at))).slice(0, 6);
+    const who = g => `<button type="button" class="sg-who" data-member="${esc(g.user_id)}">${esc(g.author_name || "Member")}</button> · ${g.cluster === "fabio" ? "★ Fabio's pick" : `${CLUSTERS[g.cluster]?.ico || ""} ${esc(folkOf(g.cluster))}`}${g.on_spot ? ` <span class="sg-spot" title="Signed on the spot">📍 on the spot</span>` : ""}`;
     el.innerHTML = `
       ${by.fabio ? `<p class="sg-pick">★ Fabio's pick</p>` : ""}
+      ${firstSign ? `<p class="sg-first">First signed by ${who(firstSign)}</p>` : ""}
       ${CLUSTER_KEYS.some(k => by[k]) ? `<p class="sg-counts" aria-label="Signed by">${CLUSTER_KEYS.filter(k => by[k]).map(k => `<span style="--c:${CLUSTERS[k].color}" title="Signed by ${by[k]} ${folkOf(k).toLowerCase()}">${CLUSTERS[k].ico} ${by[k]}</span>`).join("")}</p>` : `<p class="sg-none">No folk has signed it yet: be the first.</p>`}
       <div class="sg-acts">
         ${order.map(k => mineOf(k) ? `<button type="button" class="pop-btn sg-on" data-unsign="${mineOf(k).id}" style="--c:${CLUSTERS[k].color}">✓ Signed as ${folkOf(k).toLowerCase()}</button>`
@@ -3778,7 +3809,7 @@ const Spots = (() => {
         <input type="text" maxlength="140" placeholder="A tip in one line (optional), e.g. Go before 8, the car park fills up" aria-label="Your tip">
         <button type="submit" class="pop-btn primary">Sign</button>
       </form>
-      ${tips.length ? `<ul class="sg-tips">${tips.map(g => `<li><span style="--c:${(CLUSTERS[g.cluster] || { color: "#ffd27a" }).color}">${g.cluster === "fabio" ? "★" : CLUSTERS[g.cluster]?.ico || ""}</span><p>${esc(g.tip)}<small>${esc(g.author_name || "Member")}${g.user_id !== uid ? ` <button type="button" class="rev-flag" data-flagsign="${g.id}" title="Flag this tip" aria-label="Flag this tip">⚑</button>` : ""}</small></p></li>`).join("")}</ul>` : ""}`;
+      ${tips.length ? `<ul class="sg-tips">${tips.map(g => `<li><span style="--c:${(CLUSTERS[g.cluster] || { color: "#ffd27a" }).color}">${g.cluster === "fabio" ? "★" : CLUSTERS[g.cluster]?.ico || ""}</span><p>${esc(g.tip)}<small>${who(g)}${evoV ? ` <button type="button" class="sg-useful${vMine(g.id) ? " on" : ""}" data-useful="${g.id}"${g.user_id === uid ? " disabled" : ""} aria-pressed="${vMine(g.id)}">👍 Useful${vCount(g.id) ? ` ${vCount(g.id)}` : ""}</button>` : ""}${g.user_id !== uid ? ` <button type="button" class="rev-flag" data-flagsign="${g.id}" title="Flag this tip" aria-label="Flag this tip">⚑</button>` : ""}</small></p></li>`).join("")}</ul>` : ""}`;
     let pending = null;
     const form = el.querySelector("[data-signform]");
     el.querySelectorAll("[data-sign]").forEach(b => b.addEventListener("click", () => {
@@ -3788,12 +3819,19 @@ const Spots = (() => {
     }));
     form.addEventListener("submit", async ev => {
       ev.preventDefault(); if (!pending) return;
-      const btn = form.querySelector("button"); btn.disabled = true;
+      const btn = form.querySelector("button"); btn.disabled = true; btn.textContent = "Signing…";
+      // «Signed on the spot»: se il telefono è a meno di ~300 m dal luogo
+      let onSpot = false;
+      if (evoV && navigator.geolocation) onSpot = await new Promise(res => navigator.geolocation.getCurrentPosition(
+        p => res(kmBetween(p.coords.latitude, p.coords.longitude, s.lat, s.lon) <= 0.3), () => res(false), { timeout: 6000, maximumAge: 120000 }));
+      const body = { spot_id: s.id, cluster: pending, tip: form.querySelector("input").value.trim() || null, author_name: displayName(), ...(evoV ? { on_spot: onSpot } : {}) };
       try {
-        await api("/rest/v1/place_signs", { method: "POST", body: { spot_id: s.id, cluster: pending, tip: form.querySelector("input").value.trim() || null, author_name: displayName() }, headers: { Prefer: "return=minimal" } });
+        await api("/rest/v1/place_signs", { method: "POST", body, headers: { Prefer: "return=minimal" } });
+        if (pending !== "fabio" && mySignCount != null) { mySignCount++; paintOnboarding(); if (mySignCount === 3) setTimeout(() => toast("🎉 Welcome, you're folk now! Your passport is in My profile."), 600); }
+        if (onSpot) toast("📍 Signed on the spot!");
         toast(pending === "fabio" ? "Marked as Fabio's pick." : `Signed as ${folkOf(pending).toLowerCase()}. Thanks!`); window.fcTrack?.("Spots: place signed", { cluster: pending });
         loadSigns(popup, s);
-      } catch (err) { toast(/row-level|policy|42501/i.test(err.message) ? "You can sign only with your own folk: choose them in My profile." : `Could not sign: ${err.message}`, true); btn.disabled = false; }
+      } catch (err) { toast(/daily limit/i.test(err.message) ? "You've signed 30 places today: come back tomorrow." : /row-level|policy|42501/i.test(err.message) ? "You can sign only with your own folk: choose them in My profile." : `Could not sign: ${err.message}`, true); btn.disabled = false; btn.textContent = "Sign"; }
     });
     el.querySelectorAll("[data-unsign]").forEach(b => b.addEventListener("click", async () => {
       if (b.dataset.confirm !== "1") { b.dataset.confirm = "1"; b.textContent = "Remove signature?"; return; }
@@ -3801,6 +3839,15 @@ const Spots = (() => {
     }));
     el.querySelector("[data-pickstyles]")?.addEventListener("click", () => openStyles(() => loadSigns(popup, s)));
     el.querySelectorAll("[data-flagsign]").forEach(b => b.addEventListener("click", () => openFlag("sign", b.dataset.flagsign, `Tip on «${s.name}»`)));
+    el.querySelectorAll("[data-member]").forEach(b => b.addEventListener("click", () => openMemberProfile(b.dataset.member)));
+    el.querySelectorAll("[data-useful]").forEach(b => b.addEventListener("click", async () => {
+      const id = +b.dataset.useful, on = b.classList.contains("on"); b.disabled = true;
+      try {
+        if (on) await api(`/rest/v1/sign_votes?sign_id=eq.${id}&user_id=eq.${encodeURIComponent(uid)}`, { method: "DELETE" });
+        else await api("/rest/v1/sign_votes", { method: "POST", body: { sign_id: id }, headers: { Prefer: "return=minimal" } });
+        loadSigns(popup, s);
+      } catch (err) { toast(`Could not vote: ${err.message}`, true); b.disabled = false; }
+    }));
   }
   // scegliere (o cambiare) i propri cluster: chi è già iscritto, chi entra con Google, dal profilo
   function openStyles(after) {
@@ -3997,7 +4044,7 @@ const Spots = (() => {
      Tutto si legge dalle tabelle che ci sono già (più lo storico): nessun dato copiato.
      ========================================================= */
   let meView = false, meTab = "places", meCache = null, pendingFocus = null, meFilter = "all", savedQuery = "";
-  const ME_TABS = [["profile", "Profile"], ["contrib", "Contributions"], ["places", "My places"], ["activity", "Activity"], ["saved", "Saved"]];
+  const ME_TABS = [["profile", "Profile"], ["passport", "Passport"], ["contrib", "Contributions"], ["places", "My places"], ["activity", "Activity"], ["saved", "Saved"]];
   const avatarUrl = p => p ? `${SPOTS_CONFIG.url.replace(/\/$/, "")}/storage/v1/object/public/avatars/${p}` : "";
   const initials = n => String(n || "?").trim().split(/\s+/).map(w => w[0]).slice(0, 2).join("").toUpperCase();
   const avatarHtml = (p, size = 72) => `<span class="me-avatar" style="--s:${size}px">${p.avatar_path ? `<img src="${esc(avatarUrl(p.avatar_path))}" alt="">` : `<span>${esc(initials(p.display_name))}</span>`}</span>`;
@@ -4084,6 +4131,16 @@ const Spots = (() => {
     if (!box || !data) return;
     const mine = spots.filter(s => s.created_by === uid).sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
     const me = profiles.find(p => p.user_id === uid) || {};
+    if (meTab === "passport") {
+      box.innerHTML = `<p class="muted">Loading your passport…</p>`;
+      const [pp, sec] = await Promise.all([loadPassport(uid), evoV ? api("/rest/v1/rpc/my_seconded", { method: "POST", body: {} }).then(r => r.data || []).catch(() => []) : []]);
+      if (!pp) { box.innerHTML = `<p class="gate-help left">The passport arrives once the database is updated.</p>`; return; }
+      box.innerHTML = passportHtml(pp, uid) + (sec.length ? `<section class="pp"><p class="pp-kick">Seconded</p><p class="gate-help left">Places you signed that other folk signed after you: your signature is guiding travellers.</p>
+        <ul class="me-list">${sec.map(x => `<li class="me-row" data-open="${x.spot_id}"><span class="me-ico" style="--c:#ffd27a">✍</span><span class="me-txt"><b>${esc(x.name)}</b><small>${x.n} folk signed after you · ${esc(fmtWhen(x.last_at))}</small></span></li>`).join("")}</ul></section>` : "");
+      wireStamps(box);
+      box.querySelectorAll("[data-open]").forEach(li => li.addEventListener("click", () => { const sp = spotById(+li.dataset.open); if (sp) openOnMap(sp); }));
+      return;
+    }
     if (meTab === "profile") {
       box.innerHTML = `<div class="me-card">
         <p class="me-bio">${me.bio ? esc(me.bio) : `<span class="muted">No bio yet.</span>`}</p>
@@ -4226,6 +4283,43 @@ const Spots = (() => {
     if (!profV) box.insertAdjacentHTML("beforeend", `<p class="gate-help left">The full history of changes starts once the database is updated.</p>`);
   }
 
+  /* --- PASSAPORTO WAYFOLK: folk e livelli, numeri, mappa dei timbri, ultimi timbri --- */
+  async function loadPassport(uid) {
+    if (!evoV) return null;
+    try { return (await api("/rest/v1/rpc/passport", { method: "POST", body: { p_user: uid } })).data; }
+    catch (err) { if ([400, 404].includes(err.status)) evoV = false; return null; }
+  }
+  function passportHtml(pp, uid) {
+    if (!pp) return "";
+    const bf = pp.by_folk || {}, folks = (pp.folks || []).filter(k => CLUSTERS[k]);
+    const tot = Object.values(bf).reduce((a, x) => a + (x.signs || 0), 0), onSpot = Object.values(bf).reduce((a, x) => a + (x.on_spot || 0), 0);
+    const stamps = (pp.stamps || []).filter(t => Number.isFinite(+t.lat));
+    // mappa dei timbri: proiezione semplice sui confini dei punti
+    let mapSvg = "";
+    if (stamps.length) {
+      const la = stamps.map(t => +t.lat), lo = stamps.map(t => +t.lon);
+      let [y0, y1, x0, x1] = [Math.min(...la), Math.max(...la), Math.min(...lo), Math.max(...lo)];
+      const pad = Math.max(0.05, (x1 - x0) * 0.12, (y1 - y0) * 0.12); x0 -= pad; x1 += pad; y0 -= pad; y1 += pad;
+      const W = 600, H = 260, k = Math.min(W / (x1 - x0), H / ((y1 - y0) * 1.3)), ox = (W - (x1 - x0) * k) / 2, oy = (H - (y1 - y0) * 1.3 * k) / 2;
+      const P = t => [ox + (+t.lon - x0) * k, H - oy - (+t.lat - y0) * 1.3 * k];
+      mapSvg = `<svg class="pp-map" viewBox="0 0 ${W} ${H}" role="img" aria-label="Map of signed places">${stamps.slice().reverse().map(t => { const [x, y] = P(t);
+        return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${t.on_spot ? 5 : 3.6}" fill="${(CLUSTERS[t.folk] || {}).color || "#ffd27a"}"${t.on_spot ? ' stroke="#fff" stroke-width="1.5"' : ""}><title>${esc(t.name)}</title></circle>`; }).join("")}</svg>`;
+    }
+    const xp = experts.get(uid);
+    return `<section class="pp">
+      <p class="pp-kick">Wayfolk passport</p>
+      <div class="pp-folks">${folks.length ? folks.map(k => { const lv = levelOf(bf[k]); return `<span class="pp-folk" style="--c:${CLUSTERS[k].color}">${CLUSTERS[k].ico} ${esc(folkOf(k))}<b>${lv ? lv[1] : "New"}</b></span>`; }).join("") : `<span class="muted">No folk chosen yet.</span>`}
+        ${xp ? `<span class="pp-folk" style="--c:#ffd9a0">🧭 Local expert<b>${esc(xp.area_name)}</b></span>` : ""}</div>
+      <dl class="me-stats pp-stats">${[["Signatures", tot], ["Places added", pp.places], ["First to sign", pp.firsts], ["On the spot", onSpot], ["Seconded", pp.seconded], ["Useful tips", pp.useful]].map(([a, b]) => `<div><dt>${a}</dt><dd>${fmtN(+b || 0)}</dd></div>`).join("")}</dl>
+      ${mapSvg}
+      ${stamps.length ? `<p class="pp-h">Latest stamps</p><ul class="pp-stamps">${stamps.slice(0, 18).map(t => `<li><button type="button" data-stamp="${t.id}" style="--c:${(CLUSTERS[t.folk] || {}).color || "#ffd27a"}"><span>${CLUSTERS[t.folk]?.ico || "★"}</span>${esc(t.name)}<small>${esc(fmtWhen(t.at))}${t.on_spot ? " · 📍" : ""}</small></button></li>`).join("")}</ul>` : `<p class="muted">No stamps yet: sign the places you've been to.</p>`}
+      <p class="gate-help left">Levels in each folk: <b>Wanderer</b> from the first signature · <b>Pathfinder</b> 10 signatures and a tip · <b>Trusted</b> 25 signatures in at least 3 areas. 50 places in your area (within 50 km) can make you a <b>Local expert</b>.</p>
+    </section>`;
+  }
+  function wireStamps(box, close) {
+    box.querySelectorAll("[data-stamp]").forEach(b => b.addEventListener("click", () => { const sp = spotById(+b.dataset.stamp); if (!sp) return toast("This place is not on your map right now.", true); close?.(); if (meView) openOnMap(sp); else focusSpot(sp); }));
+  }
+
   /* profilo pubblico di un membro (lo vedono solo i membri) */
   async function openMemberProfile(uid) {
     const local = profiles.find(p => p.user_id === uid) || {};
@@ -4241,7 +4335,12 @@ const Spots = (() => {
       ${p.bio ? `<p class="me-bio">${esc(p.bio)}</p>` : ""}
       <dl class="me-stats">${[["Places", p.places ?? places.length], ["Reviews", p.reviews], ["Photos", p.photos], ["Meetups", p.meetups]].filter(([, v]) => v != null).map(([k, v]) => `<div><dt>${k}</dt><dd>${fmtN(+v || 0)}</dd></div>`).join("")}</dl>
       <p class="sx-links">${p.instagram ? `<a class="text-link" href="https://www.instagram.com/${encodeURIComponent(p.instagram)}/" target="_blank" rel="noopener">Instagram @${esc(p.instagram)}</a>` : ""}${p.website ? `<a class="text-link" href="${esc(p.website)}" target="_blank" rel="noopener">${ICON.ext}Website</a>` : ""}</p>
+      <div data-pp><p class="muted">Loading the passport…</p></div>
       ${places.length ? `<h3 class="me-h">Places added <small>${places.length}</small></h3><ul class="me-list">${places.slice(0, 20).map(s => spotRow(s)).join("")}</ul>` : ""}`;
+    loadPassport(uid).then(pp => {
+      const box = body.querySelector("[data-pp]"); if (!box) return; box.innerHTML = pp ? passportHtml(pp, uid) : ""; wireStamps(box, () => d.close());
+      const h = body.querySelector(".me-id h2"); if (pp?.name && h && h.textContent === "Member") h.textContent = pp.name;   // nome e cognome dal passaporto
+    });
     body.querySelectorAll("[data-open]").forEach(li => li.addEventListener("click", () => { const s = spotById(+li.dataset.open); if (!s) return; d.close(); if (meView) openOnMap(s); else focusSpot(s); }));
   }
 
