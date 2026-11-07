@@ -590,7 +590,7 @@ const Spots = (() => {
           <option value="only"${alertMode === "only" ? " selected" : ""}>Only places with alerts</option></select></label>` : "")
         + (!guest && commV ? `<button type="button" class="sx-item${onlyFavs ? " on" : ""}" id="onlyFavs" aria-pressed="${onlyFavs}" style="--c:#ff8fb1"><span class="sx-ico">♥</span><span class="sx-name">My spots</span><small>${favs.size}</small><span class="sx-check" aria-hidden="true"></span></button>` : "");
       if (g.id === "pass") {
-        const intro = `<p class="sx-pass-intro">Leaving and can't take it home? Sell it or give it away to the travellers arriving after you: chargers, SIMs, tents, guidebooks…</p>`;
+        const intro = `<p class="sx-pass-intro">Leaving and can't take it home? Sell it or give it away to the travellers arriving after you: chargers, adapters, tents, guidebooks…</p>`;
         if (guest || !commV) return intro + lockItem("Pass it on", "🎁");
         return intro + `<button type="button" class="sx-item${showPass ? " on" : ""}" id="showPass" aria-pressed="${showPass}" style="--c:#8fe0a8"><span class="sx-ico">${SX_ICON.pass}</span><span class="sx-name">Show on the map</span><small>${livePass().length}</small><span class="sx-check" aria-hidden="true"></span></button>
           <button type="button" class="sx-item" id="passList" style="--c:#8fe0a8"><span class="sx-ico">☰</span><span class="sx-name">All the items</span><span class="sx-go" aria-hidden="true">›</span></button>
@@ -2902,7 +2902,7 @@ const Spots = (() => {
       <textarea id="trNote" rows="4" maxlength="1500" placeholder="How it went, best stretch, where to sleep, what to avoid…"></textarea>
       <button class="outline-link" type="submit">PUBLISH THE TRIP <span aria-hidden="true">→</span></button>
       <p class="gate-note" id="trMsg" role="status"></p>
-      <p class="gate-help left">Only members see trips. You can delete it whenever you want.</p>
+      <p class="gate-help left">Only members see trips. You can delete it whenever you want. By publishing you accept the <a href="#terms" target="_blank">terms</a>: trips are your own account, not route advice.</p>
     </form>`);
     d.querySelector("form").addEventListener("submit", async e => {
       e.preventDefault();
@@ -2942,7 +2942,7 @@ const Spots = (() => {
       <div class="pop-actions">
         ${own || admin ? `<button type="button" class="pop-btn" data-delpass>${own ? "Gone: remove it" : "Delete"}</button>` : `<button type="button" class="text-link pop-flag" data-flagpass>⚑ Flag</button>`}
       </div>
-      <p class="gate-help left">Only members see it. It disappears on ${fmtDay(it.expires_on)}. Arrange the handover between you: Spots takes no payments.</p>
+      <p class="gate-help left">Only members see it. It disappears on ${fmtDay(it.expires_on)}. The deal is only between you: Spots takes no payments and is not responsible. Meet in public, never pay in advance.</p>
     </div>`;
   }
   function wirePass(popup, it) {
@@ -2958,7 +2958,7 @@ const Spots = (() => {
   function openPassOn(pre) {
     const d = dlg("passDialog", `<form class="import-body gate-form" novalidate>
       <span class="eyebrow">Members only · Pass it on</span><h2>Sell or give away</h2>
-      <p class="gate-help left">Leaving and can't take it home? A charger, a SIM, a tent, a guidebook: someone arriving will need it.</p>
+      <p class="gate-help left">Leaving and can't take it home? A charger, an adapter, a tent, a guidebook: someone arriving will need it.</p>
       <div class="pass-kind" role="radiogroup" aria-label="Sell or give">
         <label><input type="radio" name="pkind" value="give" checked><span>🎁 I give it away</span></label>
         <label><input type="radio" name="pkind" value="sell"><span>🏷️ I sell it</span></label>
@@ -2981,7 +2981,7 @@ const Spots = (() => {
       <select id="paDays"><option value="3">3 days</option><option value="7">7 days</option><option value="14" selected>14 days</option><option value="30">30 days</option></select>
       <button class="outline-link" type="submit">POST IT <span aria-hidden="true">→</span></button>
       <p class="gate-note" id="paMsg" role="status"></p>
-      <p class="gate-help left">Only members see it, contact included. No food, medicines, weapons or anything illegal. Spots takes no payments: you agree the handover between you.</p>
+      <p class="gate-help left">Only members see it, contact included. No food, medicines, weapons or anything illegal. Spots takes no payments and is not a party: the deal is only between you. By posting you accept the <a href="#terms" target="_blank">terms</a>.</p>
     </form>`);
     let pos = pre && (pre.exact || pre.zoom >= 10) ? { lat: pre.lat, lon: pre.lon } : null;
     const priceRow = d.querySelector(".pass-price-row");
@@ -3604,6 +3604,7 @@ const Spots = (() => {
           <li><b>Support local.</b> Eat, sleep and buy from local businesses when you can.</li>
           <li><b>Share honestly.</b> Only your own photos, real prices and accurate reports. Update or close reports that are no longer true.</li>
           <li><b>Be kind.</b> Reviews describe places, not people. No insults, no spam.</li>
+          <li><b>Pass it on fairly.</b> Only your own things, described honestly, nothing forbidden (see the terms). Meet in public places, never pay in advance: deals are between you, Spots is not a party.</li>
         </ol>
         <p class="gate-help left">Places, photos or reviews that break the code can be removed, and accounts can be closed.</p>
         ${after ? `<button class="outline-link" type="button" data-agree>I AGREE <span aria-hidden="true">→</span></button>` : ""}

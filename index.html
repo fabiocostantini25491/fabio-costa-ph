@@ -45,7 +45,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,500&family=Oswald:wght@500;700&family=Libre+Caslon+Text:ital,wght@0,400;0,700;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap">
-  <link rel="stylesheet" href="style.css?v=20261107m">
+  <link rel="stylesheet" href="style.css?v=20261107n">
   <!-- statistiche anonime, senza cookie (Umami): le pagine e i clic li segnala app.js -->
   <script defer src="https://cloud.umami.is/script.js" data-website-id="2ca8d3a5-91c1-4544-a327-d8469e3e4313" data-auto-track="false" data-domains="fabiocostaph.com,www.fabiocostaph.com"></script>
 </head>
@@ -348,7 +348,7 @@
 
     <!-- PRIVACY e TERMINI (pagine richieste anche da Google per l'accesso con Google) -->
     <section class="page content-page legal-page" id="privacy" data-page="privacy" hidden>
-      <div class="section-heading"><div><span class="eyebrow">LAST UPDATED 1 NOVEMBER 2026</span><h1>Privacy</h1></div>
+      <div class="section-heading"><div><span class="eyebrow">LAST UPDATED 7 NOVEMBER 2026</span><h1>Privacy</h1></div>
         <p>What personal data this site uses, why, and what you can do about it. In short: no advertising, no tracking cookies, nothing sold to anyone.</p></div>
       <div class="legal">
         <h2>Who is responsible</h2>
@@ -356,20 +356,27 @@
         <h2>If you just visit the site</h2>
         <ul>
           <li><b>Statistics</b> — visits are counted with Umami, which uses no cookies and stores no personal data: only anonymous totals (pages viewed, country, device type).</li>
-          <li><b>Hosting and technical services</b> — the site is served by GitHub Pages; fonts come from Google Fonts; maps and satellite images from Esri, NASA and OpenStreetMap; weather from Open-Meteo; place search from Photon (Komoot). To deliver their content these providers receive your IP address, as with any website.</li>
-          <li><b>Your location</b> — used only when you tap “Near me” or “Use my location”, processed in your browser and never stored by me.</li>
+          <li><b>Hosting and technical services</b> — the site and the downloadable PDFs (magazine issues, guides, maps) are served by GitHub (GitHub Pages and GitHub releases); fonts come from Google Fonts; maps, satellite images and the 3D globe from Esri, NASA, OpenStreetMap and the jsDelivr and cdnjs libraries; weather from Open-Meteo; place search and place names from Photon (Komoot) and OpenStreetMap Nominatim. To deliver their content these providers receive your IP address, as with any website.</li>
+          <li><b>Your location</b> — used only when you tap “Near me” or “Use my position”, processed in your browser and never stored by me, unless you choose to save a place, a trip or a Pass it on item at that position.</li>
           <li><b>Analyze your shot</b> — the photo you load is analysed in your browser and never uploaded.</li>
-          <li><b>Stored on your device</b> — the site remembers in your browser your language, your photo selection, your login session and a few display choices. These are technical settings, not tracking, and you can clear them at any time from your browser.</li>
+          <li><b>Public map</b> — visitors see a small selection of places (name, category and an approximate position), without the name of who added them.</li>
+          <li><b>Links to other services</b> — buttons such as “Open in Google Maps”, “Directions” or Instagram take you to those services, whose own privacy policies apply.</li>
+          <li><b>Stored on your device</b> — the site remembers in your browser your language, your photo selection, your login session, a draft of what you are adding and a few display choices (for example notices you have already seen). These are technical settings, not tracking, and you can clear them at any time from your browser.</li>
         </ul>
         <h2>If you join Spots</h2>
         <ul>
           <li><b>Account</b> — first name, last name, email and password (stored only in encrypted form), or your name and email from Google if you sign in with Google. Used to create your account, let you log in and approve your membership.</li>
-          <li><b>What you add</b> — places, photos, reviews, prices you paid, alerts, meetups, the meetups you join, your saved places, flags you send and, if you create one, your photographer profile (name, Instagram, website, short bio and an approximate area, rounded to about 5 km). Your name appears next to what you share and is visible to other members only; your saved places are visible only to you.</li>
+          <li><b>What you add</b> — places, photos, reviews, prices you paid, alerts, meetups, the meetups you join, your saved places, flags you send, articles you submit to the Journal and, if you create one, your photographer or local expert profile (name, username, photo, Instagram, website, short bio and an approximate area, rounded to about 5 km). Your name appears next to what you share and is visible to other members only. Saved places, the meetups you join and your activity history are visible only to you.</li>
+          <li><b>Places from a photo</b> — if you add a place from a photo, its GPS position is read in your browser; the photo is uploaded only if you choose to add it.</li>
+          <li><b>Trips</b> — the title, the stops (map positions and their names), how you travelled between them, optional dates and your story. To name a stop, its coordinates are sent to Photon (Komoot). Trips are visible to members only, until you delete them. Don't add your home address or where you are right now if you don't want members to know it.</li>
+          <li><b>Pass it on</b> — the item, its description, whether you sell or give it away, the price, the place and point on the map, the contact details you choose to write (for example a phone number, Instagram or email) and how long the notice stays visible. All of this, contact included, is visible to members only. Notices disappear from the map when they expire and are deleted from the database 7 days later; you can delete yours at any time. Write only your own contact details, and only those you are happy for members to see. What you then exchange privately with other members (messages, phone calls, meetings, payments) happens outside the site: I don't see it, store it or control it.</li>
+          <li><b>Moderation and admin</b> — I can see flagged content and the requests to join, and I can export the places in an area as a spreadsheet to check and back them up; these exports stay on my own devices. Local experts can verify and edit places in their area.</li>
           <li><b>Notifications</b> — when someone signs up, their name and email are sent to me as a phone notification through the ntfy.sh service, so I can approve the request.</li>
           <li><b>Where it is kept</b> — in a Supabase database (Supabase Inc.), which acts as processor. Some providers may process data outside the EU under the European Commission's Standard Contractual Clauses.</li>
-          <li><b>Legal basis</b> — providing the membership you asked for (GDPR art. 6.1.b) and my legitimate interest in keeping the community safe and moderated (art. 6.1.f).</li>
-          <li><b>How long</b> — until you delete your content or ask me to close your account. Meetups disappear from the map on their date and are removed in periodic clean-ups.</li>
-          <li><b>Age</b> — Spots is for people aged 16 or over.</li>
+          <li><b>Legal basis</b> — providing the membership and the features you asked for (GDPR art. 6.1.b) and my legitimate interest in keeping the community safe and moderated and in handling complaints or legal requests (art. 6.1.f).</li>
+          <li><b>How long</b> — until you delete your content or ask me to close your account. Meetups disappear on their date and Pass it on notices when they expire, and both are removed in periodic clean-ups. Flags and moderation decisions are kept as long as needed to handle them and any related complaint.</li>
+          <li><b>Disclosure</b> — I share data only with the providers listed here, or with the authorities when the law requires it.</li>
+          <li><b>Age</b> — Spots is for people aged 16 or over; selling items in Pass it on is for people aged 18 or over.</li>
         </ul>
         <h2>If you write to me</h2>
         <p>Emails and Instagram messages (for example about licensing or prints) are used only to answer you and, if we agree on something, to manage that order.</p>
@@ -382,32 +389,47 @@
     </section>
 
     <section class="page content-page legal-page" id="terms" data-page="terms" hidden>
-      <div class="section-heading"><div><span class="eyebrow">LAST UPDATED 1 NOVEMBER 2026</span><h1>Terms</h1></div>
-        <p>The rules for using this site and the Spots members' map.</p></div>
+      <div class="section-heading"><div><span class="eyebrow">LAST UPDATED 7 NOVEMBER 2026</span><h1>Terms</h1></div>
+        <p>The rules for using this site and the Spots members' map. By joining Spots, or by using any of its features, you accept them.</p></div>
       <div class="legal">
         <h2>The site</h2>
-        <p>Fabio Costa Ph is a personal photography site run by Fabio Costantini. All photographs and texts on the site are © Fabio Costantini unless stated otherwise: they may not be copied, downloaded or reused without written permission. Licences and prints are available on request.</p>
+        <p>Fabio Costa Ph is a personal photography site run by Fabio Costantini. All photographs and texts on the site are © Fabio Costantini unless stated otherwise: they may not be copied, downloaded or reused without written permission. Licences and prints are available on request. The magazine issues, guides and maps offered as PDFs are for your personal use only.</p>
         <h2>Spots membership</h2>
         <ul>
           <li>Membership is free and personal: don't share your account. I approve every request and may decline or close an account at my discretion, in particular when these terms or the community code are not respected.</li>
-          <li>You must be 16 or older and give true details when you sign up.</li>
-          <li>The service is offered as it is, free of charge, and may change, pause or end at any time.</li>
+          <li>You must be 16 or older and give true details when you sign up. You must be 18 or older to sell items in Pass it on.</li>
+          <li>The service is offered free of charge and “as is”, without any guarantee that it is complete, accurate, available or free of errors. It may change, pause or end at any time, with or without notice, and content may be lost.</li>
         </ul>
         <h2>What you share</h2>
         <ul>
-          <li>You are responsible for the places, photos, reviews, prices, alerts, meetups and profile information you add. Share only accurate information and only photos you took yourself or have the right to share; photos must not show identifiable people without their consent.</li>
-          <li>You keep the copyright of your photos. You give Fabio Costa Ph a free, non-exclusive permission to show them to members inside the map; you can withdraw it at any time by deleting them.</li>
+          <li>Members publish places, photos, reviews, prices, alerts, meetups, trips, Pass it on notices, articles and profiles on their own initiative and under their own responsibility. You are solely responsible for what you publish and for its consequences. I don't check content before it is published and I don't endorse it.</li>
+          <li>Share only accurate information, and only photos and texts that are yours or that you have the right to share. Photos must not show identifiable people without their consent. Don't publish other people's personal data.</li>
+          <li>You keep the copyright of your photos and texts. You give Fabio Costa Ph a free, non-exclusive permission to show them to members inside Spots (and, for articles you submit, in the Journal); you can withdraw it at any time by deleting them.</li>
           <li>No insults, spam, advertising disguised as reviews, or content that is illegal or puts people or places at risk. Follow the community code: leave no trace, protect fragile places, respect people and property.</li>
-          <li>Members can flag content; I may remove content and suspend accounts that break these rules.</li>
         </ul>
-        <h2>Meetups and workshops</h2>
-        <p>Meetups are organised by members among themselves, and workshops by their organisers: Fabio Costa Ph is not the organiser, is not a party to any agreement or payment between you and them, and is not responsible for how they take place. Check the details directly with whoever organises them.</p>
+        <h2>Trips</h2>
+        <p>Trips are members' own accounts of journeys they made. They are not navigation, not route advice and not checked by me: roads, borders, transport, safety and local rules change, and a route that worked for someone may be unsafe, closed or illegal for you. Plan every journey yourself with up-to-date official sources, and travel at your own risk.</p>
+        <h2>Pass it on</h2>
+        <ul>
+          <li><b>What it is.</b> Pass it on is only a notice board where members can say that they sell or give away items to other members. Fabio Costa Ph is not the seller, the buyer, an agent, an intermediary or a guarantor. I never own, see, check, store, ship or deliver the items, I take no payment and no commission, and I am not a party to any agreement, sale, gift or exchange between members.</li>
+          <li><b>Your responsibility.</b> The member who publishes a notice is solely responsible for it: that the item is theirs, legal where it is offered and handed over, safe and as described, and for the price, the handover, any payment, taxes, customs rules and any obligation towards the other person. Pass it on is for private individuals passing on their own belongings; it may not be used to run a business or to sell on behalf of a business.</li>
+          <li><b>Not allowed.</b> Food and drinks, alcohol, tobacco and vapes, medicines, drugs and supplements, weapons, knives, ammunition and pepper sprays, explosives and flammables (including gas canisters and fuel), animals, plants and seeds, protected species and products made from them (such as coral, shells, ivory), antiquities and cultural goods, counterfeit, stolen or recalled items, SIM cards, tickets, passes and documents registered in someone's name, and anything that is illegal where it is offered or that breaks the rules of a country you cross.</li>
+          <li><b>Deal carefully.</b> Agree the details directly with the other person, meet in busy public places, check the item before paying, never pay in advance to people you don't know and never share documents or bank details. Contact details you publish are seen by members: share only what you are happy to share.</li>
+          <li><b>No responsibility.</b> To the fullest extent permitted by law, Fabio Costantini is not responsible for the items, for notices or their content, for the conduct of members, or for anything that happens between them, including fraud, non-payment, non-delivery, defects, damage, loss, theft, injury, fines, tax or customs consequences, or disputes. Any claim must be made directly against the other member.</li>
+          <li>I may remove notices and suspend accounts at any time, for example after a flag or a report.</li>
+        </ul>
+        <h2>Meetups, workshops and experiences</h2>
+        <p>Meetups are organised by members among themselves, and workshops and experiences by their organisers: Fabio Costa Ph is not the organiser, is not a party to any agreement or payment between you and them, and is not responsible for how they take place. Check the details directly with whoever organises them, and take part at your own risk.</p>
         <h2>Safety and responsibility</h2>
-        <p>Many spots have not been visited by me, and information about locations, access, conditions, prices and timings may be wrong or out of date. Always check current information, access rights, local rules, weather and your own abilities before you go. You visit any place and take part in any activity entirely at your own risk: to the extent permitted by law, Fabio Costantini accepts no responsibility for injury, damage, loss, fines or other consequences arising from the use of the site.</p>
+        <p>Many spots have not been visited by me, and information about locations, access, conditions, prices, opening hours and timings may be wrong or out of date. Always check current information, access rights, local rules, weather and your own abilities before you go. You visit any place, follow any trip, meet any member and take part in any activity entirely at your own risk.</p>
+        <p>To the fullest extent permitted by law, Fabio Costantini accepts no responsibility for injury, damage, loss, theft, fines or other direct or indirect consequences arising from the use of the site, of Spots or of the content published by members, or from relations between members. Nothing in these terms excludes liability that cannot be excluded by law, such as liability for wilful misconduct or gross negligence (art. 1229 of the Italian Civil Code), or the rights that consumer law gives you.</p>
+        <p>You agree to hold Fabio Costantini harmless from claims by third parties caused by content you publish or by your breach of these terms or of the law.</p>
+        <h2>Reporting illegal content</h2>
+        <p>Spots hosts content published by members. I don't monitor it in advance, but I act on reports: use the “⚑ Flag” button or write to <a href="mailto:fabio.costantini25491@gmail.com">fabio.costantini25491@gmail.com</a>, saying what the content is, where it is and why you think it is illegal or breaks these terms. I review reports promptly and may remove the content or suspend the account; the member concerned can ask me the reasons and contest the decision by writing to the same address.</p>
         <h2>Privacy</h2>
         <p>How your data is used is explained in the <a href="#privacy">privacy page</a>.</p>
-        <h2>Law</h2>
-        <p>These terms are governed by Italian law. Questions: <a href="mailto:fabio.costantini25491@gmail.com">fabio.costantini25491@gmail.com</a>.</p>
+        <h2>Changes and law</h2>
+        <p>These terms may be updated; the date at the top shows the latest version, and continuing to use Spots after a change means you accept it. They are governed by Italian law. Questions: <a href="mailto:fabio.costantini25491@gmail.com">fabio.costantini25491@gmail.com</a>.</p>
       </div>
     </section>
 
@@ -551,12 +573,12 @@
 <!--BODY-END-->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
-  <script src="i18n.js?v=20261107m"></script>
-  <script src="app.js?v=20261107m"></script>
-  <script src="spots.js?v=20261107m"></script>
-  <script src="tools.js?v=20261107m"></script>
-  <script src="pwa.js?v=20261107m"></script>
-  <script src="feedback.js?v=20261107m"></script>
-  <script src="system.js?v=20261107m"></script>
+  <script src="i18n.js?v=20261107n"></script>
+  <script src="app.js?v=20261107n"></script>
+  <script src="spots.js?v=20261107n"></script>
+  <script src="tools.js?v=20261107n"></script>
+  <script src="pwa.js?v=20261107n"></script>
+  <script src="feedback.js?v=20261107n"></script>
+  <script src="system.js?v=20261107n"></script>
 </body>
 </html>
