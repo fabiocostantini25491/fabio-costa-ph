@@ -3238,3 +3238,55 @@ body[data-page="explore"]::after{background:radial-gradient(90% 55% at 85% 0,rgb
 .pending-banner.in{border-color:rgba(126,224,129,.5)}
 .pp-folk.founder{background:rgba(255,210,122,.1)}
 @media (max-width:700px){.wf-welcome{order:1;margin:4px 0 12px}.wf-welcome h3{font-size:1.45rem}}
+
+/* ===== Wayfolk: presentation under the map, for visitors (what Wayfolk is) ===== */
+.wfa{margin-top:56px;display:flex;flex-direction:column;gap:0;border-top:1px solid rgba(255,190,122,.22)}
+.wfa-blk{padding:72px 0 0}
+.wfa-kick{margin:0 0 12px;font:500 .78rem/1.2 var(--sans);letter-spacing:.24em;text-transform:uppercase;color:var(--warm)}
+.wfa-h2{margin:0;font:600 clamp(2rem,4.4vw,3.6rem)/1.03 var(--display);color:var(--head)}
+.wfa-h2 em{font-style:italic;color:var(--warm)}
+.wfa-lead{margin:16px 0 0;max-width:620px;color:var(--soft);font-size:1.05rem;line-height:1.55}
+.wfa-folk{text-align:center;display:flex;flex-direction:column;align-items:center}
+.wfa-folks{display:flex;flex-wrap:wrap;justify-content:center;gap:22px;margin-top:34px}
+.wfa-f{width:140px;padding:0;border:0;background:none;color:var(--text);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;font:inherit}
+.wfa-ring{width:118px;height:118px;border-radius:50%;padding:4px;border:1px solid rgba(156,200,255,.25);transition:box-shadow .25s,border-color .25s;margin-bottom:6px}
+.wfa-ring img{width:100%;height:100%;border-radius:50%;object-fit:cover;display:block}
+.wfa-f b{font:600 1.45rem var(--display);color:var(--head)}
+.wfa-f small{font-size:.82rem;color:var(--muted);line-height:1.3}
+.wfa-f:hover .wfa-ring,.wfa-f:focus-visible .wfa-ring{border:3px solid #f28c1e;box-shadow:0 0 30px 6px rgba(242,140,30,.45)}
+.wfa-split{display:flex;flex-wrap:wrap;gap:48px;align-items:center}
+.wfa-split>div{flex:1 1 380px}
+.wfa-place{flex:1 1 420px;border-radius:24px;overflow:hidden;background:var(--bg-3);border:1px solid var(--line)}
+.wfa-ph{position:relative;height:220px}
+.wfa-ph img{width:100%;height:100%;object-fit:cover;display:block}
+.wfa-ph span{position:absolute;left:14px;top:14px;padding:6px 11px;border-radius:999px;background:#ffd27a;color:#1a1206;font-size:.76rem;font-weight:700}
+.wfa-in{padding:20px 22px 24px;display:flex;flex-direction:column;gap:10px}
+.wfa-pn{font:600 1.75rem var(--display);color:var(--head)}
+.wfa-tip{margin:0;padding:11px 13px;border-radius:14px;background:var(--bg-2);display:flex;flex-direction:column;gap:4px}
+.wfa-tip small{color:var(--muted);font-size:.75rem}
+.wfa-tip q{quotes:none;font:italic 500 1.15rem/1.35 var(--display);color:var(--head)}
+.wfa-tip.lock q{filter:blur(5px);user-select:none}
+.wfa-btn{align-self:flex-start;min-height:46px;padding:0 20px;border:0;border-radius:999px;background:#f28c1e;color:#1a1206;font:700 .95rem var(--sans);cursor:pointer}
+.wfa-btn:hover{background:#ffa041}
+.wfa-btn.big{min-height:54px;padding:0 30px;font-size:1.05rem;align-self:center}
+.wfa-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;margin-top:30px}
+.wfa-grid article{padding:22px;border-radius:20px;background:var(--bg-3);border:1px solid var(--line)}
+.wfa-grid article.new{border-color:rgba(255,190,122,.45)}
+.wfa-grid h3{margin:0 0 6px;font:600 1.5rem var(--display);color:var(--head);display:flex;gap:8px;align-items:center}
+.wfa-grid h3 span{padding:3px 8px;border-radius:999px;background:#f28c1e;color:#1a1206;font:700 .62rem var(--sans);letter-spacing:.1em}
+.wfa-grid p{margin:0;color:var(--soft);font-size:.95rem;line-height:1.5}
+.wfa-steps ol{list-style:none;margin:30px 0 0;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}
+.wfa-steps li{padding:24px;border-radius:20px;background:var(--bg-3);display:flex;flex-direction:column;gap:8px}
+.wfa-steps li:last-child{border:1px solid rgba(255,190,122,.45)}
+.wfa-steps li span{font:600 3rem/1 var(--display);color:var(--warm)}
+.wfa-steps li b{font-size:1.15rem;color:var(--head)}
+.wfa-steps li small{color:var(--soft);font-size:.93rem;line-height:1.5}
+.wfa-close{margin-top:72px;padding:110px 24px;border-radius:28px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:18px;
+  background:linear-gradient(180deg,rgba(5,11,20,.92),rgba(5,11,20,.5) 50%,rgba(5,11,20,.92)),url("img/wf/night.jpg") center/cover}
+.wfa-close .wfa-lead{margin:0 auto}
+.wfa-log{margin:0;color:var(--soft)}
+@media (max-width:700px){
+  .wfa-blk{padding-top:52px}
+  .wfa-folks{gap:12px}.wfa-f{width:100px}.wfa-ring{width:88px;height:88px}.wfa-f b{font-size:1.2rem}.wfa-f small{display:none}
+  .wfa-close{padding:72px 18px;border-radius:20px}
+}

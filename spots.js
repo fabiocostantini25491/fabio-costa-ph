@@ -654,6 +654,62 @@ const Spots = (() => {
       <p class="wf-login">Already folk? <button type="button" class="text-link" id="wfLogin">Log in</button> · <a class="text-link" href="#guide-spots">How it works</a></p>
     </section>`;
   }
+  // presentazione sotto la mappa, solo per chi non è ancora entrato: cos'è Wayfolk e perché entrare
+  function aboutHtml() {
+    const FOLK = [["photo", "Photo", "photo.jpg", "You chase the light."], ["hike", "Hiker", "hike.jpg", "You go where the road ends."],
+      ["slow", "Backpacker", "slow.jpg", "Slow, cheap and curious."], ["road", "Road trip", "road.jpg", "The drive is the destination."],
+      ["nomad", "Nomad", "nomad.jpg", "Work from wherever the view is."], ["food", "Foodie", "food.jpg", "Trips planned around a plate."]];
+    return `<div class="wfa" aria-label="What Wayfolk is">
+      <section class="wfa-blk wfa-folk">
+        <p class="wfa-kick">You don't join as a user</p>
+        <h2 class="wfa-h2">Which folk <em>are you?</em></h2>
+        <p class="wfa-lead">Pick the way you travel. Your folk becomes your voice on the map: the places you sign carry its mark, and people who travel like you find them.</p>
+        <div class="wfa-folks">${FOLK.map(([k, n, img, line]) => `<button type="button" data-joinfolk="${k}" class="wfa-f"><span class="wfa-ring"><img src="img/wf/${img}" alt="" loading="lazy" width="120" height="120"></span><b>${n}</b><small>${line}</small></button>`).join("")}</div>
+      </section>
+      <section class="wfa-blk wfa-split">
+        <div>
+          <p class="wfa-kick">What the maps don't tell you</p>
+          <h2 class="wfa-h2">Every place has a secret. <em>The folk who went know it.</em></h2>
+          <p class="wfa-lead">Which hour, which bench, which trattoria the locals actually use. One line each, from people who stood there. The map is open to everyone; the signatures and the tips are for folk.</p>
+        </div>
+        <article class="wfa-place" aria-label="Example of a place card">
+          <div class="wfa-ph"><img src="img/wf/photo.jpg" alt="The Odle peaks above Val di Funes" loading="lazy" width="900" height="600"><span>Fabio's pick</span></div>
+          <div class="wfa-in">
+            <b class="wfa-pn">Santa Maddalena viewpoint</b>
+            <p class="wfa-tip"><small>Photo folk · on the spot</small><q>Come at first light in October, stand by the wooden fence above the church.</q></p>
+            <p class="wfa-tip lock" aria-hidden="true"><small>Hiker folk · useful</small><q>Park lower down and take the trail through the meadows, twenty minutes.</q></p>
+            <p class="wfa-tip lock" aria-hidden="true"><small>Foodie folk · support local</small><q>The farm below sells cheese and speck, ask for the aged one.</q></p>
+            <button type="button" class="wfa-btn" id="wfaPeek">Become folk to read them</button>
+          </div>
+        </article>
+      </section>
+      <section class="wfa-blk">
+        <h2 class="wfa-h2">One toolkit for the road, <em>kept alive by its folk.</em></h2>
+        <div class="wfa-grid">
+          <article><h3>Places</h3><p>Photo spots, points of interest and trekking, with best months, live alerts and protection for fragile places.</p></article>
+          <article><h3>Essentials</h3><p>Where to sleep and eat, with real prices, reviews by folk and Support local.</p></article>
+          <article><h3>Trips</h3><p>Journeys stop by stop, with how you got there, on the map and on the 3D Earth.</p></article>
+          <article class="new"><h3>Pass it on <span>NEW</span></h3><p>Leaving? Sell or give away what you won't take home to the folk arriving after you.</p></article>
+          <article><h3>Passport</h3><p>Every place you sign is a stamp. Wanderer, Pathfinder, Trusted, and Local expert in your area.</p></article>
+          <article><h3>Field Notes</h3><p>Every folk can write. Stories go into <a href="#journal">Field Notes</a> and the monthly magazine.</p></article>
+        </div>
+      </section>
+      <section class="wfa-blk wfa-steps">
+        <h2 class="wfa-h2">Three steps to the fire.</h2>
+        <ol>
+          <li><span>01</span><b>Pick your folk</b><small>One or more. Sign up with email or Google in a minute.</small></li>
+          <li><span>02</span><b>Sign three places you've been</b><small>That's your welcome. Be the first to sign one and your name stays on it.</small></li>
+          <li><span>03</span><b>Get your passport</b><small>Stamps, levels, Local expert. The first 100 folk get a founding number for good${foundersLeft != null && foundersLeft > 0 ? `: ${foundersLeft} left` : ""}.</small></li>
+        </ol>
+      </section>
+      <section class="wfa-close">
+        <h2 class="wfa-h2">The fire is lit. <em>Pull up a seat.</em></h2>
+        <p class="wfa-lead">Leave no trace, protect fragile places, respect people, support local, share honestly, be kind. That's the whole code.</p>
+        <button type="button" class="wfa-btn big" id="wfaJoin">Become folk — it's free</button>
+        <p class="wfa-log">Already folk? <button type="button" class="text-link" id="wfaLogin">Log in</button></p>
+      </section>
+    </div>`;
+  }
   function earthHtml({ searchHtml, userHtml, bannerHtml, tailHtml }) {
     const base = baseSpots();
     const n = k => base.filter(s => s.category === k).length;
@@ -752,7 +808,8 @@ const Spots = (() => {
       </div>
     </div>
     ${bannerHtml}
-    ${tailHtml}`;
+    ${tailHtml}
+    ${guest && !session ? aboutHtml() : ""}`;
   }
 
   /* solo amministratore: scarica gli spot inquadrati sulla mappa in un file CSV (per preparare guide e articoli).
@@ -1345,12 +1402,13 @@ const Spots = (() => {
     }));
     $("#spotsLogout")?.addEventListener("click", logout);
     $("#spotsLogin")?.addEventListener("click", () => { wantLogin = true; wantJoin = false; render(); root().scrollIntoView({ behavior: "smooth" }); });
-    [$("#spotsJoin"), $("#guestJoin"), $("#wfJoin")].forEach(b => b?.addEventListener("click", () => { wantJoin = true; render(); root().scrollIntoView({ behavior: "smooth" }); }));
+    [$("#spotsJoin"), $("#guestJoin"), $("#wfJoin"), $("#wfaJoin"), $("#wfaPeek")].forEach(b => b?.addEventListener("click", () => { wantJoin = true; render(); root().scrollIntoView({ behavior: "smooth" }); }));
     $$("[data-joinfolk]").forEach(b => b.addEventListener("click", () => {   // scegli il folk e vai all'iscrizione con quel folk già scelto
       try { localStorage.setItem("fcph-joinfolk", b.dataset.joinfolk); } catch {}
       window.fcTrack?.("Spots: log in prompt"); window.fcTrack?.("Wayfolk: folk picked", { folk: b.dataset.joinfolk });
       wantJoin = true; render(); root().scrollIntoView({ behavior: "smooth" });
     }));
+    $("#wfaLogin")?.addEventListener("click", () => { wantLogin = true; wantJoin = false; render(); root().scrollIntoView({ behavior: "smooth" }); });
     $("#wfLogin")?.addEventListener("click", () => { wantLogin = true; wantJoin = false; render(); root().scrollIntoView({ behavior: "smooth" }); });
     $("#spotsRequests")?.addEventListener("click", openRequests);
     $$("[data-wsgo]").forEach(b => b.addEventListener("click", () => {
