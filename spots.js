@@ -1445,10 +1445,43 @@ const Spots = (() => {
     return visibleSpots().map(s => ({ s, d: distKm(origin, s) })).sort((a, b) => a.d - b.d).slice(0, n);
   }
 
+  /* Vista Terra: «Cosa c'è intorno» non sta più sotto la mappa ma in un pannello che scorre da destra,
+     aperto da una piccola icona sulla mappa (con il numero di posti trovati). */
+  let aroundOpen = false;
+  function aroundDrawer(count) {
+    const box = $("#spotsAround"), stage = $(".sx-stage");
+    if (!box || !stage || ui !== "earth") return false;
+    if (box.parentElement !== stage) { stage.appendChild(box); box.classList.add("as-drawer"); }
+    let tab = $("#aroundTab");
+    if (!tab) {
+      tab = document.createElement("button");
+      tab.type = "button"; tab.id = "aroundTab"; tab.className = "around-tab";
+      tab.setAttribute("aria-controls", "spotsAround");
+      tab.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="7.5"/></svg><b></b>';
+      stage.appendChild(tab);
+      tab.addEventListener("click", () => setAround(true));
+    }
+    tab.querySelector("b").textContent = count > 99 ? "99+" : String(count);
+    tab.title = tab.ariaLabel = `What's nearby: ${count} places`;
+    if (!origin) { aroundOpen = false; }
+    tab.hidden = !origin || aroundOpen;
+    box.classList.toggle("open", !!origin && aroundOpen);
+    box.hidden = !origin;
+    box.inert = !aroundOpen;
+    return true;
+  }
+  function setAround(open) {
+    aroundOpen = open;
+    const box = $("#spotsAround"), tab = $("#aroundTab");
+    if (!box || !tab) return;
+    box.classList.toggle("open", open); box.inert = !open;
+    tab.hidden = open || !origin;
+    if (!open) tab.classList.remove("pulse");
+  }
   function renderNear() {
     const el = $("#spotsNear"), box = $("#spotsAround");
     if (!el) return;
-    if (!origin) { box.hidden = true; el.innerHTML = ""; return; }
+    if (!origin) { box.hidden = true; el.innerHTML = ""; aroundDrawer(0); return; }
     box.hidden = false;
     $("#aroundEyebrow").textContent = origin.kind === "me" ? "Near you" : origin.kind === "scan" ? "This area" : "Around";
     $("#aroundTitle").textContent = origin.kind === "me" ? "What's around you" : origin.label;
@@ -1469,7 +1502,14 @@ const Spots = (() => {
       const s = spots.find(x => String(x.id) === b.dataset.near);
       if (s) focusSpot(s);
     }));
-    $("#nearClose").onclick = () => { origin = null; osmItems = []; drawOrigin(); drawOsm(); renderNear(); drawClusters(); };
+    const clearAll = () => { origin = null; osmItems = []; aroundOpen = false; drawOrigin(); drawOsm(); renderNear(); drawClusters(); };
+    if (aroundDrawer(inR.length || top.length)) {
+      // nella vista Terra la X fa solo scorrere via il pannello; «Clear» toglie la ricerca dalla mappa
+      $("#nearClose").onclick = () => setAround(false);
+      if (!$("#nearClear")) $("#nearClose").insertAdjacentHTML("beforebegin", `<button type="button" class="text-link near-clear" id="nearClear">Clear</button>`);
+      $("#nearClear").onclick = clearAll;
+      const tab = $("#aroundTab"); if (tab && !aroundOpen) { tab.classList.remove("pulse"); void tab.offsetWidth; tab.classList.add("pulse"); }
+    } else $("#nearClose").onclick = clearAll;
     renderOsm();
   }
 
