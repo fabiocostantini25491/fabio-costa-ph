@@ -93,7 +93,7 @@ button{font:inherit;color:inherit}
 .stage.card-off .hero-card{transform:translateY(calc(100% + 30px));opacity:0;pointer-events:none}
 .card-open{position:absolute;z-index:500;left:20px;bottom:20px;display:none}
 .stage.card-off .card-open{display:inline-flex}
-.legend{position:absolute;z-index:500;right:20px;bottom:24px;display:flex;flex-direction:column;gap:6px;padding:12px 14px;border-radius:16px;background:rgba(8,18,31,.9);border:1px solid var(--line);font-size:12px;color:var(--soft)}
+.legend{max-height:calc(100% - 130px);overflow:auto;position:absolute;z-index:500;right:20px;bottom:24px;display:flex;flex-direction:column;gap:6px;padding:12px 14px;border-radius:16px;background:rgba(8,18,31,.9);border:1px solid var(--line);font-size:12px;color:var(--soft)}
 .legend>span{display:flex;align-items:center;gap:8px}
 .legend i{width:10px;height:10px;border-radius:50%;display:inline-block}
 .legend .spot-pin{transform:scale(.72);margin:-4px -3px;flex:none;cursor:default}
@@ -231,6 +231,42 @@ footer a{color:var(--soft)}
 .spot-pin.signed.t3{outline:2px solid var(--fc);outline-offset:2px;box-shadow:0 0 0 5px rgba(6,16,29,.85),0 0 0 7px var(--fc),0 0 18px var(--fc)}
 .spot-pin.pick{outline:2px solid #ffd27a;outline-offset:2px}
 .spot-pin.pick.t3{box-shadow:0 0 0 5px rgba(6,16,29,.85),0 0 0 7px #ffd27a,0 0 20px #ffd27a}
+/* community pins (from style.css) */
+.meet-pin{position:relative;width:34px;height:34px;display:grid;place-items:center;border-radius:50%;background:#1a1405;border:2px solid #ffd166;box-shadow:0 0 14px rgba(255,209,102,.6);animation:pinShine 2.4s ease-in-out infinite;--c:#ffd166}
+.meet-pin svg{width:18px;height:18px;fill:none;stroke:#ffd166;stroke-width:1.8;stroke-linecap:round}
+.meet-date{position:absolute;top:100%;left:50%;transform:translate(-50%,3px);white-space:nowrap;padding:1px 6px;border-radius:999px;background:#ffd166;color:#1a1405;font:700 10px/1.5 var(--sans)}
+.ph-pin{width:30px;height:30px;display:grid;place-items:center;border-radius:50%;background:#140f22;border:2px solid #c9a7ff;box-shadow:0 0 12px rgba(201,167,255,.55)}
+.ph-pin svg{width:16px;height:16px;fill:none;stroke:#c9a7ff;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.ph-pin.expert{width:36px;height:36px;border-color:#ffc46e;box-shadow:0 0 14px rgba(255,196,110,.55)}
+.ph-pin.expert svg{stroke:#ffc46e}
+.ph-pin{position:relative}
+.ph-pin.posted{animation:phGlow 1.6s ease-in-out infinite}
+.ph-new{position:absolute;top:100%;left:50%;transform:translate(-50%,4px);white-space:nowrap;padding:1px 6px;border-radius:999px;background:#c9a7ff;color:#140f22;font:700 9.5px/1.6 var(--sans);letter-spacing:.08em}
+@media (prefers-reduced-motion:reduce){.ph-pin.posted{animation:none}}
+.ap-ico{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;vertical-align:-2px}
+.ph-pin.contrib{width:36px;height:36px;border:2px solid transparent;background:linear-gradient(#1a1405,#1a1405) padding-box,conic-gradient(#ffc46e,#f7a6c4,#ffc46e) border-box;box-shadow:0 0 16px rgba(255,196,110,.6)}
+.ph-pin.contrib .ap-ico{width:19px;height:19px;stroke:#ffc46e}
+.co-line .ap-ico{color:#ffc46e;width:15px;height:15px}
+.ph-pin.dev{width:36px;height:36px;border:2px solid #7fd8ff;background:#06151d;box-shadow:0 0 16px rgba(127,216,255,.55)}
+.ph-pin.dev .ap-ico{width:19px;height:19px;stroke:#7fd8ff}
+.dev-line .ap-ico{color:#7fd8ff;width:15px;height:15px}
+.pass-pin{position:relative;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:#0d2a1c;border:2px solid #8fe0a8;color:#8fe0a8;box-shadow:0 0 0 3px rgba(143,224,168,.18),0 4px 12px rgba(0,0,0,.45)}
+.pass-pin.sell{border-color:#ffd166;color:#ffd166;background:#2a2108;box-shadow:0 0 0 3px rgba(255,209,102,.18),0 4px 12px rgba(0,0,0,.45)}
+.pass-pin svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.pass-pin span{position:absolute;top:24px;left:50%;transform:translateX(-50%);white-space:nowrap;max-width:90px;overflow:hidden;text-overflow:ellipsis;padding:1px 5px;border-radius:6px;background:#8fe0a8;color:#0b1a12;font:700 9px/1.35 var(--sans);letter-spacing:.06em}
+.pass-pin.sell span{background:#ffd166;color:#241a02}
+.trip-end{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font:700 11px/1 var(--sans);color:#0b1020;border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.5)}
+.trip-end.start{background:#7ee081}.trip-end.finish{background:#ff6a5a;color:#fff}.trip-end.mid{width:22px;height:22px;background:#fff;font-size:10px}
+.trip-pop .trip-ends{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:6px 0;font-size:.9rem}
+.trip-pop .trip-ends .trip-end{width:20px;height:20px;font-size:9px;border-width:1.5px;box-shadow:none}
+.ph-pin[class*="folk-"]:not(.contrib):not(.dev){border-color:var(--fc);color:var(--fc);box-shadow:0 0 12px color-mix(in srgb,var(--fc) 55%,transparent)}
+.ph-pin[class*="folk-"]:not(.contrib):not(.dev) svg{stroke:var(--fc)}
+.ph-pin.multi::after{content:"+";position:absolute;right:-5px;bottom:-5px;width:14px;height:14px;border-radius:50%;display:grid;place-items:center;background:var(--fc);color:#0b1020;font:700 11px/1 var(--sans)}
+@keyframes alertPulse{50%{box-shadow:0 0 14px 3px rgba(255,77,77,.7)}}
+@keyframes phGlow{0%,100%{box-shadow:0 0 10px rgba(201,167,255,.6)}50%{box-shadow:0 0 0 8px rgba(201,167,255,.18),0 0 28px 8px rgba(201,167,255,.85)}}
+@keyframes pinShine{0%,100%{box-shadow:0 0 0 0 rgba(159,227,200,.0),0 0 8px var(--c)}50%{box-shadow:0 0 0 6px rgba(159,227,200,.18),0 0 22px 4px var(--c)}}
+@keyframes pinShineLocal{0%,100%{box-shadow:0 0 0 1.5px rgba(255,255,255,.7),0 0 8px #7ed69b}50%{box-shadow:0 0 0 1.5px rgba(255,255,255,.7),0 0 0 7px rgba(126,214,155,.2),0 0 24px 5px #7ed69b}}
+@keyframes planeIdle{0%,100%{transform:translate(0,0) rotate(0)}25%{transform:translate(1.5px,-1px) rotate(-4deg)}50%{transform:translate(0,-2px) rotate(0)}75%{transform:translate(-1.5px,-1px) rotate(3deg)}}
 .leaflet-div-icon{background:none;border:0}
 /* member view */
 body.is-folk .only-guest{display:none!important}
@@ -508,6 +544,7 @@ body:not(.is-folk) .only-folk{display:none!important}
     return `<p class="pp-cat" style="color:${c[1]}">${esc(c[0])}${g && g.fabio ? ' · <span style="color:#ffd27a">★ Fabio\'s pick</span>' : ""}${s.fragile ? " · fragile, no geotag" : ""}${s.support_local ? " · Support local" : ""}</p>
       <p class="pp-name">${esc(s.name)}</p>
       <p class="pp-signs">${g && g.total ? `<b>Signed by ${g.total} folk</b> · ${by}` : "No folk signature yet: be the first."}</p>
+      ${reports.has(s.id) ? `<p class="pp-lock" style="color:#ffb3b3">⚠ ${reports.get(s.id).map(r => esc(ALERT_KINDS[r.kind])).join(" · ")}</p>` : ""}
       <div data-tips="${s.id}"></div>
       <a class="pp-go" href="/#wayfolk">Sign or review in Wayfolk</a>`;
   };
@@ -529,10 +566,10 @@ body:not(.is-folk) .only-folk{display:none!important}
     const cls = ["spot-pin", tier ? `signed t${tier}` : "", g && g.fabio ? "pick" : "", s.support_local ? "local" : "", s.fragile ? "fragile" : ""].filter(Boolean).join(" ");
     const badge = g && g.fabio ? `<span class="pick-star" aria-hidden="true">★</span>` : tier && top ? `<span class="folk-badge" aria-hidden="true">${FOLKI[top] || ""}</span>` : "";
     return L.divIcon({ className: "", iconSize: [28, 28], iconAnchor: [14, 14], popupAnchor: [0, -12],
-      html: `<div class="${cls}" style="--c:${k[1]}${top ? `;--fc:${FOLKC[top]}` : ""}">${k[2]}${badge}${s.verified_at ? `<span class="vf-dot" aria-hidden="true">✓</span>` : ""}</div>` });
+      html: `<div class="${cls}" style="--c:${k[1]}${top ? `;--fc:${FOLKC[top]}` : ""}">${k[2]}${badge}${s.verified_at ? `<span class="vf-dot" aria-hidden="true">✓</span>` : ""}${reports.has(s.id) ? `<span class="alert-dot" aria-hidden="true"></span>` : ""}</div>` });
   }
   function draw() {
-    dots.clearLayers();
+    dots.clearLayers(); drawCommunity();
     if (onGlobe) return drawGlobe();
     const b = map.getBounds().pad(0.15);
     const inView = spots.filter(s => b.contains([s.lat, s.lon]));
@@ -544,6 +581,106 @@ body:not(.is-folk) .only-folk{display:none!important}
     }
   }
   map.on("moveend", () => { if (!onGlobe && !(map._popup && map._popup.isOpen())) draw(); });
+
+  /* ---------- the community layer of the Wayfolk map (for folk): meetups, Pass it on, folk on the map, trips, alerts ---------- */
+  const commLayer = L.layerGroup().addTo(map), tripLayer = L.layerGroup().addTo(map);
+  let meetups = [], passItems = [], profiles = [], trips = [], experts = new Set(), contribs = new Map(), reports = new Map();
+  const ALERT_KINDS = { closed: "Closed", works: "Works or landslide", event: "Event on", crowded: "Very crowded", danger: "Danger", access: "Access changed" };
+  const FOLK_ICON = {
+    photo: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8.5h3.2l1.8-2.5h6l1.8 2.5H20V19H4z"/><circle cx="12" cy="13" r="3.4"/></svg>',
+    hike: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.5 3.5h5v6.5l4.6 2.6c1.6.9 2.4 2.3 2.4 4.1V19h-15v-6.5l3-2.2z"/><path d="M4.5 16h15M9 7h3.5M9 9.6h3.5"/></svg>',
+    slow: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 7V5.5a4 4 0 0 1 8 0V7"/><rect x="5" y="7" width="14" height="14" rx="4"/><path d="M9 14h6v3.5H9zM5 12.5h14"/></svg>',
+    road: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 16.5V8.5a2 2 0 0 1 2-2H14l4 4.5h1.6a1.9 1.9 0 0 1 1.9 1.9v3.6z"/><path d="M2.5 11h19M8 6.5V11"/><circle cx="7" cy="17.3" r="1.9"/><circle cx="17" cy="17.3" r="1.9"/></svg>',
+    nomad: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4.5" y="5" width="15" height="10.5" rx="1.6"/><path d="M2 19h20M10 19l.6-1.5h2.8L14 19"/></svg>',
+    food: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 3v18M4 3v5.5a2.5 2.5 0 0 0 5 0V3M17.5 21V3c-2.2 1.2-3.5 4-3.5 7.5V13h3.5"/></svg>'
+  };
+  const ICON_APERTURE = '<svg class="ap-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3l3.6 6.3M21 12l-7.3 0M16.5 19.8 12.8 13.5M7.5 19.8l3.7-6.3M3 12h7.3M7.5 4.2l3.7 6.3"/></svg>';
+  const ICON_DEV = '<svg class="ap-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="m8.5 7-5 5 5 5M15.5 7l5 5-5 5M13.5 4.5l-3 15"/></svg>';
+  const MEET_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="8.5" cy="8" r="3"/><circle cx="16.5" cy="9" r="2.5"/><path d="M3 19c.6-3.4 2.8-5.2 5.5-5.2s4.9 1.8 5.5 5.2M14 14.4c.8-.4 1.6-.6 2.5-.6 2.3 0 4 1.5 4.5 4.7"/></svg>';
+  const PASS_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 11h15v9.5h-15zM3 7.5h18V11H3zM12 7.5v13M12 7.5C10.8 4 7 3.6 7.2 6c.1 1.2 2.4 1.5 4.8 1.5M12 7.5c1.2-3.5 5-3.9 4.8-1.5-.1 1.2-2.4 1.5-4.8 1.5"/></svg>';
+  const MODES = { walk: ["On foot", "#7ee081"], bike: ["Bike", "#4fd1c5"], moto: ["Scooter · motorbike", "#ffb347"], car: ["Car", "#ff7a7a"],
+    bus: ["Bus", "#c9a7ff"], train: ["Train", "#7fb2ff"], boat: ["Boat", "#5ad1ff"], plane: ["Plane", "#e0e0e0"] };
+  const modeOf = (t, i) => (t.stops[i] && MODES[t.stops[i].m] ? t.stops[i].m : MODES[t.mode] ? t.mode : "car");
+  const today = () => new Date().toISOString().slice(0, 10);
+  const shortDay = d => { try { return new Date(d + "T12:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "short" }); } catch { return d; } };
+  const pFolks = p => (Array.isArray(p.folks) ? p.folks : []).filter(k => k in FOLK_ICON);
+  const pKind = p => (p.kind === "traveller" || p.kind === "both" ? p.kind : "photographer");
+  const folkPinOf = p => { const f = pFolks(p); return f.length ? f[0] : pKind(p) === "traveller" ? "slow" : "photo"; };
+  const roles = uid => (contribs.get(uid) || {}).roles || [];
+  const isDev = uid => contribs.has(uid) && roles(uid).includes("developer");
+  const isCo = uid => contribs.has(uid) && roles(uid).some(r => r !== "developer");
+  const postFresh = p => p.last_post_at && Date.now() - Date.parse(p.last_post_at) < (contribs.has(p.user_id) ? 3 : 1) * 864e5;
+  const fmtPrice = it => { try { return new Intl.NumberFormat("en-GB", { style: "currency", currency: it.currency || "EUR", maximumFractionDigits: it.price % 1 ? 2 : 0 }).format(it.price); } catch { return `${it.price} ${it.currency || ""}`; } };
+  const tryGet = async (paths) => { for (const p of paths) { try { return await A(p); } catch {} } return []; };
+
+  async function loadCommunity() {
+    if (!me) return;
+    const t = today();
+    const [m, pi, pr, ex, co, tr, rp] = await Promise.all([
+      tryGet([`/rest/v1/meetups?select=id,title,note,meet_on,meet_time,lat,lon,author_name&meet_on=gt.${t}&order=meet_on.asc&limit=500`]),
+      tryGet([`/rest/v1/pass_on?select=id,kind,item,note,price,currency,place,lat,lon,author_name,expires_on&expires_on=gte.${t}&order=created_at.desc&limit=500`]),
+      tryGet(["/rest/v1/member_profiles?select=user_id,display_name,base_name,lat,lon,visible,on_map,kind,folks,last_post_at&limit=2000",
+        "/rest/v1/member_profiles?select=user_id,display_name,base_name,lat,lon,visible,on_map,kind,last_post_at&limit=2000",
+        "/rest/v1/member_profiles?select=user_id,display_name,base_name,lat,lon,visible&limit=2000"]),
+      tryGet(["/rest/v1/local_experts?select=user_id&limit=1000"]),
+      tryGet(["/rest/v1/contributors?select=user_id,roles&limit=1000"]),
+      tryGet(["/rest/v1/trips?select=id,title,mode,stops,author_name&order=created_at.desc&limit=400"]),
+      tryGet(["/rest/v1/spot_reports?select=spot_id,kind,until,created_at&resolved=eq.false&limit=3000"])
+    ]);
+    meetups = m.filter(x => x.lat != null); passItems = pi.filter(x => x.lat != null);
+    profiles = pr.filter(p => p.visible && p.on_map !== false && p.lat != null);
+    ex.forEach(e => experts.add(e.user_id)); co.forEach(c => contribs.set(c.user_id, c));
+    trips = tr.filter(x => Array.isArray(x.stops) && x.stops.length >= 2);
+    const cut = Date.now() - 14 * 864e5;
+    rp.forEach(r => { if (!ALERT_KINDS[r.kind]) return; if (r.until ? r.until >= today() : Date.parse(r.created_at) >= cut) (reports.get(r.spot_id) || reports.set(r.spot_id, []).get(r.spot_id)).push(r); });
+    draw(); syncGlobeTrips();
+  }
+  const goLink = `<a class="pp-go" href="/#wayfolk">Open in Wayfolk</a>`;
+  function drawCommunity() {
+    commLayer.clearLayers(); tripLayer.clearLayers();
+    if (!me || onGlobe) return;
+    meetups.forEach(m => L.marker([m.lat, m.lon], { zIndexOffset: 1200, title: m.title,
+      icon: L.divIcon({ className: "", iconSize: [34, 44], iconAnchor: [17, 17], popupAnchor: [0, -14], html: `<div class="meet-pin">${MEET_ICON}<span class="meet-date">${shortDay(m.meet_on)}</span></div>` }) })
+      .bindPopup(`<p class="pp-cat" style="color:#ffd166">Meetup · ${esc(shortDay(m.meet_on))}${m.meet_time ? " · " + esc(m.meet_time) : ""}</p><p class="pp-name">${esc(m.title)}</p>${m.note ? `<p class="pp-signs">${esc(m.note)}</p>` : ""}<p class="pp-signs">Organised by ${esc(m.author_name || "a folk")}</p>${goLink}`, { maxWidth: 290 }).addTo(commLayer));
+    passItems.forEach(it => L.marker([it.lat, it.lon], { zIndexOffset: 1150, title: it.item,
+      icon: L.divIcon({ className: "", iconSize: [30, 30], iconAnchor: [15, 15], popupAnchor: [0, -12], html: `<div class="pass-pin ${it.kind}">${PASS_ICON}<span>${it.kind === "give" ? "FREE" : it.price != null ? esc(fmtPrice(it)) : "SALE"}</span></div>` }) })
+      .bindPopup(`<p class="pp-cat" style="color:#8fe0a8">Pass it on · ${it.kind === "give" ? "free" : "for sale"}</p><p class="pp-name">${esc(it.item)}</p>${it.note ? `<p class="pp-signs">${esc(it.note)}</p>` : ""}<p class="pp-signs">${it.price != null && it.kind !== "give" ? `<b>${esc(fmtPrice(it))}</b> · ` : ""}${esc(it.place || "")} · by ${esc(it.author_name || "a folk")}</p>${goLink}`, { maxWidth: 290 }).addTo(commLayer));
+    const zoomOk = map.getZoom() >= 5;
+    profiles.filter(p => zoomOk || postFresh(p) || isCo(p.user_id)).forEach(p => {
+      const f = folkPinOf(p), fresh = postFresh(p), xp = experts.has(p.user_id), co = isCo(p.user_id), dev = isDev(p.user_id), big = xp || co || dev;
+      L.marker([p.lat, p.lon], { zIndexOffset: (fresh ? 1300 : 1100) + (co ? 50 : 0), title: p.display_name,
+        icon: L.divIcon({ className: "", iconSize: [big ? 36 : 30, big ? 36 : 30], iconAnchor: [big ? 18 : 15, big ? 18 : 15], popupAnchor: [0, -12],
+          html: `<div class="ph-pin folk-${f}${pFolks(p).length > 1 ? " multi" : ""}${fresh ? " posted" : ""}${xp ? " expert" : ""}${co ? " contrib" : ""}${dev && !co ? " dev" : ""}" style="--fc:${FOLKC[f]}">${co ? ICON_APERTURE : dev ? ICON_DEV : FOLK_ICON[f]}${fresh ? `<span class="ph-new">NEW POST</span>` : ""}</div>` }) })
+        .bindPopup(`<p class="pp-cat" style="color:${FOLKC[f]}">${pFolks(p).map(k => esc(FOLKNAME[k] || k)).join(" · ") || "Folk"}${xp ? " · Local expert" : ""}${co ? " · Contributor" : ""}</p><p class="pp-name">${esc(p.display_name || "A folk")}</p>${p.base_name ? `<p class="pp-signs">Based in ${esc(p.base_name)}</p>` : ""}${goLink}`, { maxWidth: 290 }).addTo(commLayer);
+    });
+    trips.forEach(t => {
+      const st = t.stops, pop = `<p class="pp-cat" style="color:#ff9f6e">Trip · ${st.length} stops</p><p class="pp-name">${esc(t.title)}</p><p class="pp-signs">by ${esc(t.author_name || "a folk")}</p>${goLink}`;
+      for (let i = 1; i < st.length; i++) {
+        const md = modeOf(t, i), ll = [[st[i - 1].lat, st[i - 1].lon], [st[i].lat, st[i].lon]];
+        L.polyline(ll, { color: "#0b1020", weight: 7, opacity: .45, interactive: false }).addTo(tripLayer);
+        L.polyline(ll, { color: MODES[md][1], weight: 3.5, opacity: .95, dashArray: md === "plane" ? "6 8" : md === "boat" ? "2 6" : null, lineCap: "round" }).bindPopup(pop, { maxWidth: 290 }).addTo(tripLayer);
+      }
+      st.slice(1, -1).forEach(p => L.circleMarker([p.lat, p.lon], { radius: 3.5, color: "#0b1020", weight: 1.5, fillColor: "#fff", fillOpacity: 1 }).bindPopup(pop).addTo(tripLayer));
+      [[st[0], "start", "▶"], [st[st.length - 1], "finish", "⚑"]].forEach(([p, c, g]) => L.marker([p.lat, p.lon], { zIndexOffset: 900, title: t.title,
+        icon: L.divIcon({ className: "", iconSize: [26, 26], iconAnchor: [13, 13], html: `<div class="trip-end ${c}">${g}</div>` }) }).bindPopup(pop, { maxWidth: 290 }).addTo(tripLayer));
+    });
+  }
+  // trips on the 3D Earth too, as on the Wayfolk map
+  function syncGlobeTrips() {
+    if (!globe || !globe.isStyleLoaded || !globe.isStyleLoaded()) return;
+    const feats = [];
+    trips.forEach(t => {
+      for (let i = 1; i < t.stops.length; i++) { const md = modeOf(t, i); feats.push({ type: "Feature", properties: { c: MODES[md][1] }, geometry: { type: "LineString", coordinates: [[t.stops[i - 1].lon, t.stops[i - 1].lat], [t.stops[i].lon, t.stops[i].lat]] } }); }
+      [[t.stops[0], "#7ee081"], [t.stops[t.stops.length - 1], "#ff6a5a"]].forEach(([p, c]) => feats.push({ type: "Feature", properties: { c }, geometry: { type: "Point", coordinates: [p.lon, p.lat] } }));
+    });
+    const data = { type: "FeatureCollection", features: feats };
+    try {
+      if (globe.getSource("trips")) return globe.getSource("trips").setData(data);
+      globe.addSource("trips", { type: "geojson", data });
+      globe.addLayer({ id: "trip-lines", type: "line", source: "trips", filter: ["==", ["geometry-type"], "LineString"], paint: { "line-color": ["get", "c"], "line-width": 2.5, "line-opacity": .9 } });
+      globe.addLayer({ id: "trip-ends", type: "circle", source: "trips", filter: ["==", ["geometry-type"], "Point"], paint: { "circle-radius": 4, "circle-color": ["get", "c"], "circle-stroke-color": "#0b1020", "circle-stroke-width": 1.5 } });
+    } catch {}
+  }
 
   async function loadSpots() {
     try {
@@ -572,6 +709,7 @@ body:not(.is-folk) .only-folk{display:none!important}
         } catch {}
       }
       draw(); say("");
+      if (me) loadCommunity();
     } catch { say("The places could not be loaded. Try again in a moment."); }
     stats();
   }
@@ -748,7 +886,7 @@ body:not(.is-folk) .only-folk{display:none!important}
           lbl: { type: "raster", tiles: [`${ESRI}/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}`], tileSize: 256, maxzoom: 18 } },
         layers: [{ id: "sat", type: "raster", source: "sat" }, { id: "lbl", type: "raster", source: "lbl", paint: { "raster-opacity": 0.8 } }] }
     });
-    globe.on("load", () => { try { globe.setProjection({ type: "globe" }); } catch {} drawGlobe(); });
+    globe.on("load", () => { try { globe.setProjection({ type: "globe" }); } catch {} drawGlobe(); syncGlobeTrips(); });
     globe.on("moveend", () => {
       drawGlobe();
       if (onGlobe && viewMode === "globe" && !handing && globe.getZoom() >= GLOBE_TO_FLAT) { const c = globe.getCenter(); goFlat([c.lat, c.lng], globe.getZoom() + 1); }
@@ -790,7 +928,12 @@ body:not(.is-folk) .only-folk{display:none!important}
     + lg("signed t2", CAT.spot[1], CAT.spot[2] + '<span class="folk-badge">🥾</span>', "Signed by 5+ folk", true)
     + lg("pick", CAT.spot[1], CAT.spot[2] + '<span class="pick-star">★</span>', "Fabio's pick", true)
     + lg("local", CAT.restaurant[1], CAT.restaurant[2], "Support local", false)
-    + lg("fragile", CAT.spot[1], CAT.spot[2], "Fragile, no geotag", true);
+    + lg("fragile", CAT.spot[1], CAT.spot[2], "Fragile, no geotag", true)
+    + lg("", CAT.spot[1], CAT.spot[2] + '<span class="alert-dot"></span>', "Alert: closed, works, crowds", true)
+    + `<span class="only-folk"><span class="meet-pin" style="transform:scale(.62);margin:-6px -5px">${MEET_ICON}</span>Meetup</span>`
+    + `<span class="only-folk"><span class="pass-pin give" style="transform:scale(.7);margin:-4px">${PASS_ICON}</span>Pass it on</span>`
+    + `<span class="only-folk"><span class="ph-pin folk-hike" style="--fc:${FOLKC.hike};transform:scale(.7);margin:-4px">${FOLK_ICON.hike}</span>Folk on the map</span>`
+    + `<span class="only-folk"><span class="trip-end start" style="transform:scale(.75);margin:-3px">▶</span>Trip: start · ⚑ arrival</span>`;
 
   /* ---------- the card over the map can step aside ---------- */
   document.querySelectorAll("[data-fold]").forEach(b => b.addEventListener("click", () => stage.classList.add("card-off")));
