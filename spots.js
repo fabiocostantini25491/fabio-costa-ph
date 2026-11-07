@@ -642,7 +642,7 @@ const Spots = (() => {
     return `<section class="wf-welcome" aria-label="Join Wayfolk">
       <h3>You don't join as a user.<br><em>You join as folk.</em></h3>
       <ul class="wf-ben">
-        <li><b>8,000+ places</b> picked with a photographer's eye, with the right time to go.</li>
+        <li><b>8,000+ places</b> scouted with a photographer's eye: some I've shot, many found while researching future trips. The folk who go confirm them.</li>
         <li><b>Signed by the folk:</b> travellers like you vouch for the places they love.</li>
         <li><b>Trips, Pass it on, meetups</b> and your own Wayfolk passport.</li>
       </ul>
