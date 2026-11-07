@@ -6,7 +6,9 @@ if (fs.existsSync(OUT) && !process.argv.includes("--force")) { console.log("sest
 const osmtogeojson = require("osmtogeojson");
 const q = `[out:json][timeout:90];
 (
-  relation["name"~"^(Sestiere (di )?)?(Cannaregio|Castello|Dorsoduro|San Marco|San Polo|Santa Croce)$"](45.40,12.29,45.46,12.38);
+  relation["name"~"(Cannaregio|Castello|Dorsoduro|San Marco|San Polo|Santa Croce)",i](45.40,12.29,45.46,12.38);
+  way["name"~"^(Sestiere )?(di )?(Cannaregio|Castello|Dorsoduro|San Marco|San Polo|Santa Croce)$",i]["place"](45.40,12.29,45.46,12.38);
+  relation["admin_level"~"^(9|10|11)$"](45.40,12.29,45.46,12.38);
 );
 out geom;`;
 const servers = ["https://overpass-api.de/api/interpreter", "https://overpass.kumi.systems/api/interpreter", "https://maps.mail.ru/osm/tools/overpass/api/interpreter"];
@@ -20,12 +22,12 @@ const servers = ["https://overpass-api.de/api/interpreter", "https://overpass.ku
     } catch (e) { console.log(s, e.message); }
   }
   if (!data) { console.log("sestieri: nessun server raggiungibile"); return; }
-  for (const el of data.elements) console.log("trovato", el.id, JSON.stringify(el.tags));
+  for (const el of data.elements) console.log("trovato", el.type, el.id, JSON.stringify(el.tags).slice(0, 300));
   const gj = osmtogeojson(data);
   const feats = [];
   for (const f of gj.features) {
     if (!/Polygon/.test(f.geometry.type)) continue;
-    const nm = String(f.properties.name || "").replace(/^Sestiere (di )?/i, "");
+    const nm = NAMES.find(n => new RegExp("^(sestiere )?(di )?" + n + "$", "i").test(String(f.properties.name || "").trim()));
     if (!NAMES.includes(nm)) continue;
     if (feats.some(x => x.properties.name === nm)) continue;   // uno per sestiere (il primo trovato)
     const round = c => Array.isArray(c[0]) ? c.map(round) : [Math.round(c[0] * 1e5) / 1e5, Math.round(c[1] * 1e5) / 1e5];

@@ -16,7 +16,7 @@ const fs = require("fs");
   await pages[1].screenshot({ path: "preview/mappa-venezia-p2.png", scale: "css" });
   // ritaglio a grandezza reale del centro (per vedere come appare ingrandita)
   const box = await pages[0].boundingBox();
-  await p.screenshot({ path: "preview/mappa-venezia-zoom.png", clip: { x: box.x + 1500, y: box.y + 900, width: 900, height: 650 } });
+  await p.screenshot({ path: "preview/mappa-venezia-zoom.png", fullPage: true, clip: { x: box.x + 1500, y: box.y + 900, width: 900, height: 650 } }).catch(e => console.log("zoom", e.message));
   console.log("pdf MB", (fs.statSync("preview/mappa-venezia.pdf").size / 1e6).toFixed(1));
   await b.close();
 })().catch(e => { console.error(e); process.exit(1); });
