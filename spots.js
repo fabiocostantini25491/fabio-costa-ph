@@ -560,23 +560,23 @@ const Spots = (() => {
     lock: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></svg>'
   };
   const SX_GROUPS = [
-    { id: "places", title: "Places", sub: "Photo spots · Viewpoints · Nature · Urban", cats: ["spot"] },
+    { id: "places", title: "Places", sub: "Photo spots · Points of interest · Trekking", cats: ["spot", "trekking"] },
     { id: "essentials", title: "Essentials", sub: "Stay · Food & drink", cats: ["hotel", "restaurant"] },
     { id: "community", title: "Community", sub: "Photographers · Local experts · Meetups", cats: [] },
-    { id: "outdoors", title: "Outdoors", sub: "Trekking · Workshops · Experiences", cats: ["trekking", "workshop", "experience"] }
+    { id: "outdoors", title: "Outdoors", sub: "Workshops · Experiences", cats: ["workshop", "experience"] }
   ];
 
   function earthHtml({ searchHtml, userHtml, bannerHtml, tailHtml }) {
     const base = baseSpots();
     const n = k => base.filter(s => s.category === k).length;
-    const item = k => `<button type="button" class="sx-item${activeCats.has(k) ? " on" : ""}" data-sxcat="${k}" style="--c:${CATS[k].color}" aria-pressed="${activeCats.has(k)}">
-        <span class="sx-ico">${CATS[k].icon}</span><span class="sx-name">${CATS[k].label}</span><small data-sxcount="${k}">${fmtN(n(k))}</small><span class="sx-check" aria-hidden="true"></span></button>`;
+    const item = (k, label = CATS[k].label) => `<button type="button" class="sx-item${activeCats.has(k) ? " on" : ""}" data-sxcat="${k}" style="--c:${CATS[k].color}" aria-pressed="${activeCats.has(k)}">
+        <span class="sx-ico">${CATS[k].icon}</span><span class="sx-name">${label}</span><small data-sxcount="${k}">${fmtN(n(k))}</small><span class="sx-check" aria-hidden="true"></span></button>`;
     const subOn = k => activeCats.has("spot") && activeSubs.has(k);
     const subItems = () => `<div class="sx-subs">${SUB_KEYS.map(k => `<button type="button" class="sx-item sx-sub${subOn(k) ? " on" : ""}" data-sxsub="${k}" style="--c:${CATS.spot.color}" aria-pressed="${subOn(k)}">
         <span class="sx-name">${SUBS[k].label}</span><small data-sxsubcount="${k}">${fmtN(base.filter(s => s.category === "spot" && spotSub(s) === k).length)}</small><span class="sx-check" aria-hidden="true"></span></button>`).join("")}</div>`;
     const lockItem = (label, ico) => `<button type="button" class="sx-item is-locked" data-sxjoin><span class="sx-ico">${ico}</span><span class="sx-name">${label}</span><span class="sx-lock">${SX_ICON.lock}Members</span></button>`;
     const body = g => {
-      if (g.id === "places") return g.cats.map(item).join("") + subItems() + (!guest && schemaV2 && socialV ? `
+      if (g.id === "places") return item("spot", "All places") + subItems() + g.cats.filter(k => k !== "spot").map(k => item(k)).join("") + (!guest && schemaV2 && socialV ? `
         <button type="button" class="sx-item${onlySupport ? " on" : ""}" id="onlySupport" aria-pressed="${onlySupport}" style="--c:#9fe3c8"><span class="sx-ico">🌱</span><span class="sx-name">Support local</span><small>${spots.filter(x => x.support_local).length}</small><span class="sx-check" aria-hidden="true"></span></button>
         <label class="sx-select">Alerts <select id="alertMode">
           <option value="show"${alertMode === "show" ? " selected" : ""}>Show</option>
@@ -592,7 +592,7 @@ const Spots = (() => {
           <button type="button" class="sx-item" id="meetList" style="--c:#ffd166"><span class="sx-ico">👥</span><span class="sx-name">Meetups</span><small>${upcomingMeetups().length}</small><span class="sx-go" aria-hidden="true">›</span></button>
           <p class="sx-links"><button type="button" class="text-link" id="meetAdd">＋ Organise a meetup</button></p>`;
       }
-      return g.cats.map(item).join("");
+      return g.cats.map(k => item(k)).join("");
     };
     const groups = SX_GROUPS.map(g => {
       const open = sxOpen.has(g.id), on = g.cats.some(k => activeCats.has(k)) || (g.id === "community" && showPhotographers);
@@ -1730,19 +1730,18 @@ const Spots = (() => {
   /* ---------- mappa satellite con raggruppamento ---------- */
   /* sottocategorie dei punti foto, ricavate da nome, descrizione e lista (in più lingue) */
   const SUBS = {
-    viewpoint: { label: "Viewpoints", re: /belvedere|panoram|viewpoint|view ?point|lookout|overlook|mirador|aussicht|point de vue|scenic|terrazz|terrace|vista point|sunset point|sunrise point/i },
-    urban: { label: "Urban", re: /chies|church|[ée]glise|kirche|iglesia|duomo|cattedral|cathedral|basilic|ponte\b|bridge|\bpont\b|br[üu]cke|puente|piazz|square|platz|plaza|\bvia\b|street|\brue\b|stra(ss|ß)e|calle|torre|tower|\btour\b|turm|castell|castle|ch[âa]teau|\bburg\b|palazz|palace|museo|museum|stazione|station|porto\b|harbou?r|\bport\b|\bcity\b|citt[àa]|borgo|village|town|centro|quartier|district|monaster|abbazi|abbey|\bfaro\b|lighthouse|tempi|temple|villa\b|skyline|rooftop|mural|urban|street art/i },
-    nature: { label: "Nature", re: /\blag[oh]|lake|\blac\b|\bsee\b|cascat|waterfall|cascade|wasserfall|spiaggi|beach|plage|strand|playa|bosc|forest|for[êe]t|\bwald\b|monte\b|mount|\bmont\b|\bberg|vall[eé]|valley|\btal\b|parco|\bpark\b|\bgol[ae]\b|gorge|grott|\bcave|fiume|river|\bisol|island|\bcala\b|\bbai[ae]\b|\bbay\b|dune|glacier|ghiacciai|canyon|cliff|scogli|faraglion|\bpasso\b|\bpass\b|rifugio|\balp|\bcima\b|peak|picco|riserva|reserve|oasi|fjord|fiord|volcan|vulcan|meadow|prat[oi]\b|nature|natura/i },
-    other: { label: "Other photo spots", re: null }
+    photo: { label: "Photo spots", re: /belvedere|panoram|viewpoint|view ?point|lookout|overlook|mirador|aussicht|point de vue|scenic|terrazz|terrace|vista point|sunset point|sunrise point/i },
+    poi: { label: "Points of interest", re: /chies|church|[ée]glise|kirche|iglesia|duomo|cattedral|cathedral|basilic|ponte\b|bridge|\bpont\b|br[üu]cke|puente|piazz|square|platz|plaza|\bvia\b|street|\brue\b|stra(ss|ß)e|calle|torre|tower|\btour\b|turm|castell|castle|ch[âa]teau|\bburg\b|palazz|palace|museo|museum|stazione|station|porto\b|harbou?r|\bport\b|\bcity\b|citt[àa]|borgo|village|town|centro|quartier|district|monaster|abbazi|abbey|\bfaro\b|lighthouse|tempi|temple|villa\b|skyline|rooftop|mural|urban|street art/i }
   };
   const SUB_KEYS = Object.keys(SUBS);
   const activeSubs = new Set(SUB_KEYS);
   const subCache = new Map();
   function spotSub(s) {
-    if (s.subcategory && SUBS[s.subcategory]) return s.subcategory;
+    if (s.subcategory === "urban" || s.subcategory === "poi") return "poi";
+    if (s.subcategory === "viewpoint" || s.subcategory === "nature") return "photo";
     if (subCache.has(s.id)) return subCache.get(s.id);
     const t = `${s.name || ""} ${s.note || ""} ${s.list || ""}`;
-    const k = SUBS.viewpoint.re.test(t) ? "viewpoint" : SUBS.urban.re.test(t) ? "urban" : SUBS.nature.re.test(t) ? "nature" : "other";
+    const k = SUBS.photo.re.test(t) ? "photo" : SUBS.poi.re.test(t) ? "poi" : "photo";
     subCache.set(s.id, k); return k;
   }
   /* gli spot che rispettano i filtri di contorno (cerca, preferiti, avvisi…), senza quelli di categoria: per i conteggi */
@@ -3647,16 +3646,16 @@ const Spots = (() => {
      ========================================================= */
   let profV = true;   // false finché non è stato eseguito supabase-profilo.sql (sottocategoria, info, stato)
   const WZ_SUBS = {
-    spot: [["viewpoint", "Viewpoint"], ["nature", "Nature"], ["urban", "Urban"], ["other", "Other"]],
+    spot: [["viewpoint", "Viewpoint"], ["nature", "Nature"], ["urban", "Point of interest"]],   // «urban» resta il valore salvato: ora si chiama Point of interest
     hotel: [["hotel", "Hotel"], ["bnb", "B&B · guesthouse"], ["camping", "Camping"], ["hut", "Mountain hut"], ["other", "Other"]],
     restaurant: [["restaurant", "Restaurant"], ["bar", "Bar · café"], ["streetfood", "Street food"], ["other", "Other"]],
     experience: [["tour", "Tour"], ["boat", "Boat trip"], ["guided", "Guided visit"], ["other", "Other"]],
     trekking: [], workshop: []
   };
   const WZ_GROUPS = [
-    { id: "places", label: "Places", cats: ["spot"] },
+    { id: "places", label: "Places", cats: ["spot", "trekking"] },
     { id: "essentials", label: "Essentials", cats: ["hotel", "restaurant"] },
-    { id: "outdoors", label: "Outdoors", cats: ["trekking", "workshop", "experience"] },
+    { id: "outdoors", label: "Outdoors", cats: ["workshop", "experience"] },
     { id: "community", label: "Community", cats: [] }
   ];
   /* informazioni pratiche per categoria (colonna «info» del luogo) */
@@ -3673,6 +3672,7 @@ const Spots = (() => {
   };
   const INFO_LABEL = { access: "Access & parking", accessibility: "Accessibility", permits: "Drone, permits, rules", price: "Price", services: "Services",
     hours: "Hours", parking: "Parking", price_level: "Price range", closed: "Closed on", duration: "Duration", link: "Booking" };
+  const SOCIAL_CATS = ["spot", "hotel", "restaurant"];   // Support local e Fragile: Places (spot) ed Essentials
   const groupOf = cat => WZ_GROUPS.find(g => g.cats.includes(cat))?.id || "places";
   const DRAFT_KEY = "fcph-add-draft";
   let wz = null, wzMap = null, wzMini = null;
@@ -3741,7 +3741,7 @@ const Spots = (() => {
     wz = {
       step: 1, edit, lat: pre?.lat ?? s.lat ?? null, lon: pre?.lon ?? s.lon ?? null, placed: !!(pre || edit),
       name: preset.name || s.name || "", cat: edit ? s.category : (CATS[lastCat] ? lastCat : "spot"),
-      sub: s.subcategory || (edit && s.category === "spot" ? spotSub(s) : ""), note: s.note || "", info: { ...(s.info || {}) },
+      sub: s.category === "spot" ? (["viewpoint", "nature", "urban"].includes(s.subcategory) ? s.subcategory : edit && spotSub(s) === "poi" ? "urban" : "") : (s.subcategory || ""), note: s.note || "", info: { ...(s.info || {}) },
       support: !!s.support_local, months: s.best_months || "", fragile: !!s.fragile, author: s.author_name || displayName(),
       from: s.starts_on || "", to: s.ends_on || "", files: [], removePhotos: new Set(), photos: [], place: "", rev: 0, tk: null, ws: null
     };
@@ -3939,7 +3939,7 @@ const Spots = (() => {
         ${wsV ? wsFieldsHtml(s, "wzWs") : ""}` : ""}
       ${wz.cat === "trekking" && tkV ? `<fieldset class="soc-add tk-add"><legend>Trail <small>(optional)</small></legend>${tkFieldsHtml(s, "wzTk")}</fieldset>` : ""}
       ${(WZ_INFO[wz.cat] || []).length ? `<fieldset class="wz-info"><legend>Useful info <small>(optional)</small></legend>${WZ_INFO[wz.cat].map(field).join("")}</fieldset>` : ""}
-      ${wz.cat === "spot" && socialV ? `<fieldset class="soc-add"><legend>Community <small>(optional)</small></legend>
+      ${SOCIAL_CATS.includes(wz.cat) && socialV ? `<fieldset class="soc-add"><legend>Community <small>(optional)</small></legend>
           <label class="shot-check"><input type="checkbox" id="wzSupport"${wz.support ? " checked" : ""}> 🌱 Support local — this place benefits from visitors</label>
           <input type="text" id="wzMonths" maxlength="60" value="${esc(wz.months)}" placeholder="Best months to visit, e.g. Oct–Apr">
           <label class="shot-check"><input type="checkbox" id="wzFragile"${wz.fragile ? " checked" : ""}> 🛡️ Fragile — hide it from the public map, ask members not to geotag it</label>
@@ -4096,7 +4096,7 @@ const Spots = (() => {
       starts_on: cat === "workshop" ? wz.from || null : null, ends_on: cat === "workshop" ? (wz.to || wz.from || null) : null });
     if (profV) Object.assign(row, { subcategory: wz.sub || null, info: Object.fromEntries(Object.entries(wz.info).filter(([k]) => (WZ_INFO[cat] || []).some(f => f[0] === k) || (k === "currency" && wz.info.price))) });
     else if (infoRows(wz.info).length) row.note = [row.note, infoRows(wz.info).map(([a, b]) => `${a}: ${b}`).join("\n")].filter(Boolean).join("\n\n");
-    if (schemaV2 && socialV && cat === "spot") Object.assign(row, { support_local: wz.support, best_months: wz.months || null });
+    if (schemaV2 && socialV && SOCIAL_CATS.includes(cat)) Object.assign(row, { support_local: wz.support, best_months: wz.months || null });
     if (cat === "trekking" && tkV && wz.tk) { const { _badPark, ...tk } = wz.tk; Object.assign(row, tk); }
     if (cat === "workshop" && wsV && wz.ws) Object.assign(row, { ws_capacity: wz.ws.cap || null, ws_enrolled: wz.ws.enr, ws_price: wz.ws.price, ws_currency: wz.ws.price != null ? wz.ws.cur : null, ws_link: wz.ws.link || null, ws_offer: wz.ws.offer || null, ws_offer_until: wz.ws.offerUntil });
     if (wz.author) setDisplayName(wz.author);
@@ -4112,7 +4112,7 @@ const Spots = (() => {
         const { data } = await api("/rest/v1/spots", { method: "POST", body: { ...row, source_key: `u:${crypto.randomUUID()}`, list: COMMUNITY }, headers: { Prefer: "return=representation" } });
         saved = Array.isArray(data) ? data[0] : data;
       }
-      if (schemaV2 && socialV && cat === "spot" && wz.fragile !== !!edit?.fragile) { try { await api("/rest/v1/rpc/set_fragile", { method: "POST", body: { p_spot: saved.id, p_fragile: wz.fragile } }); } catch {} }
+      if (schemaV2 && socialV && SOCIAL_CATS.includes(cat) && wz.fragile !== !!edit?.fragile) { try { await api("/rest/v1/rpc/set_fragile", { method: "POST", body: { p_spot: saved.id, p_fragile: wz.fragile } }); } catch {} }
       let photoErr = "";
       for (const id of wz.removePhotos) {
         const p = wz.photos.find(x => x.id === id);
