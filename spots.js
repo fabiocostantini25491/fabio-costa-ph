@@ -76,7 +76,8 @@ const Spots = (() => {
   let commV = true;         // false finché non è stato eseguito supabase-community2.sql
   let meetups = [], meetupJoins = new Map(), favs = new Set(), profiles = [], openFlags = 0;
   let onlyFavs = false, showPhotographers = false, commLayer = null;
-  let passItems = [], passV = true, showPass = true, commDirty = false;   // Pass it on (false finché non è stato eseguito supabase-pass-it-on.sql)
+  let passItems = [], passV = true, showPass = true, commDirty = false;
+  let trips = null, tripsV = true, tripCount = 0, showTrips = false, tripLayer = null, tripEd = null;   // itinerari (null = non ancora caricati)   // Pass it on (false finché non è stato eseguito supabase-pass-it-on.sql)
   let tkV = true;           // false finché non è stato eseguito supabase-trekking.sql
   let wsV = true;           // false finché non è stato eseguito supabase-workshop.sql
   let pubV = true;          // false finché non è stato eseguito supabase-pubblico.sql
@@ -563,7 +564,7 @@ const Spots = (() => {
   const SX_GROUPS = [
     { id: "places", title: "Places", sub: "Photo spots · Points of interest · Trekking", cats: ["spot", "trekking"] },
     { id: "essentials", title: "Essentials", sub: "Stay · Food & drink", cats: ["hotel", "restaurant"] },
-    { id: "community", title: "Community", sub: "Photographers · Local experts · Meetups · Pass it on", cats: [] },
+    { id: "community", title: "Community", sub: "Photographers · Local experts · Meetups · Trips · Pass it on", cats: [] },
     { id: "outdoors", title: "Outdoors", sub: "Workshops · Experiences", cats: ["workshop", "experience"] }
   ];
 
@@ -587,13 +588,15 @@ const Spots = (() => {
           <option value="only"${alertMode === "only" ? " selected" : ""}>Only places with alerts</option></select></label>` : "")
         + (!guest && commV ? `<button type="button" class="sx-item${onlyFavs ? " on" : ""}" id="onlyFavs" aria-pressed="${onlyFavs}" style="--c:#ff8fb1"><span class="sx-ico">♥</span><span class="sx-name">My spots</span><small>${favs.size}</small><span class="sx-check" aria-hidden="true"></span></button>` : "");
       if (g.id === "community") {
-        if (guest || !commV) return lockItem("Photographers", "📷") + lockItem("Local experts", "🧭") + lockItem("Meetups", "👥") + lockItem("Pass it on", "🎁");
+        if (guest || !commV) return lockItem("Photographers", "📷") + lockItem("Local experts", "🧭") + lockItem("Meetups", "👥") + lockItem("Trips", "🧭") + lockItem("Pass it on", "🎁");
         return `<button type="button" class="sx-item${showPhotographers ? " on" : ""}" id="showPh" aria-pressed="${showPhotographers}" style="--c:#c9a7ff"><span class="sx-ico">📷</span><span class="sx-name">Photographers</span><small>${profiles.filter(p => p.visible && p.on_map !== false && p.lat != null).length}</small><span class="sx-check" aria-hidden="true"></span></button>
           <p class="sx-links"><button type="button" class="text-link" id="phList">List</button><button type="button" class="text-link" id="myProfile">${profiles.some(p => p.user_id === myUid()) ? "My photographer profile" : "Join the photographers' map"}</button>${nodiV && profiles.some(p => p.user_id === myUid()) ? `<button type="button" class="text-link" id="iPosted">📣 I just posted</button>` : ""}</p>
           ${nodiV ? `<button type="button" class="sx-item" id="expList" style="--c:#ffd9a0"><span class="sx-ico">🧭</span><span class="sx-name">Local experts</span><small>${experts.size}</small><span class="sx-go" aria-hidden="true">›</span></button>` : ""}
           ${nodiV && myExpert() ? `<button type="button" class="sx-item" id="myArea" style="--c:#ffd9a0"><span class="sx-ico">🧭</span><span class="sx-name">My area</span><span class="sx-go" aria-hidden="true">›</span></button>` : ""}
           <button type="button" class="sx-item" id="meetList" style="--c:#ffd166"><span class="sx-ico">👥</span><span class="sx-name">Meetups</span><small>${upcomingMeetups().length}</small><span class="sx-go" aria-hidden="true">›</span></button>
           <p class="sx-links"><button type="button" class="text-link" id="meetAdd">＋ Organise a meetup</button></p>
+          ${tripsV ? `<button type="button" class="sx-item${showTrips ? " on" : ""}" id="showTrips" aria-pressed="${showTrips}" style="--c:#ff9f6e"><span class="sx-ico">${TRIP_ICON}</span><span class="sx-name">Trips</span><small>${fmtN(trips ? trips.length : tripCount)}</small><span class="sx-check" aria-hidden="true"></span></button>
+          <p class="sx-links"><button type="button" class="text-link" id="tripList">List</button><button type="button" class="text-link" id="tripAdd">＋ Add a trip</button></p>` : ""}
           ${passV ? `<button type="button" class="sx-item${showPass ? " on" : ""}" id="showPass" aria-pressed="${showPass}" style="--c:#8fe0a8"><span class="sx-ico">${PASS_ICON}</span><span class="sx-name">Pass it on</span><small>${livePass().length}</small><span class="sx-check" aria-hidden="true"></span></button>
           <p class="sx-links"><button type="button" class="text-link" id="passList">List</button><button type="button" class="text-link" id="passAdd">＋ Sell or give away</button></p>` : ""}`;
       }
@@ -758,6 +761,7 @@ const Spots = (() => {
     const reveal = () => { if (!globeEl.classList.contains("is-loading")) return; try { globe.setProjection({ type: "globe" }); } catch {} globeEl.classList.remove("is-loading"); drawGlobe(); };
     globe.once("style.load", () => setTimeout(reveal, 120));
     globe.on("load", reveal);
+    globe.on("load", syncGlobeTrips);
     return globe;
   }
 
@@ -773,6 +777,7 @@ const Spots = (() => {
     el.addEventListener("contextmenu", e => { if (Date.now() - (m._fcLong || 0) < 1500) e.preventDefault(); });
     const fire = () => {
       t = null; m._fcLong = Date.now();
+      if (tripEd) return;   // mentre si disegna un itinerario il tocco aggiunge tappe
       const r = el.getBoundingClientRect(), ll = m.containerPointToLatLng([start.x - r.left, start.y - r.top]);
       const lat = ll.lat, lon = L.Util.wrapNum(ll.lng, [-180, 180], true);
       try { navigator.vibrate?.(15); } catch {}
@@ -858,7 +863,7 @@ const Spots = (() => {
     // mosse della mappa piana chieste dal sito (cerca, vicino a me, apri uno spot…) mentre si vede il globo: si scende sulla mappa
     setTimeout(() => map && map.on("movestart", () => { if (onGlobe && !handing) toFlat(null); }), 120);
     map.on("zoomend", () => {
-      if (viewMode === "globe" && !onGlobe && !handing && map.getZoom() <= FLAT_TO_GLOBE) { const c = map.getCenter(); toGlobe([c.lat, c.lng], map.getZoom() - 1); }
+      if (viewMode === "globe" && !onGlobe && !handing && !tripEd && map.getZoom() <= FLAT_TO_GLOBE) { const c = map.getCenter(); toGlobe([c.lat, c.lng], map.getZoom() - 1); }
     });
     wireEarth();
     if (viewMode === "globe" && !globeFailed) {
@@ -1262,6 +1267,9 @@ const Spots = (() => {
     });
     $("#meetList")?.addEventListener("click", openMeetupList);
     $("#passList")?.addEventListener("click", openPassList);
+    $("#showTrips")?.addEventListener("click", () => setTrips(!showTrips));
+    $("#tripList")?.addEventListener("click", openTripList);
+    $("#tripAdd")?.addEventListener("click", () => withConduct(startTrip));
     $("#passAdd")?.addEventListener("click", () => withConduct(() => openPassOn(map ? { lat: map.getCenter().lat, lon: L.Util.wrapNum(map.getCenter().lng, [-180, 180], true), zoom: map.getZoom() } : null)));
     $("#showPass")?.addEventListener("click", () => { showPass = !showPass; const b = $("#showPass"); b.classList.toggle("on", showPass); b.setAttribute("aria-pressed", showPass); drawCommunity(); });
     $("#meetAdd")?.addEventListener("click", () => withConduct(() => openMeetup(map ? { lat: map.getCenter().lat, lon: L.Util.wrapNum(map.getCenter().lng, [-180, 180], true) } : null)));
@@ -1791,10 +1799,12 @@ const Spots = (() => {
     osmLayer = L.layerGroup().addTo(map);
     commLayer = L.layerGroup().addTo(map);
     map.on("popupclose", () => setTimeout(() => { if (commDirty) drawCommunity(); }, 0));
+    tripLayer = L.layerGroup().addTo(map); drawTrips();
+    if (tripEd) { wireTripMap(); setTimeout(renderTripEd, 0); }
     drawOsm();
     drawOrigin();
     map.on("moveend zoomend", drawClusters);
-    if (!guest && (admin || schemaV2)) map.on("contextmenu", e => { if (Date.now() - (map._fcLong || 0) < 900) return; withConduct(() => openAdd({ lat: e.latlng.lat, lon: L.Util.wrapNum(e.latlng.lng, [-180, 180], true) })); });
+    if (!guest && (admin || schemaV2)) map.on("contextmenu", e => { if (tripEd || Date.now() - (map._fcLong || 0) < 900) return; withConduct(() => openAdd({ lat: e.latlng.lat, lon: L.Util.wrapNum(e.latlng.lng, [-180, 180], true) })); });
     setupLongPressAdd(map);
     const pts = visibleSpots().map(s => [s.lat, s.lon]);
     if (keep) map.setView(keep.c, keep.z, { animate: false });
@@ -2403,6 +2413,10 @@ const Spots = (() => {
         try { passItems = (await api(`/rest/v1/pass_on?select=id,kind,item,note,price,currency,place,contact,lat,lon,created_by,author_name,created_at,expires_on&expires_on=gte.${todayISO()}&order=created_at.desc&limit=500`)).data || []; }
         catch (err) { if ([400, 401, 403, 404].includes(err.status)) passV = false; passItems = []; }
       }
+      if (tripsV) {
+        try { const { res } = await api("/rest/v1/trips?select=id&limit=1", { headers: { Prefer: "count=exact" } }); tripCount = +((res.headers.get("content-range") || "").split("/")[1]) || 0; }
+        catch (err) { if ([400, 401, 403, 404].includes(err.status)) tripsV = false; }
+      }
       meetupJoins = new Map();
       (jo.data || []).forEach(j => (meetupJoins.get(j.meetup_id) || meetupJoins.set(j.meetup_id, []).get(j.meetup_id)).push(j));
       favs = new Set((fa.data || []).map(f => f.spot_id));
@@ -2668,6 +2682,234 @@ const Spots = (() => {
     });
     el.querySelector("[data-flagmeet]")?.addEventListener("click", () => openFlag("meetup", String(m.id), m.title));
   }
+  /* --- ITINERARI (Trips): viaggi dei membri disegnati sulla mappa, tappa per tappa, con il mezzo di ogni tratto --- */
+  const TRIP_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5.5" cy="18.5" r="2"/><circle cx="18.5" cy="5.5" r="2"/><path d="M7.5 18.5h7a3.5 3.5 0 0 0 0-7h-5a3.5 3.5 0 0 1 0-7h7"/></svg>';
+  const MODES = { walk: ["🚶", "On foot", "#7ee081"], bike: ["🚲", "Bike", "#4fd1c5"], moto: ["🛵", "Scooter · motorbike", "#ffb347"], car: ["🚗", "Car", "#ff7a7a"],
+    bus: ["🚌", "Bus", "#c9a7ff"], train: ["🚆", "Train", "#7fb2ff"], boat: ["⛴️", "Boat", "#5ad1ff"], plane: ["✈️", "Plane", "#e0e0e0"] };
+  const MODE_KEYS = Object.keys(MODES);
+  const modeOf = (t, i) => (t.stops[i] && MODES[t.stops[i].m] ? t.stops[i].m : MODES[t.mode] ? t.mode : "car");   // mezzo con cui si arriva alla tappa i
+  const legKm = (a, b) => kmBetween(+a.lat, +a.lon, +b.lat, +b.lon);
+  const tripKm = st => st.slice(1).reduce((a, p, i) => a + legKm(st[i], p), 0);
+  const tripModes = t => [...new Set(t.stops.slice(1).map((_, i) => modeOf(t, i + 1)))];
+  async function loadTrips() {
+    if (trips || !tripsV) return trips || [];
+    try { trips = ((await api("/rest/v1/trips?select=id,title,note,mode,started_on,ended_on,stops,km,created_by,author_name,created_at&order=created_at.desc&limit=400")).data || [])
+      .filter(t => Array.isArray(t.stops) && t.stops.length >= 2); }
+    catch (err) { if ([400, 401, 403, 404].includes(err.status)) tripsV = false; trips = []; }
+    tripCount = trips.length;
+    return trips;
+  }
+  async function setTrips(on) {
+    showTrips = on;
+    const b = $("#showTrips"); if (b) { b.classList.toggle("on", on); b.setAttribute("aria-pressed", on); }
+    if (on) { await loadTrips(); if (b) b.querySelector("small").textContent = fmtN(trips.length); window.fcTrack?.("Spots: trips shown"); }
+    drawTrips();
+  }
+  function drawTrips() {
+    syncGlobeTrips();
+    if (!tripLayer || !map) return;
+    tripLayer.clearLayers();
+    if (!showTrips || !trips) return;
+    trips.forEach(t => {
+      const st = t.stops, open = () => openTripPopup(t);
+      for (let i = 1; i < st.length; i++) {
+        const md = modeOf(t, i), ll = [[st[i - 1].lat, st[i - 1].lon], [st[i].lat, st[i].lon]];
+        L.polyline(ll, { color: "#0b1020", weight: 7, opacity: .45, interactive: false }).addTo(tripLayer);
+        L.polyline(ll, { color: MODES[md][2], weight: 3.5, opacity: .95, dashArray: md === "plane" ? "6 8" : md === "boat" ? "2 6" : null, lineCap: "round" })
+          .on("click", open).bindTooltip(esc(t.title), { sticky: true }).addTo(tripLayer);
+      }
+      st.slice(1, -1).forEach(p => L.circleMarker([p.lat, p.lon], { radius: 3.5, color: "#0b1020", weight: 1.5, fillColor: "#fff", fillOpacity: 1 }).on("click", open).addTo(tripLayer));
+      const end = (p, cls, label) => L.marker([p.lat, p.lon], { zIndexOffset: 900, keyboard: true, title: `${label}: ${t.title}`,
+        icon: L.divIcon({ className: "", iconSize: [26, 26], iconAnchor: [13, 13], html: `<div class="trip-end ${cls}">${cls === "start" ? "▶" : "⚑"}</div>` }) }).on("click", open).addTo(tripLayer);
+      end(st[0], "start", "Start"); end(st[st.length - 1], "finish", "Arrival");
+    });
+  }
+  // sul globo: le stesse linee, come dati della mappa 3D (toccandone una si scende sulla mappa e si apre la scheda)
+  function syncGlobeTrips() {
+    if (!globe || !globe.isStyleLoaded?.()) return;
+    const feats = [];
+    if (showTrips && trips) trips.forEach(t => {
+      for (let i = 1; i < t.stops.length; i++) { const md = modeOf(t, i); feats.push({ type: "Feature", properties: { id: t.id, c: MODES[md][2], air: md === "plane" ? 1 : 0 }, geometry: { type: "LineString", coordinates: [[t.stops[i - 1].lon, t.stops[i - 1].lat], [t.stops[i].lon, t.stops[i].lat]] } }); }
+      [[t.stops[0], "#7ee081"], [t.stops[t.stops.length - 1], "#ff6a5a"]].forEach(([p, c]) => feats.push({ type: "Feature", properties: { id: t.id, c }, geometry: { type: "Point", coordinates: [p.lon, p.lat] } }));
+    });
+    const data = { type: "FeatureCollection", features: feats };
+    try {
+      if (globe.getSource("trips")) { globe.getSource("trips").setData(data); return; }
+      globe.addSource("trips", { type: "geojson", data });
+      globe.addLayer({ id: "trips-line", type: "line", source: "trips", filter: ["all", ["==", ["geometry-type"], "LineString"], ["==", ["get", "air"], 0]], paint: { "line-color": ["get", "c"], "line-width": 2.6 }, layout: { "line-cap": "round" } });
+      globe.addLayer({ id: "trips-air", type: "line", source: "trips", filter: ["all", ["==", ["geometry-type"], "LineString"], ["==", ["get", "air"], 1]], paint: { "line-color": ["get", "c"], "line-width": 1.8, "line-dasharray": [2, 3] } });
+      globe.addLayer({ id: "trips-end", type: "circle", source: "trips", filter: ["==", ["geometry-type"], "Point"], paint: { "circle-color": ["get", "c"], "circle-radius": 4.5, "circle-stroke-color": "#0b1020", "circle-stroke-width": 1.5 } });
+      ["trips-line", "trips-air", "trips-end"].forEach(id => {
+        globe.on("click", id, e => { const t = trips?.find(x => x.id === e.features?.[0]?.properties?.id); if (t) focusTrip(t); });
+        globe.on("mouseenter", id, () => { globe.getCanvas().style.cursor = "pointer"; });
+        globe.on("mouseleave", id, () => { globe.getCanvas().style.cursor = ""; });
+      });
+    } catch {}
+  }
+  function tripHtml(t) {
+    const st = t.stops, own = t.created_by === myUid(), km = t.km || tripKm(st);
+    const dates = [t.started_on, t.ended_on].filter(Boolean).map(fmtDay).join(" → ");
+    const pick = st.length <= 11 ? st : [st[0], ...Array.from({ length: 9 }, (_, i) => st[Math.round((i + 1) * (st.length - 1) / 10)]), st[st.length - 1]];
+    const c = p => `${(+p.lat).toFixed(5)},${(+p.lon).toFixed(5)}`;
+    const gm = `https://www.google.com/maps/dir/?api=1&origin=${c(pick[0])}&destination=${c(pick[pick.length - 1])}${pick.length > 2 ? `&waypoints=${pick.slice(1, -1).map(c).join("%7C")}` : ""}`;
+    return `<div class="spot-pop trip-pop">
+      <span class="spot-cat" style="--c:#ff9f6e">${TRIP_ICON}Trip</span>
+      <strong>${esc(t.title)}</strong>
+      <p class="trip-meta">${tripModes(t).map(m => `<span title="${MODES[m][1]}">${MODES[m][0]}</span>`).join("")}<b>${fmtKm(km)}</b> · ${st.length} stops${dates ? ` · ${dates}` : ""}</p>
+      <p class="trip-ends"><span class="trip-end start">▶</span>${esc(st[0].n || "Start")} <span class="trip-arrow">→</span> <span class="trip-end finish">⚑</span>${esc(st[st.length - 1].n || "Arrival")}</p>
+      ${t.note ? `<p class="pop-desc">${esc(t.note)}</p>` : ""}
+      <details class="trip-stops"><summary>All stops</summary><ol>${st.map((p, i) => `<li>${i ? `<span title="${MODES[modeOf(t, i)][1]}">${MODES[modeOf(t, i)][0]}</span>` : "▶"} ${esc(p.n || `Stop ${i + 1}`)}</li>`).join("")}</ol></details>
+      <p class="pop-author">By ${esc(t.author_name || "a member")}${xpBadge(t.created_by)}</p>
+      <div class="pop-actions">
+        <a class="pop-btn primary" href="${gm}" target="_blank" rel="noopener">${ICON.ext}Open in Google Maps</a>
+        ${own || admin ? `<button type="button" class="pop-btn" data-deltrip>Delete</button>` : `<button type="button" class="text-link pop-flag" data-flagtrip>⚑ Flag</button>`}
+      </div>
+    </div>`;
+  }
+  let tripPop = null;
+  function openTripPopup(t, at) {
+    if (!map) return;
+    const st = t.stops, mid = at || st[Math.floor(st.length / 2)];
+    tripPop = L.popup({ maxWidth: 310, minWidth: 250, className: "spot-popup", autoPan: true }).setLatLng([mid.lat, mid.lon])
+      .setContent(Object.assign(document.createElement("div"), { innerHTML: tripHtml(t) }).firstElementChild).openOn(map);
+    const el = tripPop.getElement();
+    el?.querySelector("[data-deltrip]")?.addEventListener("click", async ev => {
+      const b = ev.currentTarget;
+      if (b.dataset.confirm !== "1") { b.dataset.confirm = "1"; b.textContent = "Confirm delete"; return; }
+      try { await api(`/rest/v1/trips?id=eq.${t.id}`, { method: "DELETE" }); trips = trips.filter(x => x.id !== t.id); tripCount = trips.length; map.closePopup(); drawTrips(); toast("Trip deleted."); }
+      catch (err) { toast(`Could not delete: ${err.message}`, true); }
+    });
+    el?.querySelector("[data-flagtrip]")?.addEventListener("click", () => openFlag("trip", String(t.id), t.title));
+  }
+  function focusTrip(t) {
+    if (!showTrips) { showTrips = true; drawTrips(); }
+    const b = L.latLngBounds(t.stops.map(p => [p.lat, p.lon]));
+    if (onGlobe) toFlat(null);
+    $("#spotsMap")?.scrollIntoView({ behavior: "smooth", block: "center" });
+    map.flyToBounds(b, { padding: [50, 50], maxZoom: 13, duration: .9 });
+    map.once("moveend", () => setTimeout(() => openTripPopup(t), 80));
+  }
+  async function openTripList() {
+    await loadTrips();
+    const d = dlg("tripListDialog", `<div class="import-body">
+      <span class="eyebrow">Members only · Community</span><h2>Trips</h2>
+      <p class="gate-help left">Journeys of the members, stop by stop. Tap one to see it on the map.</p>
+      ${trips.length ? `<ul class="req-list">${trips.map(t => `<li class="req-row"><div><b>${esc(t.title)}</b>
+        <span>${tripModes(t).map(m => MODES[m][0]).join(" ")} ${fmtKm(t.km || tripKm(t.stops))} · ${t.stops.length} stops · by ${esc(t.author_name || "a member")}</span></div>
+        <button type="button" class="pop-btn" data-goto="${t.id}">${ICON.pin}Show</button></li>`).join("")}</ul>`
+        : `<p class="gate-help left">No trips yet. Be the first: «＋ Add a trip».</p>`}
+      <button type="button" class="outline-link" data-new>＋ ADD A TRIP</button>
+    </div>`);
+    d.querySelector("[data-new]").addEventListener("click", () => { d.close(); withConduct(startTrip); });
+    d.querySelectorAll("[data-goto]").forEach(b => b.addEventListener("click", () => { const t = trips.find(x => x.id === +b.dataset.goto); d.close(); if (t) { setTrips(true); focusTrip(t); } }));
+  }
+
+  /* --- disegnare un itinerario: si tocca la mappa (o tasto destro sul computer) per ogni tappa --- */
+  function startTrip() {
+    if (!map) return;
+    if (onGlobe) { const c = globe.getCenter(); toFlat([c.lat, c.lng], Math.max(5, globe.getZoom() + 1), { quiet: true }); }
+    tripEd = { stops: [], mode: "car" };
+    setTrips(true);
+    $("#spotsMap")?.scrollIntoView({ behavior: "smooth", block: "center" });
+    wireTripMap(); renderTripEd();
+    window.fcTrack?.("Spots: trip editor opened");
+  }
+  let tripEdLayer = null;
+  function wireTripMap() {
+    if (!map || map._fcTripWired) return;
+    map._fcTripWired = true;
+    const add = e => { if (!tripEd) return; L.DomEvent.preventDefault(e.originalEvent || e); addTripStop(e.latlng.lat, L.Util.wrapNum(e.latlng.lng, [-180, 180], true)); };
+    map.on("click", add);
+    map.on("contextmenu", add);
+    tripEdLayer = L.layerGroup().addTo(map);
+  }
+  function addTripStop(lat, lon, name = "") {
+    if (tripEd.stops.length >= 150) return toast("A trip can have up to 150 stops.", true);
+    const prev = tripEd.stops[tripEd.stops.length - 1];
+    const p = { lat: +lat.toFixed(5), lon: +lon.toFixed(5), n: name, m: prev ? (prev.m || tripEd.mode) : undefined };
+    tripEd.stops.push(p);
+    renderTripEd();
+    if (!name) reverseName(lat, lon).then(r => { if (!p.n) { p.n = r.name && r.place ? `${r.name}, ${r.place.split(",")[0]}` : r.name || r.place || ""; renderTripEd(); } });
+  }
+  function drawTripEd() {
+    if (!tripEdLayer) return;
+    tripEdLayer.clearLayers();
+    if (!tripEd) return;
+    const st = tripEd.stops;
+    for (let i = 1; i < st.length; i++) {
+      const md = st[i].m || tripEd.mode;
+      L.polyline([[st[i - 1].lat, st[i - 1].lon], [st[i].lat, st[i].lon]], { color: MODES[md][2], weight: 4, dashArray: md === "plane" ? "6 8" : null, interactive: false }).addTo(tripEdLayer);
+    }
+    st.forEach((p, i) => L.marker([p.lat, p.lon], { interactive: false, icon: L.divIcon({ className: "", iconSize: [24, 24], iconAnchor: [12, 12],
+      html: `<div class="trip-end ${i === 0 ? "start" : i === st.length - 1 && i > 0 ? "finish" : "mid"}">${i === 0 ? "▶" : i + 1}</div>` }) }).addTo(tripEdLayer));
+  }
+  function renderTripEd() {
+    const stage = stageEl() || $("#spotsMap")?.parentElement;
+    let box = $("#tripEd");
+    if (!tripEd) { box?.remove(); drawTripEd(); return; }
+    if (!box && stage) { box = document.createElement("div"); box.id = "tripEd"; box.className = "trip-ed"; stage.appendChild(box); }
+    if (!box) return;
+    const st = tripEd.stops, last = st[st.length - 1], n = st.length;
+    const chips = (cur, attr) => MODE_KEYS.map(k => `<button type="button" class="trip-chip${k === cur ? " on" : ""}" ${attr}="${k}" title="${MODES[k][1]}" aria-pressed="${k === cur}">${MODES[k][0]}</button>`).join("");
+    box.innerHTML = `
+      <div class="trip-ed-head"><b>${TRIP_ICON} New trip</b><span>${n ? `${n} stop${n > 1 ? "s" : ""}${n > 1 ? ` · ${fmtKm(tripKm(st))}` : ""}` : ""}</span></div>
+      <p class="trip-ed-help">${n === 0 ? "Tap the map where you started" : "Tap the map to add the next stop"}<span class="trip-desk"> (or right-click)</span>.</p>
+      ${n === 0 ? `<div class="trip-ed-modes"><small>Mostly by</small>${chips(tripEd.mode, "data-tmode")}</div>` : ""}
+      ${n >= 2 ? `<div class="trip-ed-modes"><small>To «${esc(last.n || `stop ${n}`)}» by</small>${chips(last.m || tripEd.mode, "data-lmode")}</div>` : n === 1 ? `<p class="trip-ed-help">▶ ${esc(st[0].n || "Start")}</p>` : ""}
+      ${n >= 2 ? `<details class="trip-stops"><summary>All stops</summary><ol>${st.map((p, i) => `<li>${i ? `<select data-smode="${i}" aria-label="How you got there">${MODE_KEYS.map(k => `<option value="${k}"${(p.m || tripEd.mode) === k ? " selected" : ""}>${MODES[k][0]}</option>`).join("")}</select>` : "▶"} <span>${esc(p.n || `Stop ${i + 1}`)}</span><button type="button" class="text-link" data-sdel="${i}" aria-label="Remove stop">✕</button></li>`).join("")}</ol></details>` : ""}
+      <div class="trip-ed-actions">
+        <button type="button" class="pop-btn" data-tundo${n ? "" : " disabled"}>↶ Undo</button>
+        <button type="button" class="pop-btn" data-tcancel>Cancel</button>
+        <button type="button" class="pop-btn primary" data-tnext${n >= 2 ? "" : " disabled"}>Done →</button>
+      </div>`;
+    L.DomEvent.disableClickPropagation(box); L.DomEvent.disableScrollPropagation(box);
+    box.querySelectorAll("[data-tmode]").forEach(b => b.addEventListener("click", () => { tripEd.mode = b.dataset.tmode; renderTripEd(); }));
+    box.querySelectorAll("[data-lmode]").forEach(b => b.addEventListener("click", () => { last.m = b.dataset.lmode; renderTripEd(); }));
+    box.querySelectorAll("[data-smode]").forEach(sel => sel.addEventListener("change", () => { st[+sel.dataset.smode].m = sel.value; renderTripEd(); }));
+    box.querySelectorAll("[data-sdel]").forEach(b => b.addEventListener("click", () => { st.splice(+b.dataset.sdel, 1); renderTripEd(); }));
+    box.querySelector("[data-tundo]").addEventListener("click", () => { st.pop(); renderTripEd(); });
+    box.querySelector("[data-tcancel]").addEventListener("click", () => { if (st.length > 1 && box.dataset.sure !== "1") { box.dataset.sure = "1"; box.querySelector("[data-tcancel]").textContent = "Discard?"; return; } tripEd = null; renderTripEd(); });
+    box.querySelector("[data-tnext]").addEventListener("click", saveTripDialog);
+    drawTripEd();
+  }
+  function saveTripDialog() {
+    const st = tripEd.stops, count = {};
+    st.slice(1).forEach(p => { const k = p.m || tripEd.mode; count[k] = (count[k] || 0) + 1; });
+    const main = Object.entries(count).sort((a, b) => b[1] - a[1])[0]?.[0] || tripEd.mode;
+    const d = dlg("tripDialog", `<form class="import-body gate-form" novalidate>
+      <span class="eyebrow">Members only · Trips</span><h2>Your trip</h2>
+      <p class="gate-help left">${st.length} stops · ${fmtKm(tripKm(st))} · ${esc(st[0].n || "Start")} → ${esc(st[st.length - 1].n || "Arrival")}</p>
+      <label for="trTitle">Title</label>
+      <input id="trTitle" maxlength="100" placeholder="e.g. Hanoi → Ho Chi Minh by scooter" value="${esc(st[0].n && st[st.length - 1].n ? `${st[0].n.split(",")[0]} → ${st[st.length - 1].n.split(",")[0]}` : "")}" required>
+      <div class="ws-fields">
+        <label>From <small>(optional)</small><input type="date" id="trFrom"></label>
+        <label>To <small>(optional)</small><input type="date" id="trTo"></label>
+      </div>
+      <label for="trNote">The story <small>(optional)</small></label>
+      <textarea id="trNote" rows="4" maxlength="1500" placeholder="How it went, best stretch, where to sleep, what to avoid…"></textarea>
+      <button class="outline-link" type="submit">PUBLISH THE TRIP <span aria-hidden="true">→</span></button>
+      <p class="gate-note" id="trMsg" role="status"></p>
+      <p class="gate-help left">Only members see trips. You can delete it whenever you want.</p>
+    </form>`);
+    d.querySelector("form").addEventListener("submit", async e => {
+      e.preventDefault();
+      const msg = d.querySelector("#trMsg"), warn = t => { msg.className = "gate-note warn"; msg.textContent = t; };
+      const title = d.querySelector("#trTitle").value.trim(), from = d.querySelector("#trFrom").value || null, to = d.querySelector("#trTo").value || null;
+      if (title.length < 2) return warn("Give your trip a title.");
+      if (from && to && to < from) return warn("The end date is before the start.");
+      const stops = st.map((p, i) => { const o = { lat: p.lat, lon: p.lon }; if (p.n) o.n = p.n.slice(0, 80); if (i) o.m = p.m || tripEd.mode; return o; });
+      const row = { title, note: d.querySelector("#trNote").value.trim() || null, mode: main, started_on: from, ended_on: to, stops, km: Math.round(tripKm(st) * 10) / 10, author_name: displayName() };
+      try {
+        const { data } = await api("/rest/v1/trips", { method: "POST", body: row, headers: { Prefer: "return=representation" } });
+        const saved = (Array.isArray(data) ? data[0] : data) || { ...row, id: Date.now(), created_by: myUid(), created_at: new Date().toISOString() };
+        (trips ||= []).unshift(saved); tripCount = trips.length;
+        tripEd = null; d.close(); renderTripEd(); showTrips = true; renderApp();
+        setTimeout(() => focusTrip(saved), 400);
+        toast("Trip published: members can now follow it."); window.fcTrack?.("Spots: trip published");
+      } catch (err) { warn(`Could not save: ${err.message}`); }
+    });
+  }
+
   /* --- PASS IT ON: chi parte vende o regala ciò che non porta a casa (solo testo: niente foto, niente pagamenti sul sito) --- */
   const PASS_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 11h15v9.5h-15zM3 7.5h18V11H3zM12 7.5v13M12 7.5C10.8 4 7 3.6 7.2 6c.1 1.2 2.4 1.5 4.8 1.5M12 7.5c1.2-3.5 5-3.9 4.8-1.5-.1 1.2-2.4 1.5-4.8 1.5"/></svg>';
   const livePass = () => passItems.filter(it => it.expires_on >= todayISO());
@@ -3116,12 +3358,12 @@ const Spots = (() => {
         }));
       } else {
         const { data } = await api("/rest/v1/content_flags?select=id,kind,target_id,label,reason,note,created_at&resolved=eq.false&order=created_at.desc&limit=500");
-        const KIND = { spot: "Posto", review: "Recensione", photo: "Foto", meetup: "Ritrovo", profile: "Profilo", pass_on: "Pass it on" };
+        const KIND = { spot: "Posto", review: "Recensione", photo: "Foto", meetup: "Ritrovo", profile: "Profilo", pass_on: "Pass it on", trip: "Itinerario" };
         const REASON = { spam: "Spam", offensive: "Offensivo", wrong: "Sbagliato", not_theirs: "Foto non sua", danger: "Pericoloso", other: "Altro" };
         openFlags = (data || []).length; refreshBadge();
         body.innerHTML = (data || []).length ? `<ul class="req-list">${data.map(f => `<li class="req-row" data-flag="${f.id}" data-kind="${f.kind}" data-target="${esc(f.target_id)}">
             <div><b>${KIND[f.kind] || f.kind} · ${REASON[f.reason] || f.reason}</b><span>${esc(f.label || "")}${f.note ? ` — “${esc(f.note)}”` : ""} · ${fmtDay(String(f.created_at).slice(0, 10))}</span></div>
-            ${["spot", "meetup", "profile", "pass_on"].includes(f.kind) || f.kind === "review" || f.kind === "photo" ? `<button type="button" class="pop-btn" data-act="show">Mostra</button>` : ""}
+            ${["spot", "meetup", "profile", "pass_on", "trip"].includes(f.kind) || f.kind === "review" || f.kind === "photo" ? `<button type="button" class="pop-btn" data-act="show">Mostra</button>` : ""}
             <button type="button" class="pop-btn" data-act="remove">Elimina contenuto</button>
             <button type="button" class="pop-btn" data-act="dismiss">Ignora</button></li>`).join("")}</ul>`
           : `<p class="gate-help left">Nessuna segnalazione aperta.</p>`;
@@ -3132,6 +3374,7 @@ const Spots = (() => {
             d.close();
             if (kind === "spot") { const s = spots.find(x => String(x.id) === target); if (s) focusSpot(s); }
             else if (kind === "meetup") { const m = meetups.find(x => String(x.id) === target); if (m) map.flyTo([m.lat, m.lon], 14); }
+            else if (kind === "trip") { await loadTrips(); const t = trips.find(x => String(x.id) === target); if (t) focusTrip(t); else toast("Itinerario già eliminato."); }
             else if (kind === "pass_on") { const it = passItems.find(x => String(x.id) === target); if (it) { showPass = true; drawCommunity(); map.flyTo([it.lat, it.lon], 15); } else toast("Annuncio già scaduto o eliminato."); }
             else if (kind === "profile") { const p = profiles.find(x => x.user_id === target); if (p && p.lat != null) { showPhotographers = true; drawCommunity(); map.flyTo([p.lat, p.lon], 10); } }
             else {
@@ -3145,11 +3388,12 @@ const Spots = (() => {
           try {
             if (b.dataset.act === "remove") {
               const path = { spot: `spots?id=eq.${encodeURIComponent(target)}`, review: `spot_reviews?id=eq.${encodeURIComponent(target)}`, photo: `spot_photos?id=eq.${encodeURIComponent(target)}`,
-                meetup: `meetups?id=eq.${encodeURIComponent(target)}`, pass_on: `pass_on?id=eq.${encodeURIComponent(target)}`, profile: `member_profiles?user_id=eq.${encodeURIComponent(target)}` }[kind];
+                meetup: `meetups?id=eq.${encodeURIComponent(target)}`, pass_on: `pass_on?id=eq.${encodeURIComponent(target)}`, trip: `trips?id=eq.${encodeURIComponent(target)}`, profile: `member_profiles?user_id=eq.${encodeURIComponent(target)}` }[kind];
               await api(`/rest/v1/${path}`, { method: "DELETE" });
               if (kind === "spot") spots = spots.filter(x => String(x.id) !== target);
               if (kind === "meetup") meetups = meetups.filter(x => String(x.id) !== target);
               if (kind === "pass_on") passItems = passItems.filter(x => String(x.id) !== target);
+              if (kind === "trip" && trips) trips = trips.filter(x => String(x.id) !== target);
               if (kind === "profile") profiles = profiles.filter(x => x.user_id !== target);
             }
             await resolve(id);
