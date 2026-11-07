@@ -57,6 +57,8 @@ const Spots = (() => {
   const DOORS = { photographers: "photo", hikers: "hike", backpackers: "slow", roadtrips: "road", nomads: "nomad", foodies: "food" };
   const doorNow = () => { try { const d = localStorage.getItem("fcph-door"); return DOORS[d] ? d : ""; } catch { return ""; } };
   let myStyles = [], clusterV = true, signV = true, folkV = true;
+  let signMap = new Map();   // firme per luogo: { total, top (folk più presente), fabio } — per le icone «evolute»
+  const signTier = s => { const g = signMap.get(s.id); if (!g) return 0; return g.total >= 15 ? 3 : g.total >= 5 ? 2 : g.total >= 1 ? 1 : 0; };
   const folkOf = k => CLUSTERS[k]?.folk || "";   // «folk»: il nome dei cluster (gente che viaggia allo stesso modo)
   const NAME_KEY = "fcph-display-name";
   const jwtClaims = () => { try { return JSON.parse(atob(session.access_token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/"))); } catch { return {}; } };
@@ -99,9 +101,22 @@ const Spots = (() => {
   let commV = true;         // false finché non è stato eseguito supabase-community2.sql
   let meetups = [], meetupJoins = new Map(), favs = new Set(), profiles = [], openFlags = 0;
   let onlyFavs = false, showPhotographers = false, showTravellers = false, commLayer = null;
-  let kindV = true;   // false finché non è stato eseguito supabase-viaggiatori.sql (colonna «kind» dei profili)
+  let kindV = true, folksV = true;   // folksV: false finché non è stato eseguito supabase-folk-mappa.sql   // false finché non è stato eseguito supabase-viaggiatori.sql (colonna «kind» dei profili)
   const pKind = p => (p.kind === "traveller" || p.kind === "both" ? p.kind : "photographer");
-  const isPhotoP = p => pKind(p) !== "traveller", isTravP = p => pKind(p) !== "photographer";
+  // i folk di un profilo (dal profilo stesso); senza folk vale il vecchio tipo fotografo/viaggiatore
+  const pFolks = p => (Array.isArray(p.folks) ? p.folks : []).filter(k => k in FOLK_ICON);
+  const isPhotoP = p => pFolks(p).length ? pFolks(p).includes("photo") : pKind(p) !== "traveller";
+  const isTravP = p => pFolks(p).length ? pFolks(p).some(k => k !== "photo") : pKind(p) !== "photographer";
+  // ogni folk ha la sua icona sulla mappa
+  const FOLK_ICON = {
+    photo: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8.5h3.2l1.8-2.5h6l1.8 2.5H20V19H4z"/><circle cx="12" cy="13" r="3.4"/></svg>',
+    hike: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.5 3.5h5v6.5l4.6 2.6c1.6.9 2.4 2.3 2.4 4.1V19h-15v-6.5l3-2.2z"/><path d="M4.5 16h15M9 7h3.5M9 9.6h3.5"/></svg>',
+    slow: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 7V5.5a4 4 0 0 1 8 0V7"/><rect x="5" y="7" width="14" height="14" rx="4"/><path d="M9 14h6v3.5H9zM5 12.5h14"/></svg>',
+    road: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 16.5V8.5a2 2 0 0 1 2-2H14l4 4.5h1.6a1.9 1.9 0 0 1 1.9 1.9v3.6z"/><path d="M2.5 11h19M8 6.5V11"/><circle cx="7" cy="17.3" r="1.9"/><circle cx="17" cy="17.3" r="1.9"/></svg>',
+    nomad: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4.5" y="5" width="15" height="10.5" rx="1.6"/><path d="M2 19h20M10 19l.6-1.5h2.8L14 19"/></svg>',
+    food: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 3v18M4 3v5.5a2.5 2.5 0 0 0 5 0V3M17.5 21V3c-2.2 1.2-3.5 4-3.5 7.5V13h3.5"/></svg>'
+  };
+  const folkPinOf = p => { const f = pFolks(p); return f.length ? f[0] : pKind(p) === "traveller" ? "slow" : "photo"; };
   const onMapP = p => p.visible && p.on_map !== false && p.lat != null;
   let passItems = [], passV = true, showPass = true, commDirty = false;
   let trips = null, tripsV = true, tripCount = 0, showTrips = false, tripLayer = null, tripEd = null;   // itinerari (null = non ancora caricati)   // Pass it on (false finché non è stato eseguito supabase-pass-it-on.sql)
@@ -1956,12 +1971,13 @@ const Spots = (() => {
   function pinIcon(s) {
     const cat = CATS[s.category] || CATS.spot;
     const plane = wsPlane(s), offer = wsOffer(s) && !plane, shineLocal = localNew(s) && !isWs(s), shineWs = (wsNew(s) || freshPlace(s)) && !plane && !offer && !shineLocal;
-    const cls = ["spot-pin", s.outdated ? "outdated" : "", s.support_local ? "local" : "", s.fragile ? "fragile" : "", plane ? "plane" : "", offer ? "offer" : "", shineWs ? "shine" : "", shineLocal ? "shine-local" : ""].filter(Boolean).join(" ");
+    const sg = signMap.get(s.id), tier = signTier(s);
+    const cls = ["spot-pin", tier ? `signed t${tier}` : "", sg?.fabio ? "pick" : "", s.outdated ? "outdated" : "", s.support_local ? "local" : "", s.fragile ? "fragile" : "", plane ? "plane" : "", offer ? "offer" : "", shineWs ? "shine" : "", shineLocal ? "shine-local" : ""].filter(Boolean).join(" ");
     const icon = plane ? ICON_PLANE : shineLocal ? ICON_LOCAL : cat.icon;
     const color = plane ? "#ffc46e" : shineLocal ? "#7ed69b" : cat.color;
     const alert = alertsOf(s).length ? `<span class="alert-dot" title="${esc(ALERTS[alertsOf(s)[0].kind].label)}"></span>` : "";
     return L.divIcon({ className: "", iconSize: [28, 28], iconAnchor: [14, 14], tooltipAnchor: [0, -14], popupAnchor: [0, -12],
-      html: `<div class="${cls}" style="--c:${color}">${icon}${offer ? `<span class="offer-tag" aria-hidden="true">%</span>` : ""}${favs.has(s.id) ? `<span class="fav-dot" aria-hidden="true">♥</span>` : ""}${s.verified_at && !s.outdated ? `<span class="vf-dot" aria-hidden="true">✓</span>` : ""}${alert}</div>` });
+      html: `<div class="${cls}" style="--c:${color}${sg?.top ? `;--fc:${CLUSTERS[sg.top].color}` : ""}"${tier || sg?.fabio ? ` title="${sg.fabio ? "Fabio's pick" : ""}${sg.fabio && tier ? " · " : ""}${tier ? `Signed by ${sg.total} folk` : ""}"` : ""}>${icon}${sg?.fabio ? `<span class="pick-star" aria-hidden="true">★</span>` : tier ? `<span class="folk-badge" aria-hidden="true">${CLUSTERS[sg.top].ico}</span>` : ""}${offer ? `<span class="offer-tag" aria-hidden="true">%</span>` : ""}${favs.has(s.id) ? `<span class="fav-dot" aria-hidden="true">♥</span>` : ""}${s.verified_at && !s.outdated ? `<span class="vf-dot" aria-hidden="true">✓</span>` : ""}${alert}</div>` });
   }
   const fmtMoneyWs = (v, cur) => { try { return new Intl.NumberFormat(window.I18N?.locale || "en-GB", { style: "currency", currency: cur || "EUR", maximumFractionDigits: v % 1 ? 2 : 0 }).format(v); } catch { return `${v} ${cur || ""}`; } };
   function wsBoxHtml(s) {
@@ -2464,7 +2480,8 @@ const Spots = (() => {
         api(`/rest/v1/meetups?select=id,title,note,meet_on,meet_time,lat,lon,spot_id,created_by,author_name&meet_on=gt.${todayISO()}&order=meet_on.asc&limit=500`),
         api("/rest/v1/meetup_joins?select=meetup_id,user_id,name&limit=5000"),
         api(`/rest/v1/spot_favorites?select=spot_id&user_id=eq.${encodeURIComponent(uid)}&limit=10000`),
-        api(`/rest/v1/member_profiles?select=user_id,display_name,instagram,website,bio,base_name,lat,lon,visible${nodiV ? ",last_post_url,last_post_at" : ""}${profV ? ",on_map,username,avatar_path" : ""}${kindV ? ",kind" : ""}&limit=2000`)
+        api(`/rest/v1/member_profiles?select=user_id,display_name,instagram,website,bio,base_name,lat,lon,visible${nodiV ? ",last_post_url,last_post_at" : ""}${profV ? ",on_map,username,avatar_path" : ""}${kindV ? ",kind" : ""}${folksV ? ",folks" : ""}&limit=2000`)
+          .catch(err => { if (folksV && err.status === 400) { folksV = false; return api(`/rest/v1/member_profiles?select=user_id,display_name,instagram,website,bio,base_name,lat,lon,visible${nodiV ? ",last_post_url,last_post_at" : ""}${profV ? ",on_map,username,avatar_path" : ""}${kindV ? ",kind" : ""}&limit=2000`); } throw err; })
           .catch(err => { if (kindV && err.status === 400) { kindV = false; return api(`/rest/v1/member_profiles?select=user_id,display_name,instagram,website,bio,base_name,lat,lon,visible${nodiV ? ",last_post_url,last_post_at" : ""}${profV ? ",on_map,username,avatar_path" : ""}&limit=2000`); } throw err; })
           .catch(err => { if (profV && err.status === 400) { profV = false; return api(`/rest/v1/member_profiles?select=user_id,display_name,instagram,website,bio,base_name,lat,lon,visible${nodiV ? ",last_post_url,last_post_at" : ""}&limit=2000`); } throw err; })
           .catch(err => { if (nodiV && err.status === 400) { nodiV = false; return api("/rest/v1/member_profiles?select=user_id,display_name,instagram,website,bio,base_name,lat,lon,visible&limit=2000"); } throw err; })
@@ -2483,6 +2500,7 @@ const Spots = (() => {
         try { const { res } = await api("/rest/v1/trips?select=id&limit=1", { headers: { Prefer: "count=exact" } }); tripCount = +((res.headers.get("content-range") || "").split("/")[1]) || 0; }
         catch (err) { if ([400, 401, 403, 404].includes(err.status)) tripsV = false; }
       }
+      if (signV && clusterV) loadSignCounts();
       meetupJoins = new Map();
       (jo.data || []).forEach(j => (meetupJoins.get(j.meetup_id) || meetupJoins.set(j.meetup_id, []).get(j.meetup_id)).push(j));
       favs = new Set((fa.data || []).map(f => f.spot_id));
@@ -2703,7 +2721,7 @@ const Spots = (() => {
       const fresh = postFresh(p), xp = experts.has(p.user_id), co = isCo(p.user_id), dev = isDev(p.user_id), big = xp || co || dev;
       const mk = L.marker([p.lat, p.lon], { zIndexOffset: (fresh ? 1300 : 1100) + (co ? 50 : 0), keyboard: true, title: p.display_name,
         icon: L.divIcon({ className: "", iconSize: [big ? 36 : 30, big ? 36 : 30], iconAnchor: [big ? 18 : 15, big ? 18 : 15], popupAnchor: [0, -12],
-          html: `<div class="ph-pin${fresh ? " posted" : ""}${xp ? " expert" : ""}${co ? " contrib" : ""}${dev && !co ? " dev" : ""}">${co ? ICON_APERTURE : dev ? ICON_DEV : pKind(p) === "traveller" ? TR_ICON : PH_ICON}${fresh ? `<span class="ph-new">NEW POST</span>` : ""}</div>` }) }).addTo(commLayer);
+          html: `<div class="ph-pin folk-${folkPinOf(p)}${pFolks(p).length > 1 ? " multi" : ""}${fresh ? " posted" : ""}${xp ? " expert" : ""}${co ? " contrib" : ""}${dev && !co ? " dev" : ""}" style="--fc:${CLUSTERS[folkPinOf(p)].color}">${co ? ICON_APERTURE : dev ? ICON_DEV : FOLK_ICON[folkPinOf(p)]}${fresh ? `<span class="ph-new">NEW POST</span>` : ""}</div>` }) }).addTo(commLayer);
       mk.bindTooltip(esc(p.display_name), { direction: "top" });
       mk.bindPopup(() => profileHtml(p), { maxWidth: 300, minWidth: 220, className: "spot-popup" });
       mk.on("popupopen", e => e.popup.getElement()?.querySelector("[data-flagprofile]")?.addEventListener("click", () => openFlag("profile", p.user_id, p.display_name)));
@@ -3093,7 +3111,7 @@ const Spots = (() => {
   function profileHtml(p) {
     const ig = p.instagram ? `https://www.instagram.com/${encodeURIComponent(p.instagram)}/` : "";
     return `<div class="spot-pop">
-      <span class="spot-cat" style="--c:${isCo(p.user_id) ? "#ffc46e" : isDev(p.user_id) ? "#7fd8ff" : "#c9a7ff"}">${isCo(p.user_id) ? ICON_APERTURE : isDev(p.user_id) ? ICON_DEV : pKind(p) === "traveller" ? TR_ICON : PH_ICON}${isCo(p.user_id) ? "Contributor" : isDev(p.user_id) ? "Developer" : { photographer: "Photographer", traveller: "Traveller", both: "Photographer & traveller" }[pKind(p)]}</span>
+      <span class="spot-cat" style="--c:${isCo(p.user_id) ? "#ffc46e" : isDev(p.user_id) ? "#7fd8ff" : "#c9a7ff"}">${isCo(p.user_id) ? ICON_APERTURE : isDev(p.user_id) ? ICON_DEV : FOLK_ICON[folkPinOf(p)]}${isCo(p.user_id) ? "Contributor" : isDev(p.user_id) ? "Developer" : pFolks(p).length ? pFolks(p).map(k => folkOf(k)).join(" · ") : { photographer: "Photographer", traveller: "Traveller", both: "Photographer & traveller" }[pKind(p)]}</span>
       ${isDev(p.user_id) ? `<p class="pop-dates co-line dev-line">${ICON_DEV}<span>Helps build Wayfolk${p.website ? ` — <a href="${esc(p.website)}" target="_blank" rel="noopener">see their work</a>` : ""}</span></p>` : ""}
       <strong>${esc(p.display_name)}</strong>
       ${p.base_name ? `<p class="pop-dates">${ICON.pin}<span>${esc(p.base_name)}</span></p>` : ""}
@@ -3228,7 +3246,8 @@ const Spots = (() => {
       const row = { user_id: myUid(), display_name: name, instagram: ig || null, website: web || null, bio: d.querySelector("#pfBio").value.trim() || null,
         base_name: d.querySelector("#pfBase").value.trim() || null, lat: c ? round(c.lat) : null, lon: c ? round(c.lon) : null,
         ...(profV ? { visible: true, on_map: d.querySelector("#pfVisible").checked, username: uname || null } : { visible: d.querySelector("#pfVisible").checked }),
-        ...(kindV ? { kind: d.querySelector("[name=pfKind]:checked")?.value || "photographer" } : {}), updated_at: new Date().toISOString() };
+        ...(kindV ? { kind: d.querySelector("[name=pfKind]:checked")?.value || "photographer" } : {}),
+        ...(folksV && myStyles.length ? { folks: myStyles } : {}), updated_at: new Date().toISOString() };
       try {
         if (profV && newPhoto) { msg.className = "gate-note"; msg.textContent = "Uploading the photo…"; row.avatar_path = await uploadAvatar(newPhoto); }
         else if (profV && dropPhoto) row.avatar_path = null;
@@ -3715,6 +3734,20 @@ const Spots = (() => {
   }
 
   /* --- FIRME DEI CLUSTER sui luoghi --- */
+  async function loadSignCounts() {
+    try {
+      const { data } = await api("/rest/v1/place_sign_counts?select=spot_id,cluster,n&limit=100000");
+      const m = new Map();
+      (data || []).forEach(r => {
+        const g = m.get(r.spot_id) || { total: 0, top: null, topN: 0, fabio: false };
+        if (r.cluster === "fabio") g.fabio = true;
+        else if (CLUSTERS[r.cluster]) { g.total += r.n; if (r.n > g.topN) { g.top = r.cluster; g.topN = r.n; } }
+        m.set(r.spot_id, g);
+      });
+      signMap = m;
+      markerById.forEach((mk, id) => { const sp = spots.find(x => x.id === id); if (sp) mk.setIcon(pinIcon(sp)); });
+    } catch {}
+  }
   const PREFERRED = { trekking: ["hike"], spot: ["photo"], hotel: ["slow", "road"], restaurant: ["food", "slow"], experience: ["slow"], workshop: ["photo"] };
   async function loadSigns(popup, s) {
     const el = popup.getElement()?.querySelector("[data-signs]");
@@ -3724,6 +3757,9 @@ const Spots = (() => {
     catch (err) { if ([400, 404].includes(err.status)) { signV = false; el.remove(); } return; }
     const uid = myUid(), by = {};
     signs.forEach(g => { by[g.cluster] = (by[g.cluster] || 0) + 1; });
+    { const tot = CLUSTER_KEYS.reduce((a, k) => a + (by[k] || 0), 0), top = CLUSTER_KEYS.filter(k => by[k]).sort((a, b) => by[b] - by[a])[0] || null;
+      if (tot || by.fabio) signMap.set(s.id, { total: tot, top, topN: top ? by[top] : 0, fabio: !!by.fabio }); else signMap.delete(s.id);
+      markerById.get(s.id)?.setIcon(pinIcon(s)); }
     const mineOf = k => signs.find(g => g.user_id === uid && g.cluster === k);
     const pref = PREFERRED[s.category] || [];
     const order = [...myStyles].sort((a, b) => (pref.includes(b) ? 1 : 0) - (pref.includes(a) ? 1 : 0));
@@ -3781,7 +3817,8 @@ const Spots = (() => {
       if (!picked.length) { msg.className = "gate-note warn"; msg.textContent = "Pick at least one."; return; }
       try {
         await api("/rest/v1/rpc/set_my_travel", { method: "POST", body: { p_styles: picked, p_source: doorNow() || null } });
-        myStyles = picked; d.close(); toast("Saved: you can now sign places with your folk."); window.fcTrack?.("Spots: folk chosen", { folk: picked.join(",") });
+        myStyles = picked; d.close(); toast("Saved: you can now sign places with your folk.");
+        const meP = profiles.find(p => p.user_id === myUid()); if (meP) { meP.folks = picked; drawCommunity(); } window.fcTrack?.("Spots: folk chosen", { folk: picked.join(",") });
         after?.();
       } catch (err) { msg.className = "gate-note warn"; msg.textContent = `Could not save: ${err.message}`; }
     });

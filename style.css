@@ -3150,3 +3150,14 @@ body[data-page="explore"]::after{background:radial-gradient(90% 55% at 85% 0,rgb
   .sx-kick{display:block !important;order:0}
   .sx-kick .sx-logo{height:58px;margin:0 0 2px}
 }
+/* luoghi firmati dai folk: l'icona «evolve» con le firme */
+.spot-pin .folk-badge,.spot-pin .pick-star{position:absolute;top:-8px;left:-8px;width:17px;height:17px;border-radius:50%;display:grid;place-items:center;font-size:10px;line-height:1;background:#06101d;border:1.5px solid var(--fc,#ffd27a);box-shadow:0 1px 4px rgba(0,0,0,.5)}
+.spot-pin .pick-star{background:linear-gradient(135deg,#ffe08a,#ffb347);color:#3a2300;border-color:#fff;font-size:11px;font-weight:700}
+.spot-pin.signed.t2{outline:2px solid var(--fc);outline-offset:2px}
+.spot-pin.signed.t3{outline:2px solid var(--fc);outline-offset:2px;box-shadow:0 0 0 5px rgba(6,16,29,.85),0 0 0 7px var(--fc),0 0 18px var(--fc)}
+.spot-pin.pick{outline:2px solid #ffd27a;outline-offset:2px}
+.spot-pin.pick.t3{box-shadow:0 0 0 5px rgba(6,16,29,.85),0 0 0 7px #ffd27a,0 0 20px #ffd27a}
+/* mappa della community: ogni folk ha la sua icona e il suo colore */
+.ph-pin[class*="folk-"]:not(.contrib):not(.dev){border-color:var(--fc);color:var(--fc);box-shadow:0 0 12px color-mix(in srgb,var(--fc) 55%,transparent)}
+.ph-pin[class*="folk-"]:not(.contrib):not(.dev) svg{stroke:var(--fc)}
+.ph-pin.multi::after{content:"+";position:absolute;right:-5px;bottom:-5px;width:14px;height:14px;border-radius:50%;display:grid;place-items:center;background:var(--fc);color:#0b1020;font:700 11px/1 var(--sans)}
