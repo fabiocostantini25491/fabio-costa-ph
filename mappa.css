@@ -26,3 +26,7 @@ body { margin: 0; background: #ddd; color: var(--ink); font: 400 8pt/1.35 var(--
 .mp-it b { font: 700 8pt Arial, sans-serif; color: var(--zc); }
 .mp-it span em { display: block; font-size: 7pt; color: var(--soft); }
 .mp-foot { position: absolute; bottom: 6mm; left: 14mm; right: 14mm; display: flex; justify-content: space-between; font: 500 7pt var(--head); letter-spacing: .12em; text-transform: uppercase; color: var(--soft); }
+
+.mp-inset { position: absolute; z-index: 600; right: 8mm; bottom: 12mm; width: 120mm; background: #fff; padding: 2mm; box-shadow: 0 2mm 6mm rgba(0,0,0,.2); }
+#inset { width: 116mm; height: 82mm; }
+.mp-inset p { margin: 1.5mm 0 0; font: 700 7pt var(--head); letter-spacing: .12em; text-transform: uppercase; color: var(--soft); }

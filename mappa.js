@@ -19,6 +19,7 @@
       <section class="mp-page"><div id="map"></div>
         <div class="mp-title"><small>Field Notes · Map</small><h1>${esc(g.titolo)}</h1><p>All ${pts.length} places on my map, by area</p></div>
         <div class="mp-legend">${zones.map(z => `<div><i style="background:${col(z)}"></i>${esc(z)}</div>`).join("")}<div><i style="background:#6b4a2b;border-radius:1mm"></i>Coffee & food</div></div>
+        <div class="mp-inset"><div id="inset"></div><p>The lagoon: Murano, San Lazzaro, Lido</p></div>
         <p class="mp-credit">Map © Esri, HERE, Garmin, © OpenStreetMap contributors · fabiocostaph.com</p>
       </section>
       ${pages.map((list, pi) => {
@@ -30,8 +31,15 @@
       }).join("")}`;
     const map = L.map("map", { zoomControl: false, attributionControl: false, zoomSnap: 0.25, fadeAnimation: false, zoomAnimation: false });
     const tiles = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}", { maxZoom: 19, maxNativeZoom: 19, detectRetina: true }).addTo(map);
-    // inquadra il centro storico (i punti sulle isole lontane restano dentro, la mappa si adatta)
-    map.fitBounds(L.latLngBounds(pts.map(p => [+p.lat, +p.lon])), { paddingTopLeft: [40, 40], paddingBottomRight: [40, 40] });
+    // mappa grande: il centro storico; le isole lontane stanno nel riquadro piccolo
+    const far = p => /murano|lazzaro|lido/i.test(p.zona);
+    const core = pts.filter(p => !far(p));
+    map.fitBounds(L.latLngBounds((core.length ? core : pts).map(p => [+p.lat, +p.lon])), { paddingTopLeft: [60, 40], paddingBottomRight: [40, 40] });
+    const inset = L.map("inset", { zoomControl: false, attributionControl: false, dragging: false, zoomSnap: 0.25, fadeAnimation: false, zoomAnimation: false });
+    L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}", { maxZoom: 19 }).addTo(inset);
+    inset.fitBounds(L.latLngBounds(pts.map(p => [+p.lat, +p.lon])), { padding: [12, 12] });
+    pts.forEach(p => L.circleMarker([+p.lat, +p.lon], { radius: 2.5, color: "#fff", weight: 0.6, fillColor: col(p.zona), fillOpacity: 1 }).addTo(inset));
+    L.rectangle(map.getBounds(), { color: "#111", weight: 1.2, fill: false, dashArray: "3 3" }).addTo(inset);
     pts.forEach(p => L.marker([+p.lat, +p.lon], { icon: L.divIcon({ className: "", iconSize: [0, 0], html: `<div class="mp-pin ${p.tipo === "pausa" ? "pausa" : ""}" style="background:${col(p.zona)}">${p.n}</div>` }) }).addTo(map));
     await new Promise(res => { let done = false; tiles.on("load", () => { if (!done) { done = true; setTimeout(res, 600); } }); setTimeout(res, 20000); });
     window.MAPPA.ready = true; window.MAPPA.count = pts.length;

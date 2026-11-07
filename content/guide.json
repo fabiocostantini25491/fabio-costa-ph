@@ -482,15 +482,6 @@
       "mappa": [
         {
           "n": 1,
-          "nome": "Basilica dei Santi Giovanni e Paolo",
-          "zona": "San Marco",
-          "tipo": "spot",
-          "lat": 45.439379,
-          "lon": 12.341713,
-          "nota": ""
-        },
-        {
-          "n": 2,
           "nome": "Basilica di San Marco",
           "zona": "San Marco",
           "tipo": "spot",
@@ -499,7 +490,7 @@
           "nota": ""
         },
         {
-          "n": 3,
+          "n": 2,
           "nome": "Campo Sant'Angelo",
           "zona": "San Marco",
           "tipo": "spot",
@@ -508,7 +499,7 @@
           "nota": ""
         },
         {
-          "n": 4,
+          "n": 3,
           "nome": "Campo Sant'Anzolo",
           "zona": "San Marco",
           "tipo": "spot",
@@ -517,7 +508,7 @@
           "nota": ""
         },
         {
-          "n": 5,
+          "n": 4,
           "nome": "Chiesa di San Giacomo di Rialto",
           "zona": "San Marco",
           "tipo": "spot",
@@ -526,7 +517,7 @@
           "nota": ""
         },
         {
-          "n": 6,
+          "n": 5,
           "nome": "Giardini Reali di Venezia",
           "zona": "San Marco",
           "tipo": "spot",
@@ -535,7 +526,7 @@
           "nota": ""
         },
         {
-          "n": 7,
+          "n": 6,
           "nome": "Piazza San Marco",
           "zona": "San Marco",
           "tipo": "spot",
@@ -544,7 +535,7 @@
           "nota": ""
         },
         {
-          "n": 8,
+          "n": 7,
           "nome": "Ponte Goldoni",
           "zona": "San Marco",
           "tipo": "spot",
@@ -553,16 +544,7 @@
           "nota": ""
         },
         {
-          "n": 9,
-          "nome": "Ponte Minich",
-          "zona": "San Marco",
-          "tipo": "spot",
-          "lat": 45.43842,
-          "lon": 12.341632,
-          "nota": ""
-        },
-        {
-          "n": 10,
+          "n": 8,
           "nome": "Ponte Rosso",
           "zona": "San Marco",
           "tipo": "spot",
@@ -571,7 +553,7 @@
           "nota": ""
         },
         {
-          "n": 11,
+          "n": 9,
           "nome": "Ponte Tron",
           "zona": "San Marco",
           "tipo": "spot",
@@ -580,7 +562,7 @@
           "nota": ""
         },
         {
-          "n": 12,
+          "n": 10,
           "nome": "Ponte de le Bande",
           "zona": "San Marco",
           "tipo": "spot",
@@ -589,7 +571,7 @@
           "nota": ""
         },
         {
-          "n": 13,
+          "n": 11,
           "nome": "Ponte de le colonne",
           "zona": "San Marco",
           "tipo": "spot",
@@ -598,16 +580,7 @@
           "nota": ""
         },
         {
-          "n": 14,
-          "nome": "Ponte dei Conzafelzi",
-          "zona": "San Marco",
-          "tipo": "spot",
-          "lat": 45.438351,
-          "lon": 12.342119,
-          "nota": ""
-        },
-        {
-          "n": 15,
+          "n": 12,
           "nome": "Ponte dei Sospiri",
           "zona": "San Marco",
           "tipo": "spot",
@@ -616,7 +589,7 @@
           "nota": ""
         },
         {
-          "n": 16,
+          "n": 13,
           "nome": "Ponte del Mondo Novo",
           "zona": "San Marco",
           "tipo": "spot",
@@ -625,25 +598,7 @@
           "nota": ""
         },
         {
-          "n": 17,
-          "nome": "Ponte del Volto",
-          "zona": "San Marco",
-          "tipo": "spot",
-          "lat": 45.439893,
-          "lon": 12.339559,
-          "nota": ""
-        },
-        {
-          "n": 18,
-          "nome": "Ponte della Paglia",
-          "zona": "San Marco",
-          "tipo": "spot",
-          "lat": 45.433638,
-          "lon": 12.341012,
-          "nota": ""
-        },
-        {
-          "n": 19,
+          "n": 14,
           "nome": "Ponte di Rialto",
           "zona": "San Marco",
           "tipo": "spot",
@@ -652,16 +607,7 @@
           "nota": ""
         },
         {
-          "n": 20,
-          "nome": "Ramo del Campaniel",
-          "zona": "San Marco",
-          "tipo": "spot",
-          "lat": 45.440071,
-          "lon": 12.338925,
-          "nota": ""
-        },
-        {
-          "n": 21,
+          "n": 15,
           "nome": "Spada",
           "zona": "San Marco",
           "tipo": "spot",
@@ -670,7 +616,7 @@
           "nota": ""
         },
         {
-          "n": 22,
+          "n": 16,
           "nome": "T Fondaco Rooftop Terrace",
           "zona": "San Marco",
           "tipo": "spot",
@@ -679,7 +625,7 @@
           "nota": ""
         },
         {
-          "n": 23,
+          "n": 17,
           "nome": "Viewpoint",
           "zona": "San Marco",
           "tipo": "spot",
@@ -688,7 +634,7 @@
           "nota": ""
         },
         {
-          "n": 24,
+          "n": 18,
           "nome": "Viewpoint",
           "zona": "San Marco",
           "tipo": "spot",
@@ -697,7 +643,7 @@
           "nota": ""
         },
         {
-          "n": 25,
+          "n": 19,
           "nome": "Viewpoint",
           "zona": "San Marco",
           "tipo": "spot",
@@ -706,16 +652,7 @@
           "nota": ""
         },
         {
-          "n": 26,
-          "nome": "Viewpoint near Spada",
-          "zona": "San Marco",
-          "tipo": "spot",
-          "lat": 45.4339,
-          "lon": 12.334891,
-          "nota": ""
-        },
-        {
-          "n": 27,
+          "n": 20,
           "nome": "Viewpoint",
           "zona": "San Marco",
           "tipo": "spot",
@@ -724,7 +661,7 @@
           "nota": "Tramonto"
         },
         {
-          "n": 28,
+          "n": 21,
           "nome": "Viewpoint",
           "zona": "San Marco",
           "tipo": "spot",
@@ -733,7 +670,7 @@
           "nota": ""
         },
         {
-          "n": 29,
+          "n": 22,
           "nome": "Viewpoint",
           "zona": "San Marco",
           "tipo": "spot",
@@ -742,7 +679,7 @@
           "nota": ""
         },
         {
-          "n": 30,
+          "n": 23,
           "nome": "Viewpoint",
           "zona": "San Marco",
           "tipo": "spot",
@@ -751,25 +688,7 @@
           "nota": ""
         },
         {
-          "n": 31,
-          "nome": "Viewpoint near Chiesa di San Giacomo di Rialto",
-          "zona": "San Marco",
-          "tipo": "spot",
-          "lat": 45.438513,
-          "lon": 12.335644,
-          "nota": ""
-        },
-        {
-          "n": 32,
-          "nome": "Viewpoint near Chiesa di San Giacomo di Rialto",
-          "zona": "San Marco",
-          "tipo": "spot",
-          "lat": 45.438841,
-          "lon": 12.335623,
-          "nota": ""
-        },
-        {
-          "n": 33,
+          "n": 24,
           "nome": "Viewpoint",
           "zona": "San Marco",
           "tipo": "spot",
@@ -778,7 +697,7 @@
           "nota": ""
         },
         {
-          "n": 34,
+          "n": 25,
           "nome": "Viewpoint",
           "zona": "San Marco",
           "tipo": "spot",
@@ -787,7 +706,7 @@
           "nota": ""
         },
         {
-          "n": 35,
+          "n": 26,
           "nome": "Viewpoint",
           "zona": "San Marco",
           "tipo": "spot",
@@ -796,16 +715,7 @@
           "nota": ""
         },
         {
-          "n": 36,
-          "nome": "Viewpoint near Ponte del Teatro",
-          "zona": "San Marco",
-          "tipo": "spot",
-          "lat": 45.435331,
-          "lon": 12.334155,
-          "nota": ""
-        },
-        {
-          "n": 37,
+          "n": 27,
           "nome": "Viewpoint",
           "zona": "San Marco",
           "tipo": "spot",
@@ -814,7 +724,7 @@
           "nota": ""
         },
         {
-          "n": 38,
+          "n": 28,
           "nome": "Viewpoint",
           "zona": "San Marco",
           "tipo": "spot",
@@ -823,7 +733,43 @@
           "nota": ""
         },
         {
-          "n": 39,
+          "n": 29,
+          "nome": "Viewpoint near Chiesa di San Giacomo di Rialto",
+          "zona": "San Marco",
+          "tipo": "spot",
+          "lat": 45.438513,
+          "lon": 12.335644,
+          "nota": ""
+        },
+        {
+          "n": 30,
+          "nome": "Viewpoint near Chiesa di San Giacomo di Rialto",
+          "zona": "San Marco",
+          "tipo": "spot",
+          "lat": 45.438841,
+          "lon": 12.335623,
+          "nota": ""
+        },
+        {
+          "n": 31,
+          "nome": "Viewpoint near Ponte del Teatro",
+          "zona": "San Marco",
+          "tipo": "spot",
+          "lat": 45.435331,
+          "lon": 12.334155,
+          "nota": ""
+        },
+        {
+          "n": 32,
+          "nome": "Viewpoint near Spada",
+          "zona": "San Marco",
+          "tipo": "spot",
+          "lat": 45.4339,
+          "lon": 12.334891,
+          "nota": ""
+        },
+        {
+          "n": 33,
           "nome": "Pasticceria Al Theatro",
           "zona": "San Marco",
           "tipo": "pausa",
@@ -832,7 +778,7 @@
           "nota": ""
         },
         {
-          "n": 40,
+          "n": 34,
           "nome": "Basilica di Santa Maria della Salute",
           "zona": "Dorsoduro",
           "tipo": "spot",
@@ -841,322 +787,7 @@
           "nota": ""
         },
         {
-          "n": 41,
-          "nome": "Campo drio il Cimitero",
-          "zona": "Dorsoduro",
-          "tipo": "spot",
-          "lat": 45.432041,
-          "lon": 12.319791,
-          "nota": ""
-        },
-        {
-          "n": 42,
-          "nome": "Chiesa Parrocchiale di Santa Maria del Carmelo (Ai Carmini)",
-          "zona": "Dorsoduro",
-          "tipo": "spot",
-          "lat": 45.433616,
-          "lon": 12.322128,
-          "nota": ""
-        },
-        {
-          "n": 43,
-          "nome": "Fondamenta Zattere Allo Spirito Santo",
-          "zona": "Dorsoduro",
-          "tipo": "spot",
-          "lat": 45.428413,
-          "lon": 12.331931,
-          "nota": ""
-        },
-        {
-          "n": 44,
-          "nome": "Fondamenta de la Pescheria, 1749",
-          "zona": "Dorsoduro",
-          "tipo": "spot",
-          "lat": 45.432508,
-          "lon": 12.318464,
-          "nota": ""
-        },
-        {
-          "n": 45,
-          "nome": "PONTE S BARNABA",
-          "zona": "Dorsoduro",
-          "tipo": "spot",
-          "lat": 45.433249,
-          "lon": 12.325233,
-          "nota": ""
-        },
-        {
-          "n": 46,
-          "nome": "Ponte Lombardo",
-          "zona": "Dorsoduro",
-          "tipo": "spot",
-          "lat": 45.432551,
-          "lon": 12.325153,
-          "nota": ""
-        },
-        {
-          "n": 47,
-          "nome": "Ponte Longo",
-          "zona": "Dorsoduro",
-          "tipo": "spot",
-          "lat": 45.429655,
-          "lon": 12.32561,
-          "nota": ""
-        },
-        {
-          "n": 48,
-          "nome": "Ponte Maria Callas",
-          "zona": "Dorsoduro",
-          "tipo": "spot",
-          "lat": 45.433224,
-          "lon": 12.333315,
-          "nota": ""
-        },
-        {
-          "n": 49,
-          "nome": "Ponte S. Trovaso",
-          "zona": "Dorsoduro",
-          "tipo": "spot",
-          "lat": 45.430974,
-          "lon": 12.326576,
-          "nota": ""
-        },
-        {
-          "n": 50,
-          "nome": "Ponte Zaguri",
-          "zona": "Dorsoduro",
-          "tipo": "spot",
-          "lat": 45.432699,
-          "lon": 12.332281,
-          "nota": ""
-        },
-        {
-          "n": 51,
-          "nome": "Ponte de Ca' Balà",
-          "zona": "Dorsoduro",
-          "tipo": "spot",
-          "lat": 45.428551,
-          "lon": 12.332882,
-          "nota": ""
-        },
-        {
-          "n": 52,
-          "nome": "Ponte de San Basegio",
-          "zona": "Dorsoduro",
-          "tipo": "spot",
-          "lat": 45.431315,
-          "lon": 12.32059,
-          "nota": ""
-        },
-        {
-          "n": 53,
-          "nome": "Ponte de la Scoazzera",
-          "zona": "Dorsoduro",
-          "tipo": "spot",
-          "lat": 45.43026,
-          "lon": 12.325429,
-          "nota": ""
-        },
-        {
-          "n": 54,
-          "nome": "Ponte dei Pugni",
-          "zona": "Dorsoduro",
-          "tipo": "spot",
-          "lat": 45.433168,
-          "lon": 12.324369,
-          "nota": ""
-        },
-        {
-          "n": 55,
-          "nome": "Ponte del Formager",
-          "zona": "Dorsoduro",
-          "tipo": "spot",
-          "lat": 45.43037,
-          "lon": 12.330773,
-          "nota": ""
-        },
-        {
-          "n": 56,
-          "nome": "Ponte del Socorso",
-          "zona": "Dorsoduro",
-          "tipo": "spot",
-          "lat": 45.433302,
-          "lon": 12.320117,
-          "nota": ""
-        },
-        {
-          "n": 57,
-          "nome": "Ponte dell'Accademia",
-          "zona": "Dorsoduro",
-          "tipo": "spot",
-          "lat": 45.431669,
-          "lon": 12.328917,
-          "nota": ""
-        },
-        {
-          "n": 58,
-          "nome": "Squero di San Trovaso",
-          "zona": "Dorsoduro",
-          "tipo": "spot",
-          "lat": 45.430271,
-          "lon": 12.325889,
-          "nota": ""
-        },
-        {
-          "n": 59,
-          "nome": "Viewpoint",
-          "zona": "Dorsoduro",
-          "tipo": "spot",
-          "lat": 45.425488,
-          "lon": 12.33411,
-          "nota": ""
-        },
-        {
-          "n": 60,
-          "nome": "Viewpoint",
-          "zona": "Dorsoduro",
-          "tipo": "spot",
-          "lat": 45.426962,
-          "lon": 12.323994,
-          "nota": ""
-        },
-        {
-          "n": 61,
-          "nome": "Viewpoint",
-          "zona": "Dorsoduro",
-          "tipo": "spot",
-          "lat": 45.429755,
-          "lon": 12.329202,
-          "nota": ""
-        },
-        {
-          "n": 62,
-          "nome": "Viewpoint",
-          "zona": "Dorsoduro",
-          "tipo": "spot",
-          "lat": 45.430348,
-          "lon": 12.332164,
-          "nota": ""
-        },
-        {
-          "n": 63,
-          "nome": "Viewpoint",
-          "zona": "Dorsoduro",
-          "tipo": "spot",
-          "lat": 45.430704,
-          "lon": 12.324377,
-          "nota": ""
-        },
-        {
-          "n": 64,
-          "nome": "Viewpoint",
-          "zona": "Dorsoduro",
-          "tipo": "spot",
-          "lat": 45.430713,
-          "lon": 12.332626,
-          "nota": ""
-        },
-        {
-          "n": 65,
-          "nome": "Viewpoint",
-          "zona": "Dorsoduro",
-          "tipo": "spot",
-          "lat": 45.432728,
-          "lon": 12.315411,
-          "nota": ""
-        },
-        {
-          "n": 66,
-          "nome": "Viewpoint near Ponte Maria Callas",
-          "zona": "Dorsoduro",
-          "tipo": "spot",
-          "lat": 45.433203,
-          "lon": 12.333006,
-          "nota": ""
-        },
-        {
-          "n": 67,
-          "nome": "Viewpoint",
-          "zona": "Dorsoduro",
-          "tipo": "spot",
-          "lat": 45.433446,
-          "lon": 12.335172,
-          "nota": ""
-        },
-        {
-          "n": 68,
-          "nome": "Viewpoint near Ponte Longo",
-          "zona": "Dorsoduro",
-          "tipo": "spot",
-          "lat": 45.429755,
-          "lon": 12.325842,
-          "nota": ""
-        },
-        {
-          "n": 69,
-          "nome": "Viewpoint near Ponte de San Basegio",
-          "zona": "Dorsoduro",
-          "tipo": "spot",
-          "lat": 45.430909,
-          "lon": 12.320918,
-          "nota": ""
-        },
-        {
-          "n": 70,
-          "nome": "Viewpoint near Fondamenta de la Pescheria, 1749",
-          "zona": "Dorsoduro",
-          "tipo": "spot",
-          "lat": 45.43219,
-          "lon": 12.319021,
-          "nota": ""
-        },
-        {
-          "n": 71,
-          "nome": "Viewpoint near Fondamenta de la Pescheria, 1749",
-          "zona": "Dorsoduro",
-          "tipo": "spot",
-          "lat": 45.432666,
-          "lon": 12.318743,
-          "nota": ""
-        },
-        {
-          "n": 72,
-          "nome": "Viewpoint near Ponte del Socorso",
-          "zona": "Dorsoduro",
-          "tipo": "spot",
-          "lat": 45.432969,
-          "lon": 12.319555,
-          "nota": ""
-        },
-        {
-          "n": 73,
-          "nome": "Viewpoint",
-          "zona": "Dorsoduro",
-          "tipo": "spot",
-          "lat": 45.431501,
-          "lon": 12.332671,
-          "nota": "Farlo dopo tramonto da San Marco o l’ultimo giorno"
-        },
-        {
-          "n": 74,
-          "nome": "Viewpoint",
-          "zona": "Dorsoduro",
-          "tipo": "spot",
-          "lat": 45.429247,
-          "lon": 12.328999,
-          "nota": ""
-        },
-        {
-          "n": 75,
-          "nome": "Viewpoint",
-          "zona": "Dorsoduro",
-          "tipo": "spot",
-          "lat": 45.433745,
-          "lon": 12.333983,
-          "nota": ""
-        },
-        {
-          "n": 76,
+          "n": 35,
           "nome": "C. de l'Abazia, 172",
           "zona": "Dorsoduro",
           "tipo": "spot",
@@ -1165,7 +796,7 @@
           "nota": ""
         },
         {
-          "n": 77,
+          "n": 36,
           "nome": "Calle Avogaria, 1584",
           "zona": "Dorsoduro",
           "tipo": "spot",
@@ -1174,7 +805,7 @@
           "nota": ""
         },
         {
-          "n": 78,
+          "n": 37,
           "nome": "Calle Larga XXII Marzo, 2102",
           "zona": "Dorsoduro",
           "tipo": "spot",
@@ -1183,7 +814,25 @@
           "nota": "Via con chiesa"
         },
         {
-          "n": 79,
+          "n": 38,
+          "nome": "Campo drio il Cimitero",
+          "zona": "Dorsoduro",
+          "tipo": "spot",
+          "lat": 45.432041,
+          "lon": 12.319791,
+          "nota": ""
+        },
+        {
+          "n": 39,
+          "nome": "Chiesa Parrocchiale di Santa Maria del Carmelo (Ai Carmini)",
+          "zona": "Dorsoduro",
+          "tipo": "spot",
+          "lat": 45.433616,
+          "lon": 12.322128,
+          "nota": ""
+        },
+        {
+          "n": 40,
           "nome": "Fondamenta Briati, 2389-2385",
           "zona": "Dorsoduro",
           "tipo": "spot",
@@ -1192,7 +841,142 @@
           "nota": ""
         },
         {
-          "n": 80,
+          "n": 41,
+          "nome": "Fondamenta Zattere Allo Spirito Santo",
+          "zona": "Dorsoduro",
+          "tipo": "spot",
+          "lat": 45.428413,
+          "lon": 12.331931,
+          "nota": ""
+        },
+        {
+          "n": 42,
+          "nome": "Fondamenta de la Pescheria, 1749",
+          "zona": "Dorsoduro",
+          "tipo": "spot",
+          "lat": 45.432508,
+          "lon": 12.318464,
+          "nota": ""
+        },
+        {
+          "n": 43,
+          "nome": "PONTE S BARNABA",
+          "zona": "Dorsoduro",
+          "tipo": "spot",
+          "lat": 45.433249,
+          "lon": 12.325233,
+          "nota": ""
+        },
+        {
+          "n": 44,
+          "nome": "Ponte Lombardo",
+          "zona": "Dorsoduro",
+          "tipo": "spot",
+          "lat": 45.432551,
+          "lon": 12.325153,
+          "nota": ""
+        },
+        {
+          "n": 45,
+          "nome": "Ponte Longo",
+          "zona": "Dorsoduro",
+          "tipo": "spot",
+          "lat": 45.429655,
+          "lon": 12.32561,
+          "nota": ""
+        },
+        {
+          "n": 46,
+          "nome": "Ponte Maria Callas",
+          "zona": "Dorsoduro",
+          "tipo": "spot",
+          "lat": 45.433224,
+          "lon": 12.333315,
+          "nota": ""
+        },
+        {
+          "n": 47,
+          "nome": "Ponte S. Trovaso",
+          "zona": "Dorsoduro",
+          "tipo": "spot",
+          "lat": 45.430974,
+          "lon": 12.326576,
+          "nota": ""
+        },
+        {
+          "n": 48,
+          "nome": "Ponte Zaguri",
+          "zona": "Dorsoduro",
+          "tipo": "spot",
+          "lat": 45.432699,
+          "lon": 12.332281,
+          "nota": ""
+        },
+        {
+          "n": 49,
+          "nome": "Ponte de Ca' Balà",
+          "zona": "Dorsoduro",
+          "tipo": "spot",
+          "lat": 45.428551,
+          "lon": 12.332882,
+          "nota": ""
+        },
+        {
+          "n": 50,
+          "nome": "Ponte de San Basegio",
+          "zona": "Dorsoduro",
+          "tipo": "spot",
+          "lat": 45.431315,
+          "lon": 12.32059,
+          "nota": ""
+        },
+        {
+          "n": 51,
+          "nome": "Ponte de la Scoazzera",
+          "zona": "Dorsoduro",
+          "tipo": "spot",
+          "lat": 45.43026,
+          "lon": 12.325429,
+          "nota": ""
+        },
+        {
+          "n": 52,
+          "nome": "Ponte dei Pugni",
+          "zona": "Dorsoduro",
+          "tipo": "spot",
+          "lat": 45.433168,
+          "lon": 12.324369,
+          "nota": ""
+        },
+        {
+          "n": 53,
+          "nome": "Ponte del Formager",
+          "zona": "Dorsoduro",
+          "tipo": "spot",
+          "lat": 45.43037,
+          "lon": 12.330773,
+          "nota": ""
+        },
+        {
+          "n": 54,
+          "nome": "Ponte del Socorso",
+          "zona": "Dorsoduro",
+          "tipo": "spot",
+          "lat": 45.433302,
+          "lon": 12.320117,
+          "nota": ""
+        },
+        {
+          "n": 55,
+          "nome": "Ponte dell'Accademia",
+          "zona": "Dorsoduro",
+          "tipo": "spot",
+          "lat": 45.431669,
+          "lon": 12.328917,
+          "nota": ""
+        },
+        {
+          "n": 56,
           "nome": "Rio Terrà dei Catecumeni, 120",
           "zona": "Dorsoduro",
           "tipo": "spot",
@@ -1201,7 +985,169 @@
           "nota": ""
         },
         {
-          "n": 81,
+          "n": 57,
+          "nome": "Squero di San Trovaso",
+          "zona": "Dorsoduro",
+          "tipo": "spot",
+          "lat": 45.430271,
+          "lon": 12.325889,
+          "nota": ""
+        },
+        {
+          "n": 58,
+          "nome": "Viewpoint",
+          "zona": "Dorsoduro",
+          "tipo": "spot",
+          "lat": 45.425488,
+          "lon": 12.33411,
+          "nota": ""
+        },
+        {
+          "n": 59,
+          "nome": "Viewpoint",
+          "zona": "Dorsoduro",
+          "tipo": "spot",
+          "lat": 45.426962,
+          "lon": 12.323994,
+          "nota": ""
+        },
+        {
+          "n": 60,
+          "nome": "Viewpoint",
+          "zona": "Dorsoduro",
+          "tipo": "spot",
+          "lat": 45.429755,
+          "lon": 12.329202,
+          "nota": ""
+        },
+        {
+          "n": 61,
+          "nome": "Viewpoint",
+          "zona": "Dorsoduro",
+          "tipo": "spot",
+          "lat": 45.430348,
+          "lon": 12.332164,
+          "nota": ""
+        },
+        {
+          "n": 62,
+          "nome": "Viewpoint",
+          "zona": "Dorsoduro",
+          "tipo": "spot",
+          "lat": 45.430704,
+          "lon": 12.324377,
+          "nota": ""
+        },
+        {
+          "n": 63,
+          "nome": "Viewpoint",
+          "zona": "Dorsoduro",
+          "tipo": "spot",
+          "lat": 45.430713,
+          "lon": 12.332626,
+          "nota": ""
+        },
+        {
+          "n": 64,
+          "nome": "Viewpoint",
+          "zona": "Dorsoduro",
+          "tipo": "spot",
+          "lat": 45.432728,
+          "lon": 12.315411,
+          "nota": ""
+        },
+        {
+          "n": 65,
+          "nome": "Viewpoint",
+          "zona": "Dorsoduro",
+          "tipo": "spot",
+          "lat": 45.433446,
+          "lon": 12.335172,
+          "nota": ""
+        },
+        {
+          "n": 66,
+          "nome": "Viewpoint",
+          "zona": "Dorsoduro",
+          "tipo": "spot",
+          "lat": 45.431501,
+          "lon": 12.332671,
+          "nota": "Farlo dopo tramonto da San Marco o l’ultimo giorno"
+        },
+        {
+          "n": 67,
+          "nome": "Viewpoint",
+          "zona": "Dorsoduro",
+          "tipo": "spot",
+          "lat": 45.429247,
+          "lon": 12.328999,
+          "nota": ""
+        },
+        {
+          "n": 68,
+          "nome": "Viewpoint",
+          "zona": "Dorsoduro",
+          "tipo": "spot",
+          "lat": 45.433745,
+          "lon": 12.333983,
+          "nota": ""
+        },
+        {
+          "n": 69,
+          "nome": "Viewpoint near Fondamenta de la Pescheria, 1749",
+          "zona": "Dorsoduro",
+          "tipo": "spot",
+          "lat": 45.43219,
+          "lon": 12.319021,
+          "nota": ""
+        },
+        {
+          "n": 70,
+          "nome": "Viewpoint near Fondamenta de la Pescheria, 1749",
+          "zona": "Dorsoduro",
+          "tipo": "spot",
+          "lat": 45.432666,
+          "lon": 12.318743,
+          "nota": ""
+        },
+        {
+          "n": 71,
+          "nome": "Viewpoint near Ponte Longo",
+          "zona": "Dorsoduro",
+          "tipo": "spot",
+          "lat": 45.429755,
+          "lon": 12.325842,
+          "nota": ""
+        },
+        {
+          "n": 72,
+          "nome": "Viewpoint near Ponte Maria Callas",
+          "zona": "Dorsoduro",
+          "tipo": "spot",
+          "lat": 45.433203,
+          "lon": 12.333006,
+          "nota": ""
+        },
+        {
+          "n": 73,
+          "nome": "Viewpoint near Ponte de San Basegio",
+          "zona": "Dorsoduro",
+          "tipo": "spot",
+          "lat": 45.430909,
+          "lon": 12.320918,
+          "nota": ""
+        },
+        {
+          "n": 74,
+          "nome": "Viewpoint near Ponte del Socorso",
+          "zona": "Dorsoduro",
+          "tipo": "spot",
+          "lat": 45.432969,
+          "lon": 12.319555,
+          "nota": ""
+        },
+        {
+          "n": 75,
           "nome": "Caffè Poggi dal 1919",
           "zona": "Dorsoduro",
           "tipo": "pausa",
@@ -1210,7 +1156,25 @@
           "nota": "Per cappuccino post pranzo"
         },
         {
-          "n": 82,
+          "n": 76,
+          "nome": "C. de le Oche",
+          "zona": "San Polo / Santa Croce",
+          "tipo": "spot",
+          "lat": 45.439321,
+          "lon": 12.327298,
+          "nota": ""
+        },
+        {
+          "n": 77,
+          "nome": "Campiello de Ca' Zen, 2590",
+          "zona": "San Polo / Santa Croce",
+          "tipo": "spot",
+          "lat": 45.437163,
+          "lon": 12.327447,
+          "nota": ""
+        },
+        {
+          "n": 78,
           "nome": "Fondamenta de la Frescada",
           "zona": "San Polo / Santa Croce",
           "tipo": "spot",
@@ -1219,7 +1183,7 @@
           "nota": ""
         },
         {
-          "n": 83,
+          "n": 79,
           "nome": "Ponte Canal",
           "zona": "San Polo / Santa Croce",
           "tipo": "spot",
@@ -1228,7 +1192,7 @@
           "nota": ""
         },
         {
-          "n": 84,
+          "n": 80,
           "nome": "Ponte San Boldo",
           "zona": "San Polo / Santa Croce",
           "tipo": "spot",
@@ -1237,7 +1201,7 @@
           "nota": ""
         },
         {
-          "n": 85,
+          "n": 81,
           "nome": "Ponte San Polo",
           "zona": "San Polo / Santa Croce",
           "tipo": "spot",
@@ -1246,7 +1210,7 @@
           "nota": ""
         },
         {
-          "n": 86,
+          "n": 82,
           "nome": "Ponte Santa Maria Mater Domini",
           "zona": "San Polo / Santa Croce",
           "tipo": "spot",
@@ -1255,7 +1219,7 @@
           "nota": ""
         },
         {
-          "n": 87,
+          "n": 83,
           "nome": "Ponte Storto",
           "zona": "San Polo / Santa Croce",
           "tipo": "spot",
@@ -1264,7 +1228,7 @@
           "nota": "Spot di Porzioli"
         },
         {
-          "n": 88,
+          "n": 84,
           "nome": "Ponte de Ca' Donà",
           "zona": "San Polo / Santa Croce",
           "tipo": "spot",
@@ -1273,7 +1237,7 @@
           "nota": ""
         },
         {
-          "n": 89,
+          "n": 85,
           "nome": "Ponte de L'Anatomia",
           "zona": "San Polo / Santa Croce",
           "tipo": "spot",
@@ -1282,7 +1246,7 @@
           "nota": ""
         },
         {
-          "n": 90,
+          "n": 86,
           "nome": "Ponte de L’Agnella",
           "zona": "San Polo / Santa Croce",
           "tipo": "spot",
@@ -1291,7 +1255,7 @@
           "nota": ""
         },
         {
-          "n": 91,
+          "n": 87,
           "nome": "Ponte de le Sechere",
           "zona": "San Polo / Santa Croce",
           "tipo": "spot",
@@ -1300,7 +1264,7 @@
           "nota": ""
         },
         {
-          "n": 92,
+          "n": 88,
           "nome": "Ponte del Gaffaro",
           "zona": "San Polo / Santa Croce",
           "tipo": "spot",
@@ -1309,7 +1273,7 @@
           "nota": ""
         },
         {
-          "n": 93,
+          "n": 89,
           "nome": "Ponte del Savio",
           "zona": "San Polo / Santa Croce",
           "tipo": "spot",
@@ -1318,7 +1282,7 @@
           "nota": ""
         },
         {
-          "n": 94,
+          "n": 90,
           "nome": "Ponte del Teatro",
           "zona": "San Polo / Santa Croce",
           "tipo": "spot",
@@ -1327,7 +1291,7 @@
           "nota": ""
         },
         {
-          "n": 95,
+          "n": 91,
           "nome": "Ponte della Costituzione",
           "zona": "San Polo / Santa Croce",
           "tipo": "spot",
@@ -1336,7 +1300,16 @@
           "nota": ""
         },
         {
-          "n": 96,
+          "n": 92,
+          "nome": "Sestiere San Polo, 2604/a/b",
+          "zona": "San Polo / Santa Croce",
+          "tipo": "spot",
+          "lat": 45.436969,
+          "lon": 12.327696,
+          "nota": ""
+        },
+        {
+          "n": 93,
           "nome": "Sotoportego Zane",
           "zona": "San Polo / Santa Croce",
           "tipo": "spot",
@@ -1345,7 +1318,7 @@
           "nota": ""
         },
         {
-          "n": 97,
+          "n": 94,
           "nome": "Viewpoint",
           "zona": "San Polo / Santa Croce",
           "tipo": "spot",
@@ -1354,7 +1327,7 @@
           "nota": ""
         },
         {
-          "n": 98,
+          "n": 95,
           "nome": "Viewpoint",
           "zona": "San Polo / Santa Croce",
           "tipo": "spot",
@@ -1363,7 +1336,7 @@
           "nota": ""
         },
         {
-          "n": 99,
+          "n": 96,
           "nome": "Viewpoint",
           "zona": "San Polo / Santa Croce",
           "tipo": "spot",
@@ -1372,7 +1345,7 @@
           "nota": ""
         },
         {
-          "n": 100,
+          "n": 97,
           "nome": "Viewpoint",
           "zona": "San Polo / Santa Croce",
           "tipo": "spot",
@@ -1381,7 +1354,7 @@
           "nota": ""
         },
         {
-          "n": 101,
+          "n": 98,
           "nome": "Viewpoint",
           "zona": "San Polo / Santa Croce",
           "tipo": "spot",
@@ -1390,7 +1363,7 @@
           "nota": "Ponte Bernardo"
         },
         {
-          "n": 102,
+          "n": 99,
           "nome": "Viewpoint",
           "zona": "San Polo / Santa Croce",
           "tipo": "spot",
@@ -1399,12 +1372,39 @@
           "nota": ""
         },
         {
-          "n": 103,
+          "n": 100,
           "nome": "Viewpoint",
           "zona": "San Polo / Santa Croce",
           "tipo": "spot",
           "lat": 45.439716,
           "lon": 12.333649,
+          "nota": ""
+        },
+        {
+          "n": 101,
+          "nome": "Viewpoint",
+          "zona": "San Polo / Santa Croce",
+          "tipo": "spot",
+          "lat": 45.436642,
+          "lon": 12.325784,
+          "nota": "Chiesetta"
+        },
+        {
+          "n": 102,
+          "nome": "Viewpoint near Ponte Canal",
+          "zona": "San Polo / Santa Croce",
+          "tipo": "spot",
+          "lat": 45.43868,
+          "lon": 12.324143,
+          "nota": ""
+        },
+        {
+          "n": 103,
+          "nome": "Viewpoint near Ponte San Boldo",
+          "zona": "San Polo / Santa Croce",
+          "tipo": "spot",
+          "lat": 45.439485,
+          "lon": 12.329105,
           "nota": ""
         },
         {
@@ -1427,60 +1427,6 @@
         },
         {
           "n": 106,
-          "nome": "Viewpoint near Ponte San Boldo",
-          "zona": "San Polo / Santa Croce",
-          "tipo": "spot",
-          "lat": 45.439485,
-          "lon": 12.329105,
-          "nota": ""
-        },
-        {
-          "n": 107,
-          "nome": "Viewpoint near Ponte Canal",
-          "zona": "San Polo / Santa Croce",
-          "tipo": "spot",
-          "lat": 45.43868,
-          "lon": 12.324143,
-          "nota": ""
-        },
-        {
-          "n": 108,
-          "nome": "Viewpoint",
-          "zona": "San Polo / Santa Croce",
-          "tipo": "spot",
-          "lat": 45.436642,
-          "lon": 12.325784,
-          "nota": "Chiesetta"
-        },
-        {
-          "n": 109,
-          "nome": "C. de le Oche",
-          "zona": "San Polo / Santa Croce",
-          "tipo": "spot",
-          "lat": 45.439321,
-          "lon": 12.327298,
-          "nota": ""
-        },
-        {
-          "n": 110,
-          "nome": "Campiello de Ca' Zen, 2590",
-          "zona": "San Polo / Santa Croce",
-          "tipo": "spot",
-          "lat": 45.437163,
-          "lon": 12.327447,
-          "nota": ""
-        },
-        {
-          "n": 111,
-          "nome": "Sestiere San Polo, 2604/a/b",
-          "zona": "San Polo / Santa Croce",
-          "tipo": "spot",
-          "lat": 45.436969,
-          "lon": 12.327696,
-          "nota": ""
-        },
-        {
-          "n": 112,
           "nome": "Ravioleria",
           "zona": "San Polo / Santa Croce",
           "tipo": "pausa",
@@ -1489,7 +1435,7 @@
           "nota": ""
         },
         {
-          "n": 113,
+          "n": 107,
           "nome": "Campo San Geremia",
           "zona": "Cannaregio",
           "tipo": "spot",
@@ -1498,7 +1444,7 @@
           "nota": ""
         },
         {
-          "n": 114,
+          "n": 108,
           "nome": "F.te Nove \"A\"",
           "zona": "Cannaregio",
           "tipo": "spot",
@@ -1507,7 +1453,7 @@
           "nota": "Partenza burano"
         },
         {
-          "n": 115,
+          "n": 109,
           "nome": "Ghetto Ebraico",
           "zona": "Cannaregio",
           "tipo": "spot",
@@ -1516,7 +1462,7 @@
           "nota": ""
         },
         {
-          "n": 116,
+          "n": 110,
           "nome": "Ponte Bembo",
           "zona": "Cannaregio",
           "tipo": "spot",
@@ -1525,7 +1471,7 @@
           "nota": ""
         },
         {
-          "n": 117,
+          "n": 111,
           "nome": "Ponte Corer",
           "zona": "Cannaregio",
           "tipo": "spot",
@@ -1534,7 +1480,7 @@
           "nota": ""
         },
         {
-          "n": 118,
+          "n": 112,
           "nome": "Ponte Diedo",
           "zona": "Cannaregio",
           "tipo": "spot",
@@ -1543,7 +1489,7 @@
           "nota": ""
         },
         {
-          "n": 119,
+          "n": 113,
           "nome": "Ponte Nicolò Pasqualigo",
           "zona": "Cannaregio",
           "tipo": "spot",
@@ -1552,7 +1498,7 @@
           "nota": ""
         },
         {
-          "n": 120,
+          "n": 114,
           "nome": "Ponte Santa Fosca",
           "zona": "Cannaregio",
           "tipo": "spot",
@@ -1561,7 +1507,7 @@
           "nota": ""
         },
         {
-          "n": 121,
+          "n": 115,
           "nome": "Ponte degli Scalzi",
           "zona": "Cannaregio",
           "tipo": "spot",
@@ -1570,7 +1516,16 @@
           "nota": ""
         },
         {
-          "n": 122,
+          "n": 116,
+          "nome": "Ponte del Volto",
+          "zona": "Cannaregio",
+          "tipo": "spot",
+          "lat": 45.439893,
+          "lon": 12.339559,
+          "nota": ""
+        },
+        {
+          "n": 117,
           "nome": "Ponte della Misericordia",
           "zona": "Cannaregio",
           "tipo": "spot",
@@ -1579,7 +1534,7 @@
           "nota": ""
         },
         {
-          "n": 123,
+          "n": 118,
           "nome": "Ponte delle Guglie",
           "zona": "Cannaregio",
           "tipo": "spot",
@@ -1588,16 +1543,16 @@
           "nota": ""
         },
         {
-          "n": 124,
-          "nome": "Viewpoint near Ponte degli Scalzi",
+          "n": 119,
+          "nome": "Ramo del Campaniel",
           "zona": "Cannaregio",
           "tipo": "spot",
-          "lat": 45.440737,
-          "lon": 12.322567,
+          "lat": 45.440071,
+          "lon": 12.338925,
           "nota": ""
         },
         {
-          "n": 125,
+          "n": 120,
           "nome": "Viewpoint",
           "zona": "Cannaregio",
           "tipo": "spot",
@@ -1606,25 +1561,7 @@
           "nota": ""
         },
         {
-          "n": 126,
-          "nome": "Viewpoint near Ponte Bembo",
-          "zona": "Cannaregio",
-          "tipo": "spot",
-          "lat": 45.44156,
-          "lon": 12.327676,
-          "nota": ""
-        },
-        {
-          "n": 127,
-          "nome": "Viewpoint near Ponte Diedo",
-          "zona": "Cannaregio",
-          "tipo": "spot",
-          "lat": 45.443286,
-          "lon": 12.331532,
-          "nota": ""
-        },
-        {
-          "n": 128,
+          "n": 121,
           "nome": "Viewpoint",
           "zona": "Cannaregio",
           "tipo": "spot",
@@ -1633,7 +1570,7 @@
           "nota": ""
         },
         {
-          "n": 129,
+          "n": 122,
           "nome": "Viewpoint",
           "zona": "Cannaregio",
           "tipo": "spot",
@@ -1642,7 +1579,7 @@
           "nota": ""
         },
         {
-          "n": 130,
+          "n": 123,
           "nome": "Viewpoint",
           "zona": "Cannaregio",
           "tipo": "spot",
@@ -1651,7 +1588,7 @@
           "nota": ""
         },
         {
-          "n": 131,
+          "n": 124,
           "nome": "Viewpoint",
           "zona": "Cannaregio",
           "tipo": "spot",
@@ -1660,7 +1597,34 @@
           "nota": ""
         },
         {
-          "n": 132,
+          "n": 125,
+          "nome": "Viewpoint near Ponte Bembo",
+          "zona": "Cannaregio",
+          "tipo": "spot",
+          "lat": 45.44156,
+          "lon": 12.327676,
+          "nota": ""
+        },
+        {
+          "n": 126,
+          "nome": "Viewpoint near Ponte Diedo",
+          "zona": "Cannaregio",
+          "tipo": "spot",
+          "lat": 45.443286,
+          "lon": 12.331532,
+          "nota": ""
+        },
+        {
+          "n": 127,
+          "nome": "Viewpoint near Ponte degli Scalzi",
+          "zona": "Cannaregio",
+          "tipo": "spot",
+          "lat": 45.440737,
+          "lon": 12.322567,
+          "nota": ""
+        },
+        {
+          "n": 128,
           "nome": "Zikiya",
           "zona": "Cannaregio",
           "tipo": "pausa",
@@ -1669,7 +1633,7 @@
           "nota": ""
         },
         {
-          "n": 133,
+          "n": 129,
           "nome": "Arsenale di Venezia",
           "zona": "Castello",
           "tipo": "spot",
@@ -1678,7 +1642,16 @@
           "nota": ""
         },
         {
-          "n": 134,
+          "n": 130,
+          "nome": "Basilica dei Santi Giovanni e Paolo",
+          "zona": "Castello",
+          "tipo": "spot",
+          "lat": 45.439379,
+          "lon": 12.341713,
+          "nota": ""
+        },
+        {
+          "n": 131,
           "nome": "Basilica di San Pietro di Castello",
           "zona": "Castello",
           "tipo": "spot",
@@ -1687,7 +1660,7 @@
           "nota": ""
         },
         {
-          "n": 135,
+          "n": 132,
           "nome": "Giardino della Marinaressa",
           "zona": "Castello",
           "tipo": "spot",
@@ -1696,7 +1669,7 @@
           "nota": ""
         },
         {
-          "n": 136,
+          "n": 133,
           "nome": "Ponte",
           "zona": "Castello",
           "tipo": "spot",
@@ -1705,7 +1678,7 @@
           "nota": ""
         },
         {
-          "n": 137,
+          "n": 134,
           "nome": "Ponte Lion",
           "zona": "Castello",
           "tipo": "spot",
@@ -1714,7 +1687,16 @@
           "nota": ""
         },
         {
-          "n": 138,
+          "n": 135,
+          "nome": "Ponte Minich",
+          "zona": "Castello",
+          "tipo": "spot",
+          "lat": 45.43842,
+          "lon": 12.341632,
+          "nota": ""
+        },
+        {
+          "n": 136,
           "nome": "Ponte de l'Ospealeto",
           "zona": "Castello",
           "tipo": "spot",
@@ -1723,12 +1705,30 @@
           "nota": ""
         },
         {
-          "n": 139,
+          "n": 137,
           "nome": "Ponte de la Comenda",
           "zona": "Castello",
           "tipo": "spot",
           "lat": 45.436136,
           "lon": 12.345823,
+          "nota": ""
+        },
+        {
+          "n": 138,
+          "nome": "Ponte dei Conzafelzi",
+          "zona": "Castello",
+          "tipo": "spot",
+          "lat": 45.438351,
+          "lon": 12.342119,
+          "nota": ""
+        },
+        {
+          "n": 139,
+          "nome": "Ponte della Paglia",
+          "zona": "Castello",
+          "tipo": "spot",
+          "lat": 45.433638,
+          "lon": 12.341012,
           "nota": ""
         },
         {
@@ -1769,24 +1769,6 @@
         },
         {
           "n": 144,
-          "nome": "Viewpoint near Ponte de la Comenda",
-          "zona": "Castello",
-          "tipo": "spot",
-          "lat": 45.435944,
-          "lon": 12.346,
-          "nota": ""
-        },
-        {
-          "n": 145,
-          "nome": "Viewpoint near Ponte de la Comenda",
-          "zona": "Castello",
-          "tipo": "spot",
-          "lat": 45.436086,
-          "lon": 12.345537,
-          "nota": ""
-        },
-        {
-          "n": 146,
           "nome": "Viewpoint",
           "zona": "Castello",
           "tipo": "spot",
@@ -1795,7 +1777,7 @@
           "nota": ""
         },
         {
-          "n": 147,
+          "n": 145,
           "nome": "Viewpoint",
           "zona": "Castello",
           "tipo": "spot",
@@ -1804,7 +1786,16 @@
           "nota": ""
         },
         {
-          "n": 148,
+          "n": 146,
+          "nome": "Viewpoint",
+          "zona": "Castello",
+          "tipo": "spot",
+          "lat": 45.434963,
+          "lon": 12.348436,
+          "nota": ""
+        },
+        {
+          "n": 147,
           "nome": "Viewpoint near Ponte de l'Ospealeto",
           "zona": "Castello",
           "tipo": "spot",
@@ -1813,12 +1804,21 @@
           "nota": ""
         },
         {
-          "n": 149,
-          "nome": "Viewpoint",
+          "n": 148,
+          "nome": "Viewpoint near Ponte de la Comenda",
           "zona": "Castello",
           "tipo": "spot",
-          "lat": 45.434963,
-          "lon": 12.348436,
+          "lat": 45.435944,
+          "lon": 12.346,
+          "nota": ""
+        },
+        {
+          "n": 149,
+          "nome": "Viewpoint near Ponte de la Comenda",
+          "zona": "Castello",
+          "tipo": "spot",
+          "lat": 45.436086,
+          "lon": 12.345537,
           "nota": ""
         },
         {
