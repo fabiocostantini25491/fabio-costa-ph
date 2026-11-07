@@ -566,7 +566,7 @@ const Spots = (() => {
     { id: "pass", title: "Pass it on", sub: "Sell or give away to travellers", cats: [], isNew: "2027-01-31" },
     { id: "places", title: "Places", sub: "Photo spots · Points of interest · Trekking", cats: ["spot", "trekking"] },
     { id: "essentials", title: "Essentials", sub: "Stay · Food & drink", cats: ["hotel", "restaurant"] },
-    { id: "community", title: "Community", sub: "Photographers · Local experts · Meetups · Trips", cats: [] },
+    { id: "community", title: "Community", sub: "Travellers · Local experts · Meetups · Trips", cats: [] },
     { id: "outdoors", title: "Outdoors", sub: "Workshops · Experiences", cats: ["workshop", "experience"] }
   ];
 
@@ -597,9 +597,9 @@ const Spots = (() => {
           <button type="button" class="sx-pass-cta" id="passAdd">🎁 Sell or give away something</button>`;
       }
       if (g.id === "community") {
-        if (guest || !commV) return lockItem("Photographers", "📷") + lockItem("Local experts", "🧭") + lockItem("Meetups", "👥") + lockItem("Trips", "🧭");
-        return `<button type="button" class="sx-item${showPhotographers ? " on" : ""}" id="showPh" aria-pressed="${showPhotographers}" style="--c:#c9a7ff"><span class="sx-ico">📷</span><span class="sx-name">Photographers</span><small>${profiles.filter(p => p.visible && p.on_map !== false && p.lat != null).length}</small><span class="sx-check" aria-hidden="true"></span></button>
-          <p class="sx-links"><button type="button" class="text-link" id="phList">List</button><button type="button" class="text-link" id="myProfile">${profiles.some(p => p.user_id === myUid()) ? "My photographer profile" : "Join the photographers' map"}</button>${nodiV && profiles.some(p => p.user_id === myUid()) ? `<button type="button" class="text-link" id="iPosted">📣 I just posted</button>` : ""}</p>
+        if (guest || !commV) return lockItem("Travellers", "🎒") + lockItem("Local experts", "🧭") + lockItem("Meetups", "👥") + lockItem("Trips", "🧭");
+        return `<button type="button" class="sx-item${showPhotographers ? " on" : ""}" id="showPh" aria-pressed="${showPhotographers}" style="--c:#c9a7ff"><span class="sx-ico">🎒</span><span class="sx-name">Travellers</span><small>${profiles.filter(p => p.visible && p.on_map !== false && p.lat != null).length}</small><span class="sx-check" aria-hidden="true"></span></button>
+          <p class="sx-links"><button type="button" class="text-link" id="phList">List</button><button type="button" class="text-link" id="myProfile">${profiles.some(p => p.user_id === myUid()) ? "My traveller profile" : "Join the travellers' map"}</button>${nodiV && profiles.some(p => p.user_id === myUid()) ? `<button type="button" class="text-link" id="iPosted">📣 I just posted</button>` : ""}</p>
           ${nodiV ? `<button type="button" class="sx-item" id="expList" style="--c:#ffd9a0"><span class="sx-ico">🧭</span><span class="sx-name">Local experts</span><small>${experts.size}</small><span class="sx-go" aria-hidden="true">›</span></button>` : ""}
           ${nodiV && myExpert() ? `<button type="button" class="sx-item" id="myArea" style="--c:#ffd9a0"><span class="sx-ico">🧭</span><span class="sx-name">My area</span><span class="sx-go" aria-hidden="true">›</span></button>` : ""}
           <button type="button" class="sx-item" id="meetList" style="--c:#ffd166"><span class="sx-ico">👥</span><span class="sx-name">Meetups</span><small>${upcomingMeetups().length}</small><span class="sx-go" aria-hidden="true">›</span></button>
@@ -1182,12 +1182,12 @@ const Spots = (() => {
         <button type="button" class="filter comm-btn${onlyFavs ? " active" : ""}" id="onlyFavs" aria-pressed="${onlyFavs}">♥ My spots <small>${favs.size}</small></button>
         <button type="button" class="filter comm-btn" id="meetList">👥 Meetups <small>${upcomingMeetups().length}</small></button>
         <button type="button" class="filter comm-btn" id="meetAdd">＋ Meetup</button>
-        <button type="button" class="filter comm-btn${showPhotographers ? " active" : ""}" id="showPh" aria-pressed="${showPhotographers}">📷 Photographers <small>${profiles.filter(p => p.visible && p.on_map !== false && p.lat != null).length}</small></button>
+        <button type="button" class="filter comm-btn${showPhotographers ? " active" : ""}" id="showPh" aria-pressed="${showPhotographers}">🎒 Travellers <small>${profiles.filter(p => p.visible && p.on_map !== false && p.lat != null).length}</small></button>
         <button type="button" class="text-link" id="phList">List</button>
         ${nodiV ? `<button type="button" class="filter comm-btn" id="expList">🧭 Local experts <small>${experts.size}</small></button>` : ""}
         ${nodiV && myExpert() ? `<button type="button" class="filter comm-btn xp-mine" id="myArea">🧭 My area</button>` : ""}
         ${nodiV && profiles.some(p => p.user_id === myUid()) ? `<button type="button" class="filter comm-btn" id="iPosted">📣 I just posted</button>` : ""}
-        <button type="button" class="text-link" id="myProfile">${profiles.some(p => p.user_id === myUid()) ? "My photographer profile" : "Join the photographers' map"}</button>
+        <button type="button" class="text-link" id="myProfile">${profiles.some(p => p.user_id === myUid()) ? "My traveller profile" : "Join the travellers' map"}</button>
       </div>` : ""}
       <p class="sx-switch-row"><button type="button" class="text-link sx-switch" id="sxToEarth">🌍 Try the new Earth view</button></p>
       <div class="spots-stage">
@@ -2551,7 +2551,7 @@ const Spots = (() => {
   function openPhotographers(onlyCo) {
     const list = profiles.filter(p => p.visible).sort((a, b) => (contribs.has(b.user_id) - contribs.has(a.user_id)) || a.display_name.localeCompare(b.display_name))
       .filter(p => !onlyCo || contribs.has(p.user_id));
-    const d = dlg("phListDialog", `<div class="import-body"><span class="eyebrow">Spots community</span><h2>📷 Photographers</h2>
+    const d = dlg("phListDialog", `<div class="import-body"><span class="eyebrow">Spots community</span><h2>🎒 Travellers</h2>
       <div class="gate-tabs"><button type="button" class="${onlyCo ? "" : "on"}" data-co="0">All</button><button type="button" class="${onlyCo ? "on" : ""}" data-co="1">${ICON_APERTURE} Contributors</button></div>
       <ul class="req-list">${list.map(p => `<li class="req-row${contribs.has(p.user_id) ? " co-row" : ""}"><div><b>${esc(p.display_name)}${coBadge(p.user_id)}${experts.has(p.user_id) ? ` <span class="xp-badge">🧭 ${esc(experts.get(p.user_id).area_name)}</span>` : ""}</b>
         <span>${p.base_name ? esc(p.base_name) : ""}${p.instagram ? ` · <a href="https://www.instagram.com/${encodeURIComponent(p.instagram)}/" target="_blank" rel="noopener">@${esc(p.instagram)}</a>` : ""}${p.website ? ` · <a href="${esc(p.website)}" target="_blank" rel="noopener">website</a>` : ""}${postFresh(p) ? ` · <a href="${esc(p.last_post_url)}" target="_blank" rel="noopener">📣 new post</a>` : ""}</span></div>
@@ -2580,8 +2580,8 @@ const Spots = (() => {
   function openPosted() {
     const me = profiles.find(p => p.user_id === myUid());
     if (!me) return openProfile();
-    const d = dlg("postedDialog", `<form class="import-body gate-form" novalidate><span class="eyebrow">Photographers' map</span><h2>📣 I just posted</h2>
-      <p class="gate-help left">Paste the link of your new Instagram post: your icon on the photographers' map glows for 24 hours and stays visible even when members zoom out.</p>
+    const d = dlg("postedDialog", `<form class="import-body gate-form" novalidate><span class="eyebrow">Travellers' map</span><h2>📣 I just posted</h2>
+      <p class="gate-help left">Paste the link of your new Instagram post: your icon on the travellers' map glows for 24 hours and stays visible even when members zoom out.</p>
       <input id="igPost" type="url" placeholder="https://www.instagram.com/p/…" value="${esc(postFresh(me) ? me.last_post_url || "" : "")}" required>
       <button class="outline-link" type="submit">MAKE MY ICON GLOW <span aria-hidden="true">→</span></button><p class="gate-note" id="igMsg" role="status"></p></form>`);
     d.querySelector("form").addEventListener("submit", async ev => {
@@ -2615,7 +2615,7 @@ const Spots = (() => {
 
   /* --- disegno: ritrovi e fotografi --- */
   const MEET_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="8.5" cy="8" r="3"/><circle cx="16.5" cy="9" r="2.5"/><path d="M3 19c.6-3.4 2.8-5.2 5.5-5.2s4.9 1.8 5.5 5.2M14 14.4c.8-.4 1.6-.6 2.5-.6 2.3 0 4 1.5 4.5 4.7"/></svg>';
-  const PH_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8.5h3.2l1.8-2.5h6l1.8 2.5H20V19H4z"/><circle cx="12" cy="13" r="3.4"/></svg>';
+  const PH_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 7V5.5a4 4 0 0 1 8 0V7"/><rect x="5" y="7" width="14" height="14" rx="4"/><path d="M9 14h6v3.5H9zM5 12.5h14"/></svg>';   // viaggiatori: uno zaino
   const shortDay = d => new Date(d + "T12:00:00").toLocaleDateString(window.I18N?.locale || "en-GB", { day: "numeric", month: "short" });
   function drawCommunity() {
     if (!commLayer || !map) return;
@@ -3036,7 +3036,7 @@ const Spots = (() => {
   function profileHtml(p) {
     const ig = p.instagram ? `https://www.instagram.com/${encodeURIComponent(p.instagram)}/` : "";
     return `<div class="spot-pop">
-      <span class="spot-cat" style="--c:${isCo(p.user_id) ? "#ffc46e" : isDev(p.user_id) ? "#7fd8ff" : "#c9a7ff"}">${isCo(p.user_id) ? ICON_APERTURE : isDev(p.user_id) ? ICON_DEV : PH_ICON}${isCo(p.user_id) ? "Contributor" : isDev(p.user_id) ? "Developer" : "Photographer"}</span>
+      <span class="spot-cat" style="--c:${isCo(p.user_id) ? "#ffc46e" : isDev(p.user_id) ? "#7fd8ff" : "#c9a7ff"}">${isCo(p.user_id) ? ICON_APERTURE : isDev(p.user_id) ? ICON_DEV : PH_ICON}${isCo(p.user_id) ? "Contributor" : isDev(p.user_id) ? "Developer" : "Traveller"}</span>
       ${isDev(p.user_id) ? `<p class="pop-dates co-line dev-line">${ICON_DEV}<span>Helps build Spots${p.website ? ` — <a href="${esc(p.website)}" target="_blank" rel="noopener">see their work</a>` : ""}</span></p>` : ""}
       <strong>${esc(p.display_name)}</strong>
       ${p.base_name ? `<p class="pop-dates">${ICON.pin}<span>${esc(p.base_name)}</span></p>` : ""}
@@ -3117,7 +3117,7 @@ const Spots = (() => {
     const me = profiles.find(p => p.user_id === myUid()) || {};
     const v = x => (x == null ? "" : esc(String(x)));
     const d = dlg("profileDialog", `<form class="import-body gate-form" novalidate>
-      <span class="eyebrow">${profV ? "My profile" : "Photographers' map"}</span><h2>${me.user_id ? "Your profile" : profV ? "Create your profile" : "Join the map"}</h2>
+      <span class="eyebrow">${profV ? "My profile" : "Travellers' map"}</span><h2>${me.user_id ? "Your profile" : profV ? "Create your profile" : "Join the map"}</h2>
       ${profV ? `<div class="pf-avatar">${avatarHtml(me.display_name ? me : { display_name: displayName() }, 72)}<label class="pop-btn">📷 ${me.avatar_path ? "Change photo" : "Add a profile photo"}<input type="file" id="pfPhoto" accept="image/*" hidden></label>${me.avatar_path ? `<button type="button" class="text-link" id="pfNoPhoto">Remove</button>` : ""}</div>` : ""}
       <label for="pfName">Name</label><input id="pfName" maxlength="60" value="${v(me.display_name || displayName())}" required>
       ${profV ? `<label for="pfUser">Username <small>(3–30: letters, numbers, dots, underscores)</small></label><input id="pfUser" maxlength="30" value="${v(me.username)}" placeholder="e.g. anna.dolomiti" autocapitalize="none" autocomplete="username">` : ""}
@@ -3126,12 +3126,12 @@ const Spots = (() => {
         <label>Website<input id="pfWeb" type="url" maxlength="300" value="${v(me.website)}" placeholder="https://…"></label>
       </div>
       <label for="pfBio">About you <small>(optional)</small></label>
-      <textarea id="pfBio" rows="2" maxlength="300" placeholder="Landscape and night photographer, Dolomites guide…">${v(me.bio)}</textarea>
+      <textarea id="pfBio" rows="2" maxlength="300" placeholder="Slow traveller and photographer, Dolomites guide…">${v(me.bio)}</textarea>
       <label for="pfBase">Where you're based</label>
       <div class="gkey-row"><input id="pfBase" maxlength="80" value="${v(me.base_name)}" placeholder="Town or area, e.g. Bolzano"><button class="text-link" type="button" id="pfHere">Use my location</button></div>
       <input id="pfCoords" value="${me.lat != null ? `${(+me.lat).toFixed(2)}, ${(+me.lon).toFixed(2)}` : ""}" placeholder="Coordinates of your area, e.g. 46.50, 11.35" autocomplete="off">
       <p class="gate-help left">For privacy your pin is placed only roughly (about 5 km), never at your address.</p>
-      <label class="shot-check"><input type="checkbox" id="pfVisible"${me.user_id ? ((profV ? me.on_map !== false : me.visible) ? " checked" : "") : " checked"}> Show me on the photographers' map</label>
+      <label class="shot-check"><input type="checkbox" id="pfVisible"${me.user_id ? ((profV ? me.on_map !== false : me.visible) ? " checked" : "") : " checked"}> Show me on the travellers' map</label>
       <button class="outline-link" type="submit">SAVE PROFILE <span aria-hidden="true">→</span></button>
       ${me.user_id ? `<button class="text-link" type="button" id="pfDelete">Remove my profile</button>` : ""}
       <p class="gate-note" id="pfMsg" role="status"></p>
@@ -3177,7 +3177,7 @@ const Spots = (() => {
         profiles = profiles.filter(p => p.user_id !== row.user_id).concat({ ...me, ...row });
         d.close(); meCache = null;
         if (meView) { renderMe(); toast("Profile saved."); }
-        else { showPhotographers = row.lat != null && row.on_map !== false; renderApp(); toast(row.lat == null ? "Profile saved. Add your area to appear on the photographers' map." : "Profile saved: you're on the photographers' map."); }
+        else { showPhotographers = row.lat != null && row.on_map !== false; renderApp(); toast(row.lat == null ? "Profile saved. Add your area to appear on the travellers' map." : "Profile saved: you're on the travellers' map."); }
         window.fcTrack?.("Spots: saved photographer profile");
       } catch (err) { warn(/duplicate|unique|23505/i.test(err.message) ? "That username is already taken: try another." : `Could not save: ${err.message}`); }
     });
@@ -3869,7 +3869,7 @@ const Spots = (() => {
           <div><dt>Location</dt><dd>${esc(me.base_name || "—")}</dd></div>
           <div><dt>Instagram</dt><dd>${me.instagram ? `<a href="https://www.instagram.com/${encodeURIComponent(me.instagram)}/" target="_blank" rel="noopener">@${esc(me.instagram)}</a>` : "—"}</dd></div>
           <div><dt>Website</dt><dd>${me.website ? `<a href="${esc(me.website)}" target="_blank" rel="noopener">${esc(me.website.replace(/^https?:\/\//, ""))}</a>` : "—"}</dd></div>
-          <div><dt>Photographers' map</dt><dd>${me.user_id && me.lat != null && me.on_map !== false && me.visible !== false ? "Shown (about 5 km precision)" : "Not shown"}</dd></div>
+          <div><dt>Travellers' map</dt><dd>${me.user_id && me.lat != null && me.on_map !== false && me.visible !== false ? "Shown (about 5 km precision)" : "Not shown"}</dd></div>
         </dl>
         <p class="gate-help left">Your public profile is seen only by Spots members${contribs.has(uid) || experts.has(uid) ? ", and your name, username and photo also on The crew page" : ""}. Saved places, meetups you join and your activity history are private: only you see them.</p>
         <button type="button" class="outline-link" data-meedit2>✎ Edit profile</button>
@@ -4329,9 +4329,9 @@ const Spots = (() => {
         ${WZ_GROUPS.map(x => `<button type="button" class="wz-group${x.id === g ? " on" : ""}" data-wzg="${x.id}">${SX_ICON[x.id]}<span>${x.label}</span></button>`).join("")}
       </fieldset>
       ${g === "community" ? `<div class="wz-community">
-          <p>Photographers, local experts and meetups have their own place in Spots:</p>
+          <p>Travellers, local experts and meetups have their own place in Spots:</p>
           <button type="button" class="outline-link" data-wzmeet>👥 Organise a meetup here</button>
-          <button type="button" class="outline-link" data-wzph>📷 Join the photographers' map</button>
+          <button type="button" class="outline-link" data-wzph>🎒 Join the travellers' map</button>
           ${passV ? `<button type="button" class="outline-link" data-wzpass>🎁 Pass it on: sell or give away something here</button>` : ""}
         </div>` : `
       ${g === "places" ? `<div class="wz-cats" role="group" aria-label="Category">${PLACE_KINDS.map(([c, sb, label, ico]) => `<button type="button" class="wz-cat${placeKind() === sb ? " on" : ""}" data-wzcat="${c}" data-wzkind="${sb}" style="--c:${CATS[c].color}">${ico}<span>${label}</span></button>`).join("")}</div>`
