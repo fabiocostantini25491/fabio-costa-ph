@@ -2035,7 +2035,7 @@ function setupArticleZoom() {
 let guidesData = null;
 async function loadGuides() {
   if (guidesData) return guidesData;
-  try { const r = await getJSON("content/guide.json"); guidesData = (Array.isArray(r?.guide) ? r.guide : []).filter(g => g && g.titolo && g.slug); }
+  try { const r = await getJSON("content/guide.json"); guidesData = (Array.isArray(r?.guide) ? r.guide : []).filter(g => g && g.titolo && g.slug && !g.bozza); }   // le bozze non si vedono sul sito
   catch { guidesData = []; }
   return guidesData;
 }
