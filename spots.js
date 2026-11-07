@@ -75,7 +75,11 @@ const Spots = (() => {
   let experts = new Map();   // user_id → { area_name, lat, lon, radius_km, display_name }
   let commV = true;         // false finché non è stato eseguito supabase-community2.sql
   let meetups = [], meetupJoins = new Map(), favs = new Set(), profiles = [], openFlags = 0;
-  let onlyFavs = false, showPhotographers = false, commLayer = null;
+  let onlyFavs = false, showPhotographers = false, showTravellers = false, commLayer = null;
+  let kindV = true;   // false finché non è stato eseguito supabase-viaggiatori.sql (colonna «kind» dei profili)
+  const pKind = p => (p.kind === "traveller" || p.kind === "both" ? p.kind : "photographer");
+  const isPhotoP = p => pKind(p) !== "traveller", isTravP = p => pKind(p) !== "photographer";
+  const onMapP = p => p.visible && p.on_map !== false && p.lat != null;
   let passItems = [], passV = true, showPass = true, commDirty = false;
   let trips = null, tripsV = true, tripCount = 0, showTrips = false, tripLayer = null, tripEd = null;   // itinerari (null = non ancora caricati)   // Pass it on (false finché non è stato eseguito supabase-pass-it-on.sql)
   let tkV = true;           // false finché non è stato eseguito supabase-trekking.sql
@@ -566,7 +570,7 @@ const Spots = (() => {
     { id: "pass", title: "Pass it on", sub: "Sell or give away to travellers", cats: [], isNew: "2027-01-31" },
     { id: "places", title: "Places", sub: "Photo spots · Points of interest · Trekking", cats: ["spot", "trekking"] },
     { id: "essentials", title: "Essentials", sub: "Stay · Food & drink", cats: ["hotel", "restaurant"] },
-    { id: "community", title: "Community", sub: "Travellers · Local experts · Meetups · Trips", cats: [] },
+    { id: "community", title: "Community", sub: "Photographers · Travellers · Local experts · Meetups · Trips", cats: [] },
     { id: "outdoors", title: "Outdoors", sub: "Workshops · Experiences", cats: ["workshop", "experience"] }
   ];
 
@@ -597,9 +601,10 @@ const Spots = (() => {
           <button type="button" class="sx-pass-cta" id="passAdd">🎁 Sell or give away something</button>`;
       }
       if (g.id === "community") {
-        if (guest || !commV) return lockItem("Travellers", "🎒") + lockItem("Local experts", "🧭") + lockItem("Meetups", "👥") + lockItem("Trips", "🧭");
-        return `<button type="button" class="sx-item${showPhotographers ? " on" : ""}" id="showPh" aria-pressed="${showPhotographers}" style="--c:#c9a7ff"><span class="sx-ico">🎒</span><span class="sx-name">Travellers</span><small>${profiles.filter(p => p.visible && p.on_map !== false && p.lat != null).length}</small><span class="sx-check" aria-hidden="true"></span></button>
-          <p class="sx-links"><button type="button" class="text-link" id="phList">List</button><button type="button" class="text-link" id="myProfile">${profiles.some(p => p.user_id === myUid()) ? "My traveller profile" : "Join the travellers' map"}</button>${nodiV && profiles.some(p => p.user_id === myUid()) ? `<button type="button" class="text-link" id="iPosted">📣 I just posted</button>` : ""}</p>
+        if (guest || !commV) return lockItem("Photographers", "📷") + lockItem("Travellers", "🎒") + lockItem("Local experts", "🧭") + lockItem("Meetups", "👥") + lockItem("Trips", "🧭");
+        return `<button type="button" class="sx-item${showPhotographers ? " on" : ""}" id="showPh" aria-pressed="${showPhotographers}" style="--c:#c9a7ff"><span class="sx-ico">📷</span><span class="sx-name">Photographers</span><small>${profiles.filter(p => onMapP(p) && isPhotoP(p)).length}</small><span class="sx-check" aria-hidden="true"></span></button>
+          ${kindV ? `<button type="button" class="sx-item${showTravellers ? " on" : ""}" id="showTr" aria-pressed="${showTravellers}" style="--c:#7fd3c7"><span class="sx-ico">🎒</span><span class="sx-name">Travellers</span><small>${profiles.filter(p => onMapP(p) && isTravP(p)).length}</small><span class="sx-check" aria-hidden="true"></span></button>` : ""}
+          <p class="sx-links"><button type="button" class="text-link" id="phList">List</button><button type="button" class="text-link" id="myProfile">${profiles.some(p => p.user_id === myUid()) ? "My community profile" : "Join the community map"}</button>${nodiV && profiles.some(p => p.user_id === myUid()) ? `<button type="button" class="text-link" id="iPosted">📣 I just posted</button>` : ""}</p>
           ${nodiV ? `<button type="button" class="sx-item" id="expList" style="--c:#ffd9a0"><span class="sx-ico">🧭</span><span class="sx-name">Local experts</span><small>${experts.size}</small><span class="sx-go" aria-hidden="true">›</span></button>` : ""}
           ${nodiV && myExpert() ? `<button type="button" class="sx-item" id="myArea" style="--c:#ffd9a0"><span class="sx-ico">🧭</span><span class="sx-name">My area</span><span class="sx-go" aria-hidden="true">›</span></button>` : ""}
           <button type="button" class="sx-item" id="meetList" style="--c:#ffd166"><span class="sx-ico">👥</span><span class="sx-name">Meetups</span><small>${upcomingMeetups().length}</small><span class="sx-go" aria-hidden="true">›</span></button>
@@ -612,7 +617,7 @@ const Spots = (() => {
       return g.cats.map(k => item(k)).join("");
     };
     const groups = SX_GROUPS.filter(g => g.id !== "pass" || guest || !commV || passV).map(g => {
-      const open = sxOpen.has(g.id), on = g.cats.some(k => activeCats.has(k)) || (g.id === "community" && showPhotographers) || (g.id === "pass" && showPass && !guest && commV);
+      const open = sxOpen.has(g.id), on = g.cats.some(k => activeCats.has(k)) || (g.id === "community" && (showPhotographers || showTravellers)) || (g.id === "pass" && showPass && !guest && commV);
       const count = g.cats.reduce((a, k) => a + n(k), 0);
       return `<section class="sx-group${open ? " open" : ""}${on ? " on" : ""}" data-g="${g.id}">
         <button type="button" class="sx-ghead" data-sxg="${g.id}" aria-expanded="${open}">
@@ -912,7 +917,7 @@ const Spots = (() => {
       document.querySelectorAll("[data-sxsub]").forEach(b => { const on = activeCats.has("spot") && activeSubs.has(b.dataset.sxsub); b.classList.toggle("on", on); b.setAttribute("aria-pressed", on); });
       document.querySelectorAll(".sx-group").forEach(sec => {
         const g = SX_GROUPS.find(x => x.id === sec.dataset.g);
-        sec.classList.toggle("on", g.cats.some(c => activeCats.has(c)) || (g.id === "community" && showPhotographers));
+        sec.classList.toggle("on", g.cats.some(c => activeCats.has(c)) || (g.id === "community" && (showPhotographers || showTravellers)));
       });
       drawClusters(); if (origin) renderNear();
     };
@@ -1182,12 +1187,13 @@ const Spots = (() => {
         <button type="button" class="filter comm-btn${onlyFavs ? " active" : ""}" id="onlyFavs" aria-pressed="${onlyFavs}">♥ My spots <small>${favs.size}</small></button>
         <button type="button" class="filter comm-btn" id="meetList">👥 Meetups <small>${upcomingMeetups().length}</small></button>
         <button type="button" class="filter comm-btn" id="meetAdd">＋ Meetup</button>
-        <button type="button" class="filter comm-btn${showPhotographers ? " active" : ""}" id="showPh" aria-pressed="${showPhotographers}">🎒 Travellers <small>${profiles.filter(p => p.visible && p.on_map !== false && p.lat != null).length}</small></button>
+        <button type="button" class="filter comm-btn${showPhotographers ? " active" : ""}" id="showPh" aria-pressed="${showPhotographers}">📷 Photographers <small>${profiles.filter(p => onMapP(p) && isPhotoP(p)).length}</small></button>
+        ${kindV ? `<button type="button" class="filter comm-btn${showTravellers ? " active" : ""}" id="showTr" aria-pressed="${showTravellers}">🎒 Travellers <small>${profiles.filter(p => onMapP(p) && isTravP(p)).length}</small></button>` : ""}
         <button type="button" class="text-link" id="phList">List</button>
         ${nodiV ? `<button type="button" class="filter comm-btn" id="expList">🧭 Local experts <small>${experts.size}</small></button>` : ""}
         ${nodiV && myExpert() ? `<button type="button" class="filter comm-btn xp-mine" id="myArea">🧭 My area</button>` : ""}
         ${nodiV && profiles.some(p => p.user_id === myUid()) ? `<button type="button" class="filter comm-btn" id="iPosted">📣 I just posted</button>` : ""}
-        <button type="button" class="text-link" id="myProfile">${profiles.some(p => p.user_id === myUid()) ? "My traveller profile" : "Join the travellers' map"}</button>
+        <button type="button" class="text-link" id="myProfile">${profiles.some(p => p.user_id === myUid()) ? "My community profile" : "Join the community map"}</button>
       </div>` : ""}
       <p class="sx-switch-row"><button type="button" class="text-link sx-switch" id="sxToEarth">🌍 Try the new Earth view</button></p>
       <div class="spots-stage">
@@ -1281,13 +1287,19 @@ const Spots = (() => {
     $("#passAdd")?.addEventListener("click", () => withConduct(() => openPassOn(map ? { lat: map.getCenter().lat, lon: L.Util.wrapNum(map.getCenter().lng, [-180, 180], true), zoom: map.getZoom() } : null)));
     $("#showPass")?.addEventListener("click", () => { showPass = !showPass; const b = $("#showPass"); b.classList.toggle("on", showPass); b.setAttribute("aria-pressed", showPass); drawCommunity(); });
     $("#meetAdd")?.addEventListener("click", () => withConduct(() => openMeetup(map ? { lat: map.getCenter().lat, lon: L.Util.wrapNum(map.getCenter().lng, [-180, 180], true) } : null)));
-    $("#showPh")?.addEventListener("click", () => {
-      showPhotographers = !showPhotographers;
-      $("#showPh").classList.toggle("active", showPhotographers);
-      $("#showPh").setAttribute("aria-pressed", showPhotographers);
+    const togglePeople = (id, which) => {
+      if (which === "ph") showPhotographers = !showPhotographers; else showTravellers = !showTravellers;
+      const on = which === "ph" ? showPhotographers : showTravellers, b = $(id);
+      b?.classList.toggle("active", on); b?.classList.toggle("on", on); b?.setAttribute("aria-pressed", on);
       drawCommunity();
-      if (showPhotographers) { const pts = profiles.filter(p => p.visible && p.on_map !== false && p.lat != null).map(p => [p.lat, p.lon]); if (pts.length) map.flyToBounds(L.latLngBounds(pts).pad(0.3), { maxZoom: 8, duration: .8 }); else toast("No photographers on the map yet: be the first!"); }
-    });
+      if (on) {
+        const pts = profiles.filter(p => onMapP(p) && (which === "ph" ? isPhotoP(p) : isTravP(p))).map(p => [p.lat, p.lon]);
+        if (pts.length) map.flyToBounds(L.latLngBounds(pts).pad(0.3), { maxZoom: 8, duration: .8 });
+        else toast(which === "ph" ? "No photographers on the map yet: be the first!" : "No travellers on the map yet: be the first!");
+      }
+    };
+    $("#showPh")?.addEventListener("click", () => togglePeople("#showPh", "ph"));
+    $("#showTr")?.addEventListener("click", () => togglePeople("#showTr", "tr"));
     $("#myProfile")?.addEventListener("click", openProfile);
     $("#expList")?.addEventListener("click", openExperts);
     $("#phList")?.addEventListener("click", () => openPhotographers(false));
@@ -2412,7 +2424,8 @@ const Spots = (() => {
         api(`/rest/v1/meetups?select=id,title,note,meet_on,meet_time,lat,lon,spot_id,created_by,author_name&meet_on=gt.${todayISO()}&order=meet_on.asc&limit=500`),
         api("/rest/v1/meetup_joins?select=meetup_id,user_id,name&limit=5000"),
         api(`/rest/v1/spot_favorites?select=spot_id&user_id=eq.${encodeURIComponent(uid)}&limit=10000`),
-        api(`/rest/v1/member_profiles?select=user_id,display_name,instagram,website,bio,base_name,lat,lon,visible${nodiV ? ",last_post_url,last_post_at" : ""}${profV ? ",on_map,username,avatar_path" : ""}&limit=2000`)
+        api(`/rest/v1/member_profiles?select=user_id,display_name,instagram,website,bio,base_name,lat,lon,visible${nodiV ? ",last_post_url,last_post_at" : ""}${profV ? ",on_map,username,avatar_path" : ""}${kindV ? ",kind" : ""}&limit=2000`)
+          .catch(err => { if (kindV && err.status === 400) { kindV = false; return api(`/rest/v1/member_profiles?select=user_id,display_name,instagram,website,bio,base_name,lat,lon,visible${nodiV ? ",last_post_url,last_post_at" : ""}${profV ? ",on_map,username,avatar_path" : ""}&limit=2000`); } throw err; })
           .catch(err => { if (profV && err.status === 400) { profV = false; return api(`/rest/v1/member_profiles?select=user_id,display_name,instagram,website,bio,base_name,lat,lon,visible${nodiV ? ",last_post_url,last_post_at" : ""}&limit=2000`); } throw err; })
           .catch(err => { if (nodiV && err.status === 400) { nodiV = false; return api("/rest/v1/member_profiles?select=user_id,display_name,instagram,website,bio,base_name,lat,lon,visible&limit=2000"); } throw err; })
       ]);
@@ -2548,18 +2561,21 @@ const Spots = (() => {
       }));
     } catch { fb.innerHTML = `<p class="gate-help left">Flags not available.</p>`; }
   }
-  function openPhotographers(onlyCo) {
+  function openPhotographers(tab) {
+    tab = tab === true ? "co" : tab || "all";
     const list = profiles.filter(p => p.visible).sort((a, b) => (contribs.has(b.user_id) - contribs.has(a.user_id)) || a.display_name.localeCompare(b.display_name))
-      .filter(p => !onlyCo || contribs.has(p.user_id));
-    const d = dlg("phListDialog", `<div class="import-body"><span class="eyebrow">Spots community</span><h2>🎒 Travellers</h2>
-      <div class="gate-tabs"><button type="button" class="${onlyCo ? "" : "on"}" data-co="0">All</button><button type="button" class="${onlyCo ? "on" : ""}" data-co="1">${ICON_APERTURE} Contributors</button></div>
+      .filter(p => tab === "all" || (tab === "co" ? contribs.has(p.user_id) : tab === "ph" ? isPhotoP(p) : isTravP(p)));
+    const T = (k, l) => `<button type="button" class="${tab === k ? "on" : ""}" data-co="${k}">${l}</button>`;
+    const d = dlg("phListDialog", `<div class="import-body"><span class="eyebrow">Spots community</span><h2>Photographers &amp; travellers</h2>
+      <div class="gate-tabs">${T("all", "All")}${T("ph", "📷 Photographers")}${kindV ? T("tr", "🎒 Travellers") : ""}${T("co", `${ICON_APERTURE} Contributors`)}</div>
       <ul class="req-list">${list.map(p => `<li class="req-row${contribs.has(p.user_id) ? " co-row" : ""}"><div><b>${esc(p.display_name)}${coBadge(p.user_id)}${experts.has(p.user_id) ? ` <span class="xp-badge">🧭 ${esc(experts.get(p.user_id).area_name)}</span>` : ""}</b>
         <span>${p.base_name ? esc(p.base_name) : ""}${p.instagram ? ` · <a href="https://www.instagram.com/${encodeURIComponent(p.instagram)}/" target="_blank" rel="noopener">@${esc(p.instagram)}</a>` : ""}${p.website ? ` · <a href="${esc(p.website)}" target="_blank" rel="noopener">website</a>` : ""}${postFresh(p) ? ` · <a href="${esc(p.last_post_url)}" target="_blank" rel="noopener">📣 new post</a>` : ""}</span></div>
         ${p.lat != null ? `<button type="button" class="pop-btn" data-ph="${esc(p.user_id)}">${ICON.pin}Map</button>` : ""}</li>`).join("") || `<li class="gate-help left">Nobody here yet.</li>`}</ul></div>`);
-    d.querySelectorAll("[data-co]").forEach(b => b.addEventListener("click", () => openPhotographers(b.dataset.co === "1")));
+    d.querySelectorAll("[data-co]").forEach(b => b.addEventListener("click", () => openPhotographers(b.dataset.co)));
     d.querySelectorAll("[data-ph]").forEach(b => b.addEventListener("click", () => {
       const p = profiles.find(x => x.user_id === b.dataset.ph); d.close(); if (!p) return;
-      showPhotographers = true; drawCommunity(); $("#spotsMap").scrollIntoView({ behavior: "smooth", block: "center" }); map.flyTo([p.lat, p.lon], 10, { duration: .8 });
+      if (isPhotoP(p)) showPhotographers = true; else showTravellers = true;
+      drawCommunity(); $("#spotsMap").scrollIntoView({ behavior: "smooth", block: "center" }); map.flyTo([p.lat, p.lon], 10, { duration: .8 });
     }));
   }
   const slugify = t => String(t || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
@@ -2580,8 +2596,8 @@ const Spots = (() => {
   function openPosted() {
     const me = profiles.find(p => p.user_id === myUid());
     if (!me) return openProfile();
-    const d = dlg("postedDialog", `<form class="import-body gate-form" novalidate><span class="eyebrow">Travellers' map</span><h2>📣 I just posted</h2>
-      <p class="gate-help left">Paste the link of your new Instagram post: your icon on the travellers' map glows for 24 hours and stays visible even when members zoom out.</p>
+    const d = dlg("postedDialog", `<form class="import-body gate-form" novalidate><span class="eyebrow">Community map</span><h2>📣 I just posted</h2>
+      <p class="gate-help left">Paste the link of your new Instagram post: your icon on the community map glows for 24 hours and stays visible even when members zoom out.</p>
       <input id="igPost" type="url" placeholder="https://www.instagram.com/p/…" value="${esc(postFresh(me) ? me.last_post_url || "" : "")}" required>
       <button class="outline-link" type="submit">MAKE MY ICON GLOW <span aria-hidden="true">→</span></button><p class="gate-note" id="igMsg" role="status"></p></form>`);
     d.querySelector("form").addEventListener("submit", async ev => {
@@ -2615,7 +2631,8 @@ const Spots = (() => {
 
   /* --- disegno: ritrovi e fotografi --- */
   const MEET_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="8.5" cy="8" r="3"/><circle cx="16.5" cy="9" r="2.5"/><path d="M3 19c.6-3.4 2.8-5.2 5.5-5.2s4.9 1.8 5.5 5.2M14 14.4c.8-.4 1.6-.6 2.5-.6 2.3 0 4 1.5 4.5 4.7"/></svg>';
-  const PH_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 7V5.5a4 4 0 0 1 8 0V7"/><rect x="5" y="7" width="14" height="14" rx="4"/><path d="M9 14h6v3.5H9zM5 12.5h14"/></svg>';   // viaggiatori: uno zaino
+  const PH_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8.5h3.2l1.8-2.5h6l1.8 2.5H20V19H4z"/><circle cx="12" cy="13" r="3.4"/></svg>';
+  const TR_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 7V5.5a4 4 0 0 1 8 0V7"/><rect x="5" y="7" width="14" height="14" rx="4"/><path d="M9 14h6v3.5H9zM5 12.5h14"/></svg>';   // viaggiatori: uno zaino
   const shortDay = d => new Date(d + "T12:00:00").toLocaleDateString(window.I18N?.locale || "en-GB", { day: "numeric", month: "short" });
   function drawCommunity() {
     if (!commLayer || !map) return;
@@ -2642,11 +2659,11 @@ const Spots = (() => {
       mk.on("popupopen", e => wirePass(e.popup, it));
     });
     const zoomOk = map.getZoom() >= 5;
-    profiles.filter(p => p.visible && p.on_map !== false && p.lat != null && (showPhotographers || (postFresh(p) && (zoomOk || isCo(p.user_id))))).forEach(p => {
+    profiles.filter(p => onMapP(p) && ((showPhotographers && isPhotoP(p)) || (showTravellers && isTravP(p)) || (postFresh(p) && (zoomOk || isCo(p.user_id))))).forEach(p => {
       const fresh = postFresh(p), xp = experts.has(p.user_id), co = isCo(p.user_id), dev = isDev(p.user_id), big = xp || co || dev;
       const mk = L.marker([p.lat, p.lon], { zIndexOffset: (fresh ? 1300 : 1100) + (co ? 50 : 0), keyboard: true, title: p.display_name,
         icon: L.divIcon({ className: "", iconSize: [big ? 36 : 30, big ? 36 : 30], iconAnchor: [big ? 18 : 15, big ? 18 : 15], popupAnchor: [0, -12],
-          html: `<div class="ph-pin${fresh ? " posted" : ""}${xp ? " expert" : ""}${co ? " contrib" : ""}${dev && !co ? " dev" : ""}">${co ? ICON_APERTURE : dev ? ICON_DEV : PH_ICON}${fresh ? `<span class="ph-new">NEW POST</span>` : ""}</div>` }) }).addTo(commLayer);
+          html: `<div class="ph-pin${fresh ? " posted" : ""}${xp ? " expert" : ""}${co ? " contrib" : ""}${dev && !co ? " dev" : ""}">${co ? ICON_APERTURE : dev ? ICON_DEV : pKind(p) === "traveller" ? TR_ICON : PH_ICON}${fresh ? `<span class="ph-new">NEW POST</span>` : ""}</div>` }) }).addTo(commLayer);
       mk.bindTooltip(esc(p.display_name), { direction: "top" });
       mk.bindPopup(() => profileHtml(p), { maxWidth: 300, minWidth: 220, className: "spot-popup" });
       mk.on("popupopen", e => e.popup.getElement()?.querySelector("[data-flagprofile]")?.addEventListener("click", () => openFlag("profile", p.user_id, p.display_name)));
@@ -3036,7 +3053,7 @@ const Spots = (() => {
   function profileHtml(p) {
     const ig = p.instagram ? `https://www.instagram.com/${encodeURIComponent(p.instagram)}/` : "";
     return `<div class="spot-pop">
-      <span class="spot-cat" style="--c:${isCo(p.user_id) ? "#ffc46e" : isDev(p.user_id) ? "#7fd8ff" : "#c9a7ff"}">${isCo(p.user_id) ? ICON_APERTURE : isDev(p.user_id) ? ICON_DEV : PH_ICON}${isCo(p.user_id) ? "Contributor" : isDev(p.user_id) ? "Developer" : "Traveller"}</span>
+      <span class="spot-cat" style="--c:${isCo(p.user_id) ? "#ffc46e" : isDev(p.user_id) ? "#7fd8ff" : "#c9a7ff"}">${isCo(p.user_id) ? ICON_APERTURE : isDev(p.user_id) ? ICON_DEV : pKind(p) === "traveller" ? TR_ICON : PH_ICON}${isCo(p.user_id) ? "Contributor" : isDev(p.user_id) ? "Developer" : { photographer: "Photographer", traveller: "Traveller", both: "Photographer & traveller" }[pKind(p)]}</span>
       ${isDev(p.user_id) ? `<p class="pop-dates co-line dev-line">${ICON_DEV}<span>Helps build Spots${p.website ? ` — <a href="${esc(p.website)}" target="_blank" rel="noopener">see their work</a>` : ""}</span></p>` : ""}
       <strong>${esc(p.display_name)}</strong>
       ${p.base_name ? `<p class="pop-dates">${ICON.pin}<span>${esc(p.base_name)}</span></p>` : ""}
@@ -3117,8 +3134,11 @@ const Spots = (() => {
     const me = profiles.find(p => p.user_id === myUid()) || {};
     const v = x => (x == null ? "" : esc(String(x)));
     const d = dlg("profileDialog", `<form class="import-body gate-form" novalidate>
-      <span class="eyebrow">${profV ? "My profile" : "Travellers' map"}</span><h2>${me.user_id ? "Your profile" : profV ? "Create your profile" : "Join the map"}</h2>
+      <span class="eyebrow">${profV ? "My profile" : "Community map"}</span><h2>${me.user_id ? "Your profile" : profV ? "Create your profile" : "Join the map"}</h2>
       ${profV ? `<div class="pf-avatar">${avatarHtml(me.display_name ? me : { display_name: displayName() }, 72)}<label class="pop-btn">📷 ${me.avatar_path ? "Change photo" : "Add a profile photo"}<input type="file" id="pfPhoto" accept="image/*" hidden></label>${me.avatar_path ? `<button type="button" class="text-link" id="pfNoPhoto">Remove</button>` : ""}</div>` : ""}
+      ${kindV ? `<fieldset class="pf-kind"><legend>On the map as</legend>
+        ${[["photographer", "📷 Photographer"], ["traveller", "🎒 Traveller"], ["both", "📷🎒 Both"]].map(([k, l]) => `<label><input type="radio" name="pfKind" value="${k}"${pKind(me) === k ? " checked" : ""}><span>${l}</span></label>`).join("")}
+      </fieldset>` : ""}
       <label for="pfName">Name</label><input id="pfName" maxlength="60" value="${v(me.display_name || displayName())}" required>
       ${profV ? `<label for="pfUser">Username <small>(3–30: letters, numbers, dots, underscores)</small></label><input id="pfUser" maxlength="30" value="${v(me.username)}" placeholder="e.g. anna.dolomiti" autocapitalize="none" autocomplete="username">` : ""}
       <div class="ws-fields">
@@ -3131,7 +3151,7 @@ const Spots = (() => {
       <div class="gkey-row"><input id="pfBase" maxlength="80" value="${v(me.base_name)}" placeholder="Town or area, e.g. Bolzano"><button class="text-link" type="button" id="pfHere">Use my location</button></div>
       <input id="pfCoords" value="${me.lat != null ? `${(+me.lat).toFixed(2)}, ${(+me.lon).toFixed(2)}` : ""}" placeholder="Coordinates of your area, e.g. 46.50, 11.35" autocomplete="off">
       <p class="gate-help left">For privacy your pin is placed only roughly (about 5 km), never at your address.</p>
-      <label class="shot-check"><input type="checkbox" id="pfVisible"${me.user_id ? ((profV ? me.on_map !== false : me.visible) ? " checked" : "") : " checked"}> Show me on the travellers' map</label>
+      <label class="shot-check"><input type="checkbox" id="pfVisible"${me.user_id ? ((profV ? me.on_map !== false : me.visible) ? " checked" : "") : " checked"}> Show me on the community map</label>
       <button class="outline-link" type="submit">SAVE PROFILE <span aria-hidden="true">→</span></button>
       ${me.user_id ? `<button class="text-link" type="button" id="pfDelete">Remove my profile</button>` : ""}
       <p class="gate-note" id="pfMsg" role="status"></p>
@@ -3167,7 +3187,8 @@ const Spots = (() => {
       const round = x => Math.round(x * 20) / 20;   // ~5 km
       const row = { user_id: myUid(), display_name: name, instagram: ig || null, website: web || null, bio: d.querySelector("#pfBio").value.trim() || null,
         base_name: d.querySelector("#pfBase").value.trim() || null, lat: c ? round(c.lat) : null, lon: c ? round(c.lon) : null,
-        ...(profV ? { visible: true, on_map: d.querySelector("#pfVisible").checked, username: uname || null } : { visible: d.querySelector("#pfVisible").checked }), updated_at: new Date().toISOString() };
+        ...(profV ? { visible: true, on_map: d.querySelector("#pfVisible").checked, username: uname || null } : { visible: d.querySelector("#pfVisible").checked }),
+        ...(kindV ? { kind: d.querySelector("[name=pfKind]:checked")?.value || "photographer" } : {}), updated_at: new Date().toISOString() };
       try {
         if (profV && newPhoto) { msg.className = "gate-note"; msg.textContent = "Uploading the photo…"; row.avatar_path = await uploadAvatar(newPhoto); }
         else if (profV && dropPhoto) row.avatar_path = null;
@@ -3177,7 +3198,7 @@ const Spots = (() => {
         profiles = profiles.filter(p => p.user_id !== row.user_id).concat({ ...me, ...row });
         d.close(); meCache = null;
         if (meView) { renderMe(); toast("Profile saved."); }
-        else { showPhotographers = row.lat != null && row.on_map !== false; renderApp(); toast(row.lat == null ? "Profile saved. Add your area to appear on the travellers' map." : "Profile saved: you're on the travellers' map."); }
+        else { if (row.lat != null && row.on_map !== false) { if (isPhotoP(row)) showPhotographers = true; if (isTravP(row)) showTravellers = true; } renderApp(); toast(row.lat == null ? "Profile saved. Add your area to appear on the community map." : "Profile saved: you're on the community map."); }
         window.fcTrack?.("Spots: saved photographer profile");
       } catch (err) { warn(/duplicate|unique|23505/i.test(err.message) ? "That username is already taken: try another." : `Could not save: ${err.message}`); }
     });
@@ -3389,7 +3410,7 @@ const Spots = (() => {
             else if (kind === "meetup") { const m = meetups.find(x => String(x.id) === target); if (m) map.flyTo([m.lat, m.lon], 14); }
             else if (kind === "trip") { await loadTrips(); const t = trips.find(x => String(x.id) === target); if (t) focusTrip(t); else toast("Itinerario già eliminato."); }
             else if (kind === "pass_on") { const it = passItems.find(x => String(x.id) === target); if (it) { showPass = true; drawCommunity(); map.flyTo([it.lat, it.lon], 15); } else toast("Annuncio già scaduto o eliminato."); }
-            else if (kind === "profile") { const p = profiles.find(x => x.user_id === target); if (p && p.lat != null) { showPhotographers = true; drawCommunity(); map.flyTo([p.lat, p.lon], 10); } }
+            else if (kind === "profile") { const p = profiles.find(x => x.user_id === target); if (p && p.lat != null) { if (isPhotoP(p)) showPhotographers = true; else showTravellers = true; drawCommunity(); map.flyTo([p.lat, p.lon], 10); } }
             else {
               const table = kind === "review" ? "spot_reviews" : "spot_photos";
               try { const { data: r } = await api(`/rest/v1/${table}?select=spot_id&id=eq.${encodeURIComponent(target)}`); const s = spots.find(x => x.id === r?.[0]?.spot_id); if (s) focusSpot(s); else toast("Contenuto già eliminato."); } catch {}
@@ -3869,7 +3890,7 @@ const Spots = (() => {
           <div><dt>Location</dt><dd>${esc(me.base_name || "—")}</dd></div>
           <div><dt>Instagram</dt><dd>${me.instagram ? `<a href="https://www.instagram.com/${encodeURIComponent(me.instagram)}/" target="_blank" rel="noopener">@${esc(me.instagram)}</a>` : "—"}</dd></div>
           <div><dt>Website</dt><dd>${me.website ? `<a href="${esc(me.website)}" target="_blank" rel="noopener">${esc(me.website.replace(/^https?:\/\//, ""))}</a>` : "—"}</dd></div>
-          <div><dt>Travellers' map</dt><dd>${me.user_id && me.lat != null && me.on_map !== false && me.visible !== false ? "Shown (about 5 km precision)" : "Not shown"}</dd></div>
+          <div><dt>Community map</dt><dd>${me.user_id && me.lat != null && me.on_map !== false && me.visible !== false ? "Shown (about 5 km precision)" : "Not shown"}</dd></div>
         </dl>
         <p class="gate-help left">Your public profile is seen only by Spots members${contribs.has(uid) || experts.has(uid) ? ", and your name, username and photo also on The crew page" : ""}. Saved places, meetups you join and your activity history are private: only you see them.</p>
         <button type="button" class="outline-link" data-meedit2>✎ Edit profile</button>
@@ -4329,9 +4350,9 @@ const Spots = (() => {
         ${WZ_GROUPS.map(x => `<button type="button" class="wz-group${x.id === g ? " on" : ""}" data-wzg="${x.id}">${SX_ICON[x.id]}<span>${x.label}</span></button>`).join("")}
       </fieldset>
       ${g === "community" ? `<div class="wz-community">
-          <p>Travellers, local experts and meetups have their own place in Spots:</p>
+          <p>Photographers, travellers, local experts and meetups have their own place in Spots:</p>
           <button type="button" class="outline-link" data-wzmeet>👥 Organise a meetup here</button>
-          <button type="button" class="outline-link" data-wzph>🎒 Join the travellers' map</button>
+          <button type="button" class="outline-link" data-wzph>📷🎒 Join the community map</button>
           ${passV ? `<button type="button" class="outline-link" data-wzpass>🎁 Pass it on: sell or give away something here</button>` : ""}
         </div>` : `
       ${g === "places" ? `<div class="wz-cats" role="group" aria-label="Category">${PLACE_KINDS.map(([c, sb, label, ico]) => `<button type="button" class="wz-cat${placeKind() === sb ? " on" : ""}" data-wzcat="${c}" data-wzkind="${sb}" style="--c:${CATS[c].color}">${ico}<span>${label}</span></button>`).join("")}</div>`

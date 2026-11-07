@@ -3093,3 +3093,11 @@ body[data-page="explore"]::after{background:radial-gradient(90% 55% at 85% 0,rgb
   .sx-sheet .sx-gtext b{font-size:8.6px;letter-spacing:.05em}
   .sx-sheet .sx-new{position:absolute;top:1px;right:3px;margin:0;padding:1px 5px;font-size:7.5px}
 }
+/* profilo: fotografo, viaggiatore o entrambi */
+.pf-kind{border:0;margin:4px 0 8px;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.pf-kind legend{padding:0;margin-bottom:6px;font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;opacity:.8}
+.pf-kind label{position:relative;cursor:pointer}
+.pf-kind input{position:absolute;opacity:0;pointer-events:none}
+.pf-kind span{display:block;text-align:center;padding:10px 6px;border-radius:12px;border:1px solid rgba(255,255,255,.18);font-weight:600;font-size:.9rem}
+.pf-kind input:checked + span{border-color:#c9a7ff;background:rgba(201,167,255,.14)}
+.pf-kind input:focus-visible + span{outline:2px solid #c9a7ff;outline-offset:2px}
