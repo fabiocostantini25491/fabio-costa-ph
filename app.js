@@ -2413,7 +2413,7 @@ const CLICK_EVENTS = [
   [".contact-links a[href*='instagram.com']", "Contact: Instagram"],
   [".contact-links a[href^='mailto:']", "Contact: email"],
   ["a[href*='google.com/maps']", "Open in Google Maps"],
-  ["#spotsLogin, #guestJoin, [data-login]", "Spots: log in prompt"],
+  ["#spotsLogin, #guestJoin, #wfJoin, #wfLogin, [data-login]", "Spots: log in prompt"],
   ["#spotsAdd", "Spots: add a place"],
   ["[data-addphoto]", "Spots: add photo"],
   ["[data-review]", "Spots: review"],

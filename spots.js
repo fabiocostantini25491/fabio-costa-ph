@@ -58,7 +58,9 @@ const Spots = (() => {
   const doorNow = () => { try { const d = localStorage.getItem("fcph-door"); return DOORS[d] ? d : ""; } catch { return ""; } };
   let myStyles = [], clusterV = true, signV = true, folkV = true;
   let signMap = new Map();
-  let evoV = true, mySignCount = null;   // evoV: false finché non è stato eseguito supabase-folk-evoluzione.sql
+  let evoV = true, mySignCount = null;
+  let pendingMode = false, foundersLeft = null;   // pendingMode: iscritto in attesa che però vede tutto (ingresso immediato)
+  const joinFolk = () => { try { const k = localStorage.getItem("fcph-joinfolk"); return CLUSTERS[k] ? k : ""; } catch { return ""; } };   // evoV: false finché non è stato eseguito supabase-folk-evoluzione.sql
   const LEVELS = [["trusted", "Trusted", 25], ["pathfinder", "Pathfinder", 10], ["wanderer", "Wanderer", 1]];
   // livello in un folk: Wanderer (1 firma) · Pathfinder (10 firme e almeno un consiglio) · Trusted (25 firme in almeno 3 zone)
   const levelOf = st => !st || !st.signs ? null : st.signs >= 25 && (st.areas || 0) >= 3 ? LEVELS[0] : st.signs >= 10 && (st.tips || 0) >= 1 ? LEVELS[1] : LEVELS[2];   // firme per luogo: { total, top (folk più presente), fabio } — per le icone «evolute»
@@ -419,6 +421,11 @@ const Spots = (() => {
         memberStatus = admin ? "approved" : await fetchMemberStatus();
         if (admin) { try { await fetchMemberStatus(); } catch {} }   // anche tu hai i tuoi cluster
         if (memberStatus === "approved" || memberStatus === "pending") maybeAskStyles();
+        pendingMode = false;
+        if (memberStatus === "pending") {
+          // ingresso immediato: chi è in attesa vede già tutta la mappa (se il database lo consente)
+          try { const sp = await fetchSpots(); if (sp.length) { spots = sp; pendingMode = true; guest = false; await Promise.all([fetchReports(), fetchCommunity()]); loaded = true; meView ? renderMe() : renderApp(); return; } } catch {}
+        }
         if (memberStatus !== "approved") {
           // in attesa di approvazione: vede la mappa pubblica, come un visitatore
           wantLogin = false; wantJoin = false;
@@ -441,13 +448,17 @@ const Spots = (() => {
   function gateHtml(inner) {
     return `<div class="spots-gate">
       <div class="gate-icon" aria-hidden="true">${LOCK_SVG}</div>
-      <h2>Members only</h2>
-      <p>Photo spots, places to eat and stay, workshops and trails — collected over the years and shared by members. Membership is free: sign up in a minute, and I approve every account personally.</p>
+      <h2>${wantJoin ? "Become folk" : "Welcome back, folk"}</h2>
+      <p>${wantJoin ? "Free, in a minute. Pick your folk and step in: you can explore everything right away, and signing, reviews and adding places unlock as soon as I approve your request, usually within a day." : "Log in to see every place with its exact location, the signatures of the folk, trips and your passport."}</p>
       ${inner}
     </div>`;
   }
   /* ---------- visitatori: la selezione pubblica (vista «public_spots» del database) ---------- */
+  async function loadFounders() {
+    try { const { data } = await api("/rest/v1/rpc/members_count", { method: "POST", body: {}, auth: false }); if (Number.isFinite(+data)) foundersLeft = Math.max(0, 100 - +data); } catch {}
+  }
   async function loadPublic() {
+    if (foundersLeft == null) loadFounders().then(() => { if (foundersLeft > 0) { const w = document.querySelector(".wf-welcome"); if (w && !w.querySelector(".wf-found")) w.querySelector(".wf-cta")?.insertAdjacentHTML("afterend", `<p class="wf-found">🏅 <b>${foundersLeft}</b> of 100 places left as <b>Founding folk</b>: a badge in your passport, forever.</p>`); } });
     if (guestLoaded) { guest = true; return true; }
     try {
       // la selezione pubblica cambia di rado: resta sul dispositivo per 12 ore (meno traffico su Supabase)
@@ -477,7 +488,7 @@ const Spots = (() => {
       ${notice ? `<p class="gate-note warn">${esc(notice)}</p>` : ""}
       <div class="gate-tabs" role="tablist">
         <button type="button" role="tab" class="${join ? "" : "on"}" aria-selected="${!join}" data-gtab="login">Log in</button>
-        <button type="button" role="tab" class="${join ? "on" : ""}" aria-selected="${join}" data-gtab="join">Join — it's free</button>
+        <button type="button" role="tab" class="${join ? "on" : ""}" aria-selected="${join}" data-gtab="join">Find your folk — free</button>
       </div>
       ${join ? `<form class="gate-form" id="joinForm" novalidate>
         <div class="gate-row">
@@ -491,8 +502,9 @@ const Spots = (() => {
         <label for="joinPassword">Password</label>
         <input id="joinPassword" type="password" autocomplete="new-password" minlength="8" placeholder="At least 8 characters" required>
         <fieldset class="cl-pick" id="joinStyles"><legend>Choose your folk <small>(how you travel: pick all that fit)</small></legend>
-          ${CLUSTER_KEYS.map(k => `<label><input type="checkbox" value="${k}"${DOORS[doorNow()] === k ? " checked" : ""}><span>${CLUSTERS[k].ico} ${CLUSTERS[k].long}</span></label>`).join("")}
+          ${CLUSTER_KEYS.map(k => `<label><input type="checkbox" value="${k}"${DOORS[doorNow()] === k || joinFolk() === k ? " checked" : ""}><span>${CLUSTERS[k].ico} ${CLUSTERS[k].long}</span></label>`).join("")}
         </fieldset>
+        ${foundersLeft != null && foundersLeft > 0 ? `<p class="wf-found">🏅 Join now and you're one of the first 100 <b>Founding folk</b> (${foundersLeft} places left).</p>` : ""}
         <label class="gate-check"><input type="checkbox" id="joinCode"> <span>I accept the <button type="button" class="text-link" id="joinShowCode">community code</button>, the <a href="#terms" target="_blank">terms</a> and the <a href="#privacy" target="_blank">privacy policy</a>. I'm 16 or older.</span></label>
         <button class="outline-link" type="submit" id="joinSend">JOIN <span aria-hidden="true">→</span></button>
         <p class="gate-note" id="gateMsg" role="status"></p>
@@ -626,6 +638,23 @@ const Spots = (() => {
     { id: "outdoors", title: "Outdoors", sub: "Workshops · Experiences", cats: ["workshop", "experience"] }
   ];
 
+  /* --- BENVENUTO per chi non è ancora folk: cos'è, perché entrare, quale folk sei --- */
+  function welcomeHtml() {
+    return `<section class="wf-welcome" aria-label="Join Wayfolk">
+      <h3>You don't join as a user.<br><em>You join as folk.</em></h3>
+      <ul class="wf-ben">
+        <li><b>8,000+ places</b> picked with a photographer's eye, with the right time to go.</li>
+        <li><b>Signed by the folk:</b> travellers like you vouch for the places they love.</li>
+        <li><b>Trips, Pass it on, meetups</b> and your own Wayfolk passport.</li>
+      </ul>
+      <p class="wf-pick">Which folk are you?</p>
+      <div class="wf-folks">${CLUSTER_KEYS.map(k => `<button type="button" data-joinfolk="${k}" style="--c:${CLUSTERS[k].color}"><span>${CLUSTERS[k].ico}</span>${esc(CLUSTERS[k].label)}</button>`).join("")}</div>
+      <button type="button" class="wf-cta" id="wfJoin">Find your folk — free <span aria-hidden="true">→</span></button>
+      ${foundersLeft != null && foundersLeft > 0 ? `<p class="wf-found">🏅 <b>${foundersLeft}</b> of 100 places left as <b>Founding folk</b>: a badge in your passport, forever.</p>` : ""}
+      <div class="wf-peek" aria-label="What you find inside"><span>★ Fabio's pick</span><span>✍ Signed by hiker folk</span><span>📍 On the spot</span><span>👍 Useful tips</span><span>🛂 Your passport</span></div>
+      <p class="wf-login">Already folk? <button type="button" class="text-link" id="wfLogin">Log in</button> · <a class="text-link" href="#guide-spots">How it works</a></p>
+    </section>`;
+  }
   function earthHtml({ searchHtml, userHtml, bannerHtml, tailHtml }) {
     const base = baseSpots();
     const n = k => base.filter(s => s.category === k).length;
@@ -689,6 +718,7 @@ const Spots = (() => {
         <h2 class="sx-title">Explore the Earth</h2>
         <p class="sx-lead">${esc(DOOR_LEAD[doorNow()] || "Made by its community: travellers like you share, sign and review the places worth the trip, and look after them.")}</p>
         <div class="sx-panel">
+          ${guest && !session ? welcomeHtml() : ""}
           ${searchHtml}
           <div class="onb-folk" id="onbFolk" hidden></div>
           <div class="sx-groups">${groups}</div>
@@ -1142,6 +1172,7 @@ const Spots = (() => {
 `;
     const bannerHtml = `
       ${guest && session ? `<div class="guest-banner pending-banner">${LOCK_SVG}<p>${esc(pendingText())}</p></div>` : ""}
+      ${pendingMode ? `<div class="guest-banner pending-banner in"><p><strong>Welcome, folk!</strong> Explore everything. Signing, reviews and adding places unlock as soon as Fabio approves your request, usually within a day.</p></div>` : ""}
       ${guest && !session ? `<div class="guest-banner">${LOCK_SVG}<p>${guestLoading || !spots.length ? `<strong>${guestLoading ? "Loading the shared spots…" : "The community map"}</strong>
           Members see every spot with its exact location, photos, reviews, prices and live alerts — and can add their own.
           <em>Membership is free:</em> <a href="#join">join in a minute</a>.` : (() => {
@@ -1215,6 +1246,7 @@ const Spots = (() => {
           ${CATS[k].icon}${CATS[k].label} <small>${spots.filter(s => s.category === k).length}</small></button>`).join("")}
       </div>` : ""}
       ${guest && session ? `<div class="guest-banner pending-banner">${LOCK_SVG}<p>${esc(pendingText())}</p></div>` : ""}
+      ${pendingMode ? `<div class="guest-banner pending-banner in"><p><strong>Welcome, folk!</strong> Explore everything. Signing, reviews and adding places unlock as soon as Fabio approves your request, usually within a day.</p></div>` : ""}
       ${guest && !session ? `<div class="guest-banner">${LOCK_SVG}<p>${guestLoading || !spots.length ? `<strong>${guestLoading ? "Loading the shared spots…" : "The community map"}</strong>
           Members see every spot with its exact location, photos, reviews, prices and live alerts — and can add their own.
           <em>Membership is free:</em> <a href="#join">join in a minute</a>.` : (() => {
@@ -1314,7 +1346,13 @@ const Spots = (() => {
     }));
     $("#spotsLogout")?.addEventListener("click", logout);
     $("#spotsLogin")?.addEventListener("click", () => { wantLogin = true; wantJoin = false; render(); root().scrollIntoView({ behavior: "smooth" }); });
-    [$("#spotsJoin"), $("#guestJoin")].forEach(b => b?.addEventListener("click", () => { wantJoin = true; render(); root().scrollIntoView({ behavior: "smooth" }); }));
+    [$("#spotsJoin"), $("#guestJoin"), $("#wfJoin")].forEach(b => b?.addEventListener("click", () => { wantJoin = true; render(); root().scrollIntoView({ behavior: "smooth" }); }));
+    $$("[data-joinfolk]").forEach(b => b.addEventListener("click", () => {   // scegli il folk e vai all'iscrizione con quel folk già scelto
+      try { localStorage.setItem("fcph-joinfolk", b.dataset.joinfolk); } catch {}
+      window.fcTrack?.("Spots: log in prompt"); window.fcTrack?.("Wayfolk: folk picked", { folk: b.dataset.joinfolk });
+      wantJoin = true; render(); root().scrollIntoView({ behavior: "smooth" });
+    }));
+    $("#wfLogin")?.addEventListener("click", () => { wantLogin = true; wantJoin = false; render(); root().scrollIntoView({ behavior: "smooth" }); });
     $("#spotsRequests")?.addEventListener("click", openRequests);
     $$("[data-wsgo]").forEach(b => b.addEventListener("click", () => {
       const s = spots.find(x => x.id === +b.dataset.wsgo);
@@ -3729,7 +3767,15 @@ const Spots = (() => {
   /* ---------- codice della community: si accetta una volta prima di contribuire ---------- */
   const CONDUCT_KEY = "fcph-conduct-ok";
   const conductOk = () => { try { return localStorage.getItem(CONDUCT_KEY) === "1"; } catch { return false; } };
-  function withConduct(fn) { if (conductOk() || !schemaV2) return fn(); showConduct(fn); }
+  function withConduct(fn) { if (pendingMode) return pendingNote(); if (conductOk() || !schemaV2) return fn(); showConduct(fn); }
+  const pendingNote = () => toast("You're in! Signing, reviewing and adding unlock as soon as Fabio approves your request (usually within a day).");
+  // in attesa: si guarda tutto, ma i pulsanti per scrivere spiegano che manca l'approvazione
+  document.addEventListener("click", e => {
+    if (!pendingMode) return;
+    const b = e.target.closest?.("[data-sign], [data-pickstyles], [data-review], [data-addphoto], [data-report], [data-fav], [data-meethere], [data-join], [data-useful], [data-lppass], .lp-add-btn, #spotsAdd, #tripAdd, #passAdd, #meetAdd, #myProfile, [data-social]");
+    if (!b) return;
+    e.preventDefault(); e.stopPropagation(); pendingNote();
+  }, true);
   function showConduct(after) {
     let d = $("#conductDialog");
     if (!d) { d = document.createElement("dialog"); d.id = "conductDialog"; d.className = "import-dialog conduct-dialog"; document.body.appendChild(d); }
@@ -4382,7 +4428,8 @@ const Spots = (() => {
     return `<section class="pp">
       <p class="pp-kick">Wayfolk passport</p>
       <div class="pp-folks">${folks.length ? folks.map(k => { const lv = levelOf(bf[k]); return `<span class="pp-folk" style="--c:${CLUSTERS[k].color}">${CLUSTERS[k].ico} ${esc(folkOf(k))}<b>${lv ? lv[1] : "New"}</b></span>`; }).join("") : `<span class="muted">No folk chosen yet.</span>`}
-        ${xp ? `<span class="pp-folk" style="--c:#ffd9a0">🧭 Local expert<b>${esc(xp.area_name)}</b></span>` : ""}</div>
+        ${xp ? `<span class="pp-folk" style="--c:#ffd9a0">🧭 Local expert<b>${esc(xp.area_name)}</b></span>` : ""}
+        ${pp.rank && pp.rank <= 100 ? `<span class="pp-folk founder" style="--c:#ffd27a">🏅 Founding folk<b>#${pp.rank}</b></span>` : ""}</div>
       <dl class="me-stats pp-stats">${[["Signatures", tot], ["Places added", pp.places], ["First to sign", pp.firsts], ["On the spot", onSpot], ["Seconded", pp.seconded], ["Useful tips", pp.useful]].map(([a, b]) => `<div><dt>${a}</dt><dd>${fmtN(+b || 0)}</dd></div>`).join("")}</dl>
       ${mapSvg}
       ${stamps.length ? `<p class="pp-h">Latest stamps</p><ul class="pp-stamps">${stamps.slice(0, 18).map(t => `<li><button type="button" data-stamp="${t.id}" style="--c:${(CLUSTERS[t.folk] || {}).color || "#ffd27a"}"><span>${CLUSTERS[t.folk]?.ico || "★"}</span>${esc(t.name)}<small>${esc(fmtWhen(t.at))}${t.on_spot ? " · 📍" : ""}</small></button></li>`).join("")}</ul>` : `<p class="muted">No stamps yet: sign the places you've been to.</p>`}

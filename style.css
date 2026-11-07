@@ -3219,3 +3219,22 @@ body[data-page="explore"]::after{background:radial-gradient(90% 55% at 85% 0,rgb
 .mz-folk-k{font-size:.72rem;letter-spacing:.2em;text-transform:uppercase;color:#ffd27a}
 .mz-folk-t{font-weight:600}
 .mag-folk{font-size:.85em;opacity:.85;white-space:nowrap}
+/* benvenuto per chi non è ancora folk */
+.wf-welcome{margin:0 0 14px;padding:18px 18px 14px;border-radius:18px;background:linear-gradient(180deg,rgba(245,160,74,.12),rgba(10,20,42,.6));border:1px solid rgba(245,160,74,.45);box-shadow:0 10px 30px rgba(0,0,0,.25)}
+.wf-welcome h3{margin:0 0 10px;font-family:var(--serif,'Cormorant Garamond',serif);font-weight:600;font-size:1.65rem;line-height:1.1;color:#fff}
+.wf-welcome h3 em{color:#f5a04a}
+.wf-ben{margin:0 0 12px;padding-left:18px;display:grid;gap:5px;font-size:.9rem;line-height:1.4}
+.wf-pick{margin:0 0 8px;font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;opacity:.85}
+.wf-folks{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-bottom:12px}
+.wf-folks button{display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 4px;border-radius:12px;border:1px solid color-mix(in srgb,var(--c) 55%,transparent);background:color-mix(in srgb,var(--c) 10%,transparent);color:#fff;font:600 .78rem var(--sans);cursor:pointer;min-height:56px}
+.wf-folks button span{font-size:1.25rem;line-height:1}
+.wf-folks button:hover,.wf-folks button:focus-visible{background:color-mix(in srgb,var(--c) 22%,transparent);border-color:var(--c)}
+.wf-cta{display:block;width:100%;padding:13px 16px;border:0;border-radius:999px;background:#f5a04a;color:#1a1206;font:700 .95rem var(--sans);letter-spacing:.03em;cursor:pointer}
+.wf-cta:hover{filter:brightness(1.07)}
+.wf-found{margin:10px 0 0;font-size:.85rem;line-height:1.4;color:#ffd9a8}
+.wf-peek{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0 0}
+.wf-peek span{padding:3px 9px;border-radius:999px;border:1px dashed rgba(255,255,255,.25);font-size:.74rem;opacity:.85}
+.wf-login{margin:10px 0 0;font-size:.82rem;opacity:.85}
+.pending-banner.in{border-color:rgba(126,224,129,.5)}
+.pp-folk.founder{background:rgba(255,210,122,.1)}
+@media (max-width:700px){.wf-welcome{order:1;margin:4px 0 12px}.wf-welcome h3{font-size:1.45rem}}
