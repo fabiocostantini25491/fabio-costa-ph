@@ -575,9 +575,11 @@ const Spots = (() => {
     const subItems = () => `<div class="sx-subs">${SUB_KEYS.map(k => `<button type="button" class="sx-item sx-sub${subOn(k) ? " on" : ""}" data-sxsub="${k}" style="--c:${CATS.spot.color}" aria-pressed="${subOn(k)}">
         <span class="sx-name">${SUBS[k].label}</span><small data-sxsubcount="${k}">${fmtN(base.filter(s => s.category === "spot" && spotSub(s) === k).length)}</small><span class="sx-check" aria-hidden="true"></span></button>`).join("")}</div>`;
     const lockItem = (label, ico) => `<button type="button" class="sx-item is-locked" data-sxjoin><span class="sx-ico">${ico}</span><span class="sx-name">${label}</span><span class="sx-lock">${SX_ICON.lock}Members</span></button>`;
+    // Support local vale per Places ed Essentials: stesso interruttore, conteggio della sezione
+    const supportItem = cats => `<button type="button" class="sx-item${onlySupport ? " on" : ""}" data-onlysupport aria-pressed="${onlySupport}" style="--c:#9fe3c8"><span class="sx-ico">🌱</span><span class="sx-name">Support local</span><small>${spots.filter(x => x.support_local && cats.includes(x.category)).length}</small><span class="sx-check" aria-hidden="true"></span></button>`;
     const body = g => {
       if (g.id === "places") return item("spot", "All places") + subItems() + g.cats.filter(k => k !== "spot").map(k => item(k)).join("") + (!guest && schemaV2 && socialV ? `
-        <button type="button" class="sx-item${onlySupport ? " on" : ""}" id="onlySupport" aria-pressed="${onlySupport}" style="--c:#9fe3c8"><span class="sx-ico">🌱</span><span class="sx-name">Support local</span><small>${spots.filter(x => x.support_local).length}</small><span class="sx-check" aria-hidden="true"></span></button>
+        ${supportItem(g.cats)}
         <label class="sx-select">Alerts <select id="alertMode">
           <option value="show"${alertMode === "show" ? " selected" : ""}>Show</option>
           <option value="hide"${alertMode === "hide" ? " selected" : ""}>Hide places with alerts</option>
@@ -592,6 +594,7 @@ const Spots = (() => {
           <button type="button" class="sx-item" id="meetList" style="--c:#ffd166"><span class="sx-ico">👥</span><span class="sx-name">Meetups</span><small>${upcomingMeetups().length}</small><span class="sx-go" aria-hidden="true">›</span></button>
           <p class="sx-links"><button type="button" class="text-link" id="meetAdd">＋ Organise a meetup</button></p>`;
       }
+      if (g.id === "essentials") return g.cats.map(k => item(k)).join("") + (!guest && schemaV2 && socialV ? supportItem(g.cats) : "");
       return g.cats.map(k => item(k)).join("");
     };
     const groups = SX_GROUPS.map(g => {
@@ -1247,7 +1250,7 @@ const Spots = (() => {
     $("[data-addws]")?.addEventListener("click", () => withConduct(() => openAdd(null, { category: "workshop" })));
     $("#spotsAdd")?.addEventListener("click", () => withConduct(() => openAdd()));
     $("#alertMode")?.addEventListener("change", e => { alertMode = e.target.value; drawClusters(); renderNear(); });
-    $("#onlySupport")?.addEventListener("click", () => { onlySupport = !onlySupport; renderApp(); });
+    document.querySelectorAll("#onlySupport, [data-onlysupport]").forEach(b => b.addEventListener("click", () => { onlySupport = !onlySupport; renderApp(); }));
     $("#openConduct")?.addEventListener("click", () => showConduct());
     $("#onlyFavs")?.addEventListener("click", () => {
       if (!favs.size && !onlyFavs) return toast("Tap ♡ Save on any place to add it to your spots.");
@@ -3646,10 +3649,10 @@ const Spots = (() => {
      ========================================================= */
   let profV = true;   // false finché non è stato eseguito supabase-profilo.sql (sottocategoria, info, stato)
   const WZ_SUBS = {
-    spot: [["viewpoint", "Viewpoint"], ["nature", "Nature"], ["urban", "Point of interest"]],   // «urban» resta il valore salvato: ora si chiama Point of interest
-    hotel: [["hotel", "Hotel"], ["bnb", "B&B · guesthouse"], ["camping", "Camping"], ["hut", "Mountain hut"], ["other", "Other"]],
-    restaurant: [["restaurant", "Restaurant"], ["bar", "Bar · café"], ["streetfood", "Street food"], ["other", "Other"]],
-    experience: [["tour", "Tour"], ["boat", "Boat trip"], ["guided", "Guided visit"], ["other", "Other"]],
+    spot: [["viewpoint", "Photo spot"], ["nature", "Photo spot"], ["urban", "Point of interest"]],   // in Places si sceglie con i tre pulsanti, non con questa riga   // «urban» resta il valore salvato: ora si chiama Point of interest
+    hotel: [["hotel", "Hotel"], ["bnb", "B&B · guesthouse"], ["camping", "Camping"], ["hut", "Mountain hut"]],
+    restaurant: [["restaurant", "Restaurant"], ["bar", "Bar · café"], ["streetfood", "Street food"]],
+    experience: [["tour", "Tour"], ["boat", "Boat trip"], ["guided", "Guided visit"]],
     trekking: [], workshop: []
   };
   const WZ_GROUPS = [
@@ -3672,6 +3675,11 @@ const Spots = (() => {
   };
   const INFO_LABEL = { access: "Access & parking", accessibility: "Accessibility", permits: "Drone, permits, rules", price: "Price", services: "Services",
     hours: "Hours", parking: "Parking", price_level: "Price range", closed: "Closed on", duration: "Duration", link: "Booking" };
+  // Places in tre scelte: Photo spot e Point of interest sono entrambi «spot» (sottocategoria viewpoint / urban), più Trekking
+  const PLACE_KINDS = [["spot", "photo", "Photo spot", CATS.spot.icon],
+    ["spot", "poi", "Point of interest", '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h16M6 20V10M18 20V10M10 20v-6h4v6M3 10l9-6 9 6z"/></svg>'],
+    ["trekking", "trek", "Trekking", CATS.trekking.icon]];
+  const placeKind = () => wz.cat === "trekking" ? "trek" : wz.cat !== "spot" ? "" : wz.sub === "urban" ? "poi" : wz.sub ? "photo" : wz.edit && spotSub(wz.edit) === "poi" ? "poi" : "photo";
   const SOCIAL_CATS = ["spot", "hotel", "restaurant"];   // Support local e Fragile: Places (spot) ed Essentials
   const groupOf = cat => WZ_GROUPS.find(g => g.cats.includes(cat))?.id || "places";
   const DRAFT_KEY = "fcph-add-draft";
@@ -3932,8 +3940,9 @@ const Spots = (() => {
           <button type="button" class="outline-link" data-wzmeet>👥 Organise a meetup here</button>
           <button type="button" class="outline-link" data-wzph>📷 Join the photographers' map</button>
         </div>` : `
-      ${cats.length > 1 ? `<div class="wz-cats" role="group" aria-label="Category">${cats.map(k => `<button type="button" class="wz-cat${k === wz.cat ? " on" : ""}" data-wzcat="${k}" style="--c:${CATS[k].color}">${CATS[k].icon}<span>${CATS[k].label}</span></button>`).join("")}</div>` : ""}
-      ${subs.length && profV ? `<div class="wz-subs" role="group" aria-label="Type">${subs.map(([k, l]) => `<button type="button" class="wz-sub${k === wz.sub ? " on" : ""}" data-wzsub="${k}">${esc(l)}</button>`).join("")}</div>` : ""}
+      ${g === "places" ? `<div class="wz-cats" role="group" aria-label="Category">${PLACE_KINDS.map(([c, sb, label, ico]) => `<button type="button" class="wz-cat${placeKind() === sb ? " on" : ""}" data-wzcat="${c}" data-wzkind="${sb}" style="--c:${CATS[c].color}">${ico}<span>${label}</span></button>`).join("")}</div>`
+        : cats.length > 1 ? `<div class="wz-cats" role="group" aria-label="Category">${cats.map(k => `<button type="button" class="wz-cat${k === wz.cat ? " on" : ""}" data-wzcat="${k}" style="--c:${CATS[k].color}">${CATS[k].icon}<span>${CATS[k].label}</span></button>`).join("")}</div>` : ""}
+      ${subs.length && profV && g !== "places" ? `<div class="wz-subs" role="group" aria-label="Type">${subs.map(([k, l]) => `<button type="button" class="wz-sub${k === wz.sub ? " on" : ""}" data-wzsub="${k}">${esc(l)}</button>`).join("")}</div>` : ""}
       <label>Description <small>(optional)</small><textarea id="wzNote" rows="3" maxlength="2000" placeholder="What makes it worth it? Best time, what to shoot, tips…">${esc(wz.note)}</textarea></label>
       ${wz.cat === "workshop" ? `<div class="add-dates"><div><label for="wzFrom">From</label><input id="wzFrom" type="date" value="${esc(wz.from)}"></div><div><label for="wzTo">To</label><input id="wzTo" type="date" value="${esc(wz.to)}"></div></div>
         ${wsV ? wsFieldsHtml(s, "wzWs") : ""}` : ""}
@@ -3972,7 +3981,11 @@ const Spots = (() => {
       wz.group = g.id;   // Community non è un tipo di luogo: mostra solo i suoi pulsanti
       rerender();
     }));
-    d.querySelectorAll("[data-wzcat]").forEach(b => b.addEventListener("click", () => { collect(); (wz.subBy ||= {})[wz.cat] = wz.sub; wz.cat = b.dataset.wzcat; wz.sub = wz.subBy[wz.cat] || ""; rerender(); }));
+    d.querySelectorAll("[data-wzcat]").forEach(b => b.addEventListener("click", () => {
+      collect();
+      if (b.dataset.wzkind != null) { wz.cat = b.dataset.wzcat; if (wz.cat === "spot") wz.sub = b.dataset.wzkind === "poi" ? "urban" : (wz.sub === "nature" ? "nature" : "viewpoint"); else wz.sub = ""; rerender(); return; }
+      (wz.subBy ||= {})[wz.cat] = wz.sub; wz.cat = b.dataset.wzcat; wz.sub = wz.subBy[wz.cat] || ""; rerender();
+    }));
     d.querySelectorAll("[data-wzsub]").forEach(b => b.addEventListener("click", () => { collect(); wz.sub = wz.sub === b.dataset.wzsub ? "" : b.dataset.wzsub; rerender(); }));
     d.querySelector("[data-wzmeet]")?.addEventListener("click", () => { const p = { lat: wz.lat, lon: wz.lon }; d.close(); withConduct(() => openMeetup(p.lat != null ? p : null)); });
     d.querySelector("[data-wzph]")?.addEventListener("click", () => { d.close(); openProfile(); });
@@ -4094,7 +4107,7 @@ const Spots = (() => {
     const row = { name: wz.name.slice(0, 300), lat: wz.lat, lon: wz.lon, note: wz.note || null };
     if (schemaV2) Object.assign(row, { category: cat, author_name: (wz.author || displayName()).slice(0, 60),
       starts_on: cat === "workshop" ? wz.from || null : null, ends_on: cat === "workshop" ? (wz.to || wz.from || null) : null });
-    if (profV) Object.assign(row, { subcategory: wz.sub || null, info: Object.fromEntries(Object.entries(wz.info).filter(([k]) => (WZ_INFO[cat] || []).some(f => f[0] === k) || (k === "currency" && wz.info.price))) });
+    if (profV) Object.assign(row, { subcategory: cat === "spot" ? (wz.sub || (placeKind() === "poi" ? "urban" : "viewpoint")) : wz.sub || null, info: Object.fromEntries(Object.entries(wz.info).filter(([k]) => (WZ_INFO[cat] || []).some(f => f[0] === k) || (k === "currency" && wz.info.price))) });
     else if (infoRows(wz.info).length) row.note = [row.note, infoRows(wz.info).map(([a, b]) => `${a}: ${b}`).join("\n")].filter(Boolean).join("\n\n");
     if (schemaV2 && socialV && SOCIAL_CATS.includes(cat)) Object.assign(row, { support_local: wz.support, best_months: wz.months || null });
     if (cat === "trekking" && tkV && wz.tk) { const { _badPark, ...tk } = wz.tk; Object.assign(row, tk); }
