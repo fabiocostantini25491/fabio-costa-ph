@@ -561,6 +561,29 @@ function addMapFullscreen(map, stage) {
   map.addControl(new Ctrl());
 }
 window.addMapFullscreen = addMapFullscreen;
+// telefono girato in orizzontale con la mappa davanti: solo la mappa, a tutto schermo; rigirato in verticale torna com'era
+(() => {
+  const land = window.matchMedia?.("(orientation: landscape) and (max-height: 540px) and (pointer: coarse)");
+  if (!land) return;
+  let wasLand = land.matches, auto = null, tid = 0;
+  const turned = () => {
+    if (land.matches === wasLand) return;   // solo quando cambia davvero l'orientamento
+    wasLand = land.matches;
+    if (land.matches) {
+      for (const btn of document.querySelectorAll(".map-full-ctrl a")) {
+        const stage = btn.closest(".sx-stage, .explore-stage, .spots-stage");
+        if (!stage || !stage.offsetParent || stage.classList.contains("map-full")) continue;
+        const r = stage.getBoundingClientRect(), vh = window.innerHeight;
+        const seen = Math.min(r.bottom, vh) - Math.max(r.top, 0);
+        if (seen > Math.min(r.height, vh) * 0.35) { btn.click(); auto = stage; break; }
+      }
+    } else if (auto) {
+      if (auto.isConnected && auto.classList.contains("map-full")) auto.querySelector(".map-full-ctrl a")?.click();
+      auto = null;
+    }
+  };
+  window.addEventListener("resize", () => { clearTimeout(tid); tid = setTimeout(turned, 200); });
+})();
 
 function createMap(kind) {
   if (maps[kind] || !window.L) return maps[kind];

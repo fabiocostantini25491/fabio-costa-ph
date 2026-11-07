@@ -3026,3 +3026,10 @@ body[data-page="explore"]::after{background:radial-gradient(90% 55% at 85% 0,rgb
 /* a tutto schermo il globo ha il suo cielo: niente testi della pagina dietro */
 .sx-stage.map-full,.sx-stage.spots-stage.map-full{background:radial-gradient(circle at 50% 45%,rgba(40,100,220,.22),transparent 60%),url("img/sfondo-stelle-mobile.jpg") center/cover no-repeat,#020818 !important}
 @media (min-width:901px){.sx-stage.map-full,.sx-stage.spots-stage.map-full{background:radial-gradient(circle at 50% 45%,rgba(40,100,220,.22),transparent 60%),url("img/sfondo-stelle.jpg") center/cover no-repeat,#020818 !important}}
+/* a tutto schermo in orizzontale: i comandi restano fuori dalla tacca e dagli angoli arrotondati */
+@media (orientation:landscape){
+  .sx-stage.map-full .sx-ctrl{right:max(14px,calc(env(safe-area-inset-right,0px) + 6px)) !important}
+  .sx-stage.map-full .sx-modes,.sx-stage.map-full .sx-sheet{margin-left:env(safe-area-inset-left,0px)}
+  .sx-stage.map-full .leaflet-left{left:env(safe-area-inset-left,0px)}
+  .sx-stage.map-full .leaflet-right{right:env(safe-area-inset-right,0px)}
+}
