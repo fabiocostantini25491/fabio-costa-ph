@@ -3001,3 +3001,6 @@ body[data-page="explore"]::after{background:radial-gradient(90% 55% at 85% 0,rgb
 .lp-add-btn{border:0;border-radius:999px;padding:11px 18px;background:#ffd27a;color:#2b1a02;font:600 14px var(--sans);cursor:pointer;min-height:44px}
 .lp-add small{font-size:11px;color:#556}
 .map-spots,.sx-globe{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+/* iPhone: niente selezione del testo né menu «Copia» tenendo premuto sulla mappa */
+.sx-stage,.sx-stage *,.spots-stage,.spots-stage *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.sx-stage input,.sx-stage textarea{-webkit-user-select:text;user-select:text}

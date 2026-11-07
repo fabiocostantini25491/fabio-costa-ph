@@ -756,29 +756,46 @@ const Spots = (() => {
      Un tocco breve resta per i pin e per spostare la mappa; due dita = zoom (nessuna aggiunta). */
   function setupLongPressAdd(m) {
     const el = m.getContainer();
-    let t = null, start = null, pop = null;
+    let t = null, start = null, pop = null, pid = null;
     const cancel = () => { clearTimeout(t); t = null; };
-    el.addEventListener("touchstart", e => {
+    // iPhone: senza questo la pressione lunga avvia la selezione del testo («Copia», «Trova selezione») e annulla il gesto
+    const stage = el.closest(".sx-stage, .spots-stage") || el;
+    stage.addEventListener("selectstart", e => e.preventDefault());
+    el.addEventListener("contextmenu", e => { if (Date.now() - (m._fcLong || 0) < 1500) e.preventDefault(); });
+    const fire = () => {
+      t = null; m._fcLong = Date.now();
+      const r = el.getBoundingClientRect(), ll = m.containerPointToLatLng([start.x - r.left, start.y - r.top]);
+      const lat = ll.lat, lon = L.Util.wrapNum(ll.lng, [-180, 180], true);
+      try { navigator.vibrate?.(15); } catch {}
+      pop?.remove();
+      const box = document.createElement("div");
+      box.className = "lp-add";
+      box.innerHTML = guest
+        ? `<button type="button" class="lp-add-btn">Log in to add a spot here</button><small>${lat.toFixed(5)}, ${lon.toFixed(5)}</small>`
+        : `<button type="button" class="lp-add-btn">＋ Add a spot here</button><small>${lat.toFixed(5)}, ${lon.toFixed(5)}${m.getZoom() < 12 ? " · zoom in for a precise point" : ""}</small>`;
+      pop = L.popup({ closeButton: true, autoPan: true, closeOnClick: false, className: "lp-pop", offset: [0, -6] }).setLatLng([lat, lon]).setContent(box).openOn(m);
+      box.querySelector("button").addEventListener("click", () => {
+        m.closePopup(pop);
+        if (guest) { wantLogin = true; wantJoin = false; render(); root()?.scrollIntoView({ behavior: "smooth" }); return; }
+        withConduct(() => openAdd({ lat, lon }));
+      });
+    };
+    const down = (x, y, id, target) => {
       cancel();
-      if (e.touches.length !== 1 || e.target.closest(".leaflet-marker-icon, .leaflet-popup, .leaflet-control, button, a")) return;
-      const tc = e.touches[0]; start = { x: tc.clientX, y: tc.clientY };
-      t = setTimeout(() => {
-        t = null; m._fcLong = Date.now();
-        const r = el.getBoundingClientRect(), ll = m.containerPointToLatLng([start.x - r.left, start.y - r.top]);
-        const lat = ll.lat, lon = L.Util.wrapNum(ll.lng, [-180, 180], true);
-        try { navigator.vibrate?.(15); } catch {}
-        if (guest) { hint("Log in to Spots to add a place."); return; }
-        pop?.remove();
-        const box = document.createElement("div");
-        box.className = "lp-add";
-        box.innerHTML = `<button type="button" class="lp-add-btn">＋ Add a spot here</button><small>${lat.toFixed(5)}, ${lon.toFixed(5)}${m.getZoom() < 12 ? " · zoom in for a precise point" : ""}</small>`;
-        pop = L.popup({ closeButton: true, autoPan: true, closeOnClick: false, className: "lp-pop", offset: [0, -6] }).setLatLng([lat, lon]).setContent(box).openOn(m);
-        box.querySelector("button").addEventListener("click", () => { m.closePopup(pop); withConduct(() => openAdd({ lat, lon })); });
-      }, 550);
-    }, { passive: true });
-    el.addEventListener("touchmove", e => { if (!t || !start) return; const tc = e.touches[0]; if (e.touches.length > 1 || Math.hypot(tc.clientX - start.x, tc.clientY - start.y) > 10) cancel(); }, { passive: true });
-    el.addEventListener("touchend", cancel, { passive: true });
-    el.addEventListener("touchcancel", cancel, { passive: true });
+      if (target.closest(".leaflet-marker-icon, .leaflet-popup, .leaflet-control, button, a")) return;
+      start = { x, y }; pid = id; t = setTimeout(fire, 550);
+    };
+    const move = (x, y) => { if (t && start && Math.hypot(x - start.x, y - start.y) > 10) cancel(); };
+    if (window.PointerEvent) {
+      const touches = new Set();
+      el.addEventListener("pointerdown", e => { if (e.pointerType === "mouse") return; touches.add(e.pointerId); if (touches.size > 1) return cancel(); down(e.clientX, e.clientY, e.pointerId, e.target); });
+      el.addEventListener("pointermove", e => { if (e.pointerId === pid) move(e.clientX, e.clientY); });
+      ["pointerup", "pointercancel", "pointerleave"].forEach(ev => el.addEventListener(ev, e => { touches.delete(e.pointerId); if (e.pointerId === pid && ev !== "pointerleave") cancel(); }));
+    } else {
+      el.addEventListener("touchstart", e => { if (e.touches.length !== 1) return cancel(); down(e.touches[0].clientX, e.touches[0].clientY, 1, e.target); }, { passive: true });
+      el.addEventListener("touchmove", e => { if (e.touches.length > 1) return cancel(); move(e.touches[0].clientX, e.touches[0].clientY); }, { passive: true });
+      ["touchend", "touchcancel"].forEach(ev => el.addEventListener(ev, cancel, { passive: true }));
+    }
     m.on("zoomstart", () => { if (t) cancel(); });
   }
 
