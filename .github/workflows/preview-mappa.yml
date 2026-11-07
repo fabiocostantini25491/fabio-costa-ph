@@ -16,10 +16,11 @@ jobs:
           npm install --no-save --no-package-lock playwright@1 osmtogeojson
           npx playwright install --with-deps chromium
       - run: |
+          git fetch -q origin main && git checkout origin/main -- guida.html guida.js guida.css vendor img guides content/guide.json 2>/dev/null || true
           node scripts/sestieri.cjs
           (python3 -m http.server 8000 >/dev/null 2>&1 &) ; sleep 2
-          node scripts/preview-mappa.cjs
+          node scripts/preview-guida.cjs
       - run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add preview content/sestieri-venezia.json 2>/dev/null; git add preview && git commit -m "Anteprima mappa [skip ci]" && git push
+          git reset -q; git add preview && git commit -m "Anteprima mappa [skip ci]" && git push
