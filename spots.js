@@ -1072,7 +1072,7 @@ const Spots = (() => {
           ${guest && session ? `<span class="spots-email">${esc(memberName || email)}</span>
           <button class="text-link" type="button" id="spotsLogout">Log out</button>` : guest ? `<button class="text-link" type="button" id="spotsLogin">Log in</button>
           <button class="outline-link spots-add" type="button" id="spotsJoin">${LOCK_SVG}Join free</button>` : `
-          <a class="outline-link spots-add me-link" href="#me">◉ My Spots</a>
+          <a class="outline-link spots-add me-link" href="#me">◉ My profile</a>
           ${admin ? `<button class="outline-link spots-add req-btn${pendingMembers.length + openFlags ? " has" : ""}" type="button" id="spotsRequests">Admin <b>${pendingMembers.length + openFlags}</b></button>` : ""}
           ${schemaV2 || admin ? `<button class="outline-link spots-add" type="button" id="spotsAdd">${ICON_PLUS}Add a place</button>` : ""}
           ${admin ? `<button class="text-link" type="button" id="spotsImport">${ICON_UPLOAD}Importa da Google Maps</button>` : ""}
@@ -3117,7 +3117,7 @@ const Spots = (() => {
     const me = profiles.find(p => p.user_id === myUid()) || {};
     const v = x => (x == null ? "" : esc(String(x)));
     const d = dlg("profileDialog", `<form class="import-body gate-form" novalidate>
-      <span class="eyebrow">${profV ? "My Spots" : "Photographers' map"}</span><h2>${me.user_id ? "Your profile" : profV ? "Create your profile" : "Join the map"}</h2>
+      <span class="eyebrow">${profV ? "My profile" : "Photographers' map"}</span><h2>${me.user_id ? "Your profile" : profV ? "Create your profile" : "Join the map"}</h2>
       ${profV ? `<div class="pf-avatar">${avatarHtml(me.display_name ? me : { display_name: displayName() }, 72)}<label class="pop-btn">📷 ${me.avatar_path ? "Change photo" : "Add a profile photo"}<input type="file" id="pfPhoto" accept="image/*" hidden></label>${me.avatar_path ? `<button type="button" class="text-link" id="pfNoPhoto">Remove</button>` : ""}</div>` : ""}
       <label for="pfName">Name</label><input id="pfName" maxlength="60" value="${v(me.display_name || displayName())}" required>
       ${profV ? `<label for="pfUser">Username <small>(3–30: letters, numbers, dots, underscores)</small></label><input id="pfUser" maxlength="30" value="${v(me.username)}" placeholder="e.g. anna.dolomiti" autocapitalize="none" autocomplete="username">` : ""}
@@ -3827,7 +3827,7 @@ const Spots = (() => {
       <header class="me-head">
         ${avatarHtml(me, 84)}
         <div class="me-id">
-          <p class="eyebrow">My Spots</p>
+          <p class="eyebrow">My profile</p>
           <h2>${esc(me.display_name || displayName())}</h2>
           <p class="me-sub">${me.username ? `<b>@${esc(me.username)}</b>` : `<button type="button" class="text-link" data-meedit>Choose a username</button>`}${me.base_name ? ` · ${esc(me.base_name)}` : ""}${data.since ? ` · Member since ${esc(fmtWhen(data.since))}` : ""}</p>
         </div>
