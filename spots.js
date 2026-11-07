@@ -449,7 +449,7 @@ const Spots = (() => {
     return `<div class="spots-gate">
       <div class="gate-icon" aria-hidden="true">${LOCK_SVG}</div>
       <h2>${wantJoin ? "Become folk" : "Welcome back, folk"}</h2>
-      <p>${wantJoin ? "Free, in a minute. Pick your folk and step in: you can explore everything right away, and signing, reviews and adding places unlock as soon as I approve your request, usually within a day." : "Log in to see every place with its exact location, the signatures of the folk, trips and your passport."}</p>
+      <p>${wantJoin ? "Free, in a minute. Pick your folk and step in: you can explore, sign, review and add places right away." : "Log in to see every place with its exact location, the signatures of the folk, trips and your passport."}</p>
       ${inner}
     </div>`;
   }
@@ -508,7 +508,6 @@ const Spots = (() => {
         <label class="gate-check"><input type="checkbox" id="joinCode"> <span>I accept the <button type="button" class="text-link" id="joinShowCode">community code</button>, the <a href="#terms" target="_blank">terms</a> and the <a href="#privacy" target="_blank">privacy policy</a>. I'm 16 or older.</span></label>
         <button class="outline-link" type="submit" id="joinSend">JOIN <span aria-hidden="true">→</span></button>
         <p class="gate-note" id="gateMsg" role="status"></p>
-        <p class="gate-help">I approve every request personally, usually within a day. Until then you can browse the public map.</p>
       </form>` : `<form class="gate-form" id="gateForm" novalidate>
         <label for="gateEmail">Email</label>
         <input id="gateEmail" type="email" autocomplete="username" placeholder="you@example.com" required>
@@ -593,7 +592,7 @@ const Spots = (() => {
     if (memberStatus === "suspended") return "Your account is suspended. If you think this is a mistake, contact me.";
     return memberStatus === "rejected"
       ? "Your request to join was not approved. If you think this is a mistake, contact me."
-      : "Thanks for joining! Your request is waiting for my approval — usually within a day. Until then, here is the public map.";
+      : "Thanks for joining! Your account is almost ready: reload the page in a moment. Until then, here is the public map.";
   }
 
   /* =========================================================
@@ -1172,7 +1171,7 @@ const Spots = (() => {
 `;
     const bannerHtml = `
       ${guest && session ? `<div class="guest-banner pending-banner">${LOCK_SVG}<p>${esc(pendingText())}</p></div>` : ""}
-      ${pendingMode ? `<div class="guest-banner pending-banner in"><p><strong>Welcome, folk!</strong> Explore everything. Signing, reviews and adding places unlock as soon as Fabio approves your request, usually within a day.</p></div>` : ""}
+      ${pendingMode ? `<div class="guest-banner pending-banner in"><p><strong>Welcome, folk!</strong> Explore everything. Signing, reviews and adding places unlock in a moment: reload the page if they don't.</p></div>` : ""}
       ${guest && !session ? `<div class="guest-banner">${LOCK_SVG}<p>${guestLoading || !spots.length ? `<strong>${guestLoading ? "Loading the shared spots…" : "The community map"}</strong>
           Members see every spot with its exact location, photos, reviews, prices and live alerts — and can add their own.
           <em>Membership is free:</em> <a href="#join">join in a minute</a>.` : (() => {
@@ -1246,7 +1245,7 @@ const Spots = (() => {
           ${CATS[k].icon}${CATS[k].label} <small>${spots.filter(s => s.category === k).length}</small></button>`).join("")}
       </div>` : ""}
       ${guest && session ? `<div class="guest-banner pending-banner">${LOCK_SVG}<p>${esc(pendingText())}</p></div>` : ""}
-      ${pendingMode ? `<div class="guest-banner pending-banner in"><p><strong>Welcome, folk!</strong> Explore everything. Signing, reviews and adding places unlock as soon as Fabio approves your request, usually within a day.</p></div>` : ""}
+      ${pendingMode ? `<div class="guest-banner pending-banner in"><p><strong>Welcome, folk!</strong> Explore everything. Signing, reviews and adding places unlock in a moment: reload the page if they don't.</p></div>` : ""}
       ${guest && !session ? `<div class="guest-banner">${LOCK_SVG}<p>${guestLoading || !spots.length ? `<strong>${guestLoading ? "Loading the shared spots…" : "The community map"}</strong>
           Members see every spot with its exact location, photos, reviews, prices and live alerts — and can add their own.
           <em>Membership is free:</em> <a href="#join">join in a minute</a>.` : (() => {
@@ -3768,7 +3767,7 @@ const Spots = (() => {
   const CONDUCT_KEY = "fcph-conduct-ok";
   const conductOk = () => { try { return localStorage.getItem(CONDUCT_KEY) === "1"; } catch { return false; } };
   function withConduct(fn) { if (pendingMode) return pendingNote(); if (conductOk() || !schemaV2) return fn(); showConduct(fn); }
-  const pendingNote = () => toast("You're in! Signing, reviewing and adding unlock as soon as Fabio approves your request (usually within a day).");
+  const pendingNote = () => toast("You're in! Signing, reviewing and adding unlock in a moment: reload the page if they don't.");
   // in attesa: si guarda tutto, ma i pulsanti per scrivere spiegano che manca l'approvazione
   document.addEventListener("click", e => {
     if (!pendingMode) return;
