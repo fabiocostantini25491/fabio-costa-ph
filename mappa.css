@@ -52,3 +52,4 @@ a { color: inherit; text-decoration: none; }
 .mp-foot { position: absolute; bottom: 9mm; left: 22mm; right: 22mm; display: flex; justify-content: space-between; font: 500 9pt var(--head); letter-spacing: .12em; text-transform: uppercase; color: var(--soft); }
 .mp-foot a { color: var(--rule); }
 .mp-tiles { filter: grayscale(.85) brightness(1.06) contrast(.92); }
+.leaflet-container a.mp-pin, .leaflet-container a.mp-pin:hover { color: #fff; }
