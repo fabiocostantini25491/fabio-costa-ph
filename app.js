@@ -2422,7 +2422,7 @@ function whenUmami(fn, tries = 0) {
 }
 function trackPage(page, extra = "") {
   const url = "/" + (page === "home" ? "" : page) + extra;
-  whenUmami(u => u.track(p => ({ ...p, url, title: `Fabio Costa Ph — ${PAGE_TITLES[page] || page}` })));
+  whenUmami(u => u.track(p => ({ ...p, url, title: SF ? `SpotFolk — ${page === "spots" ? "the map" : PAGE_TITLES[page] || page}` : `Fabio Costa Ph — ${PAGE_TITLES[page] || page}` })));
 }
 function trackEvent(name, data) { whenUmami(u => u.track(name, data)); }
 window.fcTrack = trackEvent;
@@ -2457,6 +2457,37 @@ document.addEventListener("click", e => {
 }, { capture: true, passive: true });
 document.addEventListener("change", e => { if (e.target.id === "shotFile" && e.target.files?.length) trackEvent("Analyze: photo loaded"); }, { capture: true });
 
+/* SpotFolk on its own (spotfolk.eu): only SpotFolk lives here; the rest of the site opens on fabiocostaph.com */
+const SF = document.documentElement.classList.contains("sf");
+const SF_PAGES = ["spots", "privacy", "terms", "guide"];
+const FCPH = "https://fabiocostaph.com/";
+function sfOutside(hash) {   // the page a hash leads to, if it isn't part of SpotFolk
+  const h = hash.replace(/^#/, "");
+  if (!h || /^(spotfolk|wayfolk|spots|join|me|privacy|terms|guide|feedback)$/.test(h) || /^(?:spots|wayfolk|spotfolk|guide)-/.test(h)) return false;
+  return true;
+}
+if (SF) {
+  // links to the rest of the site go to fabiocostaph.com (logged in there too, via the one-time hand-off)
+  // the SpotFolk menu: scrolls to the map or to a section of the presentation under it
+  document.addEventListener("click", e => {
+    const a = e.target.closest?.("[data-sfscroll]"); if (!a) return;
+    e.preventDefault();
+    const go = () => { const t = a.dataset.sfscroll === "spots" ? document.querySelector("#spots .sx-stage, #spots .spots-stage") || $("#spots") : document.getElementById(a.dataset.sfscroll);
+      if (t) window.scrollTo({ top: t.getBoundingClientRect().top + scrollY - ($("#sfBar")?.offsetHeight || 0) - 12, behavior: "smooth" }); };
+    if (document.body.dataset.page !== "spots" || location.hash === "#me") { location.hash = "spotfolk"; setTimeout(go, 500); } else go();
+  }, true);
+  document.addEventListener("click", e => {
+    const a = e.target.closest?.("a[href^='#']"); if (!a || !sfOutside(a.getAttribute("href"))) return;
+    e.preventDefault(); e.stopPropagation();
+    window.Spots?.goOther ? window.Spots.goOther(FCPH + a.getAttribute("href"), true) : window.open(FCPH + a.getAttribute("href"), "_blank", "noopener");
+  }, true);
+  document.addEventListener("DOMContentLoaded", () => {
+    const lp = document.querySelector(".lang-pick"), acts = $("#sfActs");
+    if (lp && acts) acts.prepend(lp);
+    $("#sfLogin")?.addEventListener("click", () => window.Spots?.login());
+  });
+}
+
 function route() {
   // chi arriva da wayfolk.eu (inoltro del dominio a fabiocostaph.com/?wayfolk) va dritto a SpotFolk
   if (/(^\?|&)(wayfolk|spotfolk)\b/.test(location.search) && !location.hash) { history.replaceState(null, "", location.pathname + "#spotfolk"); trackEvent("Wayfolk domain"); }
@@ -2483,6 +2514,11 @@ function route() {
   if (guideAnchor) page = "guide";
   if (join) page = "spots";
   if (!PAGES.includes(page)) page = "home";
+  if (SF && page === "guide" && !guideAnchor) { history.replaceState(null, "", "#guide-spots"); return route(); }
+  if (SF && !SF_PAGES.includes(page)) {
+    if (page === "home" || !hash) page = "spots";
+    else { location.replace(FCPH + "#" + hash); return; }
+  }
 
   const changed = document.body.dataset.page !== page;
   document.body.dataset.page = page;

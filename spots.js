@@ -106,13 +106,18 @@ const Spots = (() => {
   let experts = new Map();   // user_id → { area_name, lat, lon, radius_km, display_name }
   let commV = true;         // false finché non è stato eseguito supabase-community2.sql
   let meetups = [], meetupJoins = new Map(), favs = new Set(), profiles = [], openFlags = 0;
-  let onlyFavs = false, showPhotographers = false, showTravellers = false, commLayer = null;
+  let onlyFavs = false, commLayer = null;
+  const showFolks = new Set();   // i folk della community mostrati sulla mappa (Photo, Hiker, Backpacker, Road trip, Nomad, Foodie)
   let kindV = true, folksV = true;   // folksV: false finché non è stato eseguito supabase-folk-mappa.sql   // false finché non è stato eseguito supabase-viaggiatori.sql (colonna «kind» dei profili)
   const pKind = p => (p.kind === "traveller" || p.kind === "both" ? p.kind : "photographer");
   // i folk di un profilo (dal profilo stesso); senza folk vale il vecchio tipo fotografo/viaggiatore
   const pFolks = p => (Array.isArray(p.folks) ? p.folks : []).filter(k => k in FOLK_ICON);
   const isPhotoP = p => pFolks(p).length ? pFolks(p).includes("photo") : pKind(p) !== "traveller";
   const isTravP = p => pFolks(p).length ? pFolks(p).some(k => k !== "photo") : pKind(p) !== "photographer";
+  // tutti i folk di un profilo; i vecchi profili senza folk: fotografo → Photo, viaggiatore → Backpacker
+  const pFolkSet = p => pFolks(p).length ? pFolks(p) : pKind(p) === "traveller" ? ["slow"] : pKind(p) === "both" ? ["photo", "slow"] : ["photo"];
+  const showsP = p => pFolkSet(p).some(k => showFolks.has(k));
+  const revealP = p => { pFolkSet(p).forEach(k => showFolks.add(k)); };
   // ogni folk ha la sua icona sulla mappa
   const FOLK_ICON = {
     photo: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8.5h3.2l1.8-2.5h6l1.8 2.5H20V19H4z"/><circle cx="12" cy="13" r="3.4"/></svg>',
@@ -197,21 +202,39 @@ const Spots = (() => {
     saveSession({ access_token: data.access_token, refresh_token: data.refresh_token, expires_at: Date.now() + data.expires_in * 1000 });
     spareForSpotfolk(email, password);
   }
-  /* login unico con spotfolk.eu: una seconda sessione, separata, che il primo link verso spotfolk.eu porta con sé (una volta sola) */
+  /* login unico tra fabiocostaph.com e spotfolk.eu: una seconda sessione, separata, che il primo link verso l'altro sito
+     porta con sé (una volta sola). Su spotfolk.eu l'altro sito è fabiocostaph.com, e viceversa. */
   const HANDOFF = "fcph-handoff";
+  const SF_MODE = document.documentElement.classList.contains("sf");
+  const OTHER = SF_MODE ? "https://fabiocostaph.com" : "https://spotfolk.eu";
   async function spareForSpotfolk(email, password) {
     try { const { data } = await api("/auth/v1/token?grant_type=password", { method: "POST", auth: false, body: { email, password } }); localStorage.setItem(HANDOFF, data.refresh_token); } catch {}
   }
+  function goOther(href, newTab) {
+    let rt = null; try { rt = session ? localStorage.getItem(HANDOFF) : null; } catch {}
+    const u = new URL(href);
+    if (rt) {
+      try { localStorage.removeItem(HANDOFF); } catch {}
+      const to = u.hash.slice(1).replace(/[^\w-]/g, "");
+      u.hash = `sfh=${encodeURIComponent(rt)}${to ? `&to=${to}` : ""}`;
+    }
+    if (newTab) window.open(u.href, "_blank", "noopener"); else location.href = u.href;
+  }
   document.addEventListener("click", e => {
-    const a = e.target.closest?.('a[href^="https://spotfolk.eu"]'); if (!a || !session) return;
+    const a = e.target.closest?.(`a[href^="${OTHER}"]`); if (!a || !session) return;
     let rt = null; try { rt = localStorage.getItem(HANDOFF); } catch {}
     if (!rt) return;
     e.preventDefault();
-    try { localStorage.removeItem(HANDOFF); } catch {}
-    const u = new URL(a.href), to = u.hash.slice(1).replace(/[^\w-]/g, "");
-    u.hash = `sfh=${encodeURIComponent(rt)}${to ? `&to=${to}` : ""}`;
-    if (a.target === "_blank") window.open(u.href, "_blank", "noopener"); else location.href = u.href;
-  });
+    goOther(a.href, a.target === "_blank");
+  }, true);
+  // SpotFolk on its own (spotfolk.eu): the bar on top follows who is looking
+  function sfState() {
+    if (!SF_MODE) return;
+    const inside = !!session && !guest;
+    document.documentElement.classList.toggle("sf-folk", inside);
+    const i = document.getElementById("sfMeI"); if (i) i.textContent = ((memberName || "F").trim()[0] || "F").toUpperCase();
+    const n = document.querySelector("#sfMe span"); if (n && memberName) n.textContent = memberName.trim().split(/\s+/)[0];
+  }
   /* Iscrizione dal sito: nome, cognome, email, password. L'account entra «in attesa» finché non lo approvi */
   async function signUp(first, last, email, password, styles = []) {
     const { data } = await api("/auth/v1/signup", { method: "POST", auth: false,
@@ -501,6 +524,7 @@ const Spots = (() => {
   }
 
   function renderGate() {
+    setTimeout(sfState, 0);
     const join = wantJoin;
     root().innerHTML = gateHtml(`
       ${notice ? `<p class="gate-note warn">${esc(notice)}</p>` : ""}
@@ -644,7 +668,7 @@ const Spots = (() => {
     { id: "pass", title: "Pass it on", sub: "Sell or give away to travellers", cats: [], isNew: "2027-01-31" },
     { id: "places", title: "Places", sub: "Photo spots · Points of interest · Trekking", cats: ["spot", "trekking"] },
     { id: "essentials", title: "Essentials", sub: "Stay · Food & drink", cats: ["hotel", "restaurant"] },
-    { id: "community", title: "Community", sub: "Photographers · Travellers · Local experts · Meetups · Trips", cats: [] },
+    { id: "community", title: "Community", sub: "All the folk · Local experts · Meetups · Trips", cats: [] },
     { id: "outdoors", title: "Outdoors", sub: "Workshops · Experiences", cats: ["workshop", "experience"] }
   ];
 
@@ -672,7 +696,7 @@ const Spots = (() => {
       ["slow", "Backpacker", "slow.jpg", "Slow, cheap and curious."], ["road", "Road trip", "road.jpg", "The drive is the destination."],
       ["nomad", "Nomad", "nomad.jpg", "Work from wherever the view is."], ["food", "Foodie", "food.jpg", "Trips planned around a plate."]];
     return `<div class="wfa" aria-label="What SpotFolk is">
-      <section class="wfa-blk wfa-folk">
+      <section class="wfa-blk wfa-folk" id="wfaFolk">
         <p class="wfa-kick">You don't join as a user</p>
         <h2 class="wfa-h2">Which folk <em>are you?</em></h2>
         <p class="wfa-lead">Pick the way you travel. Your folk becomes your voice on the map: the places you sign carry its mark, and people who travel like you find them.</p>
@@ -680,7 +704,7 @@ const Spots = (() => {
           ? `<div class="wfa-f is-static"><span class="wfa-ring"><img src="img/wf/${img}" alt="" loading="lazy" width="120" height="120"></span><b>${n}</b><small>${line}</small></div>`
           : `<button type="button" data-joinfolk="${k}" class="wfa-f"><span class="wfa-ring"><img src="img/wf/${img}" alt="" loading="lazy" width="120" height="120"></span><b>${n}</b><small>${line}</small></button>`).join("")}</div>
       </section>
-      <section class="wfa-blk wfa-split">
+      <section class="wfa-blk wfa-split" id="wfaTips">
         <div>
           <p class="wfa-kick">What the maps don't tell you</p>
           <h2 class="wfa-h2">Every place has a secret. <em>The folk who went know it.</em></h2>
@@ -697,7 +721,7 @@ const Spots = (() => {
           </div>
         </article>
       </section>
-      <section class="wfa-blk">
+      <section class="wfa-blk" id="wfaInside">
         <h2 class="wfa-h2">One toolkit for the road, <em>kept alive by its folk.</em></h2>
         <div class="wfa-grid">
           <article><h3>Places</h3><p>Photo spots, points of interest and trekking, with best months, live alerts and protection for fragile places.</p></article>
@@ -716,7 +740,7 @@ const Spots = (() => {
           <li><span>03</span><b>Get your passport</b><small><span>Stamps, levels, Local expert. The first 100 folk get a founding number for good.</span>${foundersLeft != null && foundersLeft > 0 ? ` <b>${foundersLeft}</b> <span>left.</span>` : ""}</small></li>
         </ol>
       </section>
-      <section class="wfa-close">
+      <section class="wfa-close" id="wfaCode">
         <h2 class="wfa-h2">The fire is lit. <em>Pull up a seat.</em></h2>
         <p class="wfa-lead">Leave no trace, protect fragile places, respect people, support local, share honestly, be kind. That's the whole code.</p>
         ${inside ? `<button type="button" class="wfa-btn big" id="wfaToMap">Back to the map</button>` : `<button type="button" class="wfa-btn big" id="wfaJoin">Become folk — it's free</button>
@@ -751,9 +775,8 @@ const Spots = (() => {
           <button type="button" class="sx-pass-cta" id="passAdd">🎁 Sell or give away something</button>`;
       }
       if (g.id === "community") {
-        if (guest || !commV) return lockItem("Photographers", "📷") + lockItem("Travellers", "🎒") + lockItem("Local experts", "🧭") + lockItem("Meetups", "👥") + lockItem("Trips", "🧭");
-        return `<button type="button" class="sx-item${showPhotographers ? " on" : ""}" id="showPh" aria-pressed="${showPhotographers}" style="--c:#c9a7ff"><span class="sx-ico">📷</span><span class="sx-name">Photographers</span><small>${profiles.filter(p => onMapP(p) && isPhotoP(p)).length}</small><span class="sx-check" aria-hidden="true"></span></button>
-          ${kindV ? `<button type="button" class="sx-item${showTravellers ? " on" : ""}" id="showTr" aria-pressed="${showTravellers}" style="--c:#7fd3c7"><span class="sx-ico">🎒</span><span class="sx-name">Travellers</span><small>${profiles.filter(p => onMapP(p) && isTravP(p)).length}</small><span class="sx-check" aria-hidden="true"></span></button>` : ""}
+        if (guest || !commV) return CLUSTER_KEYS.map(k => lockItem(CLUSTERS[k].folk, CLUSTERS[k].ico)).join("") + lockItem("Local experts", "🧭") + lockItem("Meetups", "👥") + lockItem("Trips", "🧭");
+        return CLUSTER_KEYS.map(k => `<button type="button" class="sx-item${showFolks.has(k) ? " on" : ""}" data-showfolk="${k}" aria-pressed="${showFolks.has(k)}" style="--c:${CLUSTERS[k].color}"><span class="sx-ico">${CLUSTERS[k].ico}</span><span class="sx-name">${esc(CLUSTERS[k].folk)}</span><small>${profiles.filter(p => onMapP(p) && pFolkSet(p).includes(k)).length}</small><span class="sx-check" aria-hidden="true"></span></button>`).join("") + `
           <p class="sx-links"><button type="button" class="text-link" id="phList">List</button><button type="button" class="text-link" id="myProfile">${profiles.some(p => p.user_id === myUid()) ? "My community profile" : "Join the community map"}</button>${nodiV && profiles.some(p => p.user_id === myUid()) ? `<button type="button" class="text-link" id="iPosted">📣 I just posted</button>` : ""}</p>
           ${nodiV ? `<button type="button" class="sx-item" id="expList" style="--c:#ffd9a0"><span class="sx-ico">🧭</span><span class="sx-name">Local experts</span><small>${experts.size}</small><span class="sx-go" aria-hidden="true">›</span></button>` : ""}
           ${nodiV && myExpert() ? `<button type="button" class="sx-item" id="myArea" style="--c:#ffd9a0"><span class="sx-ico">🧭</span><span class="sx-name">My area</span><span class="sx-go" aria-hidden="true">›</span></button>` : ""}
@@ -769,7 +792,7 @@ const Spots = (() => {
       return g.cats.map(k => item(k)).join("");
     };
     const groups = SX_GROUPS.filter(g => g.id !== "pass" || guest || !commV || passV).map(g => {
-      const open = sxOpen.has(g.id), on = g.cats.some(k => activeCats.has(k)) || (g.id === "community" && (showPhotographers || showTravellers)) || (g.id === "pass" && showPass && !guest && commV);
+      const open = sxOpen.has(g.id), on = g.cats.some(k => activeCats.has(k)) || (g.id === "community" && showFolks.size > 0) || (g.id === "pass" && showPass && !guest && commV);
       const count = g.cats.reduce((a, k) => a + n(k), 0);
       return `<section class="sx-group${open ? " open" : ""}${on ? " on" : ""}" data-g="${g.id}">
         <button type="button" class="sx-ghead" data-sxg="${g.id}" aria-expanded="${open}">
@@ -785,10 +808,11 @@ const Spots = (() => {
       <aside class="sx-side">
         <p class="sx-kick"><img class="sx-logo" src="img/spotfolk-logo.png" alt="SpotFolk" width="640" height="365"></p>
         <a class="sx-home" href="https://spotfolk.eu" target="_blank" rel="noopener">spotfolk.eu ↗</a>
-        <h2 class="sx-title">Explore the Earth</h2>
+        <h2 class="sx-title">${SF_MODE ? "The map, <em>signed by the folk.</em>" : "Explore the Earth"}</h2>
         <p class="sx-lead">${esc(DOOR_LEAD[doorNow()] || "Made by its community: travellers like you share, sign and review the places worth the trip, and look after them.")}</p>
         <div class="sx-panel">
           ${guest && !session ? welcomeHtml() : ""}
+          ${SF_MODE ? `<button type="button" class="sf-near" id="sfNear">${SX_ICON.near}<span>Places near me</span></button>` : ""}
           ${searchHtml}
           <div class="onb-folk" id="onbFolk" hidden></div>
           <div class="sx-groups">${groups}</div>
@@ -1073,7 +1097,7 @@ const Spots = (() => {
       document.querySelectorAll("[data-sxsub]").forEach(b => { const on = activeCats.has("spot") && activeSubs.has(b.dataset.sxsub); b.classList.toggle("on", on); b.setAttribute("aria-pressed", on); });
       document.querySelectorAll(".sx-group").forEach(sec => {
         const g = SX_GROUPS.find(x => x.id === sec.dataset.g);
-        sec.classList.toggle("on", g.cats.some(c => activeCats.has(c)) || (g.id === "community" && (showPhotographers || showTravellers)));
+        sec.classList.toggle("on", g.cats.some(c => activeCats.has(c)) || (g.id === "community" && showFolks.size > 0));
       });
       drawClusters(); if (origin) renderNear();
     };
@@ -1093,6 +1117,7 @@ const Spots = (() => {
     document.querySelectorAll("[data-sxjoin]").forEach(b => b.addEventListener("click", () => { wantJoin = true; render(); root().scrollIntoView({ behavior: "smooth" }); }));
     document.querySelectorAll("[data-sxmode]").forEach(b => b.addEventListener("click", () => setViewMode(b.dataset.sxmode)));
     $("#sxNear")?.addEventListener("click", locateMe);
+    $("#sfNear")?.addEventListener("click", locateMe);
     $("#sxIn")?.addEventListener("click", () => onGlobe ? globe.zoomIn() : map.zoomIn());
     $("#sxOut")?.addEventListener("click", () => onGlobe ? globe.zoomOut() : map.zoomOut());
     $("#sxHome")?.addEventListener("click", () => { if (viewMode !== "globe") setViewMode("globe"); else if (onGlobe) globe.flyTo({ zoom: earthZoom(), duration: 1400 }); else { const c = map.getCenter(); toGlobe([c.lat, c.lng], Math.min(map.getZoom() - 1, 5), true); } });
@@ -1213,6 +1238,7 @@ const Spots = (() => {
   }
 
   function renderApp() {
+    setTimeout(sfState, 0);
     const lists = [...new Set(spots.map(s => s.list))].sort((a, b) => a.localeCompare(b));
     if (!activeLists) activeLists = new Set(lists);
     else lists.forEach(l => { if (!knownLists.has(l)) activeLists.add(l); });   // liste nuove: visibili
@@ -1345,8 +1371,7 @@ const Spots = (() => {
         <button type="button" class="filter comm-btn${onlyFavs ? " active" : ""}" id="onlyFavs" aria-pressed="${onlyFavs}">♥ My spots <small>${favs.size}</small></button>
         <button type="button" class="filter comm-btn" id="meetList">👥 Meetups <small>${upcomingMeetups().length}</small></button>
         <button type="button" class="filter comm-btn" id="meetAdd">＋ Meetup</button>
-        <button type="button" class="filter comm-btn${showPhotographers ? " active" : ""}" id="showPh" aria-pressed="${showPhotographers}">📷 Photographers <small>${profiles.filter(p => onMapP(p) && isPhotoP(p)).length}</small></button>
-        ${kindV ? `<button type="button" class="filter comm-btn${showTravellers ? " active" : ""}" id="showTr" aria-pressed="${showTravellers}">🎒 Travellers <small>${profiles.filter(p => onMapP(p) && isTravP(p)).length}</small></button>` : ""}
+        ${CLUSTER_KEYS.map(k => `<button type="button" class="filter comm-btn${showFolks.has(k) ? " active" : ""}" data-showfolk="${k}" aria-pressed="${showFolks.has(k)}">${CLUSTERS[k].ico} ${esc(CLUSTERS[k].folk)} <small>${profiles.filter(p => onMapP(p) && pFolkSet(p).includes(k)).length}</small></button>`).join("")}
         <button type="button" class="text-link" id="phList">List</button>
         ${nodiV ? `<button type="button" class="filter comm-btn" id="expList">🧭 Local experts <small>${experts.size}</small></button>` : ""}
         ${nodiV && myExpert() ? `<button type="button" class="filter comm-btn xp-mine" id="myArea">🧭 My area</button>` : ""}
@@ -1456,19 +1481,19 @@ const Spots = (() => {
     $("#passAdd")?.addEventListener("click", () => withConduct(() => openPassOn(map ? { lat: map.getCenter().lat, lon: L.Util.wrapNum(map.getCenter().lng, [-180, 180], true), zoom: map.getZoom() } : null)));
     $("#showPass")?.addEventListener("click", () => { showPass = !showPass; const b = $("#showPass"); b.classList.toggle("on", showPass); b.setAttribute("aria-pressed", showPass); drawCommunity(); });
     $("#meetAdd")?.addEventListener("click", () => withConduct(() => openMeetup(map ? { lat: map.getCenter().lat, lon: L.Util.wrapNum(map.getCenter().lng, [-180, 180], true) } : null)));
-    const togglePeople = (id, which) => {
-      if (which === "ph") showPhotographers = !showPhotographers; else showTravellers = !showTravellers;
-      const on = which === "ph" ? showPhotographers : showTravellers, b = $(id);
-      b?.classList.toggle("active", on); b?.classList.toggle("on", on); b?.setAttribute("aria-pressed", on);
+    // community: ogni folk si accende e si spegne da sé
+    $$("[data-showfolk]").forEach(b => b.addEventListener("click", () => {
+      const k = b.dataset.showfolk, on = !showFolks.has(k);
+      if (on) showFolks.add(k); else showFolks.delete(k);
+      b.classList.toggle("active", on); b.classList.toggle("on", on); b.setAttribute("aria-pressed", on);
+      b.closest(".sx-group")?.classList.toggle("on", showFolks.size > 0 || [...b.closest(".sx-group").querySelectorAll(".sx-item.on")].length > 0);
       drawCommunity();
       if (on) {
-        const pts = profiles.filter(p => onMapP(p) && (which === "ph" ? isPhotoP(p) : isTravP(p))).map(p => [p.lat, p.lon]);
+        const pts = profiles.filter(p => onMapP(p) && pFolkSet(p).includes(k)).map(p => [p.lat, p.lon]);
         if (pts.length) map.flyToBounds(L.latLngBounds(pts).pad(0.3), { maxZoom: 8, duration: .8 });
-        else toast(which === "ph" ? "No photographers on the map yet: be the first!" : "No travellers on the map yet: be the first!");
+        else toast(`No ${CLUSTERS[k].folk} on the map yet: be the first!`);
       }
-    };
-    $("#showPh")?.addEventListener("click", () => togglePeople("#showPh", "ph"));
-    $("#showTr")?.addEventListener("click", () => togglePeople("#showTr", "tr"));
+    }));
     $("#myProfile")?.addEventListener("click", openProfile);
     $("#expList")?.addEventListener("click", openExperts);
     $("#phList")?.addEventListener("click", () => openPhotographers(false));
@@ -2753,7 +2778,7 @@ const Spots = (() => {
     d.querySelectorAll("[data-co]").forEach(b => b.addEventListener("click", () => openPhotographers(b.dataset.co)));
     d.querySelectorAll("[data-ph]").forEach(b => b.addEventListener("click", () => {
       const p = profiles.find(x => x.user_id === b.dataset.ph); d.close(); if (!p) return;
-      if (isPhotoP(p)) showPhotographers = true; else showTravellers = true;
+      revealP(p);
       drawCommunity(); $("#spotsMap").scrollIntoView({ behavior: "smooth", block: "center" }); map.flyTo([p.lat, p.lon], 10, { duration: .8 });
     }));
   }
@@ -2838,7 +2863,7 @@ const Spots = (() => {
       mk.on("popupopen", e => wirePass(e.popup, it));
     });
     const zoomOk = map.getZoom() >= 5;
-    profiles.filter(p => onMapP(p) && ((showPhotographers && isPhotoP(p)) || (showTravellers && isTravP(p)) || (postFresh(p) && (zoomOk || isCo(p.user_id))))).forEach(p => {
+    profiles.filter(p => onMapP(p) && (showsP(p) || (postFresh(p) && (zoomOk || isCo(p.user_id))))).forEach(p => {
       const fresh = postFresh(p), xp = experts.has(p.user_id), co = isCo(p.user_id), dev = isDev(p.user_id), big = xp || co || dev;
       const mk = L.marker([p.lat, p.lon], { zIndexOffset: (fresh ? 1300 : 1100) + (co ? 50 : 0), keyboard: true, title: p.display_name,
         icon: L.divIcon({ className: "", iconSize: [big ? 36 : 30, big ? 36 : 30], iconAnchor: [big ? 18 : 15, big ? 18 : 15], popupAnchor: [0, -12],
@@ -3380,7 +3405,7 @@ const Spots = (() => {
         profiles = profiles.filter(p => p.user_id !== row.user_id).concat({ ...me, ...row });
         d.close(); meCache = null;
         if (meView) { renderMe(); toast("Profile saved."); }
-        else { if (row.lat != null && row.on_map !== false) { if (isPhotoP(row)) showPhotographers = true; if (isTravP(row)) showTravellers = true; } renderApp(); toast(row.lat == null ? "Profile saved. Add your area to appear on the community map." : "Profile saved: you're on the community map."); }
+        else { if (row.lat != null && row.on_map !== false) { revealP(row); } renderApp(); toast(row.lat == null ? "Profile saved. Add your area to appear on the community map." : "Profile saved: you're on the community map."); }
         window.fcTrack?.("Spots: saved photographer profile");
       } catch (err) { warn(/duplicate|unique|23505/i.test(err.message) ? "That username is already taken: try another." : `Could not save: ${err.message}`); }
     });
@@ -3637,7 +3662,7 @@ const Spots = (() => {
             else if (kind === "meetup") { const m = meetups.find(x => String(x.id) === target); if (m) map.flyTo([m.lat, m.lon], 14); }
             else if (kind === "trip") { await loadTrips(); const t = trips.find(x => String(x.id) === target); if (t) focusTrip(t); else toast("Itinerario già eliminato."); }
             else if (kind === "pass_on") { const it = passItems.find(x => String(x.id) === target); if (it) { showPass = true; drawCommunity(); map.flyTo([it.lat, it.lon], 15); } else toast("Annuncio già scaduto o eliminato."); }
-            else if (kind === "profile") { const p = profiles.find(x => x.user_id === target); if (p && p.lat != null) { if (isPhotoP(p)) showPhotographers = true; else showTravellers = true; drawCommunity(); map.flyTo([p.lat, p.lon], 10); } }
+            else if (kind === "profile") { const p = profiles.find(x => x.user_id === target); if (p && p.lat != null) { revealP(p); drawCommunity(); map.flyTo([p.lat, p.lon], 10); } }
             else {
               const table = kind === "review" ? "spot_reviews" : "spot_photos";
               try { const { data: r } = await api(`/rest/v1/${table}?select=spot_id&id=eq.${encodeURIComponent(target)}`); const s = spots.find(x => x.id === r?.[0]?.spot_id); if (s) focusSpot(s); else toast("Contenuto già eliminato."); } catch {}
@@ -5535,7 +5560,8 @@ const Spots = (() => {
   }
 
   const prefetch = () => { if (ui === "earth" && viewMode === "globe" && !globeFailed) loadMapLibre().catch(() => {}); };
-  return { show, prefetch, handleCallback, loadSession, renderWrite, parse: { fromCSV, fromKML, fromGeoJSON, coordsFromText } };
+  const login = () => { if (session && !guest) return; wantLogin = true; wantJoin = false; if (location.hash !== "#spotfolk" && document.body.dataset.page !== "spots") location.hash = "spotfolk"; render(); setTimeout(() => root()?.scrollIntoView({ behavior: "smooth" }), 60); };
+  return { show, prefetch, handleCallback, loadSession, renderWrite, goOther, login, parse: { fromCSV, fromKML, fromGeoJSON, coordsFromText } };
 })();
 
 const LOCK_SVG = '<svg viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/><circle cx="12" cy="15.5" r="1.3"/></svg>';

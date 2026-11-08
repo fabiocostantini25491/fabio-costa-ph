@@ -45,7 +45,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,500&family=Oswald:wght@500;700&family=Libre+Caslon+Text:ital,wght@0,400;0,700;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap">
-  <link rel="stylesheet" href="style.css?v=20261108r">
+  <link rel="stylesheet" href="style.css?v=20261108s">
   <!-- statistiche anonime, senza cookie (Umami): le pagine e i clic li segnala app.js -->
   <script>
   /* single login with spotfolk.eu: a link from there can carry a one-time session of its own (#sfh=…).
@@ -57,7 +57,23 @@
     history.replaceState(null, "", location.pathname + location.search + (to ? "#" + to.replace(/[^\w-]/g, "") : ""));
   })();
   </script>
-  <script defer src="https://cloud.umami.is/script.js" data-website-id="2ca8d3a5-91c1-4544-a327-d8469e3e4313" data-auto-track="false" data-domains="fabiocostaph.com,www.fabiocostaph.com"></script>
+  <script defer src="https://cloud.umami.is/script.js" data-website-id="2ca8d3a5-91c1-4544-a327-d8469e3e4313" data-auto-track="false" data-domains="fabiocostaph.com,www.fabiocostaph.com,spotfolk.eu,www.spotfolk.eu" id="umamiTag"></script>
+  <script>
+  /* SpotFolk on its own: the same site runs on spotfolk.eu showing only SpotFolk (map, passport, sign-up).
+     For testing on any copy: ?sfmode=1 turns it on in this browser, ?sfmode=0 turns it off. */
+  (function () {
+    var on = /(^|\.)spotfolk\.eu$/.test(location.hostname);
+    try {
+      var q = location.search.match(/[?&]sfmode=([01])/);
+      if (q) { q[1] === "1" ? localStorage.setItem("sf-mode", "1") : localStorage.removeItem("sf-mode"); history.replaceState(null, "", location.pathname + location.hash); }
+      if (localStorage.getItem("sf-mode") === "1") on = true;
+    } catch (e) {}
+    if (!on) return;
+    document.documentElement.classList.add("sf");
+    document.title = "SpotFolk — the community map";
+    var u = document.getElementById("umamiTag"); if (u) u.setAttribute("data-tag", "spotfolk");
+  })();
+  </script>
 </head>
 <body>
 <!--BODY-START-->
@@ -83,6 +99,24 @@
       <button class="icon-button menu-toggle" id="menuToggle" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="mainNav">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
       </button>
+    </div>
+  </header>
+  <div class="sf-top" id="sfTop"><a href="https://fabiocostaph.com/"><img src="img/logo.png" alt="" width="288" height="192"><span>Fabio Costa Ph</span></a><span class="sf-born">A community born from the map of photographer Fabio Costantini</span></div>
+  <header class="sf-bar" id="sfBar">
+    <a class="sf-logo" href="#spotfolk" aria-label="SpotFolk, the map"><img src="img/spotfolk-logo.png" alt="SpotFolk" width="640" height="365"></a>
+    <nav class="sf-nav" aria-label="SpotFolk">
+      <a class="sf-map" href="#spotfolk" data-sfscroll="spots"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2zM9 4v14M15 6v14"/></svg>The map</a>
+      <a class="sf-folk-only" href="#me">Your passport</a>
+      <a href="#spotfolk" data-sfscroll="wfaFolk">The folk</a>
+      <a class="sf-guest-only" href="#spotfolk" data-sfscroll="wfaTips">Tips</a>
+      <a href="#spotfolk" data-sfscroll="wfaInside">Inside</a>
+      <a class="sf-guest-only" href="#spotfolk" data-sfscroll="wfaCode">Our code</a>
+      <a href="https://fabiocostaph.com/#journal" target="_blank" rel="noopener">Field Notes ↗</a>
+    </nav>
+    <div class="sf-acts" id="sfActs">
+      <button type="button" class="sf-btn sf-line sf-guest-only" id="sfLogin">Log in</button>
+      <a class="sf-btn sf-fire sf-guest-only" href="#join">Become folk</a>
+      <a class="sf-me sf-folk-only" href="#me" id="sfMe"><i id="sfMeI">F</i><span>Your passport</span></a>
     </div>
   </header>
 
@@ -602,12 +636,12 @@
 <!--BODY-END-->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
-  <script src="i18n.js?v=20261108r"></script>
-  <script src="app.js?v=20261108r"></script>
-  <script src="spots.js?v=20261108r"></script>
-  <script src="tools.js?v=20261108r"></script>
-  <script src="pwa.js?v=20261108r"></script>
-  <script src="feedback.js?v=20261108r"></script>
-  <script src="system.js?v=20261108r"></script>
+  <script src="i18n.js?v=20261108s"></script>
+  <script src="app.js?v=20261108s"></script>
+  <script src="spots.js?v=20261108s"></script>
+  <script src="tools.js?v=20261108s"></script>
+  <script src="pwa.js?v=20261108s"></script>
+  <script src="feedback.js?v=20261108s"></script>
+  <script src="system.js?v=20261108s"></script>
 </body>
 </html>
