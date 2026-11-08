@@ -1193,6 +1193,17 @@ const I18N = (() => {
     "(your device)": ["(il tuo dispositivo)", "(tu dispositivo)", "(votre appareil)", "(dein Gerät)"],
     "Signed by {n} folk": ["Firmato da {n} folk", "Firmado por {n} folk", "Signé par {n} folk", "Von {n} Folk signiert"],
     "Tap a place on the map to read its signatures and tips.": ["Tocca un luogo sulla mappa per leggere firme e consigli."],
+    "The travel magazine of the site, written by me and by the Wayfolk folk: practical stories, not poetry — when to go, where to park, how long the walk is, what settings to use and the mistakes to avoid.": ["La rivista di viaggio del sito, scritta da me e dai folk di Wayfolk: racconti pratici, non poesia — quando andare, dove parcheggiare, quanto dura la camminata, che impostazioni usare e gli errori da evitare."],
+    "— every article, filtered by topic: reportage, places, current affairs, photography and technique, practical guides.": ["— tutti gli articoli, filtrabili per tema: reportage, luoghi, attualità, fotografia e tecnica, guide pratiche."],
+    "— the magazine builds itself: every month the published stories become an issue of": ["— la rivista si compone da sola: ogni mese i racconti pubblicati diventano un numero di"],
+    ", with its cover, to read on the site or download as a PDF.": [", con la sua copertina, da leggere sul sito o scaricare in PDF."],
+    "— places zone by zone: what to see, when to go, where to stop, with a printable PDF and a PDF map that links every point to Google Maps.": ["— luoghi zona per zona: cosa vedere, quando andare, dove fermarsi, con un PDF da stampare e una mappa PDF che collega ogni punto a Google Maps."],
+    "Every folk can write": ["Ogni folk può scrivere"],
+    "— tap": ["— tocca"],
+    "✍ Write for Field Notes": ["✍ Scrivi per Field Notes"],
+    ", send your story with your photos, and once it's published you become a co-author of the magazine: your byline carries your name and your folk, and the story goes into that month's issue.": [", invia il tuo racconto con le tue foto e, una volta pubblicato, diventi coautore della rivista: la firma porta il tuo nome e il tuo folk, e il racconto entra nel numero di quel mese."],
+    "Folk of the month": ["Folk del mese"],
+    "— every issue tells the story of one member of the community.": ["— ogni numero racconta la storia di un membro della community."],
   };
 
   const idx = ORDER.indexOf(lang);
