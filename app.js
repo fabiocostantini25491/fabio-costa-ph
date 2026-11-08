@@ -2423,7 +2423,7 @@ const CLICK_EVENTS = [
   ["[data-osmi], [data-addosm]", "Spots: OpenStreetMap place"],
   ["#toolsLocate", "Tools: near me"],
   ["[data-tab]", el => `Tools: tab ${el.dataset.tab}`],
-  ["[data-mode]", el => `Planner: ${el.dataset.mode}`],
+  [".map-modes [data-mode]", el => `Planner: ${el.dataset.mode}`],
   ["[data-look]", el => `Planner: look at ${el.dataset.look}`],
   ["#plPlay", "Planner: play"],
   ["#shotAi", "Analyze: AI detect"],
