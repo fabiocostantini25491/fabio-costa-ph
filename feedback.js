@@ -9,12 +9,12 @@
 
   const Q = [
     { id: "came", multi: true, q: "What brought you here?", o: {
-      photos: "The photographs", spots: "The Wayfolk map", tools: "The Tools (sun, moon, planner)", journal: "Articles and guides",
+      photos: "The photographs", spots: "The SpotFolk map", tools: "The Tools (sun, moon, planner)", journal: "Articles and guides",
       workshops: "Workshops and meetups", social: "Instagram or a friend" } },
     { id: "interest", multi: true, q: "What interests you most?", o: {
       locations: "Photo spots and locations", light: "Planning the light (sun, moon, Milky Way)", guides: "Practical travel guides",
       stories: "Reportage and stories", community: "Workshops and meeting other photographers", prints: "Prints and photo licences" } },
-    { id: "spots", multi: true, q: "How do you use Wayfolk?", o: {
+    { id: "spots", multi: true, q: "How do you use SpotFolk?", o: {
       trip: "To plan a trip", near: "To find spots near me", add: "I add my own places", reviews: "Reviews and real prices",
       meet: "Meetups with other members", notyet: "I haven't tried it yet" } },
     { id: "often", multi: false, q: "How often would you come back?", o: {
@@ -114,7 +114,7 @@
 
   /* ---------- Diventa contributor (writer, fotografi, guide, sviluppatori…) ---------- */
   const ROLES = { writer: "Writer for the Journal", photographer: "Photographer (reportage, photo essays)", local: "Local expert / mountain guide",
-    spots: "Curating spots in my area", developer: "Developer (help build Wayfolk)", translator: "Translator", other: "Something else" };
+    spots: "Curating spots in my area", developer: "Developer (help build SpotFolk)", translator: "Translator", other: "Something else" };
   function openContribute(pre) {
     let d = document.getElementById("contribDialog");
     if (!d) { d = document.createElement("dialog"); d.id = "contribDialog"; d.className = "import-dialog fb-dialog"; document.body.appendChild(d); d.addEventListener("click", e => { if (e.target === d) d.close(); }); }
@@ -122,7 +122,7 @@
       <form class="import-body gate-form fb-form" novalidate>
         <span class="eyebrow">${esc(t("Join the crew"))}</span>
         <h2>${esc(t("Become a contributor"))}</h2>
-        <p class="gate-help left">${esc(t("Wayfolk and the Journal grow with the people who love these places. Tell me how you'd like to help: I read every message and reply personally."))}</p>
+        <p class="gate-help left">${esc(t("SpotFolk and the Journal grow with the people who love these places. Tell me how you'd like to help: I read every message and reply personally."))}</p>
         <fieldset class="fb-q"><legend>${esc(t("How would you like to contribute?"))} <small>${esc(t("(choose any)"))}</small></legend>
           <div class="fb-opts">${Object.entries(ROLES).map(([k, l]) => `<label class="fb-opt"><input type="checkbox" name="role" value="${k}"${pre === k ? " checked" : ""}><span>${esc(t(l))}</span></label>`).join("")}</div>
         </fieldset>
