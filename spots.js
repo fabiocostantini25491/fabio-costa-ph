@@ -766,6 +766,7 @@ const Spots = (() => {
     return `<div class="sx">
       <aside class="sx-side">
         <p class="sx-kick"><img class="sx-logo" src="img/spotfolk-logo.png" alt="SpotFolk" width="640" height="365"></p>
+        <a class="sx-home" href="https://spotfolk.eu" target="_blank" rel="noopener">spotfolk.eu ↗</a>
         <h2 class="sx-title">Explore the Earth</h2>
         <p class="sx-lead">${esc(DOOR_LEAD[doorNow()] || "Made by its community: travellers like you share, sign and review the places worth the trip, and look after them.")}</p>
         <div class="sx-panel">

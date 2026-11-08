@@ -3294,3 +3294,7 @@ body[data-page="explore"]::after{background:radial-gradient(90% 55% at 85% 0,rgb
 .wfa-f.is-static{cursor:default}
 .wfa-f.is-static:hover .wfa-ring{border:1px solid rgba(156,200,255,.25);box-shadow:none}
 .wfa-note{margin:4px 0 0;color:var(--muted);font-size:.9rem}
+
+/* link to the SpotFolk home domain, under the logo */
+.sx-home{display:inline-block;width:fit-content;align-self:flex-start;justify-self:start;margin:-4px 0 10px;font-size:12px;letter-spacing:.06em;color:var(--soft);text-decoration:none;border-bottom:1px solid currentColor;padding-bottom:1px}
+.sx-home:hover{color:var(--head)}
