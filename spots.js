@@ -487,6 +487,12 @@ const Spots = (() => {
   }
 
   function gateHtml(inner) {
+    if (SF_MODE) return `<div class="spots-gate sf-door">
+      <img class="sf-door-logo" src="img/spotfolk-logo.png" alt="SpotFolk" width="640" height="365">
+      <h2>${wantJoin ? "Pull up a seat, <em>folk.</em>" : "Welcome back, <em>folk.</em>"}</h2>
+      <p>${wantJoin ? "Free, one minute. Sign places, read the tips, get your passport." : "Log in to see the signatures and the tips on every place."}</p>
+      ${inner}
+    </div>`;
     return `<div class="spots-gate">
       <div class="gate-icon" aria-hidden="true">${LOCK_SVG}</div>
       <h2>${wantJoin ? "Become folk" : "Welcome back, folk"}</h2>
@@ -530,7 +536,7 @@ const Spots = (() => {
       ${notice ? `<p class="gate-note warn">${esc(notice)}</p>` : ""}
       <div class="gate-tabs" role="tablist">
         <button type="button" role="tab" class="${join ? "" : "on"}" aria-selected="${!join}" data-gtab="login">Log in</button>
-        <button type="button" role="tab" class="${join ? "on" : ""}" aria-selected="${join}" data-gtab="join">Find your folk — free</button>
+        <button type="button" role="tab" class="${join ? "on" : ""}" aria-selected="${join}" data-gtab="join">${SF_MODE ? "Become folk" : "Find your folk — free"}</button>
       </div>
       ${join ? `<form class="gate-form" id="joinForm" novalidate>
         <div class="gate-row">
@@ -544,18 +550,18 @@ const Spots = (() => {
         <label for="joinPassword">Password</label>
         <input id="joinPassword" type="password" autocomplete="new-password" minlength="8" placeholder="At least 8 characters" required>
         <fieldset class="cl-pick" id="joinStyles"><legend>Choose your folk <small>(how you travel: pick all that fit)</small></legend>
-          ${CLUSTER_KEYS.map(k => `<label><input type="checkbox" value="${k}"${DOORS[doorNow()] === k || joinFolk() === k ? " checked" : ""}><span>${CLUSTERS[k].ico} ${CLUSTERS[k].long}</span></label>`).join("")}
+          ${CLUSTER_KEYS.map(k => `<label><input type="checkbox" value="${k}"${DOORS[doorNow()] === k || joinFolk() === k ? " checked" : ""}><span>${SF_MODE ? `<i aria-hidden="true">${CLUSTERS[k].ico}</i>${CLUSTERS[k].label}` : `${CLUSTERS[k].ico} ${CLUSTERS[k].long}`}</span></label>`).join("")}
         </fieldset>
         ${foundersLeft != null && foundersLeft > 0 ? `<p class="wf-found">🏅 Join now and you're one of the first 100 <b>Founding folk</b> <span class="wf-left">${foundersLeft}</span> <span>places left.</span></p>` : ""}
         <label class="gate-check"><input type="checkbox" id="joinCode"> <span>I accept the <button type="button" class="text-link" id="joinShowCode">community code</button>, the <a href="#terms" target="_blank">terms</a> and the <a href="#privacy" target="_blank">privacy policy</a>. I'm 16 or older.</span></label>
-        <button class="outline-link" type="submit" id="joinSend">JOIN <span aria-hidden="true">→</span></button>
+        ${SF_MODE ? `<button class="sf-submit" type="submit" id="joinSend">Become folk — free →</button>` : `<button class="outline-link" type="submit" id="joinSend">JOIN <span aria-hidden="true">→</span></button>`}
         <p class="gate-note" id="gateMsg" role="status"></p>
       </form>` : `<form class="gate-form" id="gateForm" novalidate>
         <label for="gateEmail">Email</label>
         <input id="gateEmail" type="email" autocomplete="username" placeholder="you@example.com" required>
         <label for="gatePassword">Password</label>
         <input id="gatePassword" type="password" autocomplete="current-password" required>
-        <button class="outline-link" type="submit" id="gateSend">LOG IN <span aria-hidden="true">→</span></button>
+        ${SF_MODE ? `<button class="sf-submit" type="submit" id="gateSend">Log in →</button>` : `<button class="outline-link" type="submit" id="gateSend">LOG IN <span aria-hidden="true">→</span></button>`}
         <p class="gate-note" id="gateMsg" role="status"></p>
         <p class="gate-help">Forgot your password? <a href="#about">Contact me</a> and I will reset it.</p>
       </form>`}

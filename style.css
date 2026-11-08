@@ -3372,3 +3372,35 @@ html.sf #spots .spots-search .spots-locate{display:none}
   html.sf #spots .sx-sheet .sx-group{border-color:transparent;background:none}
   html.sf #spots .sx-sheet .sx-group.open{border-color:rgba(255,190,122,.6);background:rgba(242,140,30,.1)}
 }
+/* spotfolk.eu: log in / become folk with SpotFolk's own look */
+html.sf .install-tip{display:none !important}
+html.sf .spots-gate.sf-door{max-width:480px;margin:6px auto 0;padding:26px 26px 22px;text-align:left;border:1px solid var(--sf-wline);border-radius:22px;background:linear-gradient(180deg,#101d2e,#08121f 60%);box-shadow:0 30px 80px rgba(0,0,0,.5)}
+.sf-door-logo{display:block;width:96px;height:auto;margin:0 0 8px}
+html.sf .sf-door h2{margin:0;font:600 34px/1.05 var(--sf-serif);letter-spacing:0;text-transform:none;color:#f2f6fb}
+html.sf .sf-door h2 em{font-style:italic;color:var(--sf-warm)}
+html.sf .sf-door > p{margin:8px 0 16px;max-width:none;color:#b8c4d2;font-size:14.5px;line-height:1.5}
+html.sf .sf-door .gate-tabs{display:grid;grid-template-columns:1fr 1fr;width:auto;margin:0 0 18px;border-color:rgba(156,200,255,.14);background:rgba(255,255,255,.05)}
+html.sf .sf-door .gate-tabs button{min-height:40px;font-weight:700;font-size:14px;color:#b8c4d2}
+html.sf .sf-door .gate-tabs button.on{background:var(--sf-fire);color:var(--sf-ink);box-shadow:none}
+html.sf .sf-door .gate-form{gap:6px}
+html.sf .sf-door .gate-form label{margin-top:6px;font:500 12px/1 'Oswald','Arial Narrow',sans-serif;letter-spacing:.14em;color:#8a99ab}
+html.sf .sf-door .gate-form input:not([type=checkbox]){min-height:46px;padding:0 14px;border-radius:12px;border-color:rgba(156,200,255,.22);background:rgba(2,6,12,.55);font-size:16px}
+html.sf .sf-door .gate-form input:focus{border-color:var(--sf-warm);box-shadow:0 0 0 3px rgba(242,140,30,.2)}
+html.sf .sf-door .gate-row > div{gap:6px}
+html.sf .sf-door .gate-row{grid-template-columns:1fr 1fr}
+html.sf .sf-door .cl-pick{grid-template-columns:repeat(3,1fr);gap:6px;margin:10px 0 6px}
+html.sf .sf-door .cl-pick legend{font:500 12px/1 'Oswald','Arial Narrow',sans-serif;letter-spacing:.14em;color:#8a99ab;margin-bottom:8px;opacity:1}
+html.sf .sf-door .cl-pick legend small{display:block;margin-top:5px;font:400 12px var(--sans);letter-spacing:0;color:#8a99ab}
+html.sf .sf-door .cl-pick span{display:flex;flex-direction:column;align-items:center;gap:4px;padding:9px 4px;border-radius:12px;border-color:rgba(156,200,255,.14);background:rgba(255,255,255,.03);font-size:12.5px;font-weight:700;text-align:center;color:#e6ecf3}
+html.sf .sf-door .cl-pick span i{font-style:normal;font-size:20px;line-height:1}
+html.sf .sf-door .cl-pick input:checked + span{border-color:var(--sf-warm);background:rgba(242,140,30,.14);color:#f2f6fb}
+html.sf .sf-door .gate-form .gate-check{margin-top:6px;color:#b8c4d2;font-size:13.5px}
+html.sf .sf-door .gate-form .gate-check input{accent-color:var(--sf-fire)}
+html.sf .sf-door .gate-check a,html.sf .sf-door .gate-check .text-link,html.sf .sf-door .gate-help a{color:var(--sf-warm)}
+html.sf .sf-door .wf-found{color:var(--sf-warm);font-size:13.5px}
+.sf-submit{width:100%;min-height:52px;margin-top:10px;border:0;border-radius:999px;background:var(--sf-fire,#f28c1e);color:var(--sf-ink,#1a1206);font:700 16px var(--sans);cursor:pointer}
+.sf-submit:hover{background:#ffa041}.sf-submit:disabled{opacity:.6;cursor:progress}
+html.sf .sf-door .gate-back{color:#b8c4d2}
+@media (max-width:520px){html.sf .spots-gate.sf-door{padding:22px 18px 18px;border-radius:18px}html.sf .sf-door h2{font-size:30px}}
+html.sf .sf-door .cl-pick span,html.sf .sf-door .gate-form .gate-check,html.sf .sf-door .gate-form .gate-check *{text-transform:none;letter-spacing:0}
+html.sf #spotsRoot,html.sf .sf-door{scroll-margin-top:150px}
