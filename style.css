@@ -3290,3 +3290,7 @@ body[data-page="explore"]::after{background:radial-gradient(90% 55% at 85% 0,rgb
   .wfa-folks{gap:12px}.wfa-f{width:100px}.wfa-ring{width:88px;height:88px}.wfa-f b{font-size:1.2rem}.wfa-f small{display:none}
   .wfa-close{padding:72px 18px;border-radius:20px}
 }
+.wfa{margin-top:28px}
+.wfa-f.is-static{cursor:default}
+.wfa-f.is-static:hover .wfa-ring{border:1px solid rgba(156,200,255,.25);box-shadow:none}
+.wfa-note{margin:4px 0 0;color:var(--muted);font-size:.9rem}

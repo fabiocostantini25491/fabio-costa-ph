@@ -1192,6 +1192,7 @@ const I18N = (() => {
     "of dark sky": ["di cielo buio", "de cielo oscuro", "de ciel noir", "dunkler Himmel"],
     "(your device)": ["(il tuo dispositivo)", "(tu dispositivo)", "(votre appareil)", "(dein Gerät)"],
     "Signed by {n} folk": ["Firmato da {n} folk", "Firmado por {n} folk", "Signé par {n} folk", "Von {n} Folk signiert"],
+    "Tap a place on the map to read its signatures and tips.": ["Tocca un luogo sulla mappa per leggere firme e consigli."],
   };
 
   const idx = ORDER.indexOf(lang);

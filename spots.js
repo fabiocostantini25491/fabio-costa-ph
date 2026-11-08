@@ -656,6 +656,7 @@ const Spots = (() => {
   }
   // presentazione sotto la mappa, solo per chi non è ancora entrato: cos'è Wayfolk e perché entrare
   function aboutHtml() {
+    const inside = !guest || !!session;   // chi è già dentro: stessa spiegazione, senza inviti a iscriversi
     const FOLK = [["photo", "Photo", "photo.jpg", "You chase the light."], ["hike", "Hiker", "hike.jpg", "You go where the road ends."],
       ["slow", "Backpacker", "slow.jpg", "Slow, cheap and curious."], ["road", "Road trip", "road.jpg", "The drive is the destination."],
       ["nomad", "Nomad", "nomad.jpg", "Work from wherever the view is."], ["food", "Foodie", "food.jpg", "Trips planned around a plate."]];
@@ -664,7 +665,9 @@ const Spots = (() => {
         <p class="wfa-kick">You don't join as a user</p>
         <h2 class="wfa-h2">Which folk <em>are you?</em></h2>
         <p class="wfa-lead">Pick the way you travel. Your folk becomes your voice on the map: the places you sign carry its mark, and people who travel like you find them.</p>
-        <div class="wfa-folks">${FOLK.map(([k, n, img, line]) => `<button type="button" data-joinfolk="${k}" class="wfa-f"><span class="wfa-ring"><img src="img/wf/${img}" alt="" loading="lazy" width="120" height="120"></span><b>${n}</b><small>${line}</small></button>`).join("")}</div>
+        <div class="wfa-folks">${FOLK.map(([k, n, img, line]) => inside
+          ? `<div class="wfa-f is-static"><span class="wfa-ring"><img src="img/wf/${img}" alt="" loading="lazy" width="120" height="120"></span><b>${n}</b><small>${line}</small></div>`
+          : `<button type="button" data-joinfolk="${k}" class="wfa-f"><span class="wfa-ring"><img src="img/wf/${img}" alt="" loading="lazy" width="120" height="120"></span><b>${n}</b><small>${line}</small></button>`).join("")}</div>
       </section>
       <section class="wfa-blk wfa-split">
         <div>
@@ -677,9 +680,9 @@ const Spots = (() => {
           <div class="wfa-in">
             <b class="wfa-pn">Santa Maddalena viewpoint</b>
             <p class="wfa-tip"><small>Photo folk · on the spot</small><q>Come at first light in October, stand by the wooden fence above the church.</q></p>
-            <p class="wfa-tip lock" aria-hidden="true"><small>Hiker folk · useful</small><q>Park lower down and take the trail through the meadows, twenty minutes.</q></p>
-            <p class="wfa-tip lock" aria-hidden="true"><small>Foodie folk · support local</small><q>The farm below sells cheese and speck, ask for the aged one.</q></p>
-            <button type="button" class="wfa-btn" id="wfaPeek">Become folk to read them</button>
+            <p class="wfa-tip${inside ? "" : " lock"}"${inside ? "" : ' aria-hidden="true"'}><small>Hiker folk · useful</small><q>Park lower down and take the trail through the meadows, twenty minutes.</q></p>
+            <p class="wfa-tip${inside ? "" : " lock"}"${inside ? "" : ' aria-hidden="true"'}><small>Foodie folk · support local</small><q>The farm below sells cheese and speck, ask for the aged one.</q></p>
+            ${inside ? `<p class="wfa-note">Tap a place on the map to read its signatures and tips.</p>` : `<button type="button" class="wfa-btn" id="wfaPeek">Become folk to read them</button>`}
           </div>
         </article>
       </section>
@@ -705,8 +708,8 @@ const Spots = (() => {
       <section class="wfa-close">
         <h2 class="wfa-h2">The fire is lit. <em>Pull up a seat.</em></h2>
         <p class="wfa-lead">Leave no trace, protect fragile places, respect people, support local, share honestly, be kind. That's the whole code.</p>
-        <button type="button" class="wfa-btn big" id="wfaJoin">Become folk — it's free</button>
-        <p class="wfa-log">Already folk? <button type="button" class="text-link" id="wfaLogin">Log in</button></p>
+        ${inside ? `<button type="button" class="wfa-btn big" id="wfaToMap">Back to the map</button>` : `<button type="button" class="wfa-btn big" id="wfaJoin">Become folk — it's free</button>
+        <p class="wfa-log">Already folk? <button type="button" class="text-link" id="wfaLogin">Log in</button></p>`}
       </section>
     </div>`;
   }
@@ -807,9 +810,9 @@ const Spots = (() => {
         <div class="sx-sheet" id="sxSheet"></div>
       </div>
     </div>
+    ${aboutHtml()}
     ${bannerHtml}
-    ${tailHtml}
-    ${guest && !session ? aboutHtml() : ""}`;
+    ${tailHtml}`;
   }
 
   /* solo amministratore: scarica gli spot inquadrati sulla mappa in un file CSV (per preparare guide e articoli).
@@ -1344,6 +1347,7 @@ const Spots = (() => {
         <span class="hud-frame" aria-hidden="true"></span>
         ${schemaV2 ? `<button type="button" class="osm-scan" id="osmScan">${ICON_SCAN}Scan this area</button>` : ""}
       </div>
+      ${aboutHtml()}
       ${!guest ? workshopsHtml() : ""}
       <section class="spots-around" id="spotsAround" aria-live="polite" hidden>
         <header class="around-head">
@@ -1408,6 +1412,7 @@ const Spots = (() => {
       window.fcTrack?.("Spots: log in prompt"); window.fcTrack?.("Wayfolk: folk picked", { folk: b.dataset.joinfolk });
       wantJoin = true; render(); root().scrollIntoView({ behavior: "smooth" });
     }));
+    $("#wfaToMap")?.addEventListener("click", () => ($(".sx-stage") || $(".spots-stage") || root()).scrollIntoView({ behavior: "smooth", block: "start" }));
     $("#wfaLogin")?.addEventListener("click", () => { wantLogin = true; wantJoin = false; render(); root().scrollIntoView({ behavior: "smooth" }); });
     $("#wfLogin")?.addEventListener("click", () => { wantLogin = true; wantJoin = false; render(); root().scrollIntoView({ behavior: "smooth" }); });
     $("#spotsRequests")?.addEventListener("click", openRequests);
