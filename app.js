@@ -825,7 +825,7 @@ const NEWS_KIND = {
   article:  { icon: "✍", color: "#ffc46e", name: "New article" },
   workshop: { icon: "🎓", color: "#9fe3c8", name: "New workshop" },
   meetup:   { icon: "🤝", color: "#ffd166", name: "New meetup" },
-  spot:     { icon: "📍", color: "#ff8fb1", name: "New place in Wayfolk" }
+  spot:     { icon: "📍", color: "#ff8fb1", name: "New place in SpotFolk" }
 };
 const SPOT_WORD = { spot: "photo spot", restaurant: "place to eat", hotel: "place to stay", trekking: "trek" };
 function newsItems() {
@@ -849,16 +849,16 @@ function newsItems() {
     const date = w.starts_on ? fmtDate(w.starts_on) : "";
     items.push({ kind: "workshop", when: w.created_at, lat: +w.lat, lon: +w.lon, label: w.offer ? `Workshop offer · ${w.offer}` : "New workshop",
       title: `${w.name}${date ? ` · ${date}` : ""}${w.places_left != null ? ` · ${w.places_left} places left` : ""}`,
-      go: () => { if (w.ws_link && /^https?:\/\//.test(w.ws_link)) window.open(w.ws_link, "_blank", "noopener"); else location.hash = "wayfolk"; } });
+      go: () => { if (w.ws_link && /^https?:\/\//.test(w.ws_link)) window.open(w.ws_link, "_blank", "noopener"); else location.hash = "spotfolk"; } });
   });
   (homeSpotNews || []).forEach(x => {
     if (!isFresh(x.created_at)) return;
     if (x.kind === "meetup") items.push({ kind: "meetup", when: x.created_at, lat: +x.lat, lon: +x.lon, label: "New meetup",
-      title: `Members meet${x.on_date ? ` on ${fmtDate(x.on_date)}` : ""} · open Wayfolk to join`, go: () => { location.hash = "wayfolk"; } });
+      title: `Members meet${x.on_date ? ` on ${fmtDate(x.on_date)}` : ""} · open SpotFolk to join`, go: () => { location.hash = "spotfolk"; } });
     else {
       const w = SPOT_WORD[x.category] || "place", n = +x.n || 1;
-      items.push({ kind: "spot", when: x.created_at, lat: +x.lat, lon: +x.lon, label: n === 1 ? "New place in Wayfolk" : `${n} new places in Wayfolk`,
-        title: `${n === 1 ? `A new ${w}` : `New ${w}s`} in this area · members only`, go: () => { location.hash = "wayfolk"; } });
+      items.push({ kind: "spot", when: x.created_at, lat: +x.lat, lon: +x.lon, label: n === 1 ? "New place in SpotFolk" : `${n} new places in SpotFolk`,
+        title: `${n === 1 ? `A new ${w}` : `New ${w}s`} in this area · members only`, go: () => { location.hash = "spotfolk"; } });
     }
   });
   return items.filter(i => Number.isFinite(i.lat) && Number.isFinite(i.lon)).sort((a, b) => String(b.when).localeCompare(String(a.when)));
@@ -1932,7 +1932,7 @@ async function renderMagazine(want) {
     ${setCover?.folk_nome ? `<section class="mz-folk" aria-label="Folk of the month">
       ${setCover.folk_foto ? `<img src="${esc(mediaUrl(setCover.folk_foto))}" alt="" loading="lazy">` : ""}
       <div><p class="mz-folk-k">Folk of the month</p><h3>${esc(setCover.folk_nome)}</h3>${setCover.folk_tipo && FOLK_LABEL[setCover.folk_tipo] ? `<p class="mz-folk-t">${FOLK_LABEL[setCover.folk_tipo]}</p>` : ""}
-        ${setCover.folk_testo ? `<p>${esc(setCover.folk_testo)}</p>` : ""}<a class="text-link" href="#wayfolk">Meet the folk on Wayfolk →</a></div>
+        ${setCover.folk_testo ? `<p>${esc(setCover.folk_testo)}</p>` : ""}<a class="text-link" href="#spotfolk">Meet the folk on SpotFolk →</a></div>
     </section>` : ""}
     <section class="mz-toc" id="mzToc" aria-label="Contents">
       <h3>Contents</h3>
@@ -2213,7 +2213,7 @@ async function renderCrew() {
         ${c.instagram ? `<a href="https://www.instagram.com/${encodeURIComponent(c.instagram)}/" target="_blank" rel="noopener">Instagram @${esc(c.instagram)}</a>` : ""}
         ${site ? `<a href="${esc(site)}" target="_blank" rel="noopener">${ICON.ext}Website</a>` : ""}
         ${c.articles ? `<a href="#author-${esc(slug(c.name))}">${c.articles} ${c.articles === 1 ? "story" : "stories"} in the Journal →</a>` : ""}
-        ${c.on_map ? `<a href="#wayfolk">On the Wayfolk map</a>` : ""}
+        ${c.on_map ? `<a href="#spotfolk">On the SpotFolk map</a>` : ""}
       </p>
     </article>`;
   }).join("");
@@ -2395,7 +2395,7 @@ const PAGES = ["home", "explore", "gallery", "journal", "tools", "spots", "about
    STATISTICHE (Umami, anonime e senza cookie)
    Il sito usa gli indirizzi con # (es. #explore): ogni sezione viene registrata come una pagina.
    ========================================================= */
-const PAGE_TITLES = { home: "Home", explore: "Explore", gallery: "Gallery", journal: "Journal", tools: "Tools", spots: "Wayfolk", about: "About" };
+const PAGE_TITLES = { home: "Home", explore: "Explore", gallery: "Gallery", journal: "Journal", tools: "Tools", spots: "SpotFolk", about: "About" };
 /* Le visite di Fabio non si contano: fabiocostaph.com/?notrack (una volta per browser); ?track per tornare a contarle */
 const NO_TRACK = (() => {
   const q = location.search;
@@ -2458,8 +2458,8 @@ document.addEventListener("click", e => {
 document.addEventListener("change", e => { if (e.target.id === "shotFile" && e.target.files?.length) trackEvent("Analyze: photo loaded"); }, { capture: true });
 
 function route() {
-  // chi arriva da wayfolk.eu (inoltro del dominio a fabiocostaph.com/?wayfolk) va dritto a Wayfolk
-  if (/(^\?|&)wayfolk\b/.test(location.search) && !location.hash) { history.replaceState(null, "", location.pathname + "#wayfolk"); trackEvent("Wayfolk domain"); }
+  // chi arriva da wayfolk.eu (inoltro del dominio a fabiocostaph.com/?wayfolk) va dritto a SpotFolk
+  if (/(^\?|&)(wayfolk|spotfolk)\b/.test(location.search) && !location.hash) { history.replaceState(null, "", location.pathname + "#spotfolk"); trackEvent("Wayfolk domain"); }
   let hash = decodeURIComponent(location.hash.slice(1));
   let page = hash, article = null;
   if (hash.startsWith("art-")) { page = "journal"; article = hash.slice(4); }
@@ -2473,8 +2473,8 @@ function route() {
   if (writeMode) page = "journal";
   if (hash.startsWith("author-")) { page = "journal"; authorSlug = hash.slice(7); }
   // porte d'ingresso dei folk (link nei post): #wayfolk-hikers, #wayfolk-backpackers… (anche #spots-…)
-  if (hash === "wayfolk") page = "spots";   // #wayfolk è il nuovo indirizzo della sezione (#spots continua a funzionare)
-  const door = (hash.match(/^(?:spots|wayfolk)-(photographers|hikers|backpackers|roadtrips|nomads|foodies)$/) || [])[1];
+  if (hash === "spotfolk" || hash === "wayfolk") page = "spots";   // #spotfolk è l'indirizzo della sezione (#wayfolk e #spots continuano a funzionare)
+  const door = (hash.match(/^(?:spots|wayfolk|spotfolk)-(photographers|hikers|backpackers|roadtrips|nomads|foodies)$/) || [])[1];
   if (door) { page = "spots"; try { if (localStorage.getItem("fcph-door") !== door) { localStorage.setItem("fcph-door", door); trackEvent("Spots door", { door }); } } catch {} }
   const join = hash === "join";
   const meHash = hash === "me";
@@ -2543,7 +2543,7 @@ function renderAll() {
 function bindEvents() {
   setupArticleZoom();
   // chi sta per aprire Spots (dito o mouse sul link): il globo 3D inizia a scaricarsi subito
-  const preSpots = e => { if (e.target.closest?.('a[href="#wayfolk"], a[href="#join"], a[href="#me"]')) window.Spots?.prefetch?.(); };
+  const preSpots = e => { if (e.target.closest?.('a[href="#spotfolk"], a[href="#wayfolk"], a[href="#join"], a[href="#me"]')) window.Spots?.prefetch?.(); };
   document.addEventListener("pointerdown", preSpots, { passive: true });
   document.addEventListener("mouseover", preSpots, { passive: true });
   $$(".gl-vbtn").forEach(b => b.addEventListener("click", () => {

@@ -45,7 +45,7 @@ const Spots = (() => {
     food: { ico: "🍝", label: "Foodie", long: "Food & local flavours", color: "#ffd166" , folk: "Foodie folk" }
   };
   const CLUSTER_KEYS = Object.keys(CLUSTERS);
-  // la stessa idea, raccontata a ogni cluster (porte d'ingresso: fabiocostaph.com/#wayfolk-hikers ecc.)
+  // la stessa idea, raccontata a ogni cluster (porte d'ingresso: fabiocostaph.com/#spotfolk-hikers ecc.)
   const DOOR_LEAD = {
     photographers: "Thousands of places scouted for the light, signed by photo folk.",
     hikers: "The trail's best viewpoint, and when to be there. Places signed by hiker folk.",
@@ -168,7 +168,7 @@ const Spots = (() => {
         ? "This login link has expired or was already used. Ask for a new one below."
         : p.get("error_description").replace(/\+/g, " ");
     }
-    history.replaceState(null, "", location.pathname + location.search + "#wayfolk");
+    history.replaceState(null, "", location.pathname + location.search + "#spotfolk");
   }
 
   async function api(path, { method = "GET", body, headers = {}, auth = true } = {}) {
@@ -632,12 +632,12 @@ const Spots = (() => {
 
   /* --- BENVENUTO per chi non è ancora folk: cos'è, perché entrare, quale folk sei --- */
   function welcomeHtml() {
-    return `<section class="wf-welcome" aria-label="Join Wayfolk">
+    return `<section class="wf-welcome" aria-label="Join SpotFolk">
       <h3>You don't join as a user.<br><em>You join as folk.</em></h3>
       <ul class="wf-ben">
         <li><b>8,000+ places</b> scouted with a photographer's eye: some I've shot, many found while researching future trips. The folk who go confirm them.</li>
         <li><b>Signed by the folk:</b> travellers like you vouch for the places they love.</li>
-        <li><b>Trips, Pass it on, meetups</b> and your own Wayfolk passport.</li>
+        <li><b>Trips, Pass it on, meetups</b> and your own SpotFolk passport.</li>
       </ul>
       <p class="wf-pick">Which folk are you?</p>
       <div class="wf-folks">${CLUSTER_KEYS.map(k => `<button type="button" data-joinfolk="${k}" style="--c:${CLUSTERS[k].color}"><span>${CLUSTERS[k].ico}</span>${esc(CLUSTERS[k].label)}</button>`).join("")}</div>
@@ -647,13 +647,13 @@ const Spots = (() => {
       <p class="wf-login">Already folk? <button type="button" class="text-link" id="wfLogin">Log in</button> · <a class="text-link" href="#guide-spots">How it works</a></p>
     </section>`;
   }
-  // presentazione sotto la mappa, solo per chi non è ancora entrato: cos'è Wayfolk e perché entrare
+  // presentazione sotto la mappa, solo per chi non è ancora entrato: cos'è SpotFolk e perché entrare
   function aboutHtml() {
     const inside = !guest || !!session;   // chi è già dentro: stessa spiegazione, senza inviti a iscriversi
     const FOLK = [["photo", "Photo", "photo.jpg", "You chase the light."], ["hike", "Hiker", "hike.jpg", "You go where the road ends."],
       ["slow", "Backpacker", "slow.jpg", "Slow, cheap and curious."], ["road", "Road trip", "road.jpg", "The drive is the destination."],
       ["nomad", "Nomad", "nomad.jpg", "Work from wherever the view is."], ["food", "Foodie", "food.jpg", "Trips planned around a plate."]];
-    return `<div class="wfa" aria-label="What Wayfolk is">
+    return `<div class="wfa" aria-label="What SpotFolk is">
       <section class="wfa-blk wfa-folk">
         <p class="wfa-kick">You don't join as a user</p>
         <h2 class="wfa-h2">Which folk <em>are you?</em></h2>
@@ -765,7 +765,7 @@ const Spots = (() => {
     }).join("");
     return `<div class="sx">
       <aside class="sx-side">
-        <p class="sx-kick"><img class="sx-logo" src="img/wayfolk-logo.png" alt="Wayfolk" width="640" height="365"></p>
+        <p class="sx-kick"><img class="sx-logo" src="img/spotfolk-logo.png" alt="SpotFolk" width="640" height="365"></p>
         <h2 class="sx-title">Explore the Earth</h2>
         <p class="sx-lead">${esc(DOOR_LEAD[doorNow()] || "Made by its community: travellers like you share, sign and review the places worth the trip, and look after them.")}</p>
         <div class="sx-panel">
@@ -781,7 +781,7 @@ const Spots = (() => {
         <div class="sx-user">${userHtml}</div>
         <p class="sx-more">
           ${!guest && schemaV2 && socialV ? `<button type="button" class="text-link" id="openConduct">Community code</button>` : ""}
-          <a class="text-link" href="guides/spots-quick-guide.pdf" target="_blank" rel="noopener">📄 Wayfolk in one page</a>
+          <a class="text-link" href="guides/spots-quick-guide.pdf" target="_blank" rel="noopener">📄 SpotFolk in one page</a>
           <button type="button" class="text-link sx-switch" id="sxToClassic">Use the classic map</button>
           ${admin && !guest ? `<button type="button" class="text-link" id="sxExport" title="Admin only: download the spots in the current map view">⬇ Export this area (CSV)</button>` : ""}
         </p>
@@ -1235,7 +1235,7 @@ const Spots = (() => {
           return tpl.replace("{n}", fmtN(spots.length)).replace("{total}", fmtN(Math.max(publicTotal, spots.length)));
         })()}</p>
           <button type="button" class="outline-link" id="guestJoin">JOIN FREE <span aria-hidden="true">→</span></button>
-          <a class="text-link guest-guide" href="#guide-spots">How Wayfolk works</a> <a class="text-link guest-guide" href="guides/spots-quick-guide.pdf" target="_blank" rel="noopener">📄 One-page guide</a></div>` : ""}
+          <a class="text-link guest-guide" href="#guide-spots">How SpotFolk works</a> <a class="text-link guest-guide" href="guides/spots-quick-guide.pdf" target="_blank" rel="noopener">📄 One-page guide</a></div>` : ""}
 `;
     const tailHtml = `
       ${!guest ? workshopsHtml() : ""}
@@ -1309,7 +1309,7 @@ const Spots = (() => {
           return tpl.replace("{n}", fmtN(spots.length)).replace("{total}", fmtN(Math.max(publicTotal, spots.length)));
         })()}</p>
           <button type="button" class="outline-link" id="guestJoin">JOIN FREE <span aria-hidden="true">→</span></button>
-          <a class="text-link guest-guide" href="#guide-spots">How Wayfolk works</a> <a class="text-link guest-guide" href="guides/spots-quick-guide.pdf" target="_blank" rel="noopener">📄 One-page guide</a></div>` : ""}
+          <a class="text-link guest-guide" href="#guide-spots">How SpotFolk works</a> <a class="text-link guest-guide" href="guides/spots-quick-guide.pdf" target="_blank" rel="noopener">📄 One-page guide</a></div>` : ""}
       ${schemaV2 && socialV && !guest ? `<div class="spots-social" role="group" aria-label="Alerts and community">
         <label class="soc-pick">${ICON_ALERT}<span class="sr-only">Alerts</span>
           <select id="alertMode">
@@ -1319,8 +1319,8 @@ const Spots = (() => {
           </select></label>
         <button type="button" class="filter soc-support${onlySupport ? " active" : ""}" id="onlySupport" aria-pressed="${onlySupport}">🌱 Support local <small>${spots.filter(x => x.support_local).length}</small></button>
         <button type="button" class="text-link" id="openConduct">Community code</button>
-        <a class="text-link" href="#guide-spots">How Wayfolk works</a>
-        <a class="text-link" href="guides/spots-quick-guide.pdf" target="_blank" rel="noopener">📄 Wayfolk in one page</a>
+        <a class="text-link" href="#guide-spots">How SpotFolk works</a>
+        <a class="text-link" href="guides/spots-quick-guide.pdf" target="_blank" rel="noopener">📄 SpotFolk in one page</a>
       </div>` : ""}
       ${commV && !guest ? `<div class="spots-community" role="group" aria-label="Community">
         <button type="button" class="filter comm-btn${onlyFavs ? " active" : ""}" id="onlyFavs" aria-pressed="${onlyFavs}">♥ My spots <small>${favs.size}</small></button>
@@ -2547,7 +2547,7 @@ const Spots = (() => {
     if (commV) return openAdmin();
     d.innerHTML = `<button class="dialog-close" type="button" data-close aria-label="Close">${ICON.close}</button>
       <div class="import-body" data-no-i18n>
-        <span class="eyebrow">Wayfolk · solo per te</span>
+        <span class="eyebrow">SpotFolk · solo per te</span>
         <h2>Richieste di iscrizione</h2>
         ${pendingMembers.length ? `<ul class="req-list">${pendingMembers.map(row).join("")}</ul>`
           : `<p class="gate-help left">Nessuna richiesta in attesa.</p>`}
@@ -2592,7 +2592,7 @@ const Spots = (() => {
       if (passV) setTimeout(() => {   // la prima volta: far sapere che c'è
         if (!passV) return;
         try { if (localStorage.getItem("fcph-pass-seen")) return; localStorage.setItem("fcph-pass-seen", "1"); } catch { return; }
-        toast("New in Wayfolk: 🎁 Pass it on — sell or give away what you don't take home. Find it on the left.");
+        toast("New in SpotFolk: 🎁 Pass it on — sell or give away what you don't take home. Find it on the left.");
       }, 2500);
       if (passV) {
         try { passItems = (await api(`/rest/v1/pass_on?select=id,kind,item,note,price,currency,place,contact,lat,lon,created_by,author_name,created_at,expires_on&expires_on=gte.${todayISO()}&order=created_at.desc&limit=500`)).data || []; }
@@ -2626,7 +2626,7 @@ const Spots = (() => {
   const isDev = uid => contribs.has(uid) && rolesOf(uid).includes("developer");
   const isCo = uid => contribs.has(uid) && rolesOf(uid).some(r => r !== "developer");
   const coBadge = uid => (uid && isCo(uid) ? ` <span class="co-badge" title="Fabio Costa Ph contributor">${ICON_APERTURE}Contributor</span>` : "")
-    + (uid && isDev(uid) ? ` <span class="co-badge dev-badge" title="Helps build Wayfolk">${ICON_DEV}Developer</span>` : "");
+    + (uid && isDev(uid) ? ` <span class="co-badge dev-badge" title="Helps build SpotFolk">${ICON_DEV}Developer</span>` : "");
   const xpBadge = uid => { const e = uid && experts.get(uid); return (e ? ` <span class="xp-badge" title="Local expert">🧭 ${esc(e.area_name)}</span>` : "") + coBadge(uid); };
   // il post brilla 24 ore per tutti, 3 giorni per i contributor
   const postFresh = p => p && p.last_post_at && Date.now() - Date.parse(p.last_post_at) < (contribs.has(p.user_id) ? 3 : 1) * 864e5;
@@ -2726,7 +2726,7 @@ const Spots = (() => {
     const list = profiles.filter(p => p.visible).sort((a, b) => (contribs.has(b.user_id) - contribs.has(a.user_id)) || a.display_name.localeCompare(b.display_name))
       .filter(p => tab === "all" || (tab === "co" ? contribs.has(p.user_id) : tab === "ph" ? isPhotoP(p) : isTravP(p)));
     const T = (k, l) => `<button type="button" class="${tab === k ? "on" : ""}" data-co="${k}">${l}</button>`;
-    const d = dlg("phListDialog", `<div class="import-body"><span class="eyebrow">Wayfolk community</span><h2>Photographers &amp; travellers</h2>
+    const d = dlg("phListDialog", `<div class="import-body"><span class="eyebrow">SpotFolk community</span><h2>Photographers &amp; travellers</h2>
       <div class="gate-tabs">${T("all", "All")}${T("ph", "📷 Photographers")}${kindV ? T("tr", "🎒 Travellers") : ""}${T("co", `${ICON_APERTURE} Contributors`)}</div>
       <ul class="req-list">${list.map(p => `<li class="req-row${contribs.has(p.user_id) ? " co-row" : ""}"><div><b>${esc(p.display_name)}${coBadge(p.user_id)}${experts.has(p.user_id) ? ` <span class="xp-badge">🧭 ${esc(experts.get(p.user_id).area_name)}</span>` : ""}</b>
         <span>${p.base_name ? esc(p.base_name) : ""}${p.instagram ? ` · <a href="https://www.instagram.com/${encodeURIComponent(p.instagram)}/" target="_blank" rel="noopener">@${esc(p.instagram)}</a>` : ""}${p.website ? ` · <a href="${esc(p.website)}" target="_blank" rel="noopener">website</a>` : ""}${postFresh(p) ? ` · <a href="${esc(p.last_post_url)}" target="_blank" rel="noopener">📣 new post</a>` : ""}</span></div>
@@ -2741,7 +2741,7 @@ const Spots = (() => {
   const slugify = t => String(t || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
   function openExperts() {
     const list = [...experts.values()].sort((a, b) => a.area_name.localeCompare(b.area_name));
-    const d = dlg("expertsDialog", `<div class="import-body"><span class="eyebrow">Wayfolk community</span><h2>🧭 Local experts</h2>
+    const d = dlg("expertsDialog", `<div class="import-body"><span class="eyebrow">SpotFolk community</span><h2>🧭 Local experts</h2>
       <p class="gate-help left">Trusted members who know their area: they verify places, keep information up to date and look after fragile spots.</p>
       <ul class="req-list">${list.map(e => { const p = profiles.find(x => x.user_id === e.user_id) || {};
         return `<li class="req-row"><div><b>${esc(e.display_name || p.display_name || "Local expert")}</b><span>🧭 ${esc(e.area_name)} · ${(+e.radius_km)} km${p.instagram ? ` · <a href="https://www.instagram.com/${encodeURIComponent(p.instagram)}/" target="_blank" rel="noopener">@${esc(p.instagram)}</a>` : ""}${p.website ? ` · <a href="${esc(p.website)}" target="_blank" rel="noopener">website</a>` : ""}</span></div>
@@ -3120,7 +3120,7 @@ const Spots = (() => {
       <div class="pop-actions">
         ${own || admin ? `<button type="button" class="pop-btn" data-delpass>${own ? "Gone: remove it" : "Delete"}</button>` : `<button type="button" class="text-link pop-flag" data-flagpass>⚑ Flag</button>`}
       </div>
-      <p class="gate-help left">Only members see it. It disappears on ${fmtDay(it.expires_on)}. The deal is only between you: Wayfolk takes no payments and is not responsible. Meet in public, never pay in advance.</p>
+      <p class="gate-help left">Only members see it. It disappears on ${fmtDay(it.expires_on)}. The deal is only between you: SpotFolk takes no payments and is not responsible. Meet in public, never pay in advance.</p>
     </div>`;
   }
   function wirePass(popup, it) {
@@ -3159,7 +3159,7 @@ const Spots = (() => {
       <select id="paDays"><option value="3">3 days</option><option value="7">7 days</option><option value="14" selected>14 days</option><option value="30">30 days</option></select>
       <button class="outline-link" type="submit">POST IT <span aria-hidden="true">→</span></button>
       <p class="gate-note" id="paMsg" role="status"></p>
-      <p class="gate-help left">Only members see it, contact included. No food, medicines, weapons or anything illegal. Wayfolk takes no payments and is not a party: the deal is only between you. By posting you accept the <a href="#terms" target="_blank">terms</a>.</p>
+      <p class="gate-help left">Only members see it, contact included. No food, medicines, weapons or anything illegal. SpotFolk takes no payments and is not a party: the deal is only between you. By posting you accept the <a href="#terms" target="_blank">terms</a>.</p>
     </form>`);
     let pos = pre && (pre.exact || pre.zoom >= 10) ? { lat: pre.lat, lon: pre.lon } : null;
     const priceRow = d.querySelector(".pass-price-row");
@@ -3215,7 +3215,7 @@ const Spots = (() => {
     const ig = p.instagram ? `https://www.instagram.com/${encodeURIComponent(p.instagram)}/` : "";
     return `<div class="spot-pop">
       <span class="spot-cat" style="--c:${isCo(p.user_id) ? "#ffc46e" : isDev(p.user_id) ? "#7fd8ff" : "#c9a7ff"}">${isCo(p.user_id) ? ICON_APERTURE : isDev(p.user_id) ? ICON_DEV : FOLK_ICON[folkPinOf(p)]}${isCo(p.user_id) ? "Contributor" : isDev(p.user_id) ? "Developer" : pFolks(p).length ? pFolks(p).map(k => folkOf(k)).join(" · ") : { photographer: "Photographer", traveller: "Traveller", both: "Photographer & traveller" }[pKind(p)]}</span>
-      ${isDev(p.user_id) ? `<p class="pop-dates co-line dev-line">${ICON_DEV}<span>Helps build Wayfolk${p.website ? ` — <a href="${esc(p.website)}" target="_blank" rel="noopener">see their work</a>` : ""}</span></p>` : ""}
+      ${isDev(p.user_id) ? `<p class="pop-dates co-line dev-line">${ICON_DEV}<span>Helps build SpotFolk${p.website ? ` — <a href="${esc(p.website)}" target="_blank" rel="noopener">see their work</a>` : ""}</span></p>` : ""}
       <strong>${esc(p.display_name)}</strong>
       ${p.base_name ? `<p class="pop-dates">${ICON.pin}<span>${esc(p.base_name)}</span></p>` : ""}
       ${isCo(p.user_id) ? `<p class="pop-dates co-line">${ICON_APERTURE}<span>Contributor of Fabio Costa Ph — <a href="#author-${encodeURIComponent(slugify(p.display_name))}">see their work</a></span></p>` : ""}
@@ -3390,7 +3390,7 @@ const Spots = (() => {
   /* --- pannello admin: richieste, membri, segnalazioni --- */
   async function openAdmin(tab = "requests") {
     const d = dlg("adminDialog", `<div class="import-body" data-no-i18n>
-      <span class="eyebrow">Wayfolk · solo per te</span><h2>Amministrazione</h2>
+      <span class="eyebrow">SpotFolk · solo per te</span><h2>Amministrazione</h2>
       <div class="gate-tabs adm-tabs" role="tablist">
         <button type="button" data-atab="requests" class="${tab === "requests" ? "on" : ""}">Richieste <b>${pendingMembers.length}</b></button>
         <button type="button" data-atab="members" class="${tab === "members" ? "on" : ""}">Membri</button>
@@ -3419,7 +3419,7 @@ const Spots = (() => {
           api("/rest/v1/rpc/expert_candidates", { method: "POST", body: {} }).then(r => r.data || []).catch(() => [])]);
         const rows = d => (st || []).filter(r => r.dim === d);
         const tot = rows("total")[0] || { signups: 0, approved: 0, active: 0 };
-        const nm = v => CLUSTERS[v] ? `${CLUSTERS[v].ico} ${CLUSTERS[v].long}` : v === "fabio" ? "★ Fabio's pick" : DOORS[v] ? `#wayfolk-${v}` : v;
+        const nm = v => CLUSTERS[v] ? `${CLUSTERS[v].ico} ${CLUSTERS[v].long}` : v === "fabio" ? "★ Fabio's pick" : DOORS[v] ? `#spotfolk-${v}` : v;
         const pct = (a, b) => b ? `${Math.round(a / b * 100)}%` : "—";
         const table = (head, list, cols) => list.length ? `<table class="adm-table"><thead><tr>${head.map(h => `<th>${h}</th>`).join("")}</tr></thead><tbody>${list.map(r => `<tr>${cols(r).map(c => `<td>${c}</td>`).join("")}</tr>`).join("")}</tbody></table>` : `<p class="gate-help left">Ancora nessun dato.</p>`;
         body.innerHTML = `
@@ -3437,7 +3437,7 @@ const Spots = (() => {
           <p class="gate-help left">Hanno almeno 50 luoghi (aggiunti o firmati) entro 50 km. Nominali con un tocco: potranno verificare e modificare i luoghi della loro zona.</p>
           ${cand.length ? `<ul class="req-list">${cand.map(c => `<li class="req-row" data-cand="${esc(c.user_id)}"><div><b>${esc(c.name || "—")}</b><span>${c.total_signs} luoghi entro 50 km (${c.signs} firmati, ${c.places} aggiunti) · ${(+c.lat).toFixed(1)}, ${(+c.lon).toFixed(1)}</span></div>
             <form class="cand-form"><input name="area" maxlength="80" placeholder="Nome della zona" required><button type="submit" class="pop-btn primary">🧭 Nomina</button></form></li>`).join("")}</ul>` : `<p class="gate-help left">Nessun candidato per ora.</p>`}
-          <p class="gate-help left">Porte d'ingresso da usare nei post: ${Object.keys(DOORS).map(k => `<code>fabiocostaph.com/#wayfolk-${k}</code>`).join(" · ")}</p>`;
+          <p class="gate-help left">Porte d'ingresso da usare nei post: ${Object.keys(DOORS).map(k => `<code>fabiocostaph.com/#spotfolk-${k}</code>`).join(" · ")}</p>`;
         api("/rest/v1/rpc/local_folk", { method: "POST", body: { p_days: 30 } }).then(r => {
           const box = body.querySelector("[data-fotm]"); if (!box) return;
           const L2 = r.data || [];
@@ -3487,7 +3487,7 @@ const Spots = (() => {
             if (!next.length) { await api(`/rest/v1/contributors?user_id=eq.${encodeURIComponent(uid)}`, { method: "DELETE" }); contribs.delete(uid); }
             else { await api("/rest/v1/contributors?on_conflict=user_id", { method: "POST", body: { user_id: uid, display_name: nm, roles: next }, headers: { Prefer: "return=minimal,resolution=merge-duplicates" } }); contribs.set(uid, { user_id: uid, display_name: nm, roles: next }); }
             b.classList.toggle("on", !has); b.textContent = !has ? `✓ ${label}` : label;
-            toast(!has ? `${nm}: badge ${label} attivo. Per comparire sulla mappa deve creare il profilo su Wayfolk.` : `${nm}: badge ${label} tolto.`);
+            toast(!has ? `${nm}: badge ${label} attivo. Per comparire sulla mappa deve creare il profilo su SpotFolk.` : `${nm}: badge ${label} tolto.`);
           } catch (err) { toast(`Non riuscito (${err.message}). Hai eseguito supabase-contributor-ruolo.sql?`, true); }
           b.disabled = false;
         }));
@@ -3499,7 +3499,7 @@ const Spots = (() => {
             <input name="coords" placeholder="Centro: 46.55, 11.75" value="${cur ? `${cur.lat}, ${cur.lon}` : `${c.lat.toFixed(3)}, ${L.Util.wrapNum(c.lng, [-180, 180], true).toFixed(3)}`}">
             <input name="km" type="number" min="1" max="500" step="1" value="${cur?.radius_km || 25}" aria-label="Raggio km"> km
             <button type="submit" class="pop-btn primary">Salva</button>${cur ? `<button type="button" class="pop-btn" data-unnode>Togli nodo</button>` : ""}
-            <p class="gate-help left">Il centro di default è il punto al centro della mappa Wayfolk.</p></form>`);
+            <p class="gate-help left">Il centro di default è il punto al centro della mappa SpotFolk.</p></form>`);
           b.disabled = true;
           const f = li.querySelector("[data-nodeform]");
           f.addEventListener("submit", async ev => {
@@ -3572,8 +3572,8 @@ const Spots = (() => {
       } else if (tab === "feedback") {
         const { data } = await api("/rest/v1/feedback?select=id,answers,rating,message,email,lang,page,device,created_at&order=created_at.desc&limit=1000");
         const list = data || [];
-        const LBL = { came: "Cosa li ha portati qui", interest: "Cosa interessa di più", spots: "Come usano Wayfolk", often: "Quanto spesso tornerebbero", missing: "Cosa vorrebbero" };
-        const OPT = { photos: "Le foto", spots: "La mappa Wayfolk", tools: "I Tools", journal: "Articoli e guide", workshops: "Workshop e ritrovi", social: "Instagram o un amico",
+        const LBL = { came: "Cosa li ha portati qui", interest: "Cosa interessa di più", spots: "Come usano SpotFolk", often: "Quanto spesso tornerebbero", missing: "Cosa vorrebbero" };
+        const OPT = { photos: "Le foto", spots: "La mappa SpotFolk", tools: "I Tools", journal: "Articoli e guide", workshops: "Workshop e ritrovi", social: "Instagram o un amico",
           locations: "Spot e luoghi", light: "Pianificare la luce", guides: "Guide pratiche", stories: "Reportage e storie", community: "Workshop e altri fotografi", prints: "Stampe e licenze",
           trip: "Pianificare un viaggio", near: "Spot vicino a me", add: "Aggiungono posti", reviews: "Recensioni e prezzi", meet: "Ritrovi", notyet: "Non l'hanno ancora provato",
           weekly: "Ogni settimana", monthly: "Ogni mese", trips: "Prima di un viaggio", rarely: "Raramente",
@@ -3668,8 +3668,8 @@ const Spots = (() => {
     const head = `<a class="text-link mag-back" href="#journal">${ICON.prev}All stories</a><p class="mag-kicker">Field Notes</p><h2>Write for Field Notes</h2>`;
     box.innerHTML = `${head}<p class="mag-deck">Loading…</p>`;
     if (!configured() || !(await ensureSession())) {
-      box.innerHTML = `${head}<p class="mag-deck">Every folk can write for Field Notes and for the monthly magazine. Log in to Wayfolk first, then come back here.</p>
-        <p><a class="outline-link" href="#wayfolk">LOG IN TO WAYFOLK <span aria-hidden="true">→</span></a></p>`; return;
+      box.innerHTML = `${head}<p class="mag-deck">Every folk can write for Field Notes and for the monthly magazine. Log in to SpotFolk first, then come back here.</p>
+        <p><a class="outline-link" href="#spotfolk">LOG IN TO SPOTFOLK <span aria-hidden="true">→</span></a></p>`; return;
     }
     if (!loaded) { try { admin = await checkAdmin(); } catch {} }
     if (!contribs.size) { try { const { data } = await api("/rest/v1/contributors?select=user_id,display_name,roles&limit=1000"); (data || []).forEach(c => contribs.set(c.user_id, c)); } catch {} }
@@ -3683,7 +3683,7 @@ const Spots = (() => {
     try { const { data } = await api(`/rest/v1/journal_submissions?select=id,title,status,review_note,updated_at,slug&author_id=eq.${encodeURIComponent(myUid())}&order=updated_at.desc`); mine = data || []; }
     catch (err) { box.innerHTML = `${head}<p class="mag-deck">Not available yet (${esc(err.message)}).</p>`; return; }
     box.innerHTML = `${head}
-      <p class="mag-deck">${admin ? "Scrivi direttamente nel Journal: salva in bozza, guarda l'anteprima e pubblica subito, senza passare da Pages CMS. Gli articoli dei contributor da approvare sono in Wayfolk → Admin → Articoli." : "Write a reportage or a practical guide. Save it as a draft whenever you like; when it's ready, send it for review — I read every piece and publish it with your name, or send it back with a note."}</p>
+      <p class="mag-deck">${admin ? "Scrivi direttamente nel Journal: salva in bozza, guarda l'anteprima e pubblica subito, senza passare da Pages CMS. Gli articoli dei contributor da approvare sono in SpotFolk → Admin → Articoli." : "Write a reportage or a practical guide. Save it as a draft whenever you like; when it's ready, send it for review — I read every piece and publish it with your name, or send it back with a note."}</p>
       <p><button type="button" class="outline-link" data-jnew>✍ NEW ARTICLE <span aria-hidden="true">→</span></button></p>
       <p class="mag-section">Your articles</p>
       ${mine.length ? `<ul class="j-list">${mine.map(m => `<li><div><b>${esc(m.title)}</b><span class="j-st ${J_STATUS[m.status]?.[1] || ""}">${J_STATUS[m.status]?.[0] || m.status}</span>
@@ -3836,7 +3836,7 @@ const Spots = (() => {
     if (!d) { d = document.createElement("dialog"); d.id = "conductDialog"; d.className = "import-dialog conduct-dialog"; document.body.appendChild(d); }
     d.innerHTML = `<button class="dialog-close" type="button" data-close aria-label="Close">${ICON.close}</button>
       <div class="import-body">
-        <span class="eyebrow">Wayfolk community</span>
+        <span class="eyebrow">SpotFolk community</span>
         <h2>Our code</h2>
         <ol class="conduct">
           <li><b>Leave no trace.</b> Take only photos, leave only footprints. Stay on paths and take your rubbish home.</li>
@@ -3845,7 +3845,7 @@ const Spots = (() => {
           <li><b>Support local.</b> Eat, sleep and buy from local businesses when you can.</li>
           <li><b>Share honestly.</b> Only your own photos, real prices and accurate reports. Update or close reports that are no longer true.</li>
           <li><b>Be kind.</b> Reviews describe places, not people. No insults, no spam.</li>
-          <li><b>Pass it on fairly.</b> Only your own things, described honestly, nothing forbidden (see the terms). Meet in public places, never pay in advance: deals are between you, Wayfolk is not a party.</li>
+          <li><b>Pass it on fairly.</b> Only your own things, described honestly, nothing forbidden (see the terms). Meet in public places, never pay in advance: deals are between you, SpotFolk is not a party.</li>
         </ol>
         <p class="gate-help left">Places, photos or reviews that break the code can be removed, and accounts can be closed.</p>
         ${after ? `<button class="outline-link" type="button" data-agree>I AGREE <span aria-hidden="true">→</span></button>` : ""}
@@ -3885,7 +3885,7 @@ const Spots = (() => {
     const rows = spots.filter(sp => (signMap.get(sp.id)?.by || {})[folk] && (!b || b.contains([sp.lat, sp.lon])))
       .sort((a, z) => signMap.get(z.id).by[folk] - signMap.get(a.id).by[folk]).slice(0, 25);
     const d = dlg("collDialog", `<div class="import-body">
-      <span class="eyebrow">Wayfolk · collections</span><h2>${CLUSTERS[folk].ico} Most signed by ${esc(folkOf(folk).toLowerCase())}</h2>
+      <span class="eyebrow">SpotFolk · collections</span><h2>${CLUSTERS[folk].ico} Most signed by ${esc(folkOf(folk).toLowerCase())}</h2>
       <div class="gate-tabs coll-tabs">${CLUSTER_KEYS.map(k => `<button type="button" class="${k === folk ? "on" : ""}" data-cf="${k}">${CLUSTERS[k].ico}</button>`).join("")}</div>
       <p class="gate-help left">In the area you're looking at on the map. Move the map to explore another area.</p>
       ${rows.length ? `<ol class="coll-list">${rows.map((sp, i) => `<li><button type="button" data-cgo="${sp.id}"><span class="coll-n">${i + 1}</span><b>${esc(sp.name)}</b><small>${CLUSTERS[folk].ico} ${signMap.get(sp.id).by[folk]} · ${esc((CATS[sp.category] || CATS.spot).label)}${signMap.get(sp.id).fabio ? " · ★ Fabio's pick" : ""}</small></button></li>`).join("")}</ol>`
@@ -3897,11 +3897,11 @@ const Spots = (() => {
   /* --- FOLK DI QUESTA ZONA: i più attivi entro 50 km, negli ultimi 30 giorni (niente classifiche globali) --- */
   async function openLocalFolk() {
     const c = map ? map.getCenter() : null;
-    const d = dlg("localFolkDialog", `<div class="import-body"><span class="eyebrow">Wayfolk · this month</span><h2>🏅 Folk of this area</h2><p class="gate-help left">Loading…</p></div>`);
+    const d = dlg("localFolkDialog", `<div class="import-body"><span class="eyebrow">SpotFolk · this month</span><h2>🏅 Folk of this area</h2><p class="gate-help left">Loading…</p></div>`);
     let rows = [];
     try { rows = (await api("/rest/v1/rpc/local_folk", { method: "POST", body: c ? { p_lat: c.lat, p_lon: L.Util.wrapNum(c.lng, [-180, 180], true), p_km: 50, p_days: 30 } : {} })).data || []; }
     catch { d.querySelector(".gate-help").textContent = "Not available yet."; return; }
-    d.querySelector(".import-body").innerHTML = `<span class="eyebrow">Wayfolk · last 30 days · within 50 km</span><h2>🏅 Folk of this area</h2>
+    d.querySelector(".import-body").innerHTML = `<span class="eyebrow">SpotFolk · last 30 days · within 50 km</span><h2>🏅 Folk of this area</h2>
       ${rows.length ? `<ol class="coll-list">${rows.map((r, i) => `<li><button type="button" data-member="${esc(r.user_id)}"><span class="coll-n">${i + 1}</span><b>${esc(r.name || "Member")}</b><small>${CLUSTERS[r.folk]?.ico || ""} ${esc(folkOf(r.folk))} · ${r.signs} signature${r.signs > 1 ? "s" : ""}${r.tips ? ` · ${r.tips} tip${r.tips > 1 ? "s" : ""}` : ""}${r.useful ? ` · 👍 ${r.useful}` : ""}</small></button></li>`).join("")}</ol>`
         : `<p class="gate-help left">Nobody has signed places around here this month. Sign one and you're on top!</p>`}
       <p class="gate-help left">Only the area you're looking at, only this month: move the map to see another area.</p>`;
@@ -4025,7 +4025,7 @@ const Spots = (() => {
   // scegliere (o cambiare) i propri cluster: chi è già iscritto, chi entra con Google, dal profilo
   function openStyles(after) {
     const d = dlg("stylesDialog", `<form class="import-body gate-form" novalidate>
-      <span class="eyebrow">Wayfolk community</span><h2>Choose your folk</h2>
+      <span class="eyebrow">SpotFolk community</span><h2>Choose your folk</h2>
       <p class="gate-help left">Travellers who travel like you. Pick all that fit: with each folk you can sign and review the places you recommend, so people like you find them.</p>
       <fieldset class="cl-pick">${CLUSTER_KEYS.map(k => `<label><input type="checkbox" value="${k}"${myStyles.includes(k) ? " checked" : ""}><span>${CLUSTERS[k].ico} ${CLUSTERS[k].long}</span></label>`).join("")}</fieldset>
       <button class="outline-link" type="submit">SAVE <span aria-hidden="true">→</span></button>
@@ -4229,7 +4229,7 @@ const Spots = (() => {
   const fieldsText = arr => [...new Set((arr || []).map(fieldLabel))].join(", ");
 
   /* apre un luogo sulla mappa dalla dashboard */
-  function openOnMap(s) { pendingFocus = s.id; meView = false; location.hash = "wayfolk"; }
+  function openOnMap(s) { pendingFocus = s.id; meView = false; location.hash = "spotfolk"; }
   function consumeFocus() {
     if (pendingFocus == null || !map) return;
     const s = spots.find(x => x.id === pendingFocus); pendingFocus = null;
@@ -4257,14 +4257,14 @@ const Spots = (() => {
     onGlobe = false;
     const el = root();
     if (guest) { el.innerHTML = gateHtml(`<p class="gate-note">${esc(pendingText())}</p>`); return; }
-    el.innerHTML = `<div class="me"><a class="text-link me-back" href="#wayfolk">${ICON.prev}Back to the map</a><p class="gate-note">Loading your profile…</p></div>`;
+    el.innerHTML = `<div class="me"><a class="text-link me-back" href="#spotfolk">${ICON.prev}Back to the map</a><p class="gate-note">Loading your profile…</p></div>`;
     const data = await loadMe();
     if (!meView) return;
     const uid = myUid(), me = profiles.find(p => p.user_id === uid) || { display_name: displayName() };
     const mine = spots.filter(s => s.created_by === uid);
     const stats = [["Places", data.profile?.places ?? mine.length], ["Reviews", data.profile?.reviews ?? data.reviews.length], ["Photos", data.profile?.photos ?? data.photos.length], ["Saved", data.profile?.saved ?? favs.size]];
     el.innerHTML = `<div class="me">
-      <a class="text-link me-back" href="#wayfolk">${ICON.prev}Back to the map</a>
+      <a class="text-link me-back" href="#spotfolk">${ICON.prev}Back to the map</a>
       <header class="me-head">
         ${avatarHtml(me, 84)}
         <div class="me-id">
@@ -4325,7 +4325,7 @@ const Spots = (() => {
           <div><dt>Website</dt><dd>${me.website ? `<a href="${esc(me.website)}" target="_blank" rel="noopener">${esc(me.website.replace(/^https?:\/\//, ""))}</a>` : "—"}</dd></div>
           <div><dt>Community map</dt><dd>${me.user_id && me.lat != null && me.on_map !== false && me.visible !== false ? "Shown (about 5 km precision)" : "Not shown"}</dd></div>
         </dl>
-        <p class="gate-help left">Your public profile is seen only by Wayfolk members${contribs.has(uid) || experts.has(uid) ? ", and your name, username and photo also on The crew page" : ""}. Saved places, meetups you join and your activity history are private: only you see them.</p>
+        <p class="gate-help left">Your public profile is seen only by SpotFolk members${contribs.has(uid) || experts.has(uid) ? ", and your name, username and photo also on The crew page" : ""}. Saved places, meetups you join and your activity history are private: only you see them.</p>
         <button type="button" class="outline-link" data-meedit2>✎ Edit profile</button>
       </div>`;
       box.querySelector("[data-meedit2]").addEventListener("click", openProfile);
@@ -4423,7 +4423,7 @@ const Spots = (() => {
           : `<p class="muted">${data.saved.length ? "No saved place matches." : "Tap ♡ Save on any place to keep it here. Organise them in lists like «Dolomites 2027»."}</p>`}`;
       const qi = box.querySelector("#meSavedQ");
       qi.addEventListener("input", () => { savedQuery = qi.value; const pos = qi.selectionStart; drawMeTab().then(() => { const n = $("#meSavedQ"); n?.focus(); n?.setSelectionRange(pos, pos); }); });
-      box.querySelector("[data-mesavedmap]").addEventListener("click", () => { onlyFavs = true; meView = false; location.hash = "wayfolk"; });
+      box.querySelector("[data-mesavedmap]").addEventListener("click", () => { onlyFavs = true; meView = false; location.hash = "spotfolk"; });
       box.querySelectorAll("[data-melist]").forEach(inp => inp.addEventListener("change", async () => {
         const id = +inp.dataset.melist, name = inp.value.trim() || null;
         try { await api(`/rest/v1/spot_favorites?spot_id=eq.${id}&user_id=eq.${encodeURIComponent(uid)}`, { method: "PATCH", body: { list_name: name }, headers: { Prefer: "return=minimal" } });
@@ -4452,12 +4452,12 @@ const Spots = (() => {
     const s = spotById(id), who = (uid, n) => uid === myUid() ? "you" : uid && !admin ? (n || "a member") : (n || "admin");
     const rows = [...ch.map(c => ({ at: c.created_at, t: `${who(c.user_id, c.user_name)}: ${fieldsText(c.fields)}` })),
       ...ph.map(p => ({ at: p.created_at, t: `${who(p.user_id, p.author_name)}: added a photo` })),
-      ...(s?.created_at ? [{ at: s.created_at, t: "added to Wayfolk" }] : [])].sort((a, b) => String(b.at).localeCompare(String(a.at)));
+      ...(s?.created_at ? [{ at: s.created_at, t: "added to SpotFolk" }] : [])].sort((a, b) => String(b.at).localeCompare(String(a.at)));
     box.innerHTML = rows.length ? `<ol class="me-histl">${rows.map(r => `<li><time>${esc(fmtWhen(r.at))}</time><span>${esc(r.t)}</span></li>`).join("")}</ol>` : `<p class="muted">No changes yet.</p>`;
     if (!profV) box.insertAdjacentHTML("beforeend", `<p class="gate-help left">The full history of changes starts once the database is updated.</p>`);
   }
 
-  /* --- PASSAPORTO WAYFOLK: folk e livelli, numeri, mappa dei timbri, ultimi timbri --- */
+  /* --- PASSAPORTO SPOTFOLK: folk e livelli, numeri, mappa dei timbri, ultimi timbri --- */
   async function loadPassport(uid) {
     if (!evoV) return null;
     try { return (await api("/rest/v1/rpc/passport", { method: "POST", body: { p_user: uid } })).data; }
@@ -4481,7 +4481,7 @@ const Spots = (() => {
     }
     const xp = experts.get(uid);
     return `<section class="pp">
-      <p class="pp-kick">Wayfolk passport</p>
+      <p class="pp-kick">SpotFolk passport</p>
       <div class="pp-folks">${folks.length ? folks.map(k => { const lv = levelOf(bf[k]); return `<span class="pp-folk" style="--c:${CLUSTERS[k].color}">${CLUSTERS[k].ico} ${esc(folkOf(k))}<b>${lv ? lv[1] : "New"}</b></span>`; }).join("") : `<span class="muted">No folk chosen yet.</span>`}
         ${xp ? `<span class="pp-folk" style="--c:#ffd9a0">🧭 Local expert<b>${esc(xp.area_name)}</b></span>` : ""}
         ${pp.rank && pp.rank <= 100 ? `<span class="pp-folk founder" style="--c:#ffd27a">🏅 Founding folk<b>#${pp.rank}</b></span>` : ""}</div>
@@ -4826,7 +4826,7 @@ const Spots = (() => {
         ${WZ_GROUPS.map(x => `<button type="button" class="wz-group${x.id === g ? " on" : ""}" data-wzg="${x.id}">${SX_ICON[x.id]}<span>${x.label}</span></button>`).join("")}
       </fieldset>
       ${g === "community" ? `<div class="wz-community">
-          <p>Photographers, travellers, local experts and meetups have their own place in Wayfolk:</p>
+          <p>Photographers, travellers, local experts and meetups have their own place in SpotFolk:</p>
           <button type="button" class="outline-link" data-wzmeet>👥 Organise a meetup here</button>
           <button type="button" class="outline-link" data-wzph>📷🎒 Join the community map</button>
           ${passV ? `<button type="button" class="outline-link" data-wzpass>🎁 Pass it on: sell or give away something here</button>` : ""}
@@ -4971,7 +4971,7 @@ const Spots = (() => {
     const sim = near.filter(x => x.dist <= 150 || similarName(wz.name, x.name)).slice(0, 5);
     const box = $("#wzSimilar");
     if (!box) return;
-    box.innerHTML = sim.length ? `<p class="wz-label">Already on Wayfolk nearby — is it the same place?</p>
+    box.innerHTML = sim.length ? `<p class="wz-label">Already on SpotFolk nearby — is it the same place?</p>
       <ul class="wz-sim">${sim.map(x => `<li><span><b>${esc(x.name)}</b><small>${esc((CATS[x.category] || CATS.spot).label)} · ${x.dist < 1000 ? `${x.dist} m` : `${(x.dist / 1000).toFixed(1)} km`}</small></span>
         <button type="button" class="text-link" data-simopen="${x.id}">Same place: open it</button></li>`).join("")}</ul>
       <p class="gate-help left">If it's the same, open it and add your photos or a review instead. If it's a different place, just publish.</p>`

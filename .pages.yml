@@ -515,10 +515,10 @@ content:
               rename: true
 
   # ---------------------------------------------------------------
-  # WAYFOLK: sfide stagionali dei folk
+  # SPOTFOLK: sfide stagionali dei folk
   # ---------------------------------------------------------------
   - name: sfide
-    label: Wayfolk — sfide stagionali
+    label: SpotFolk — sfide stagionali
     type: file
     path: content/sfide.json
     format: json
@@ -530,7 +530,7 @@ content:
           collapsible:
             collapsed: true
             summary: "{titolo}"
-        description: "Una sfida dura qualche settimana: chi firma abbastanza luoghi nel periodo ottiene il timbro nel passaporto. Testi in inglese, come il resto di Wayfolk."
+        description: "Una sfida dura qualche settimana: chi firma abbastanza luoghi nel periodo ottiene il timbro nel passaporto. Testi in inglese, come il resto di SpotFolk."
         fields:
           - { name: titolo, label: Titolo (es. Autumn colours), type: string, required: true }
           - { name: descrizione, label: Descrizione (es. Sign 5 places with autumn foliage), type: text }
