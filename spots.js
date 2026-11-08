@@ -517,14 +517,7 @@ const Spots = (() => {
         <p class="gate-note" id="gateMsg" role="status"></p>
         <p class="gate-help">Forgot your password? <a href="#about">Contact me</a> and I will reset it.</p>
       </form>`}
-      <div class="gate-google" id="gateGoogle" hidden><p class="gate-or"><span>or</span></p>
-        <button type="button" class="google-btn" id="googleBtn">${GOOGLE_G}<span>Continue with Google</span></button>
-        <p class="gate-help">${join ? "Your Google name and email are used to create your account." : "Works for accounts created with Google."}</p>
-        <p class="gate-note google-domain">🔒 Google will say <b>“Continue to hfidpbssartkmjlqcqvz.supabase.co”</b>: that's Supabase, the secure service that runs Wayfolk accounts for fabiocostaph.com. It's safe to continue.</p>
-        ${IN_APP ? `<p class="gate-note warn inapp-note">You're browsing inside ${IN_APP}: Google often blocks sign-in here. Tap <b>⋯</b> (top right) → <b>Open in browser</b>, then come back to this page. Email and password work fine here.</p>` : ""}</div>
       ${guestLoaded ? `<button type="button" class="text-link gate-back" id="gateBack">← Back to the public map</button>` : ""}`);
-    checkGoogle().then(on => { const g = $("#gateGoogle"); if (g) g.hidden = !on; });
-    $("#googleBtn")?.addEventListener("click", signInGoogle);
     $("#gateBack")?.addEventListener("click", () => { wantLogin = false; wantJoin = false; notice = ""; render(); });
     $$("[data-gtab]").forEach(b => b.addEventListener("click", () => {
       wantJoin = b.dataset.gtab === "join"; wantLogin = !wantJoin; notice = ""; renderGate();
@@ -700,7 +693,7 @@ const Spots = (() => {
       <section class="wfa-blk wfa-steps">
         <h2 class="wfa-h2">Three steps to the fire.</h2>
         <ol>
-          <li><span>01</span><b>Pick your folk</b><small>One or more. Sign up with email or Google in a minute.</small></li>
+          <li><span>01</span><b>Pick your folk</b><small>One or more. Sign up with your email in a minute.</small></li>
           <li><span>02</span><b>Sign three places you've been</b><small>That's your welcome. Be the first to sign one and your name stays on it.</small></li>
           <li><span>03</span><b>Get your passport</b><small><span>Stamps, levels, Local expert. The first 100 folk get a founding number for good.</span>${foundersLeft != null && foundersLeft > 0 ? ` <b>${foundersLeft}</b> <span>left.</span>` : ""}</small></li>
         </ol>

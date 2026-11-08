@@ -1204,6 +1204,10 @@ const I18N = (() => {
     ", send your story with your photos, and once it's published you become a co-author of the magazine: your byline carries your name and your folk, and the story goes into that month's issue.": [", invia il tuo racconto con le tue foto e, una volta pubblicato, diventi coautore della rivista: la firma porta il tuo nome e il tuo folk, e il racconto entra nel numero di quel mese."],
     "Folk of the month": ["Folk del mese"],
     "— every issue tells the story of one member of the community.": ["— ogni numero racconta la storia di un membro della community."],
+    ", enter your name, email and a password. You're in straight away.": [", inserisci nome, email e password. Entri subito."],
+    "— first name, last name, email and password (stored only in encrypted form). Used to create your account and let you log in.": ["— nome, cognome, email e password (salvata solo in forma cifrata). Servono per creare il tuo account e farti accedere."],
+    "One or more. Sign up with your email in a minute.": ["Uno o più. Iscriviti con la tua email in un minuto."],
+    "go to": ["vai su"],
   };
 
   const idx = ORDER.indexOf(lang);
