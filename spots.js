@@ -2254,7 +2254,7 @@ const Spots = (() => {
       <a class="text-link" href="${esc(gm)}" target="_blank" rel="noopener">${ICON.ext}Open in Google Maps</a>`}</div>
       ${schemaV2 ? `<div class="pop-actions">
           <button type="button" class="pop-btn" data-addphoto>${ICON.img}Add photo</button>
-          <button type="button" class="pop-btn" data-review>${ICON_STAR}Review</button>
+          <button type="button" class="pop-btn" data-review>${ICON_STAR}Write a review</button>
           ${commV ? `<button type="button" class="pop-btn fav-btn${favs.has(s.id) ? " on" : ""}" data-fav>${favs.has(s.id) ? "♥ Saved" : "♡ Save"}</button>` : ""}
           <input type="file" accept="image/*" multiple hidden data-photofile>
         </div>
@@ -4102,7 +4102,7 @@ const Spots = (() => {
         rf.hidden = false;
       }
       const rb = el.querySelector("[data-review]");
-      if (rb) rb.lastChild.textContent = mine ? "Edit review" : "Review";
+      if (rb) rb.lastChild.textContent = mine ? "Edit review" : "Write a review";
       popup.update();
     } catch { /* foto e recensioni non disponibili: la scheda resta comunque utile */ }
   }

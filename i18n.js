@@ -683,6 +683,7 @@ const I18N = (() => {
     "Find": ["Trova", "Buscar", "Trouver", "Finden"],
     "Details": ["Dettagli", "Detalles", "Détails", "Details"],
     "Review": ["Controlla", "Revisar", "Vérifier", "Prüfen"],
+    "Write a review": ["Recensisci", "Escribe una reseña", "Donner un avis", "Bewerten"],
     "Next": ["Avanti", "Siguiente", "Suivant", "Weiter"],
     "Back": ["Indietro", "Atrás", "Retour", "Zurück"],
     "Cancel": ["Annulla", "Cancelar", "Annuler", "Abbrechen"],
