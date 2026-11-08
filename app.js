@@ -2396,7 +2396,27 @@ const PAGES = ["home", "explore", "gallery", "journal", "tools", "spots", "about
    Il sito usa gli indirizzi con # (es. #explore): ogni sezione viene registrata come una pagina.
    ========================================================= */
 const PAGE_TITLES = { home: "Home", explore: "Explore", gallery: "Gallery", journal: "Journal", tools: "Tools", spots: "Wayfolk", about: "About" };
+/* Le visite di Fabio non si contano: fabiocostaph.com/?notrack (una volta per browser); ?track per tornare a contarle */
+const NO_TRACK = (() => {
+  const q = location.search;
+  try {
+    if (/(^\?|&)notrack\b/.test(q)) { localStorage.setItem("umami.disabled", "1"); localStorage.setItem("fcph-notrack", "1"); }
+    if (/(^\?|&)track\b/.test(q)) { localStorage.removeItem("umami.disabled"); localStorage.removeItem("fcph-notrack"); }
+    if (/(^\?|&)(no)?track\b/.test(q)) {
+      const off = localStorage.getItem("fcph-notrack") === "1";
+      history.replaceState(null, "", location.pathname + location.hash);
+      const n = document.createElement("div");
+      n.textContent = off ? "✓ Statistiche disattivate su questo browser: le tue visite non vengono più contate." : "✓ Statistiche di nuovo attive su questo browser.";
+      n.style.cssText = "position:fixed;left:50%;top:84px;transform:translateX(-50%);z-index:99999;max-width:90vw;padding:12px 16px;border-radius:12px;background:#10233a;color:#fff;font:500 14px/1.4 'DM Sans',sans-serif;border:1px solid #9cc8ff;box-shadow:0 10px 30px rgba(0,0,0,.4)";
+      document.addEventListener("DOMContentLoaded", () => document.body.appendChild(n));
+      if (document.body) document.body.appendChild(n);
+      setTimeout(() => n.remove(), 6000);
+    }
+    return localStorage.getItem("fcph-notrack") === "1";
+  } catch { return false; }
+})();
 function whenUmami(fn, tries = 0) {
+  if (NO_TRACK) return;
   if (window.umami?.track) { try { fn(window.umami); } catch {} return; }
   if (tries < 40) setTimeout(() => whenUmami(fn, tries + 1), 250);   // lo script arriva dopo: si aspetta fino a 10 s
 }
