@@ -3408,3 +3408,61 @@ html.sf #spotsRoot,html.sf .sf-door{scroll-margin-top:150px}
 html.sf body:not([data-page]) main > .page{display:none !important}
 html.sf body:not([data-page]) main::before{content:"";display:block;width:34px;height:34px;margin:30vh auto;border-radius:50%;border:3px solid rgba(255,190,122,.25);border-top-color:#f28c1e;animation:sfspin .9s linear infinite}
 @keyframes sfspin{to{transform:rotate(360deg)}}
+
+/* =========================================================
+   spotfolk.eu — the folk's own page (passport first, cover, live counters)
+   ========================================================= */
+html.sf.sf-on-me .crew-band{display:none}
+.sfme{max-width:1040px;gap:18px}
+.sfme-hero{position:relative;border:1px solid var(--sf-wline);border-radius:26px;overflow:hidden;background:linear-gradient(180deg,#0f1c2d,#08121f);box-shadow:0 30px 80px rgba(0,0,0,.45)}
+.sfme-cover{height:150px;background:linear-gradient(180deg,rgba(5,11,20,.1),rgba(8,18,31,1)),url(img/wf/night.jpg) center 40%/cover}
+.sfme-main{display:grid;grid-template-columns:auto 1fr auto;gap:18px 22px;align-items:end;padding:0 26px;margin-top:-62px;position:relative}
+.sfme-ring{display:grid;place-items:center;padding:4px;border-radius:50%;background:var(--ring);box-shadow:0 10px 30px rgba(0,0,0,.5);transition:transform .3s}
+.sfme-ring:hover{transform:rotate(-6deg) scale(1.03)}
+.sfme-ring .me-avatar{border:3px solid #0b1626;background:radial-gradient(circle at 35% 30%,#2a2015,#0b1626)}
+.sfme-ring .me-avatar span{font-family:var(--sf-serif);font-size:calc(var(--s) * .4);color:var(--sf-warm)}
+.sfme-id{min-width:0;padding-bottom:4px}
+.sfme-kick{margin:0 0 4px;font:500 12px/1 'Oswald','Arial Narrow',sans-serif;letter-spacing:.22em;text-transform:uppercase;color:var(--sf-warm)}
+.sfme-id h2{margin:0;font:600 clamp(32px,4vw,48px)/1 var(--sf-serif);color:#f2f6fb}
+.sfme-sub{display:flex;flex-wrap:wrap;gap:4px 14px;margin:8px 0 0;color:#b8c4d2;font-size:14px}
+.sfme-sub b{color:#f2f6fb;font-weight:600}
+.sfme-folks{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.sfme-folks span{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;border:1px solid color-mix(in srgb,var(--c) 60%,transparent);background:color-mix(in srgb,var(--c) 12%,transparent);color:#f2f6fb;font:600 13px var(--sans)}
+.sfme-folks .sfme-founder{--c:#ffd27a;background:linear-gradient(90deg,rgba(255,210,122,.22),rgba(242,140,30,.18));border-color:#ffd27a}
+.sfme-add{padding:6px 12px;border-radius:999px;border:1px dashed var(--sf-wline);background:none;color:var(--sf-warm);font:600 13px var(--sans);cursor:pointer}
+.sfme-add:hover{background:rgba(242,140,30,.1)}
+.sfme-acts{display:flex;gap:8px;padding-bottom:6px}
+.sfme-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;padding:22px 26px 24px}
+.sfme-stat{display:grid;justify-items:start;gap:2px;padding:14px 16px;border-radius:18px;border:1px solid rgba(255,190,122,.16);background:rgba(2,6,12,.45);color:#f2f6fb;text-align:left;cursor:pointer;transition:transform .2s,border-color .2s,background .2s}
+.sfme-stat:hover{transform:translateY(-3px);border-color:rgba(255,190,122,.55);background:rgba(242,140,30,.08)}
+.sfme-stat i{font-style:normal;font-size:18px;line-height:1;color:var(--sf-warm)}
+.sfme-stat b{font:600 34px/1.05 var(--sf-serif);font-variant-numeric:tabular-nums}
+.sfme-stat small{font:500 11px/1 'Oswald','Arial Narrow',sans-serif;letter-spacing:.16em;text-transform:uppercase;color:#8a99ab}
+.sfme-tabs{position:sticky;top:76px;z-index:20;display:flex;gap:6px;padding:6px;border-radius:999px;border:1px solid rgba(255,190,122,.18);background:rgba(8,18,31,.92);backdrop-filter:blur(10px);overflow-x:auto;scrollbar-width:none}
+.sfme-tabs::-webkit-scrollbar{display:none}
+.sfme-tabs button{flex:0 0 auto;display:inline-flex;align-items:center;gap:7px;padding:10px 16px;border:0;border-radius:999px;background:none;color:#b8c4d2;font:600 14px var(--sans);cursor:pointer;transition:background .2s,color .2s}
+.sfme-tabs button i{font-style:normal}
+.sfme-tabs button:hover{color:#fff;background:rgba(255,255,255,.05)}
+.sfme-tabs button.on{background:var(--sf-fire);color:var(--sf-ink)}
+.sfme-body{animation:sfmeIn .35s ease}
+@keyframes sfmeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.sfme-body .me-row{border-radius:16px;border-color:rgba(255,190,122,.12);background:rgba(16,29,46,.7);transition:transform .2s,border-color .2s}
+.sfme-body .me-row:hover{transform:translateY(-2px);border-color:rgba(255,190,122,.45)}
+.sfme-body .me-card,.sfme-body .pp{border-radius:20px;border-color:var(--sf-wline);background:rgba(16,29,46,.7)}
+.sfme-body .pp-kick,.sfme-body .me-h{font-family:var(--sf-serif);font-size:24px;letter-spacing:0;text-transform:none;color:#f2f6fb}
+.sfme-body .outline-link,.sfme-body .pop-btn{border-color:var(--sf-wline);color:var(--sf-warm)}
+.sfme-body .text-link{color:var(--sf-warm)}
+.sfme .me-back{color:#b8c4d2}
+@media (prefers-reduced-motion:reduce){.sfme-body{animation:none}.sfme-stat,.sfme-ring,.sfme-body .me-row{transition:none}}
+@media (max-width:760px){
+  .sfme-cover{height:110px}
+  .sfme-main{grid-template-columns:1fr;justify-items:center;text-align:center;margin-top:-58px;padding:0 18px}
+  .sfme-sub,.sfme-folks{justify-content:center}
+  .sfme-acts{justify-content:center;flex-wrap:wrap}
+  .sfme-stats{grid-template-columns:repeat(2,minmax(0,1fr));padding:18px}
+  .sfme-stat b{font-size:28px}
+  .sfme-tabs{top:112px;border-radius:18px}
+  .sfme-tabs button{padding:9px 13px;font-size:13px}
+}
+.sfme-body .me-stats > div{border-radius:16px;border-color:rgba(255,190,122,.16);background:rgba(2,6,12,.45)}
+.sfme-body .me-stats dd{font-family:var(--sf-serif);font-size:30px;color:#f2f6fb}

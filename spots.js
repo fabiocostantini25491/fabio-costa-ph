@@ -1248,6 +1248,7 @@ const Spots = (() => {
 
   function renderApp() {
     setTimeout(sfState, 0);
+    document.documentElement.classList.remove("sf-on-me");
     const lists = [...new Set(spots.map(s => s.list))].sort((a, b) => a.localeCompare(b));
     if (!activeLists) activeLists = new Set(lists);
     else lists.forEach(l => { if (!knownLists.has(l)) activeLists.add(l); });   // liste nuove: visibili
@@ -4314,6 +4315,7 @@ const Spots = (() => {
     const uid = myUid(), me = profiles.find(p => p.user_id === uid) || { display_name: displayName() };
     const mine = spots.filter(s => s.created_by === uid);
     const stats = [["Places", data.profile?.places ?? mine.length], ["Reviews", data.profile?.reviews ?? data.reviews.length], ["Photos", data.profile?.photos ?? data.photos.length], ["Saved", data.profile?.saved ?? favs.size]];
+    if (SF_MODE) { sfState(); document.documentElement.classList.add("sf-on-me"); return renderMeSF(el, data, uid, me, stats); }
     el.innerHTML = `<div class="me">
       <a class="text-link me-back" href="#spotfolk">${ICON.prev}Back to the map</a>
       <header class="me-head">
@@ -4334,6 +4336,55 @@ const Spots = (() => {
     el.querySelectorAll("[data-meedit]").forEach(b => b.addEventListener("click", openProfile));
     el.querySelectorAll("[data-mestyles]").forEach(b => b.addEventListener("click", () => openStyles(() => { meCache = null; renderMe(); })));
     el.querySelector("[data-mepublic]").addEventListener("click", () => openMemberProfile(uid));
+    drawMeTab();
+  }
+
+  /* spotfolk.eu: the folk's own page — a cover, the passport up front, live counters, tabs with icons */
+  const SF_TABS = [["passport", "Passport", "🛂"], ["places", "My places", "📍"], ["contrib", "Contributions", "✍️"], ["activity", "Activity", "🕑"], ["saved", "Saved", "♥"], ["profile", "Profile", "👤"]];
+  let sfMeFirst = true;
+  function renderMeSF(el, data, uid, me, stats) {
+    if (sfMeFirst) { sfMeFirst = false; if (meTab === "places") meTab = "passport"; }
+    const ring = myStyles.length ? myStyles.map(k => CLUSTERS[k].color) : ["#ffbe7a", "#f28c1e"];
+    const conic = `conic-gradient(${ring.concat(ring[0]).map((c, i, a) => `${c} ${Math.round(i / (a.length - 1) * 100)}%`).join(",")})`;
+    const goTab = { Places: "places", Reviews: "contrib", Photos: "contrib", Saved: "saved" };
+    const sIco = { Places: "📍", Reviews: "★", Photos: "📷", Saved: "♥" };
+    el.innerHTML = `<div class="me sfme">
+      <a class="text-link me-back" href="#spotfolk">${ICON.prev}Back to the map</a>
+      <header class="sfme-hero">
+        <div class="sfme-cover" aria-hidden="true"></div>
+        <div class="sfme-main">
+          <span class="sfme-ring" style="--ring:${conic}">${avatarHtml(me, 104)}</span>
+          <div class="sfme-id">
+            <p class="sfme-kick">Your SpotFolk passport</p>
+            <h2>${esc(me.display_name || displayName())}</h2>
+            <p class="sfme-sub">${me.username ? `<b>@${esc(me.username)}</b>` : `<button type="button" class="text-link" data-meedit>Choose a username</button>`}${me.base_name ? `<span>📍 ${esc(me.base_name)}</span>` : ""}${data.since ? `<span>${esc(trS("Folk since {d}").replace("{d}", fmtWhen(data.since)))}</span>` : ""}</p>
+            ${clusterV ? `<div class="sfme-folks">${myStyles.map(k => `<span style="--c:${CLUSTERS[k].color}">${CLUSTERS[k].ico} ${esc(folkOf(k))}</span>`).join("")}<span class="sfme-founder" id="sfmeFounder" hidden></span><button type="button" class="sfme-add" data-mestyles>${myStyles.length ? "＋ Folk" : "Choose your folk"}</button></div>` : ""}
+          </div>
+          <div class="sfme-acts">
+            <button type="button" class="sf-btn sf-fire" data-meedit>✎ Edit profile</button>
+            <button type="button" class="sf-btn sf-line" data-mepublic>See it as others do</button>
+          </div>
+        </div>
+        <div class="sfme-stats">${stats.map(([k, v]) => `<button type="button" class="sfme-stat" data-sfgo="${goTab[k]}"><i aria-hidden="true">${sIco[k]}</i><b data-count="${+v || 0}">0</b><small>${k}</small></button>`).join("")}</div>
+      </header>
+      <nav class="sfme-tabs" role="tablist">${SF_TABS.map(([k, l, i]) => `<button type="button" role="tab" data-metab="${k}" aria-selected="${k === meTab}" class="${k === meTab ? "on" : ""}"><i aria-hidden="true">${i}</i>${l}</button>`).join("")}</nav>
+      <section class="me-body sfme-body" id="meBody"></section>
+    </div>`;
+    const pick = k => { meTab = k; el.querySelectorAll("[data-metab]").forEach(x => { const on = x.dataset.metab === k; x.classList.toggle("on", on); x.setAttribute("aria-selected", on); if (on) x.scrollIntoView({ block: "nearest", inline: "center", behavior: "smooth" }); }); drawMeTab(); };
+    el.querySelectorAll("[data-metab]").forEach(b => b.addEventListener("click", () => pick(b.dataset.metab)));
+    el.querySelectorAll("[data-sfgo]").forEach(b => b.addEventListener("click", () => { pick(b.dataset.sfgo); $(".sfme-tabs")?.scrollIntoView({ behavior: "smooth", block: "start" }); }));
+    el.querySelectorAll("[data-meedit]").forEach(b => b.addEventListener("click", openProfile));
+    el.querySelectorAll("[data-mestyles]").forEach(b => b.addEventListener("click", () => openStyles(() => { meCache = null; renderMe(); })));
+    el.querySelector("[data-mepublic]").addEventListener("click", () => openMemberProfile(uid));
+    // counters that roll up to their number
+    const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    el.querySelectorAll("[data-count]").forEach(b => {
+      const n = +b.dataset.count; if (still || n === 0) { b.textContent = fmtN(n); return; }
+      const t0 = performance.now(), d = 900, step = t => { const k = Math.min(1, (t - t0) / d); b.textContent = fmtN(Math.round(n * (1 - Math.pow(1 - k, 3)))); if (k < 1) requestAnimationFrame(step); };
+      requestAnimationFrame(step);
+    });
+    // founding number, if any
+    loadPassport(uid).then(pp => { const f = $("#sfmeFounder"); if (f && pp && pp.rank && pp.rank <= 100) { f.textContent = `🏅 Founding folk #${pp.rank}`; f.hidden = false; } }).catch(() => {});
     drawMeTab();
   }
 
