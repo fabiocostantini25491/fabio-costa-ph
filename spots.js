@@ -195,13 +195,30 @@ const Spots = (() => {
   async function signIn(email, password) {
     const { data } = await api("/auth/v1/token?grant_type=password", { method: "POST", auth: false, body: { email, password } });
     saveSession({ access_token: data.access_token, refresh_token: data.refresh_token, expires_at: Date.now() + data.expires_in * 1000 });
+    spareForSpotfolk(email, password);
   }
+  /* login unico con spotfolk.eu: una seconda sessione, separata, che il primo link verso spotfolk.eu porta con sé (una volta sola) */
+  const HANDOFF = "fcph-handoff";
+  async function spareForSpotfolk(email, password) {
+    try { const { data } = await api("/auth/v1/token?grant_type=password", { method: "POST", auth: false, body: { email, password } }); localStorage.setItem(HANDOFF, data.refresh_token); } catch {}
+  }
+  document.addEventListener("click", e => {
+    const a = e.target.closest?.('a[href^="https://spotfolk.eu"]'); if (!a || !session) return;
+    let rt = null; try { rt = localStorage.getItem(HANDOFF); } catch {}
+    if (!rt) return;
+    e.preventDefault();
+    try { localStorage.removeItem(HANDOFF); } catch {}
+    const u = new URL(a.href), to = u.hash.slice(1).replace(/[^\w-]/g, "");
+    u.hash = `sfh=${encodeURIComponent(rt)}${to ? `&to=${to}` : ""}`;
+    if (a.target === "_blank") window.open(u.href, "_blank", "noopener"); else location.href = u.href;
+  });
   /* Iscrizione dal sito: nome, cognome, email, password. L'account entra «in attesa» finché non lo approvi */
   async function signUp(first, last, email, password, styles = []) {
     const { data } = await api("/auth/v1/signup", { method: "POST", auth: false,
       body: { email, password, data: { first_name: first, last_name: last, full_name: `${first} ${last}`.trim(), travel_style: styles, source: doorNow() || null } } });
     if (data && data.access_token) {
       saveSession({ access_token: data.access_token, refresh_token: data.refresh_token, expires_at: Date.now() + data.expires_in * 1000 });
+      spareForSpotfolk(email, password);
       return "session";
     }
     // se su Supabase è attiva la conferma via email, la sessione arriva dopo il clic sul link
@@ -246,6 +263,7 @@ const Spots = (() => {
   }
   async function logout() {
     try { await api("/auth/v1/logout", { method: "POST" }); } catch {}
+    try { localStorage.removeItem(HANDOFF); } catch {}
     saveSession(null); spots = []; loaded = false; admin = false; guestLoaded = false; activeCats = null; memberStatus = "approved"; pendingMembers = [];
     render();
   }
