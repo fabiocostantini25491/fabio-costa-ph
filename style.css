@@ -3404,3 +3404,7 @@ html.sf .sf-door .gate-back{color:#b8c4d2}
 @media (max-width:520px){html.sf .spots-gate.sf-door{padding:22px 18px 18px;border-radius:18px}html.sf .sf-door h2{font-size:30px}}
 html.sf .sf-door .cl-pick span,html.sf .sf-door .gate-form .gate-check,html.sf .sf-door .gate-form .gate-check *{text-transform:none;letter-spacing:0}
 html.sf #spotsRoot,html.sf .sf-door{scroll-margin-top:150px}
+/* spotfolk.eu: while the page starts (before the address is read) never show fabiocostaph.com's home */
+html.sf body:not([data-page]) main > .page{display:none !important}
+html.sf body:not([data-page]) main::before{content:"";display:block;width:34px;height:34px;margin:30vh auto;border-radius:50%;border:3px solid rgba(255,190,122,.25);border-top-color:#f28c1e;animation:sfspin .9s linear infinite}
+@keyframes sfspin{to{transform:rotate(360deg)}}
