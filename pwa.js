@@ -14,6 +14,8 @@
   const isSafari = isIOS && /Safari/.test(ua) && !/CriOS|FxiOS|EdgiOS|Instagram|FBAN|FBAV/.test(ua);
   const isMobile = matchMedia("(pointer: coarse)").matches && Math.min(screen.width, screen.height) < 820;
   if (standalone) { track("PWA: opened as app"); return; }
+  // spotfolk.eu: the install tip would install «Fabio Costa Ph», so it is not shown (nor counted) there
+  if (document.documentElement.classList.contains("sf")) return;
 
   const dismissedRecently = () => {
     try { return Date.now() - (+localStorage.getItem(KEY) || 0) < 1000 * 60 * 60 * 24 * 21; } catch { return false; }

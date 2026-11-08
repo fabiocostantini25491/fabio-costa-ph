@@ -4,7 +4,7 @@
 //  - immagini del sito, librerie e font: copia salvata, aggiornata in background
 //  - tasselli delle mappe: copia salvata (le zone già viste funzionano offline), con un limite
 //  - Supabase, OpenStreetMap, meteo, statistiche: sempre e solo rete (dati personali o in tempo reale)
-const VERSION = "fcph-20261108y";
+const VERSION = "fcph-20261108z";
 const CORE = `${VERSION}-core`;
 const ASSETS = `${VERSION}-assets`;
 const TILES = "fcph-tiles";            // non legato alla versione: le mappe salvate restano
