@@ -1292,7 +1292,6 @@ const Spots = (() => {
           <a class="text-link guest-guide" href="#guide-spots">How SpotFolk works</a> <a class="text-link guest-guide" href="guides/spots-quick-guide.pdf" target="_blank" rel="noopener">📄 One-page guide</a></div>` : ""}
 `;
     const tailHtml = `
-      ${!guest ? workshopsHtml() : ""}
       <section class="spots-around" id="spotsAround" aria-live="polite" hidden>
         <header class="around-head">
           <div><span class="eyebrow" id="aroundEyebrow"></span><h2 id="aroundTitle"></h2></div>
@@ -1394,7 +1393,6 @@ const Spots = (() => {
         ${schemaV2 ? `<button type="button" class="osm-scan" id="osmScan">${ICON_SCAN}Scan this area</button>` : ""}
       </div>
       ${aboutHtml()}
-      ${!guest ? workshopsHtml() : ""}
       <section class="spots-around" id="spotsAround" aria-live="polite" hidden>
         <header class="around-head">
           <div><span class="eyebrow" id="aroundEyebrow"></span><h2 id="aroundTitle"></h2></div>
