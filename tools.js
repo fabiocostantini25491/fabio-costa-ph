@@ -149,6 +149,7 @@ const Tools = (() => {
 
   const fmtT = ms => ms == null || !Number.isFinite(ms) ? "—"
     : new Intl.DateTimeFormat((window.I18N?.locale || "en-GB"), { timeZone: tz, hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date(ms));
+  const TT = s => (window.I18N ? I18N.t(s) : s);
   const fmtDate = (ms, opts) => new Intl.DateTimeFormat((window.I18N?.locale || "en-GB"), { timeZone: tz, ...opts }).format(new Date(ms));
   const fmtDur = ms => { const m = Math.round(ms / 60000); return `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, "0")} min`; };
 
@@ -451,7 +452,7 @@ const Tools = (() => {
     const offTxt = `UTC${off >= 0 ? "+" : "−"}${Math.abs(off) % 1 ? Math.abs(off).toFixed(1) : Math.abs(off)}`;
     document.getElementById("toolsPlace").innerHTML = `
       ${ICON.pin}<strong>${esc(place.name)}</strong>${place.context ? `<span>${esc(place.context)}</span>` : ""}
-      <span class="tp-meta">${fmtCoord(place.lat, place.lon).replace("  |  ", " · ")} · ${esc(tzApprox ? `${tz} (your device)` : tz)} ${offTxt}</span>`;
+      <span class="tp-meta">${fmtCoord(place.lat, place.lon).replace("  |  ", " · ")} · ${esc(tzApprox ? `${tz} ${TT("(your device)")}` : tz)} ${offTxt}</span>`;
     document.getElementById("toolsGrid").innerHTML = sunCard(today) + moonCard() + nightCard() + calendarCard();
     wireCalendar();
     listeners.forEach(fn => { try { fn(); } catch (err) { console.error(err); } });
@@ -568,7 +569,7 @@ const Tools = (() => {
       const o = { y, m, d }, il = Astro.moonIllum(localToUtc(y, m, d, 22)), n = night(o);
       const mw = n.core >= 36e5, dark = n.dark >= 3 * 36e5;
       cells += `<button type="button" class="cal-cell${sameDay(o, day) ? " sel" : ""}${sameDay(o, today) ? " today" : ""}${dark ? " dark" : ""}" data-day="${d}"
-        title="${phaseName(il.phase)} · ${Math.round(il.fraction * 100)}%${n.dark ? ` · ${fmtDur(n.dark)} of dark sky` : ""}${mw ? " · Milky Way core visible" : ""}">
+        title="${TT(phaseName(il.phase))} · ${Math.round(il.fraction * 100)}%${n.dark ? ` · ${fmtDur(n.dark)} ${TT("of dark sky")}` : ""}${mw ? " · " + TT("Milky Way core visible") : ""}">
         <span class="cal-d">${d}</span>${moonSvg(il.phase, 26)}<span class="cal-p">${Math.round(il.fraction * 100)}%</span>
         ${mw ? `<span class="cal-mw" aria-label="Milky Way">✦</span>` : ""}</button>`;
     }

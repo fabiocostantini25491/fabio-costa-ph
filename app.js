@@ -1211,14 +1211,14 @@ function renderGallery() {
         <span class="gl-rowtext"><small class="gl-rowcat">${esc(catLabel(p.category))}</small><strong>${esc(p.title)}</strong>
           <small>${esc([placeOf(p), p.date ? fmtDate(p.date) : ""].filter(Boolean).join(" · "))}</small></span>
       </button>
-      <button class="photo-pick" type="button" data-pick="${esc(p.id)}" aria-pressed="${picks.has(p.id)}" aria-label="Add “${esc(p.title)}” to your selection" title="Add to your selection">${ICON_PICK}</button>
+      <button class="photo-pick" type="button" data-pick="${esc(p.id)}" aria-pressed="${picks.has(p.id)}" aria-label="${esc((window.I18N ? I18N.t("Add to your selection") : "Add to your selection") + ": " + p.title)}" title="Add to your selection">${ICON_PICK}</button>
     </div>` : `
     <div class="photo-cell">
       <button class="photo-card" type="button" data-id="${esc(p.id)}">
         <img src="${esc(p.src)}" alt="${esc(p.title)}" data-cat="${esc(p.category)}" loading="lazy">
         <span class="photo-info"><h3>${esc(p.title)}</h3><small>${esc(placeOf(p))} · ${esc(catLabel(p.category))}</small></span>
       </button>
-      <button class="photo-pick" type="button" data-pick="${esc(p.id)}" aria-pressed="${picks.has(p.id)}" aria-label="Add “${esc(p.title)}” to your selection" title="Add to your selection">${ICON_PICK}</button>
+      <button class="photo-pick" type="button" data-pick="${esc(p.id)}" aria-pressed="${picks.has(p.id)}" aria-label="${esc((window.I18N ? I18N.t("Add to your selection") : "Add to your selection") + ": " + p.title)}" title="Add to your selection">${ICON_PICK}</button>
     </div>`).join("");
   $("#galleryEmpty").hidden = items.length > 0;
   $$("#photoGrid .photo-card").forEach(el => el.addEventListener("click", () => openPhoto(el.dataset.id, items)));

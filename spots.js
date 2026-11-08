@@ -504,7 +504,7 @@ const Spots = (() => {
         <fieldset class="cl-pick" id="joinStyles"><legend>Choose your folk <small>(how you travel: pick all that fit)</small></legend>
           ${CLUSTER_KEYS.map(k => `<label><input type="checkbox" value="${k}"${DOORS[doorNow()] === k || joinFolk() === k ? " checked" : ""}><span>${CLUSTERS[k].ico} ${CLUSTERS[k].long}</span></label>`).join("")}
         </fieldset>
-        ${foundersLeft != null && foundersLeft > 0 ? `<p class="wf-found">🏅 Join now and you're one of the first 100 <b>Founding folk</b> (${foundersLeft} places left).</p>` : ""}
+        ${foundersLeft != null && foundersLeft > 0 ? `<p class="wf-found">🏅 Join now and you're one of the first 100 <b>Founding folk</b> <span class="wf-left">${foundersLeft}</span> <span>places left.</span></p>` : ""}
         <label class="gate-check"><input type="checkbox" id="joinCode"> <span>I accept the <button type="button" class="text-link" id="joinShowCode">community code</button>, the <a href="#terms" target="_blank">terms</a> and the <a href="#privacy" target="_blank">privacy policy</a>. I'm 16 or older.</span></label>
         <button class="outline-link" type="submit" id="joinSend">JOIN <span aria-hidden="true">→</span></button>
         <p class="gate-note" id="gateMsg" role="status"></p>
@@ -519,7 +519,7 @@ const Spots = (() => {
       </form>`}
       <div class="gate-google" id="gateGoogle" hidden><p class="gate-or"><span>or</span></p>
         <button type="button" class="google-btn" id="googleBtn">${GOOGLE_G}<span>Continue with Google</span></button>
-        <p class="gate-help">${join ? "Your Google name and email are used to create the request — I still approve it personally." : "Works for accounts created with Google."}</p>
+        <p class="gate-help">${join ? "Your Google name and email are used to create your account." : "Works for accounts created with Google."}</p>
         <p class="gate-note google-domain">🔒 Google will say <b>“Continue to hfidpbssartkmjlqcqvz.supabase.co”</b>: that's Supabase, the secure service that runs Wayfolk accounts for fabiocostaph.com. It's safe to continue.</p>
         ${IN_APP ? `<p class="gate-note warn inapp-note">You're browsing inside ${IN_APP}: Google often blocks sign-in here. Tap <b>⋯</b> (top right) → <b>Open in browser</b>, then come back to this page. Email and password work fine here.</p>` : ""}</div>
       ${guestLoaded ? `<button type="button" class="text-link gate-back" id="gateBack">← Back to the public map</button>` : ""}`);
@@ -699,7 +699,7 @@ const Spots = (() => {
         <ol>
           <li><span>01</span><b>Pick your folk</b><small>One or more. Sign up with email or Google in a minute.</small></li>
           <li><span>02</span><b>Sign three places you've been</b><small>That's your welcome. Be the first to sign one and your name stays on it.</small></li>
-          <li><span>03</span><b>Get your passport</b><small>Stamps, levels, Local expert. The first 100 folk get a founding number for good${foundersLeft != null && foundersLeft > 0 ? `: ${foundersLeft} left` : ""}.</small></li>
+          <li><span>03</span><b>Get your passport</b><small><span>Stamps, levels, Local expert. The first 100 folk get a founding number for good.</span>${foundersLeft != null && foundersLeft > 0 ? ` <b>${foundersLeft}</b> <span>left.</span>` : ""}</small></li>
         </ol>
       </section>
       <section class="wfa-close">
@@ -1150,7 +1150,7 @@ const Spots = (() => {
         const n = group.length, size = Math.round(Math.min(34, 10 + Math.log10(n) * 9) * (sxTouch ? .9 : 1));
         el.className = `sx-gcl${n >= 10 ? " has-n" : ""}`; el.style.setProperty("--s", `${size}px`); el.style.opacity = fade(lat, lon);
         el.innerHTML = `<span>${fmtN(n)}</span>`;
-        el.setAttribute("aria-label", `${n} spots`);
+        el.setAttribute("aria-label", trS("{n} places").replace("{n}", n));
         el.addEventListener("click", ev => {
           ev.stopPropagation();
           const z = Math.min(globe.getZoom() + 2.2, GLOBE_TO_FLAT + 0.2);
@@ -2027,7 +2027,7 @@ const Spots = (() => {
       if (group.length === 1) return addSpotMarker(group[0]);
       const lat = group.reduce((a, s) => a + s.lat, 0) / group.length, lon = group.reduce((a, s) => a + s.lon, 0) / group.length;
       const size = group.length < 10 ? 36 : group.length < 100 ? 44 : 54;
-      L.marker([lat, lon], { keyboard: true, title: `${group.length} spots`,
+      L.marker([lat, lon], { keyboard: true, title: trS("{n} places").replace("{n}", group.length),
         icon: L.divIcon({ className: "", iconSize: [size, size], iconAnchor: [size / 2, size / 2],
           html: `<div class="spot-cluster" style="--s:${size}px">${group.length}</div>` }) })
         .addTo(layer)
@@ -2081,7 +2081,7 @@ const Spots = (() => {
     const color = plane ? "#ffc46e" : shineLocal ? "#7ed69b" : cat.color;
     const alert = alertsOf(s).length ? `<span class="alert-dot" title="${esc(ALERTS[alertsOf(s)[0].kind].label)}"></span>` : "";
     return L.divIcon({ className: "", iconSize: [28, 28], iconAnchor: [14, 14], tooltipAnchor: [0, -14], popupAnchor: [0, -12],
-      html: `<div class="${cls}" style="--c:${color}${sg?.top ? `;--fc:${CLUSTERS[sg.top].color}` : ""}"${tier || sg?.fabio ? ` title="${sg.fabio ? "Fabio's pick" : ""}${sg.fabio && tier ? " · " : ""}${tier ? `Signed by ${sg.total} folk` : ""}"` : ""}>${icon}${sg?.fabio ? `<span class="pick-star" aria-hidden="true">★</span>` : tier ? `<span class="folk-badge" aria-hidden="true">${CLUSTERS[sg.top].ico}</span>` : ""}${offer ? `<span class="offer-tag" aria-hidden="true">%</span>` : ""}${favs.has(s.id) ? `<span class="fav-dot" aria-hidden="true">♥</span>` : ""}${s.verified_at && !s.outdated ? `<span class="vf-dot" aria-hidden="true">✓</span>` : ""}${alert}</div>` });
+      html: `<div class="${cls}" style="--c:${color}${sg?.top ? `;--fc:${CLUSTERS[sg.top].color}` : ""}"${tier || sg?.fabio ? ` title="${sg.fabio ? "Fabio's pick" : ""}${sg.fabio && tier ? " · " : ""}${tier ? trS("Signed by {n} folk").replace("{n}", sg.total) : ""}"` : ""}>${icon}${sg?.fabio ? `<span class="pick-star" aria-hidden="true">★</span>` : tier ? `<span class="folk-badge" aria-hidden="true">${CLUSTERS[sg.top].ico}</span>` : ""}${offer ? `<span class="offer-tag" aria-hidden="true">%</span>` : ""}${favs.has(s.id) ? `<span class="fav-dot" aria-hidden="true">♥</span>` : ""}${s.verified_at && !s.outdated ? `<span class="vf-dot" aria-hidden="true">✓</span>` : ""}${alert}</div>` });
   }
   const fmtMoneyWs = (v, cur) => { try { return new Intl.NumberFormat(window.I18N?.locale || "en-GB", { style: "currency", currency: cur || "EUR", maximumFractionDigits: v % 1 ? 2 : 0 }).format(v); } catch { return `${v} ${cur || ""}`; } };
   function wsBoxHtml(s) {
