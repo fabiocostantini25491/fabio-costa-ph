@@ -3364,3 +3364,11 @@ html.sf #spots .sx-modes button.on,html.sf #spots .sx-modes button[aria-pressed=
 html.sf #guide .guide-card:not(#guide-spots),html.sf #guide .guide-toc,html.sf #guide .guide-downloads a:not([href*="spots"]):not([href*="contributors"]){display:none}
 html.sf #guide .section-heading p{display:none}
 html.sf #spots .spots-search .spots-locate{display:none}
+/* spotfolk.eu on the phone: the bar of groups under the globe stays compact (small labels, as on fabiocostaph.com) */
+@media (max-width:980px){
+  html.sf #spots .sx-sheet .sx-gtext b{font:600 8.6px/1.15 var(--sans);letter-spacing:.03em;text-transform:uppercase;color:#f2f6fb;white-space:normal;overflow-wrap:anywhere;hyphens:auto}
+  html.sf #spots .sx-sheet .sx-gtext{width:100%}
+  html.sf #spots .sx-sheet .sx-groups{border-color:var(--sf-wline);background:rgba(8,18,31,.92)}
+  html.sf #spots .sx-sheet .sx-group{border-color:transparent;background:none}
+  html.sf #spots .sx-sheet .sx-group.open{border-color:rgba(255,190,122,.6);background:rgba(242,140,30,.1)}
+}
