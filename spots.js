@@ -889,6 +889,8 @@ const Spots = (() => {
   /* fondo della mappa piana: satellite (con nomi) oppure rilievo */
   function applyBase() {
     if (!map || !baseSat) return;
+    // sul globo la mappa piana è nascosta: le sue foto satellitari si scaricano solo quando si scende (il globo parte prima)
+    if (ui === "earth" && viewMode === "globe" && !globeFailed && !map._fcFlat) return;
     const topo = ui === "earth" && viewMode === "terrain";
     [baseSat, baseTopo, satLabels].forEach(l => l && map.hasLayer(l) && map.removeLayer(l));
     (topo ? baseTopo : baseSat).addTo(map);
@@ -1016,6 +1018,7 @@ const Spots = (() => {
     if (!map) return;
     onGlobe = false;
     stageEl()?.classList.remove("on-globe");
+    if (!map._fcFlat) { map._fcFlat = true; applyBase(); }
     if (center) { handing = true; map.setView(center, Math.max(3, Math.min(19, zoom)), { animate: false }); setTimeout(() => { handing = false; }, 60); }
     map.invalidateSize();
     if (!opts.quiet) hint(viewMode === "globe" ? "Zoom out to return to the globe." : "");
