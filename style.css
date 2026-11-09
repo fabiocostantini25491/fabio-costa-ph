@@ -3746,3 +3746,13 @@ span.pc-useful{cursor:default}
 /* in every story the folk comes before the name */
 .pc-sline{display:flex;align-items:center;flex-wrap:wrap;gap:3px 7px}
 .pc-sline .pc-sfolk{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;border:1px solid color-mix(in srgb,var(--c) 60%,transparent);background:color-mix(in srgb,var(--c) 14%,transparent);color:#f2f6fb;font:700 10.5px var(--sans);white-space:nowrap}
+/* near me, grouped: places to eat, to sleep, to see… */
+.near-group{margin:8px 0;border:1px solid color-mix(in srgb,var(--c) 30%,transparent);border-radius:14px;background:rgba(255,255,255,.02)}
+.near-group > summary{display:flex;align-items:center;gap:10px;padding:9px 12px;cursor:pointer;list-style:none}
+.near-group > summary::-webkit-details-marker{display:none}
+.near-group > summary b{flex:1;font:600 16px 'Cormorant Garamond',Georgia,serif;color:#f2f6fb}
+.near-group > summary em{font:600 11px var(--sans);font-style:normal;padding:2px 9px;border-radius:999px;background:color-mix(in srgb,var(--c) 18%,transparent);color:var(--c)}
+.near-group > summary .sg-cat{--c:inherit}
+.near-group .near-list{padding:0 6px 6px}
+.near-more > summary{padding:4px 14px 10px;cursor:pointer;font-size:12px;color:#ffbe7a;list-style:none}
+.near-more > summary::-webkit-details-marker{display:none}

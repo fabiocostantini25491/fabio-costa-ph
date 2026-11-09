@@ -1747,6 +1747,8 @@ const Spots = (() => {
     tab.hidden = open || !origin;
     if (!open) tab.classList.remove("pulse");
   }
+  // «Vicino a me» diviso per tipo di posto, nell'ordine in cui serve in viaggio
+  const NEAR_GROUPS = [["Places to eat", ["restaurant"]], ["Places to sleep", ["hotel"]], ["Photo spots & places to see", ["spot"]], ["Trekking", ["trekking"]], ["Experiences", ["experience"]], ["Workshops", ["workshop"]]];
   function renderNear() {
     const el = $("#spotsNear"), box = $("#spotsAround");
     if (!el) return;
@@ -1755,18 +1757,24 @@ const Spots = (() => {
     $("#aroundEyebrow").textContent = origin.kind === "me" ? "Near you" : origin.kind === "scan" ? "This area" : "Around";
     $("#aroundTitle").textContent = origin.kind === "me" ? "What's around you" : origin.label;
     const inR = visibleSpots().map(s => ({ s, d: distKm(origin, s) })).filter(o => o.d <= nearKm).sort((a, b) => a.d - b.d);
-    const top = inR.length ? inR.slice(0, 15) : nearestSpots(1);
+    const top = inR.length ? inR : nearestSpots(1);
     const where = origin.kind === "me" ? "you" : esc(origin.label);
+    const nearItem = ({ s, d }) => `
+        <li><button type="button" data-near="${s.id}">
+          <span class="sg-cat" style="--c:${(CATS[s.category] || CATS.spot).color}">${(CATS[s.category] || CATS.spot).icon}</span>
+          <span class="sg-text"><strong>${esc(s.name)}</strong><small>${(CATS[s.category] || CATS.spot).label}${subLabel(s) ? ` · ${esc(subLabel(s))}` : ""}</small></span>
+          <span class="near-d">${fmtKm(d)}</span></button></li>`;
     el.innerHTML = `
       <h3 class="col-title"><span class="col-dot community"></span>From the community</h3>
       <p class="near-sum">${!top.length ? "No spots match the current filters."
-        : inR.length ? `<strong>${inR.length}</strong> place${inR.length > 1 ? "s" : ""} within ${nearKm} km${inR.length > 15 ? " · showing the 15 closest" : ""}`
+        : inR.length ? `<strong>${inR.length}</strong> place${inR.length > 1 ? "s" : ""} within ${nearKm} km`
         : `Nothing within ${nearKm} km of ${where}. The nearest is <strong>${fmtKm(top[0].d)}</strong> away — try a larger radius.`}</p>
-      <ol class="near-list">${top.map(({ s, d }) => `
-        <li><button type="button" data-near="${s.id}">
-          <span class="sg-cat" style="--c:${(CATS[s.category] || CATS.spot).color}">${(CATS[s.category] || CATS.spot).icon}</span>
-          <span class="sg-text"><strong>${esc(s.name)}</strong><small>${(CATS[s.category] || CATS.spot).label}</small></span>
-          <span class="near-d">${fmtKm(d)}</span></button></li>`).join("")}</ol>`;
+      ${inR.length ? NEAR_GROUPS.map(([label, cats]) => { const g = inR.filter(o => cats.includes(o.s.category)); if (!g.length) return "";
+        const c = CATS[cats[0]] || CATS.spot;
+        return `<details class="near-group" open style="--c:${c.color}"><summary><span class="sg-cat">${c.icon}</span><b>${label}</b><em>${g.length}</em></summary>
+          <ol class="near-list">${g.slice(0, 6).map(nearItem).join("")}</ol>
+          ${g.length > 6 ? `<details class="near-more"><summary>${esc(trS("Show all {n}").replace("{n}", g.length))}</summary><ol class="near-list">${g.slice(6, 40).map(nearItem).join("")}</ol></details>` : ""}</details>`; }).join("")
+        : `<ol class="near-list">${top.map(nearItem).join("")}</ol>`}`;
     el.querySelectorAll("[data-near]").forEach(b => b.addEventListener("click", () => {
       const s = spots.find(x => String(x.id) === b.dataset.near);
       if (s) focusSpot(s);
