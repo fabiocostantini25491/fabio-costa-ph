@@ -2415,8 +2415,10 @@ const NO_TRACK = (() => {
     return localStorage.getItem("fcph-notrack") === "1";
   } catch { return false; }
 })();
+/* robots that open pages in an automated browser (link checkers, security scanners, previews) are not counted */
+const ROBOT = navigator.webdriver === true || /HeadlessChrome|bot\b|crawler|spider|Lighthouse|PageSpeed|facebookexternalhit|LinkedInBot|Slurp|preview/i.test(navigator.userAgent || "");
 function whenUmami(fn, tries = 0) {
-  if (NO_TRACK) return;
+  if (NO_TRACK || ROBOT) return;
   if (window.umami?.track) { try { fn(window.umami); } catch {} return; }
   if (tries < 40) setTimeout(() => whenUmami(fn, tries + 1), 250);   // lo script arriva dopo: si aspetta fino a 10 s
 }
