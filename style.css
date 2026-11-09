@@ -3689,3 +3689,57 @@ span.pc-useful{cursor:default}
 .pc-p,.pc-more{flex:0 0 78px;scroll-snap-align:start}
 .pc-p b,.pc-p small,.pc-p time{max-width:78px}
 .pc-first{position:absolute;top:52px;left:50%;transform:translateX(-50%);margin:0}
+/* folk stories, as in the SpotFolk layout: photo, then who (face, name, folk, date, on the spot), title, words, useful */
+.pc-story{container-type:inline-size;display:grid;gap:0;padding:0;overflow:hidden}
+.pc-story .pc-sbody{padding:10px 10px 8px;display:grid;gap:4px}
+.pc-cover{display:block;padding:0;border:0;background:none;cursor:pointer}
+.pc-cover img{display:block;width:100%;height:150px;object-fit:cover}
+@container (min-width:440px){
+  .pc-story.has-photo{grid-template-columns:42% 1fr}
+  .pc-story.has-photo .pc-cover img{height:100%;min-height:180px;border-radius:12px 0 0 12px}
+}
+.pc-shead{display:flex;align-items:center;flex-wrap:wrap;gap:4px 7px}
+.pc-shead .pc-face{padding:1.5px}
+.pc-sname{font:600 15px/1.1 'Cormorant Garamond',Georgia,serif;color:#f2f6fb}
+.pc-sfolk{font-size:11px;font-weight:600;color:color-mix(in srgb,var(--c) 80%,#fff)}
+.pc-shead time{margin-left:auto;font-size:10.5px;color:#9fb0c6}
+.pc-shead .pc-onspot{margin-left:0}
+.pc-shead .pc-onspot:last-child{margin-left:auto}
+.pc-title{margin:4px 0 0}
+.pc-sphotos img{width:84px;height:58px}
+.pc-sfoot{justify-content:flex-start}
+.pc-sfoot .pc-useful{margin-left:auto}
+.pc-mark{width:30px;height:30px;padding:0;border-radius:8px;border:1px solid rgba(255,255,255,.18);background:none;color:#e6ecf3;font-size:14px;cursor:pointer}
+.pc-mark.on{color:#ff8fb1;border-color:#ff8fb1}
+.pc-more-menu{position:relative}
+.pc-dots3{width:30px;height:30px;padding:0;border:0;background:none;color:#b8c4d2;font-size:12px;letter-spacing:1px;cursor:pointer}
+.pc-menu{position:absolute;right:0;bottom:34px;z-index:5;display:grid;min-width:150px;padding:4px;border-radius:12px;border:1px solid rgba(255,190,122,.3);background:#0d1b2c;box-shadow:0 10px 30px rgba(0,0,0,.5)}
+.pc-menu[hidden]{display:none}
+.pc-menu button{padding:8px 10px;border:0;border-radius:8px;background:none;color:#e6ecf3;text-align:left;font:500 12.5px var(--sans);cursor:pointer}
+.pc-menu button:hover{background:rgba(255,255,255,.06)}
+.pc-shead{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:8px}
+.pc-swho{min-width:0;display:grid;line-height:1.2}
+.pc-swho small{font-size:10.5px;color:#9fb0c6}
+.pc-shead .pc-onspot{margin:0!important;font-size:9.5px}
+.pc > *,.pc-body > *,.pc-top > *{min-width:0}.pc-photos,.pc-people{max-width:100%}
+/* Support local and Fragile: badges on top, and their own cards in Travel better */
+.pc-flags{display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 4px!important}
+.pc-flag{display:inline-flex;align-items:center;gap:5px;padding:5px 11px;border-radius:999px;font:700 11.5px var(--sans);cursor:pointer;border:1px solid}
+.pc-flag.local{color:#9fe3c8;border-color:rgba(159,227,200,.55);background:rgba(159,227,200,.1)}
+.pc-flag.fragile{color:#8fd3ff;border-color:rgba(143,211,255,.55);background:rgba(143,211,255,.1)}
+.pc-flag:hover{filter:brightness(1.15)}
+.pc-badge{padding:10px 12px;border-radius:14px;border:1px solid;font-size:12.5px;line-height:1.5}
+.pc-badge.local{border-color:rgba(159,227,200,.45);background:linear-gradient(180deg,rgba(159,227,200,.12),rgba(159,227,200,.03))}
+.pc-badge.fragile{border-color:rgba(143,211,255,.45);background:linear-gradient(180deg,rgba(143,211,255,.12),rgba(143,211,255,.03))}
+.pc-bh{display:flex;align-items:center;gap:8px;margin:0 0 4px!important}
+.pc-bh b{font:600 16px 'Cormorant Garamond',Georgia,serif;color:#f2f6fb}
+.pc-badge.local .pc-bh span,.pc-badge.fragile .pc-bh span{width:28px;height:28px;display:grid;place-items:center;border-radius:50%;background:rgba(255,255,255,.06)}
+.pc-badge p{margin:0!important;color:#dfe8f3}
+.pc-badge ul{margin:0;padding-left:18px;color:#dfe8f3;display:grid;gap:2px}
+.pc-badge [data-nearby]{margin-top:8px}
+.pc-badge .soc-near{width:100%}
+.rev-subs-h{margin:0 0 2px!important;font:600 15px 'Cormorant Garamond',Georgia,serif;color:#f2f6fb}
+.rev-subs-h small{font:400 10.5px var(--sans);color:#9fb0c6;margin-left:4px}
+.rev-subs.need{padding:6px;border-radius:10px;outline:1.5px solid rgba(255,140,120,.7)}
+.pc-photos .pop-fig{flex:0 0 118px;max-width:118px;min-width:0}.pc-photos figcaption{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pc-photos .pop-thumb{display:block;padding:0;width:118px}.pc-photos .pop-thumb img{width:118px!important;height:80px!important;object-fit:cover;border-radius:10px}.pc-badge .soc-sub{margin:6px 0 2px!important;font:600 11px var(--sans)!important;letter-spacing:.02em!important;text-transform:none!important;color:#b8c4d2!important}

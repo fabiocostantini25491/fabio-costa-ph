@@ -2316,7 +2316,6 @@ const Spots = (() => {
     const t = [];
     if (s.best_months) t.push(["🗓️", `Best time to go: <b>${esc(s.best_months)}</b>`]);
     t.push(["📅", "Visit early in the morning or outside peak season."]);
-    if (s.fragile) t.push(["🛡️", "Fragile place: stay on paths, keep groups small, no drones, no geotags on social media."]);
     if (s.category === "trekking") t.push(["🥾", "Check the weather and start early; tell someone your route."]);
     else if (s.category === "restaurant") t.push(["🍝", "Order what the locals order, and book ahead in high season."]);
     else if (s.category === "hotel") t.push(["🛏️", "Book directly with the owners when you can: more of what you pay stays here."]);
@@ -2333,7 +2332,7 @@ const Spots = (() => {
     const consBody = `<div data-rating><p class="pc-empty">No impressions yet: share your story to give the first.</p></div>`;
     const storiesBody = `${schemaV2 ? `<button type="button" class="pc-share" data-review>Share your story <span aria-hidden="true">＋</span></button>
         <form class="pop-review pc-form" data-reviewform hidden>
-          <div class="rev-subs" data-revsubs>${crit.map(([k, l, d]) => `<div class="rev-sub" data-sub="${k}"><span>${l}<small>${d}</small></span><span class="rev-dots" role="radiogroup" aria-label="${l}">${[1, 2, 3, 4, 5].map(n => `<button type="button" role="radio" aria-checked="false" aria-label="${n}/5" data-subv="${n}"></button>`).join("")}</span></div>`).join("")}</div>
+          <div class="rev-subs" data-revsubs><p class="rev-subs-h">Your impressions <small>all four, from 1 to 5</small></p>${crit.map(([k, l, d]) => `<div class="rev-sub" data-sub="${k}"><span>${l}<small>${d}</small></span><span class="rev-dots" role="radiogroup" aria-label="${l}">${[1, 2, 3, 4, 5].map(n => `<button type="button" role="radio" aria-checked="false" aria-label="${n}/5" data-subv="${n}"></button>`).join("")}</span></div>`).join("")}</div>
           <label class="rev-folk" data-revfolk hidden>Telling it as <select name="folk"></select></label>
           <input type="text" name="title" maxlength="120" placeholder="A title, e.g. A magical morning at the lake" aria-label="Title of your story">
           <textarea rows="4" maxlength="2000" placeholder="Your story: what it was like, when to go, what to know…" aria-label="Your story"></textarea>
@@ -2351,8 +2350,12 @@ const Spots = (() => {
         </form>` : ""}
         <div class="pop-reviews" data-reviews><p class="pc-empty">No stories yet.</p></div>`;
     const pulseBody = `<div data-pulse><p class="pc-empty">Quiet for now: the first signatures will make it move.</p></div>`;
-    const travelBody = `${travelBetter(s)}
-      ${s.support_local ? `<div class="soc-box local"><b>🌱 Support local</b><p>Your visit helps this place: eat, sleep and buy locally.</p><div data-nearby></div></div>` : ""}`;
+    const travelBody = `
+      ${s.fragile ? `<div class="pc-badge fragile"><p class="pc-bh"><span aria-hidden="true">🛡️</span><b>Fragile place</b></p>
+        <ul><li>Stay on the paths and keep groups small.</li><li>No drones, no fires, nothing left behind.</li><li>No geotags on social media: the exact spot stays among the folk.</li></ul></div>` : ""}
+      ${s.support_local ? `<div class="pc-badge local"><p class="pc-bh"><span aria-hidden="true">🌱</span><b>Support local</b></p>
+        <p>This place lives on visitors like you: eat, sleep and buy from the people who live here.</p><div data-nearby></div></div>` : ""}
+      ${travelBetter(s)}`;
     const detailsBody = `
       ${s.note ? `<p class="pop-desc">${esc(s.note)}</p>` : ""}
       <dl class="pc-dl">
@@ -2378,6 +2381,7 @@ const Spots = (() => {
         <strong>${esc(s.name)}</strong>
         ${localNew(s) ? `<span class="ws-chip new local-chip">🌱 New in Support local</span>` : freshPlace(s) ? `<span class="ws-chip new local-chip">✨ New on the map</span>` : ""}
         ${dates ? `<p class="pop-dates">${ICON.cal}<span>${dates}</span></p>` : ""}
+        ${s.support_local || s.fragile ? `<p class="pc-flags">${s.fragile ? `<button type="button" class="pc-flag fragile" data-gotravel>🛡️ Fragile place</button>` : ""}${s.support_local ? `<button type="button" class="pc-flag local" data-gotravel>🌱 Support local</button>` : ""}</p>` : ""}
         ${schemaV2 ? `<div class="pop-photos pc-photos" data-photos></div>` : ""}
         <div class="pop-alerts" data-alerts>${alertsHtml(s)}</div>
       </header>
@@ -2425,6 +2429,8 @@ const Spots = (() => {
   async function wirePopup(popup, s) {
     const el = popup.getElement();
     el.querySelector("[data-copy]")?.addEventListener("click", ev => copyText(ev.currentTarget, `${s.lat.toFixed(6)}, ${s.lon.toFixed(6)}`));
+    el.querySelectorAll("[data-gotravel]").forEach(b => b.addEventListener("click", () => { const d = el.querySelector('[data-sec="travel"]'); if (d) { d.open = true; popup.update(); setTimeout(() => d.scrollIntoView({ behavior: "smooth", block: "nearest" }), 60); } }));
+    el.querySelectorAll(".pc-sec").forEach(d => d.addEventListener("toggle", () => popup.update()));
     el.querySelector("[data-editspot]")?.addEventListener("click", () => { map.closePopup(); openEditPlace(s); });
     el.querySelector("[data-authorp]")?.addEventListener("click", () => openMemberProfile(s.created_by));
     el.querySelector("[data-delete]")?.addEventListener("click", async ev => {
@@ -2507,6 +2513,9 @@ const Spots = (() => {
       const paid = parseFloat(fv("paid")) >= 0 ? parseFloat(fv("paid")) : null;
       const subBody = subV ? Object.fromEntries(SUBR.map(([k]) => [k, subs[k] || null])) : {};
       const given = SUBR.map(([k]) => subs[k]).filter(Boolean);
+      // ogni racconto porta le sue 4 impressioni: sono loro a fare il parere dei folk
+      if (subV && given.length < SUBR.length) { form.querySelector("[data-revsubs]")?.classList.add("need"); toast("Give your impression on all four levels: they make the folk consensus.", true); return; }
+      form.querySelector("[data-revsubs]")?.classList.remove("need");
       if (given.length) rating = Math.round(given.reduce((a, b) => a + b, 0) / given.length);   // la media resta anche come voto generale
       if (subV) subBody.r_title = (form.querySelector("[name=title]")?.value || "").trim() || null;
       if (!rating && !body && paid == null && !Object.values(subBody).some(Boolean)) { form.querySelector("textarea").focus(); return; }
@@ -4231,18 +4240,30 @@ const Spots = (() => {
       const faceOf = r => profiles.find(p => p.user_id === r.user_id) || { display_name: r.author_name || "Member" };
       const onSpotOf = r => (el._signs || []).some(g => g.user_id === r.user_id && g.on_spot);
       const photosOf = r => photos.filter(p => p.user_id === r.user_id && urls[p.path]).slice(0, 3);
-      el.querySelector("[data-reviews]").innerHTML = reviews.length ? reviews.map(r => { const sc = revScore(r), ph = photosOf(r); return `<article class="pop-rev pc-story${experts.has(r.user_id) ? " by-expert" : ""}" style="--c:${CLUSTERS[r.folk]?.color || "#ffbe7a"}">
-        <header class="rev-head"><button type="button" class="pc-face" data-member="${esc(r.user_id || "")}" aria-label="${esc(r.author_name || "Member")}">${avatarHtml(faceOf(r), 36)}</button>
-          <span class="pc-who"><b>${esc(shortName(r.author_name || "Member"))}</b>${xpBadge(r.user_id)}<small>${CLUSTERS[r.folk] ? `${CLUSTERS[r.folk].ico} ${esc(folkOf(r.folk))} · ` : ""}${fmtDay(r.created_at.slice(0, 10))}</small></span>
-          ${onSpotOf(r) ? `<span class="pc-onspot">📍 On the spot</span>` : ""}</header>
-        ${r.r_title ? `<h4 class="pc-title">${esc(r.r_title)}</h4>` : ""}
-        ${r.body ? `<p class="pc-text">${esc(r.body)}</p>` : ""}
-        ${ph.length ? `<div class="pc-sphotos">${ph.map(p => `<button type="button" data-sphoto="${photos.indexOf(p)}" aria-label="Photo by ${esc(p.author_name || "")}"><img src="${esc(urls[p.path])}" alt="" loading="lazy"></button>`).join("")}</div>` : ""}
-        <footer class="pc-sfoot">${sc ? `<span class="pc-score" title="Their impression">${sc.toFixed(1)}<small>/5</small></span>` : ""}
-          ${rvV && r.user_id !== uid ? `<button type="button" class="pc-useful${vMine(r.id) ? " on" : ""}" data-ruseful="${r.id}" aria-pressed="${vMine(r.id)}">👍 ${vCount(r.id) ? `${vCount(r.id)} ` : ""}Useful</button>` : rvV && vCount(r.id) ? `<span class="pc-useful">👍 ${vCount(r.id)} Useful</span>` : ""}
-          ${r.user_id === uid || admin || canCurate(s) ? `<button type="button" class="rev-del" data-delrev="${r.id}" aria-label="Delete story">${ICON.close}</button>` : commV ? `<button type="button" class="rev-flag" data-flagrev="${r.id}" title="Flag this story" aria-label="Flag this story">⚑</button>` : ""}</footer>
-        ${r.paid != null ? `<p class="rev-paid">💶 Paid ${fmtMoney(r.paid, r.currency)}${r.people ? ` for ${r.people} ${r.people > 1 ? "people" : "person"}` : ""}${r.nights ? `, ${r.nights} night${r.nights > 1 ? "s" : ""}` : ""}${r.stay_type ? ` · ${esc(r.stay_type)}` : ""}</p>` : ""}</article>`; }).join("") : `<p class="pc-empty">No stories yet: be the first to tell this place.</p>`;
+      el.querySelector("[data-reviews]").innerHTML = reviews.length ? reviews.map(r => { const sc = revScore(r), ph = photosOf(r), c = CLUSTERS[r.folk], mineR = r.user_id === uid, canDel = mineR || admin || canCurate(s);
+        return `<article class="pop-rev pc-story${experts.has(r.user_id) ? " by-expert" : ""}${ph.length ? " has-photo" : ""}" style="--c:${c?.color || "#ffbe7a"}">
+        ${ph.length ? `<button type="button" class="pc-cover" data-sphoto="${photos.indexOf(ph[0])}" aria-label="Photo by ${esc(r.author_name || "")}"><img src="${esc(urls[ph[0].path])}" alt="" loading="lazy"></button>` : ""}
+        <div class="pc-sbody">
+          <header class="pc-shead">
+            <button type="button" class="pc-face" data-member="${esc(r.user_id || "")}" aria-label="${esc(r.author_name || "Member")}">${avatarHtml(faceOf(r), 30)}</button>
+            <span class="pc-swho"><span><b class="pc-sname">${esc(shortName(r.author_name || "Member"))}</b>${xpBadge(r.user_id)}</span>
+              <small>${c ? `<span class="pc-sfolk">${c.ico} ${esc(folkOf(r.folk))}</span> · ` : ""}<time>${fmtDay(r.created_at.slice(0, 10))}</time></small></span>
+            ${onSpotOf(r) ? `<span class="pc-onspot">📍 On the spot</span>` : ""}
+          </header>
+          ${r.r_title ? `<h4 class="pc-title">${esc(r.r_title)}</h4>` : ""}
+          ${r.body ? `<p class="pc-text">${esc(r.body)}</p>` : ""}
+          ${ph.length > 1 ? `<div class="pc-sphotos">${ph.slice(1).map(p => `<button type="button" data-sphoto="${photos.indexOf(p)}" aria-label="Photo by ${esc(p.author_name || "")}"><img src="${esc(urls[p.path])}" alt="" loading="lazy"></button>`).join("")}</div>` : ""}
+          ${r.paid != null ? `<p class="rev-paid">💶 Paid ${fmtMoney(r.paid, r.currency)}${r.people ? ` for ${r.people} ${r.people > 1 ? "people" : "person"}` : ""}${r.nights ? `, ${r.nights} night${r.nights > 1 ? "s" : ""}` : ""}${r.stay_type ? ` · ${esc(r.stay_type)}` : ""}</p>` : ""}
+          <footer class="pc-sfoot">${sc ? `<span class="pc-score" title="Their impression">${sc.toFixed(1)}<small>/5</small></span>` : ""}
+            ${rvV && !mineR ? `<button type="button" class="pc-useful${vMine(r.id) ? " on" : ""}" data-ruseful="${r.id}" aria-pressed="${vMine(r.id)}">👍 ${vCount(r.id) ? `${vCount(r.id)} ` : ""}Useful</button>` : rvV && vCount(r.id) ? `<span class="pc-useful">👍 ${vCount(r.id)} Useful</span>` : ""}
+            ${commV ? `<button type="button" class="pc-mark${favs.has(s.id) ? " on" : ""}" data-favstory title="Save this place" aria-label="Save this place">${favs.has(s.id) ? "♥" : "♡"}</button>` : ""}
+            ${canDel || commV ? `<span class="pc-more-menu"><button type="button" class="pc-dots3" data-smore aria-label="More" aria-expanded="false">•••</button>
+              <span class="pc-menu" hidden>${canDel ? `<button type="button" data-delrev="${r.id}">Delete story</button>` : `<button type="button" data-flagrev="${r.id}">⚑ Flag this story</button>`}</span></span>` : ""}
+          </footer>
+        </div></article>`; }).join("") : `<p class="pc-empty">No stories yet: be the first to tell this place.</p>`;
       el.querySelectorAll("[data-sphoto]").forEach(b => b.addEventListener("click", () => openPhotos(photos, urls, +b.dataset.sphoto, s)));
+      el.querySelectorAll("[data-smore]").forEach(b => b.addEventListener("click", () => { const m = b.nextElementSibling, open = m.hidden; el.querySelectorAll(".pc-menu").forEach(x => { x.hidden = true; }); m.hidden = !open; b.setAttribute("aria-expanded", open); }));
+      el.querySelectorAll("[data-favstory]").forEach(b => b.addEventListener("click", () => { const f = el.querySelector("[data-fav]"); if (f) f.click(); setTimeout(() => el.querySelectorAll("[data-favstory]").forEach(x => { const on = favs.has(s.id); x.classList.toggle("on", on); x.textContent = on ? "♥" : "♡"; }), 400); }));
       el.querySelectorAll("[data-ruseful]").forEach(b => b.addEventListener("click", async () => {
         const id = +b.dataset.ruseful, on = b.classList.contains("on"); b.disabled = true;
         try {
