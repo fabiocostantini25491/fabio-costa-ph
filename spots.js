@@ -2520,7 +2520,7 @@ const Spots = (() => {
       if (subV && given.length < SUBR.length) { form.querySelector("[data-revsubs]")?.classList.add("need"); toast("Give your impression on all four levels: they make the folk consensus.", true); return; }
       form.querySelector("[data-revsubs]")?.classList.remove("need");
       if (given.length) rating = Math.round(given.reduce((a, b) => a + b, 0) / given.length);   // la media resta anche come voto generale
-      if (subV) subBody.r_title = (form.querySelector("[name=title]")?.value || "").trim() || null;
+      if (subV && titleV) subBody.r_title = (form.querySelector("[name=title]")?.value || "").trim() || null;
       if (!rating && !body && paid == null && !Object.values(subBody).some(Boolean)) { form.querySelector("textarea").focus(); return; }
       const extra = pricesV2 && PRICED[s.category] ? { paid, currency: paid != null ? fv("currency") : null,
         people: paid != null ? Math.max(1, parseInt(fv("people")) || 1) : null,
@@ -2568,21 +2568,27 @@ const Spots = (() => {
   // il punteggio di un racconto: la media dei suoi 4 livelli (le vecchie recensioni: le stelle)
   const revScore = r => { const v = SUBR.map(([k]) => r[k]).filter(Boolean); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : r.rating || null; };
   let rvV = true;   // false finché non c'è la tabella review_votes («Useful» sui racconti)
-  async function fetchReviews(id) {
-    const base = `id,user_id,author_name,rating,body,created_at${folkV ? ",folk" : ""}${subV ? "," + SUBR.map(x => x[0]).join(",") + ",r_title" : ""}`;
-    try { return await fetchReviews0(id, base); }
+  let titleV = true;
+  /* le recensioni con le colonne opzionali: se il database ne rifiuta una (file SQL non ancora eseguito),
+     si toglie solo quella, guardando il messaggio d'errore, e si riprova — le altre restano */
+  async function fetchReviews(id, tries = 0) {
+    const cols = ["id", "user_id", "author_name", "rating", "body", "created_at"];
+    if (folkV) cols.push("folk");
+    if (subV) cols.push(...SUBR.map(x => x[0]));
+    if (subV && titleV) cols.push("r_title");
+    if (pricesV2) cols.push("paid", "currency", "people", "nights", "stay_type");
+    try { return await api(`/rest/v1/spot_reviews?select=${cols.join(",")}&spot_id=eq.${id}&order=created_at.desc`); }
     catch (err) {
-      if (err.status !== 400) throw err;
-      if (subV) { subV = false; return fetchReviews(id); }
-      if (!folkV) throw err; folkV = false; return fetchReviews(id);
+      if (err.status !== 400 || tries > 4) throw err;
+      const m = String(err.message || "");
+      if (/r_title/.test(m)) titleV = false;
+      else if (/r_experience|r_authentic|r_access|r_worth/.test(m)) subV = false;
+      else if (/paid|currency|people|nights|stay_type/.test(m)) pricesV2 = false;
+      else if (/folk/.test(m)) folkV = false;
+      else if (subV) subV = false; else if (pricesV2) pricesV2 = false; else if (folkV) folkV = false; else throw err;
+      console.warn("[SpotFolk] reviews: column not available yet →", m);
+      return fetchReviews(id, tries + 1);
     }
-  }
-  async function fetchReviews0(id, base) {
-    if (pricesV2) {
-      try { return await api(`/rest/v1/spot_reviews?select=${base},paid,currency,people,nights,stay_type&spot_id=eq.${id}&order=created_at.desc`); }
-      catch (err) { if (err.status !== 400) throw err; pricesV2 = false; }
-    }
-    return api(`/rest/v1/spot_reviews?select=${base}&spot_id=eq.${id}&order=created_at.desc`);
   }
   function spendSummary(s, reviews) {
     const r = reviews.filter(x => x.paid != null && x.paid > 0);
@@ -4221,7 +4227,8 @@ const Spots = (() => {
         <img src="${esc(urls[p.path])}" alt="" loading="lazy"></button><figcaption>© ${esc(p.author_name || "Member")}${xpBadge(p.user_id)}${commV && p.user_id !== uid0 ? ` <button type="button" class="rev-flag" data-flagphoto="${p.id}" title="Flag this photo" aria-label="Flag this photo">⚑</button>` : ""}</figcaption></figure>` : "").join("");
       pbox.querySelectorAll("[data-photo]").forEach(b => b.addEventListener("click", () => openPhotos(photos, urls, +b.dataset.photo, s)));
       el._reviews = reviews; el._photos = photos; el._urls = urls;
-      if (!subV) { el.querySelector("[data-revsubs]")?.remove(); el.querySelector("[data-reviewform] [name=title]")?.remove(); }
+      if (!subV) { const rs = el.querySelector("[data-revsubs]"); if (rs && admin) rs.outerHTML = `<p class="gate-help left">Admin: the four impressions are off because the database doesn't have their columns yet. Run supabase-voti-recensioni.sql in Supabase, then reload.</p>`; else rs?.remove(); }
+      if (!subV || !titleV) el.querySelector("[data-reviewform] [name=title]")?.remove();
       // «Useful» sui racconti
       let rvotes = [];
       if (rvV && reviews.length) { try { rvotes = (await api(`/rest/v1/review_votes?select=review_id,user_id&review_id=in.(${reviews.map(r => r.id).join(",")})`)).data || []; } catch (err) { if ([400, 404].includes(err.status)) rvV = false; } }
