@@ -2487,6 +2487,7 @@ if (SF) {
     const lp = document.querySelector(".lang-pick"), acts = $("#sfActs");
     if (lp && acts) acts.prepend(lp);
     $("#sfLogin")?.addEventListener("click", () => window.Spots?.login());
+    $("#sfLogout")?.addEventListener("click", () => window.Spots?.logout());
   });
 }
 

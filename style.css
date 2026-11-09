@@ -3466,3 +3466,30 @@ html.sf.sf-on-me .crew-band{display:none}
 }
 .sfme-body .me-stats > div{border-radius:16px;border-color:rgba(255,190,122,.16);background:rgba(2,6,12,.45)}
 .sfme-body .me-stats dd{font-family:var(--sf-serif);font-size:30px;color:#f2f6fb}
+/* spotfolk.eu: quick actions on top of the menu, log out in the bar, nothing repeated at the bottom */
+.sf-quick{display:grid;gap:8px;margin:0 0 12px}
+.sf-quick.two{grid-template-columns:1fr 1fr}
+.sf-quick .sf-near{margin:0;font-size:15px}
+.sf-quick .sf-addplace{background:transparent;color:var(--sf-warm,#ffbe7a);border:1.5px solid var(--sf-wline,rgba(255,190,122,.3))}
+.sf-quick .sf-addplace:hover{background:rgba(242,140,30,.1)}
+.sf-quick svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
+html.sf #spots .sx-user .me-link,html.sf #spots .sx-user #spotsAdd,html.sf #spots .sx-user .spots-email,html.sf #spots .sx-user #spotsLogout{display:none}
+.sf-out{display:inline-flex;align-items:center;gap:7px;min-height:42px;padding:0 14px;border-radius:999px;border:1px solid rgba(230,236,243,.25);background:none;color:#b8c4d2;font:600 14px var(--sans);cursor:pointer}
+.sf-out:hover{color:#fff;border-color:rgba(230,236,243,.55)}
+.sf-out svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+@media (max-width:980px){html.sf .sf-quick{order:4}.sf-out span{display:none}.sf-out{min-height:38px;width:38px;padding:0;justify-content:center}}
+/* delete my account */
+.me-danger{border-color:rgba(255,120,110,.35) !important}
+.me-danger summary{cursor:pointer;color:#ffb3a7;font-weight:600}
+.me-danger p{margin:10px 0 0;color:var(--soft,#b8c4d2);font-size:14px;line-height:1.55}
+.me-confirm{display:grid;gap:6px;margin-top:12px;font-size:13px;color:var(--soft,#b8c4d2)}
+.me-confirm input{max-width:220px;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,120,110,.4);background:rgba(2,6,12,.5);color:#fff;font:600 15px var(--sans);letter-spacing:.08em}
+.me-delbtn{margin-top:10px;border-color:rgba(255,120,110,.6) !important;color:#ffb3a7 !important}
+.me-delbtn:disabled{opacity:.45;cursor:not-allowed}
+/* welcome after signing up */
+.welcome-dialog .import-body{text-align:center;max-width:440px}
+.wd-fire{margin:0;font-size:44px;line-height:1}
+.welcome-dialog h2{margin:6px 0 10px;font:600 36px/1.05 'Cormorant Garamond',Georgia,serif}
+.wd-folks{display:flex;flex-wrap:wrap;justify-content:center;gap:8px}
+.wd-folks span{padding:6px 12px;border-radius:999px;border:1px solid var(--c);color:#f2f6fb;font:600 13px var(--sans)}
+.welcome-dialog .gate-help{text-align:center}

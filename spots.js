@@ -595,6 +595,7 @@ const Spots = (() => {
           return;
         }
         await render();
+        welcomeFolk(first, styles);
         setTimeout(() => (document.querySelector(".pending-banner") || root()).scrollIntoView({ behavior: "smooth", block: "center" }), 400);
       } catch (err) {
         msg.className = "gate-note warn";
@@ -629,6 +630,23 @@ const Spots = (() => {
     });
   }
 
+  /* right after signing up: a clear "you're in", so nobody wonders whether it worked */
+  function welcomeFolk(first, styles) {
+    let d = $("#welcomeDialog");
+    if (!d) { d = document.createElement("dialog"); d.id = "welcomeDialog"; d.className = "import-dialog welcome-dialog"; document.body.appendChild(d); }
+    const f = (styles || []).filter(k => CLUSTERS[k]);
+    d.innerHTML = `<div class="import-body">
+        <p class="wd-fire" aria-hidden="true">🔥</p>
+        <span class="eyebrow">You're in</span>
+        <h2>${esc(trS("Welcome, {n}!").replace("{n}", first || "folk"))}</h2>
+        <p>Your SpotFolk account is ready: you can sign, review and add places right away, here and on fabiocostaph.com, with the same email and password.</p>
+        ${f.length ? `<p class="wd-folks">${f.map(k => `<span style="--c:${CLUSTERS[k].color}">${CLUSTERS[k].ico} ${esc(folkOf(k))}</span>`).join("")}</p>` : ""}
+        <p class="gate-help left">Start with three places you've been to: open one on the map and tap “Sign”.</p>
+        <button class="sf-submit" type="button" data-close>To the map →</button>
+      </div>`;
+    d.querySelector("[data-close]").onclick = () => d.close();
+    if (!d.open) d.showModal();
+  }
   function pendingText() {
     if (memberStatus === "suspended") return "Your account is suspended. If you think this is a mistake, contact me.";
     return memberStatus === "rejected"
@@ -818,7 +836,7 @@ const Spots = (() => {
         <p class="sx-lead">${esc(DOOR_LEAD[doorNow()] || "Made by its community: travellers like you share, sign and review the places worth the trip, and look after them.")}</p>
         <div class="sx-panel">
           ${guest && !session ? welcomeHtml() : ""}
-          ${SF_MODE ? `<button type="button" class="sf-near" id="sfNear">${SX_ICON.near}<span>Places near me</span></button>` : ""}
+          ${SF_MODE ? `<div class="sf-quick${!guest && (schemaV2 || admin) ? " two" : ""}"><button type="button" class="sf-near" id="sfNear">${SX_ICON.near}<span>Places near me</span></button>${!guest && (schemaV2 || admin) ? `<button type="button" class="sf-near sf-addplace" id="sfAddPlace">${ICON_PLUS}<span>Add a place</span></button>` : ""}</div>` : ""}
           ${searchHtml}
           <div class="onb-folk" id="onbFolk" hidden></div>
           <div class="sx-groups">${groups}</div>
@@ -1472,6 +1490,7 @@ const Spots = (() => {
     $("#sxToEarth")?.addEventListener("click", () => { ui = "earth"; lsSet(UI_KEY, ui); renderApp(); });
     $("[data-addws]")?.addEventListener("click", () => withConduct(() => openAdd(null, { category: "workshop" })));
     $("#spotsAdd")?.addEventListener("click", () => withConduct(() => openAdd()));
+    $("#sfAddPlace")?.addEventListener("click", () => withConduct(() => openAdd()));
     $("#alertMode")?.addEventListener("change", e => { alertMode = e.target.value; drawClusters(); renderNear(); });
     document.querySelectorAll("#onlySupport, [data-onlysupport]").forEach(b => b.addEventListener("click", () => { onlySupport = !onlySupport; renderApp(); }));
     $("#openConduct")?.addEventListener("click", () => showConduct());
@@ -4429,8 +4448,34 @@ const Spots = (() => {
         </dl>
         <p class="gate-help left">Your public profile is seen only by SpotFolk members${contribs.has(uid) || experts.has(uid) ? ", and your name, username and photo also on The crew page" : ""}. Saved places, meetups you join and your activity history are private: only you see them.</p>
         <button type="button" class="outline-link" data-meedit2>✎ Edit profile</button>
-      </div>`;
+      </div>
+      <details class="me-card me-danger">
+        <summary>Delete my account</summary>
+        <p>Your account, profile, passport, reviews, photos, saved places, trips and Field Notes stories are deleted for good. The places you added stay on the map for the other folk, without your name. This can't be undone.</p>
+        <label class="me-confirm"><span>Type <b>DELETE</b> to confirm</span><input type="text" id="meDelTxt" autocomplete="off" autocapitalize="characters"></label>
+        <button type="button" class="pop-btn me-delbtn" id="meDelGo" disabled>Delete my account for good</button>
+        <p class="gate-note" id="meDelMsg" role="status"></p>
+      </details>`;
       box.querySelector("[data-meedit2]").addEventListener("click", openProfile);
+      const dt = box.querySelector("#meDelTxt"), dg = box.querySelector("#meDelGo"), dm = box.querySelector("#meDelMsg");
+      dt.addEventListener("input", () => { dg.disabled = dt.value.trim().toUpperCase() !== "DELETE"; });
+      dg.addEventListener("click", async () => {
+        dg.disabled = true; dm.className = "gate-note"; dm.textContent = "Deleting your account…";
+        try {
+          if (!(await ensureSession())) throw new Error("please log in again");
+          await api("/rest/v1/rpc/delete_my_account", { method: "POST", body: {} });
+          window.fcTrack?.("Spots: account deleted");
+          try { localStorage.removeItem(HANDOFF); localStorage.removeItem(CONDUCT_KEY); } catch {}
+          saveSession(null); meView = false; meCache = null; guest = true; loaded = false; guestLoaded = false;
+          toast("Your account has been deleted. Thank you for having been folk.");
+          location.hash = "spotfolk"; render();
+        } catch (err) {
+          dm.className = "gate-note warn";
+          dm.textContent = err.status === 404 ? "Deleting from here isn't active yet: write to fabio.costantini25491@gmail.com and I'll delete your account."
+            : `It didn't work (${err.message}). Write to fabio.costantini25491@gmail.com and I'll delete it.`;
+          dg.disabled = false;
+        }
+      });
       return;
     }
     if (meTab === "contrib") {
@@ -5619,7 +5664,7 @@ const Spots = (() => {
 
   const prefetch = () => { if (ui === "earth" && viewMode === "globe" && !globeFailed) loadMapLibre().catch(() => {}); };
   const login = () => { if (session && !guest) return; wantLogin = true; wantJoin = false; if (location.hash !== "#spotfolk" && document.body.dataset.page !== "spots") location.hash = "spotfolk"; render(); setTimeout(() => root()?.scrollIntoView({ behavior: "smooth" }), 60); };
-  return { show, prefetch, handleCallback, loadSession, renderWrite, goOther, login, parse: { fromCSV, fromKML, fromGeoJSON, coordsFromText } };
+  return { show, prefetch, handleCallback, loadSession, renderWrite, goOther, login, logout: () => { meView = false; meCache = null; if (location.hash === "#me") location.hash = "spotfolk"; return logout(); }, parse: { fromCSV, fromKML, fromGeoJSON, coordsFromText } };
 })();
 
 const LOCK_SVG = '<svg viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/><circle cx="12" cy="15.5" r="1.3"/></svg>';
