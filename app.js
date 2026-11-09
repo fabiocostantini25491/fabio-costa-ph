@@ -2463,8 +2463,8 @@ const SF_PAGES = ["spots", "privacy", "terms", "guide"];
 const FCPH = "https://fabiocostaph.com/";
 function sfOutside(hash) {   // the page a hash leads to, if it isn't part of SpotFolk
   const h = hash.replace(/^#/, "");
-  if (!h || /^(spotfolk|wayfolk|spots|join|me|privacy|terms|guide|feedback)$/.test(h) || /^(?:spots|wayfolk|spotfolk|guide)-/.test(h)) return false;
-  return true;
+  // only real pages of fabiocostaph.com: every other # (the × of a map card, #photoRights, #close…) stays here
+  return /^(home|explore|gallery|journal|tools|about|crew|write|guides|magazine)$/.test(h) || /^(art|author|g|magazine)-/.test(h);
 }
 if (SF) {
   // links to the rest of the site go to fabiocostaph.com (logged in there too, via the one-time hand-off)
