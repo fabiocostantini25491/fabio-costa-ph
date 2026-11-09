@@ -3493,3 +3493,11 @@ html.sf #spots .sx-user .me-link,html.sf #spots .sx-user #spotsAdd,html.sf #spot
 .wd-folks{display:flex;flex-wrap:wrap;justify-content:center;gap:8px}
 .wd-folks span{padding:6px 12px;border-radius:999px;border:1px solid var(--c);color:#f2f6fb;font:600 13px var(--sans)}
 .welcome-dialog .gate-help{text-align:center}
+/* privacy and cookie tables */
+.legal-table{margin:14px 0 6px;overflow-x:auto;border:1px solid var(--line-strong,rgba(156,200,255,.25));border-radius:14px}
+.legal-table table{width:100%;min-width:560px;border-collapse:collapse;font-size:14px;line-height:1.5}
+.legal-table th{text-align:left;padding:10px 12px;font:600 11px var(--sans);letter-spacing:.12em;text-transform:uppercase;color:var(--head,#fff);background:rgba(255,255,255,.04)}
+.legal-table td{padding:10px 12px;border-top:1px solid rgba(220,230,245,.1);vertical-align:top}
+.legal-table td:first-child{color:var(--head,#fff);font-weight:500}
+.legal p{margin:8px 0}
+.legal-page .section-heading .eyebrow{display:block;margin-bottom:8px;color:var(--accent,#9cc8ff)}

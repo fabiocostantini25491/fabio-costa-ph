@@ -236,9 +236,11 @@ const Spots = (() => {
     const n = document.querySelector("#sfMe span"); if (n && memberName) n.textContent = memberName.trim().split(/\s+/)[0];
   }
   /* Iscrizione dal sito: nome, cognome, email, password. L'account entra «in attesa» finché non lo approvi */
+  const PRIVACY_VERSION = "2026-11-09", TERMS_VERSION = "2026-11-07";   // versions of the privacy notice and terms shown at sign-up
   async function signUp(first, last, email, password, styles = []) {
     const { data } = await api("/auth/v1/signup", { method: "POST", auth: false,
-      body: { email, password, data: { first_name: first, last_name: last, full_name: `${first} ${last}`.trim(), travel_style: styles, source: doorNow() || null } } });
+      body: { email, password, data: { first_name: first, last_name: last, full_name: `${first} ${last}`.trim(), travel_style: styles, source: doorNow() || null,
+        privacy_notice_read: PRIVACY_VERSION, terms_accepted: TERMS_VERSION, consents_at: new Date().toISOString(), signup_site: location.hostname } } });
     if (data && data.access_token) {
       saveSession({ access_token: data.access_token, refresh_token: data.refresh_token, expires_at: Date.now() + data.expires_in * 1000 });
       spareForSpotfolk(email, password);
@@ -553,7 +555,8 @@ const Spots = (() => {
           ${CLUSTER_KEYS.map(k => `<label><input type="checkbox" value="${k}"${DOORS[doorNow()] === k || joinFolk() === k ? " checked" : ""}><span>${SF_MODE ? `<i aria-hidden="true">${CLUSTERS[k].ico}</i>${CLUSTERS[k].label}` : `${CLUSTERS[k].ico} ${CLUSTERS[k].long}`}</span></label>`).join("")}
         </fieldset>
         ${foundersLeft != null && foundersLeft > 0 ? `<p class="wf-found">🏅 Join now and you're one of the first 100 <b>Founding folk</b> <span class="wf-left">${foundersLeft}</span> <span>places left.</span></p>` : ""}
-        <label class="gate-check"><input type="checkbox" id="joinCode"> <span>I accept the <button type="button" class="text-link" id="joinShowCode">community code</button>, the <a href="#terms" target="_blank">terms</a> and the <a href="#privacy" target="_blank">privacy policy</a>. I'm 16 or older.</span></label>
+        <label class="gate-check"><input type="checkbox" id="joinPrivacy"> <span><a href="#privacy" target="_blank">I have read the privacy notice</a> (art. 13 GDPR).</span></label>
+        <label class="gate-check"><input type="checkbox" id="joinCode"> <span>I accept the <button type="button" class="text-link" id="joinShowCode">community code</button> and agree to the <a href="#terms" target="_blank">terms</a>. I'm 16 or older.</span></label>
         ${SF_MODE ? `<button class="sf-submit" type="submit" id="joinSend">Become folk — free →</button>` : `<button class="outline-link" type="submit" id="joinSend">JOIN <span aria-hidden="true">→</span></button>`}
         <p class="gate-note" id="gateMsg" role="status"></p>
       </form>` : `<form class="gate-form" id="gateForm" novalidate>
@@ -582,7 +585,8 @@ const Spots = (() => {
       if (password.length < 8) { msg.textContent = "The password needs at least 8 characters."; return; }
       const styles = [...document.querySelectorAll("#joinStyles input:checked")].map(i => i.value);
       if (!styles.length) { msg.textContent = "Choose your folk: pick at least one."; return; }
-      if (!$("#joinCode").checked) { msg.textContent = "Please accept the community code."; return; }
+      if (!$("#joinPrivacy").checked) { msg.textContent = "Please confirm you have read the privacy notice."; return; }
+      if (!$("#joinCode").checked) { msg.textContent = "Please accept the community code and the terms."; return; }
       btn.disabled = true; msg.className = "gate-note"; msg.textContent = "Sending your request…";
       try {
         const how = await signUp(first, last, email, password, styles);

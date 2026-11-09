@@ -2389,7 +2389,7 @@ function renderAbout() {
 /* =========================================================
    10. NAVIGAZIONE
    ========================================================= */
-const PAGES = ["home", "explore", "gallery", "journal", "tools", "spots", "about", "guide", "privacy", "terms", "crew"];
+const PAGES = ["home", "explore", "gallery", "journal", "tools", "spots", "about", "guide", "privacy", "terms", "cookies", "crew"];
 
 /* =========================================================
    STATISTICHE (Umami, anonime e senza cookie)
@@ -2461,7 +2461,7 @@ document.addEventListener("change", e => { if (e.target.id === "shotFile" && e.t
 
 /* SpotFolk on its own (spotfolk.eu): only SpotFolk lives here; the rest of the site opens on fabiocostaph.com */
 const SF = document.documentElement.classList.contains("sf");
-const SF_PAGES = ["spots", "privacy", "terms", "guide"];
+const SF_PAGES = ["spots", "privacy", "terms", "cookies", "guide"];
 const FCPH = "https://fabiocostaph.com/";
 function sfOutside(hash) {   // the page a hash leads to, if it isn't part of SpotFolk
   const h = hash.replace(/^#/, "");
