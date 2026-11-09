@@ -59,6 +59,7 @@ const Spots = (() => {
   let myStyles = [], clusterV = true, signV = true, folkV = true;
   let signMap = new Map();
   let evoV = true, mySignCount = null;
+  let subV = true;   // false finché non è stato eseguito supabase-voti-recensioni.sql (i 4 voti delle recensioni)
   let pendingMode = false, foundersLeft = null;   // pendingMode: iscritto in attesa che però vede tutto (ingresso immediato)
   const joinFolk = () => { try { const k = localStorage.getItem("fcph-joinfolk"); return CLUSTERS[k] ? k : ""; } catch { return ""; } };   // evoV: false finché non è stato eseguito supabase-folk-evoluzione.sql
   const LEVELS = [["trusted", "Trusted", 25], ["pathfinder", "Pathfinder", 10], ["wanderer", "Wanderer", 1]];
@@ -2306,7 +2307,10 @@ const Spots = (() => {
       <strong>${esc(s.name)}</strong>
       ${localNew(s) ? `<span class="ws-chip new local-chip">🌱 New in Support local</span>` : freshPlace(s) ? `<span class="ws-chip new local-chip">✨ New on the map</span>` : ""}
       ${dates ? `<p class="pop-dates">${ICON.cal}<span>${dates}</span></p>` : ""}
+      <section class="pc-folk" data-folkbox hidden></section>
       ${signV && commV ? `<div class="pop-signs" data-signs></div>` : ""}
+      <section class="pc-cons" data-rating hidden></section>
+      <section class="pc-pulse" data-pulse hidden></section>
       <div data-vfbox>${verifyHtml(s)}</div>
       <div data-wsbox>${wsBoxHtml(s)}</div>
       ${isTk(s) ? `<div data-tkbox>${tkBoxHtml(s)}</div>` : ""}
@@ -2315,7 +2319,6 @@ const Spots = (() => {
       ${isWs(s) && wsV && canEdit(s) ? `<button type="button" class="pop-btn ws-edit" data-wsedit>👥 Update places, price and link</button>
         <form class="pop-review ws-form" data-wsform hidden>${wsFieldsHtml(s, "ws")}<button type="submit" class="pop-btn primary">Save</button></form>` : ""}
       <div class="pop-alerts" data-alerts>${alertsHtml(s)}</div>
-      <p class="pop-rating" data-rating hidden></p>
       ${PRICED[s.category] ? `<p class="pop-spend" data-spend></p>` : ""}
       ${s.note ? `<p class="pop-desc">${esc(s.note)}</p>` : ""}
       ${infoRows(s.info).length ? `<dl class="pop-info">${infoRows(s.info).map(([a, b]) => `<div><dt>${esc(a)}</dt><dd>${/^https?:\/\//.test(b) ? `<a href="${esc(b)}" target="_blank" rel="noopener">${ICON.ext}Open</a>` : esc(b)}</dd></div>`).join("")}</dl>` : ""}
@@ -2335,6 +2338,7 @@ const Spots = (() => {
         <form class="pop-review" data-reviewform hidden>
           <div class="stars" role="radiogroup" aria-label="Rating">${[1, 2, 3, 4, 5].map(n =>
             `<button type="button" role="radio" aria-checked="false" aria-label="${n} star${n > 1 ? "s" : ""}" data-star="${n}">★</button>`).join("")}</div>
+          <div class="rev-subs" data-revsubs>${SUBR.map(([k, l, d]) => `<div class="rev-sub" data-sub="${k}"><span>${l}<small>${d}</small></span><span class="rev-dots" role="radiogroup" aria-label="${l}">${[1, 2, 3, 4, 5].map(n => `<button type="button" role="radio" aria-checked="false" aria-label="${n}/5" data-subv="${n}"></button>`).join("")}</span></div>`).join("")}</div>
           <label class="rev-folk" data-revfolk hidden>Reviewing as <select name="folk"></select></label>
           <textarea rows="3" maxlength="2000" placeholder="What is it like? Tips for others…" aria-label="Your review"></textarea>
           ${PRICED[s.category] ? `<fieldset class="pay">
@@ -2454,12 +2458,18 @@ const Spots = (() => {
     let rating = 0;
     const paint = () => form.querySelectorAll("[data-star]").forEach(b => { const on = +b.dataset.star <= rating; b.classList.toggle("on", on); b.setAttribute("aria-checked", +b.dataset.star === rating ? "true" : "false"); });
     form.querySelectorAll("[data-star]").forEach(b => b.addEventListener("click", () => { rating = +b.dataset.star === rating ? 0 : +b.dataset.star; paint(); }));
+    const subs = {};
+    const paintSubs = () => form.querySelectorAll("[data-sub]").forEach(row => { const v = subs[row.dataset.sub] || 0;
+      row.querySelectorAll("[data-subv]").forEach(b => { b.classList.toggle("on", +b.dataset.subv <= v); b.setAttribute("aria-checked", +b.dataset.subv === v ? "true" : "false"); }); });
+    form.querySelectorAll("[data-sub]").forEach(row => row.querySelectorAll("[data-subv]").forEach(b => b.addEventListener("click", () => {
+      const k = row.dataset.sub, n = +b.dataset.subv; subs[k] = subs[k] === n ? 0 : n; paintSubs(); })));
     form.addEventListener("submit", async e => {
       e.preventDefault();
       const body = form.querySelector("textarea").value.trim(), btn = form.querySelector("[type=submit]");
       const fv = n => form.querySelector(`[name=${n}]`)?.value;
       const paid = parseFloat(fv("paid")) >= 0 ? parseFloat(fv("paid")) : null;
-      if (!rating && !body && paid == null) { form.querySelector("textarea").focus(); return; }
+      const subBody = subV ? Object.fromEntries(SUBR.map(([k]) => [k, subs[k] || null])) : {};
+      if (!rating && !body && paid == null && !Object.values(subBody).some(Boolean)) { form.querySelector("textarea").focus(); return; }
       const extra = pricesV2 && PRICED[s.category] ? { paid, currency: paid != null ? fv("currency") : null,
         people: paid != null ? Math.max(1, parseInt(fv("people")) || 1) : null,
         nights: paid != null && s.category === "hotel" ? Math.max(1, parseInt(fv("nights")) || 1) : null,
@@ -2467,7 +2477,7 @@ const Spots = (() => {
       btn.disabled = true;
       try {
         await api("/rest/v1/spot_reviews?on_conflict=spot_id,user_id", { method: "POST",
-          body: { spot_id: s.id, rating: rating || null, body: body || null, author_name: displayName(), ...extra, ...(folkV && clusterV ? { folk: fv("folk") || null } : {}) },
+          body: { spot_id: s.id, rating: rating || null, body: body || null, author_name: displayName(), ...extra, ...subBody, ...(folkV && clusterV ? { folk: fv("folk") || null } : {}) },
           headers: { Prefer: "resolution=merge-duplicates,return=minimal" } });
         form.hidden = true; toast("Thanks for your review!");
         loadExtras(popup, s);
@@ -2476,6 +2486,7 @@ const Spots = (() => {
     });
     form._setMine = r => {
       rating = r?.rating || 0; form.querySelector("textarea").value = r?.body || ""; paint();
+      SUBR.forEach(([k]) => { subs[k] = r?.[k] || 0; }); paintSubs();
       const set = (n, v) => { const x = form.querySelector(`[name=${n}]`); if (x && v != null) x.value = v; };
       set("paid", r?.paid); set("currency", r?.currency); set("people", r?.people); set("nights", r?.nights); set("stay", r?.stay_type);
     };
@@ -2488,10 +2499,17 @@ const Spots = (() => {
   const STAY_TYPES = ["Hotel", "B&B", "Agriturismo / farm stay", "Apartment", "Hostel", "Mountain hut", "Camping", "Guesthouse", "Other"];
   let pricesV2 = true;
   const fmtMoney = (v, c) => { try { return new Intl.NumberFormat((window.I18N?.locale || "en-GB"), { style: "currency", currency: c || "EUR", maximumFractionDigits: v % 1 ? 2 : 0 }).format(v); } catch { return `${v} ${c || ""}`; } };
+  /* i quattro voti di una recensione, oltre alle stelle */
+  const SUBR = [["r_experience", "Experience", "The overall experience"], ["r_authentic", "Authenticity", "The true character of the place"],
+    ["r_access", "Accessibility", "How easy it is to reach and visit"], ["r_worth", "Worth the trip", "Does it really deserve a visit?"]];
   async function fetchReviews(id) {
-    const base = `id,user_id,author_name,rating,body,created_at${folkV ? ",folk" : ""}`;
+    const base = `id,user_id,author_name,rating,body,created_at${folkV ? ",folk" : ""}${subV ? "," + SUBR.map(x => x[0]).join(",") : ""}`;
     try { return await fetchReviews0(id, base); }
-    catch (err) { if (!folkV || err.status !== 400) throw err; folkV = false; return fetchReviews(id); }
+    catch (err) {
+      if (err.status !== 400) throw err;
+      if (subV) { subV = false; return fetchReviews(id); }
+      if (!folkV) throw err; folkV = false; return fetchReviews(id);
+    }
   }
   async function fetchReviews0(id, base) {
     if (pricesV2) {
@@ -4027,6 +4045,7 @@ const Spots = (() => {
     catch (err) { if (evoV && err.status === 400) { evoV = false; return loadSigns(popup, s); } if ([400, 404].includes(err.status)) { signV = false; el.remove(); } return; }
     const uid = myUid(), by = {};
     signs.forEach(g => { by[g.cluster] = (by[g.cluster] || 0) + 1; });
+    const card = popup.getElement(); if (card) { card._signs = signs; paintFolk(popup, s); }
     { const tot = CLUSTER_KEYS.reduce((a, k) => a + (by[k] || 0), 0), top = CLUSTER_KEYS.filter(k => by[k]).sort((a, b) => by[b] - by[a])[0] || null;
       if (tot || by.fabio) signMap.set(s.id, { total: tot, top, topN: top ? by[top] : 0, fabio: !!by.fabio, by: Object.fromEntries(CLUSTER_KEYS.filter(k => by[k]).map(k => [k, by[k]])) }); else signMap.delete(s.id);
       markerById.get(s.id)?.setIcon(pinIcon(s)); }
@@ -4034,7 +4053,6 @@ const Spots = (() => {
     const pref = PREFERRED[s.category] || [];
     const order = [...myStyles].sort((a, b) => (pref.includes(b) ? 1 : 0) - (pref.includes(a) ? 1 : 0));
     // il primo a firmare (Fabio's pick escluso) resta scritto sulla scheda
-    const firstSign = signs.filter(g => g.cluster !== "fabio").sort((a, b) => String(a.created_at).localeCompare(String(b.created_at)))[0];
     // «Useful» sui consigli: i più utili salgono in cima
     let votes = [];
     const tipIds = signs.filter(g => g.tip).map(g => g.id);
@@ -4044,8 +4062,7 @@ const Spots = (() => {
     const who = g => `<button type="button" class="sg-who" data-member="${esc(g.user_id)}">${esc(g.author_name || "Member")}</button> · ${g.cluster === "fabio" ? "★ Fabio's pick" : `${CLUSTERS[g.cluster]?.ico || ""} ${esc(folkOf(g.cluster))}`}${g.on_spot ? ` <span class="sg-spot" title="Signed on the spot">📍 on the spot</span>` : ""}`;
     el.innerHTML = `
       ${by.fabio ? `<p class="sg-pick">★ Fabio's pick</p>` : ""}
-      ${firstSign ? `<p class="sg-first">First signed by ${who(firstSign)}</p>` : ""}
-      ${CLUSTER_KEYS.some(k => by[k]) ? `<p class="sg-counts" aria-label="Signed by">${CLUSTER_KEYS.filter(k => by[k]).map(k => `<span style="--c:${CLUSTERS[k].color}" title="Signed by ${by[k]} ${folkOf(k).toLowerCase()}">${CLUSTERS[k].ico} ${by[k]}</span>`).join("")}</p>` : `<p class="sg-none">No folk has signed it yet: be the first.</p>`}
+      ${CLUSTER_KEYS.some(k => by[k]) ? "" : `<p class="sg-none">No folk has signed it yet: be the first.</p>`}
       <div class="sg-acts">
         ${order.map(k => mineOf(k) ? `<button type="button" class="pop-btn sg-on" data-unsign="${mineOf(k).id}" style="--c:${CLUSTERS[k].color}">✓ Signed as ${folkOf(k).toLowerCase()}</button>`
           : `<button type="button" class="pop-btn sg-btn" data-sign="${k}" style="--c:${CLUSTERS[k].color}">✍ Sign as ${CLUSTERS[k].ico} ${folkOf(k).toLowerCase()}</button>`).join("")}
@@ -4128,7 +4145,7 @@ const Spots = (() => {
     if (!el) return;
     try {
       const [{ data: photos }, { data: reviews }] = await Promise.all([
-        api(`/rest/v1/spot_photos?select=id,path,user_id,author_name&spot_id=eq.${s.id}&order=created_at.desc`),
+        api(`/rest/v1/spot_photos?select=id,path,user_id,author_name,created_at&spot_id=eq.${s.id}&order=created_at.desc`),
         fetchReviews(s.id)
       ]);
       const urls = photos.length ? await signPhotos(photos.map(p => p.path)) : {};
@@ -4137,28 +4154,26 @@ const Spots = (() => {
         <button type="button" class="pop-thumb" data-photo="${i}" aria-label="Open photo ${i + 1} by ${esc(p.author_name || "a member")}">
         <img src="${esc(urls[p.path])}" alt="" loading="lazy"></button><figcaption>© ${esc(p.author_name || "Member")}${xpBadge(p.user_id)}${commV && p.user_id !== uid0 ? ` <button type="button" class="rev-flag" data-flagphoto="${p.id}" title="Flag this photo" aria-label="Flag this photo">⚑</button>` : ""}</figcaption></figure>` : "").join("");
       pbox.querySelectorAll("[data-photo]").forEach(b => b.addEventListener("click", () => openPhotos(photos, urls, +b.dataset.photo, s)));
-      const rated = reviews.filter(r => r.rating);
+      el._reviews = reviews; el._photos = photos;
+      if (!subV) el.querySelector("[data-revsubs]")?.remove();
       const rbox = el.querySelector("[data-rating]");
-      if (rated.length) {
-        const avg = rated.reduce((a, r) => a + r.rating, 0) / rated.length;
-        rbox.hidden = false;
-        const byF = {};
-        rated.filter(r => CLUSTERS[r.folk]).forEach(r => { (byF[r.folk] ||= []).push(r.rating); });
-        rbox.innerHTML = `<span class="stars-static" style="--v:${(avg / 5 * 100).toFixed(0)}%">★★★★★</span> <strong>${avg.toFixed(1)}</strong> · ${rated.length} review${rated.length > 1 ? "s" : ""}`
-          + (Object.keys(byF).length ? `<span class="rev-byfolk">${CLUSTER_KEYS.filter(k => byF[k]).map(k => `<span style="--c:${CLUSTERS[k].color}" title="${folkOf(k)}: ${byF[k].length} review${byF[k].length > 1 ? "s" : ""}">${CLUSTERS[k].ico} ${(byF[k].reduce((a, b) => a + b, 0) / byF[k].length).toFixed(1)}</span>`).join("")}</span>` : "");
-      } else rbox.hidden = true;
+      rbox.innerHTML = consensusHtml(reviews); rbox.hidden = !rbox.innerHTML;
+      paintFolk(popup, s);
       // quanto si spende: media di quanto hanno pagato i membri
       const pbox2 = el.querySelector("[data-spend]");
       if (pbox2) pbox2.innerHTML = spendSummary(s, reviews);
       const uid = myUid();
       reviews.sort((a, b) => (experts.has(b.user_id) ? 1 : 0) - (experts.has(a.user_id) ? 1 : 0));
-      el.querySelector("[data-reviews]").innerHTML = reviews.map(r => `<div class="pop-rev${experts.has(r.user_id) ? " by-expert" : ""}">
-        <p class="rev-head">${r.rating ? `<span class="rev-stars">${"★".repeat(r.rating)}<i>${"★".repeat(5 - r.rating)}</i></span>` : ""}
-          <b>${esc(r.author_name || "Member")}</b>${CLUSTERS[r.folk] ? ` <span class="rev-folktag" style="--c:${CLUSTERS[r.folk].color}">${CLUSTERS[r.folk].ico} ${folkOf(r.folk).toLowerCase()}</span>` : ""}${xpBadge(r.user_id)}<time>${fmtDay(r.created_at.slice(0, 10))}</time>
+      const faceOf = r => profiles.find(p => p.user_id === r.user_id) || { display_name: r.author_name || "Member" };
+      el.querySelector("[data-reviews]").innerHTML = (reviews.length ? `<p class="pc-h"><span aria-hidden="true">💬</span>Folk stories <em class="pc-n">${reviews.length}</em></p>` : "") + reviews.map(r => `<div class="pop-rev pc-story${experts.has(r.user_id) ? " by-expert" : ""}" style="--c:${CLUSTERS[r.folk]?.color || "#ffbe7a"}">
+        <p class="rev-head"><button type="button" class="pc-face" data-member="${esc(r.user_id || "")}" aria-label="${esc(r.author_name || "Member")}">${avatarHtml(faceOf(r), 34)}</button>
+          <span class="pc-who"><b>${esc(r.author_name || "Member")}</b>${xpBadge(r.user_id)}<small>${CLUSTERS[r.folk] ? `${CLUSTERS[r.folk].ico} ${esc(folkOf(r.folk))} · ` : ""}${fmtDay(r.created_at.slice(0, 10))}</small></span>
           ${r.user_id === uid || admin || canCurate(s) ? `<button type="button" class="rev-del" data-delrev="${r.id}" aria-label="Delete review">${ICON.close}</button>` : commV ? `<button type="button" class="rev-flag" data-flagrev="${r.id}" title="Flag this review" aria-label="Flag this review">⚑</button>` : ""}</p>
+        ${r.rating ? `<p class="rev-stars pc-stars">${"★".repeat(r.rating)}<i>${"★".repeat(5 - r.rating)}</i></p>` : ""}
         ${r.body ? `<p>${esc(r.body)}</p>` : ""}
         ${r.paid != null ? `<p class="rev-paid">💶 Paid ${fmtMoney(r.paid, r.currency)}${r.people ? ` for ${r.people} ${r.people > 1 ? "people" : "person"}` : ""}${r.nights ? `, ${r.nights} night${r.nights > 1 ? "s" : ""}` : ""}${r.stay_type ? ` · ${esc(r.stay_type)}` : ""}</p>` : ""}</div>`).join("");
       el.querySelectorAll("[data-flagrev]").forEach(b => b.addEventListener("click", () => openFlag("review", b.dataset.flagrev, `Review on «${s.name}»`)));
+      el.querySelectorAll("[data-reviews] [data-member]").forEach(b => b.addEventListener("click", () => b.dataset.member && openMemberProfile(b.dataset.member)));
       el.querySelectorAll("[data-flagphoto]").forEach(b => b.addEventListener("click", () => openFlag("photo", b.dataset.flagphoto, `Photo on «${s.name}»`)));
       el.querySelectorAll("[data-delrev]").forEach(b => b.addEventListener("click", async () => {
         try { await api(`/rest/v1/spot_reviews?id=eq.${b.dataset.delrev}`, { method: "DELETE" }); loadExtras(popup, s); }
@@ -4178,6 +4193,69 @@ const Spots = (() => {
       if (rb) rb.lastChild.textContent = mine ? "Edit review" : "Write a review";
       popup.update();
     } catch { /* foto e recensioni non disponibili: la scheda resta comunque utile */ }
+  }
+
+  /* ---------- la scheda del luogo: prima le persone, poi le parole ----------
+     «The folk who know this place»: chi l'ha firmato o raccontato, dal primo (First folk) in poi; poi il consenso e il polso */
+  const shortName = n => { const w = String(n || "Folk").trim().split(/\s+/); return w.length > 1 ? `${w[0]} ${w[w.length - 1][0]}.` : w[0]; };
+  function consensusHtml(reviews) {
+    const rated = reviews.filter(r => r.rating);
+    if (!rated.length) return "";
+    const avg = rated.reduce((a, r) => a + r.rating, 0) / rated.length;
+    const subs = SUBR.map(([k, l, d]) => { const v = reviews.filter(r => r[k]).map(r => r[k]); return v.length ? [l, d, v.reduce((a, b) => a + b, 0) / v.length] : null; }).filter(Boolean);
+    const byF = {};
+    rated.filter(r => CLUSTERS[r.folk]).forEach(r => { (byF[r.folk] ||= []).push(r.rating); });
+    return `<p class="pc-h"><span aria-hidden="true">🏅</span>Folk consensus</p>
+      <div class="pc-cbox${subs.length ? "" : " solo"}">
+        <div class="pc-ring" style="--p:${(avg / 5 * 100).toFixed(1)}%"><b>${avg.toFixed(1)}</b><small>/ 5</small><span>${rated.length} folk</span></div>
+        ${subs.length ? `<ul class="pc-subs">${subs.map(([l, d, v]) => `<li><span>${l}<small>${d}</small></span><b>${v.toFixed(1)}</b><i style="--v:${(v / 5 * 100).toFixed(0)}%"></i></li>`).join("")}</ul>`
+          : `<p class="pc-solo"><span class="stars-static" style="--v:${(avg / 5 * 100).toFixed(0)}%">★★★★★</span>${rated.length} review${rated.length > 1 ? "s" : ""}</p>`}
+      </div>
+      ${Object.keys(byF).length ? `<p class="rev-byfolk">${CLUSTER_KEYS.filter(k => byF[k]).map(k => `<span style="--c:${CLUSTERS[k].color}" title="${folkOf(k)}: ${byF[k].length} review${byF[k].length > 1 ? "s" : ""}">${CLUSTERS[k].ico} ${(byF[k].reduce((a, b) => a + b, 0) / byF[k].length).toFixed(1)}</span>`).join("")}</p>` : ""}`;
+  }
+  function paintFolk(popup, s) {
+    const el = popup.getElement(); if (!el) return;
+    const box = el.querySelector("[data-folkbox]"), pbox = el.querySelector("[data-pulse]");
+    if (!box) return;
+    const signs = (el._signs || []).filter(g => g.user_id), reviews = (el._reviews || []).filter(r => r.user_id), photos = el._photos || [];
+    const folkSigns = signs.filter(g => g.cluster !== "fabio");
+    const people = new Map();
+    const add = (uid, name, folk, at, onSpot) => {
+      const p = people.get(uid);
+      if (!p) return people.set(uid, { uid, name, folk, at, onSpot });
+      if (String(at) < String(p.at)) { p.at = at; if (folk) p.folk = folk; }
+      if (!p.folk && folk) p.folk = folk; p.onSpot = p.onSpot || onSpot;
+    };
+    folkSigns.forEach(g => add(g.user_id, g.author_name, g.cluster, g.created_at, !!g.on_spot));
+    reviews.forEach(r => add(r.user_id, r.author_name, CLUSTERS[r.folk] ? r.folk : null, r.created_at, false));
+    const list = [...people.values()].sort((a, b) => String(a.at).localeCompare(String(b.at)));
+    const first = folkSigns.slice().sort((a, b) => String(a.created_at).localeCompare(String(b.created_at)))[0]?.user_id;
+    const by = {}; folkSigns.forEach(g => { by[g.cluster] = (by[g.cluster] || 0) + 1; });
+    const tot = folkSigns.length;
+    if (list.length) {
+      const show = list.length <= 4 ? list : list.slice(0, 3), more = list.length - show.length;
+      box.innerHTML = `<p class="pc-h"><span aria-hidden="true">✍</span>The folk who know this place</p>
+        <div class="pc-people">${show.map(p => { const prof = profiles.find(x => x.user_id === p.uid) || { display_name: p.name }, c = CLUSTERS[p.folk];
+          return `<button type="button" class="pc-p${p.uid === first ? " first" : ""}" data-member="${esc(p.uid)}" style="--c:${c ? c.color : "#ffbe7a"}">
+            ${p.uid === first ? `<i class="pc-crown" aria-hidden="true">👑</i>` : ""}<span class="pc-av">${avatarHtml(prof, 50)}</span>
+            ${p.uid === first ? `<em class="pc-first">First folk</em>` : ""}
+            <b>${esc(shortName(prof.display_name || p.name))}</b><small>${c ? `${c.ico} ${esc(c.label)}` : "Folk"}</small><time>${p.onSpot ? "📍 " : ""}${esc(fmtWhen(p.at))}</time></button>`; }).join("")}
+          ${more > 0 ? `<span class="pc-more"><b>+${more}</b><small>other folk</small></span>` : ""}</div>
+        ${tot ? `<div class="pc-bar" role="img" aria-label="Signed by ${tot} folk">${CLUSTER_KEYS.filter(k => by[k]).map(k => `<i style="--c:${CLUSTERS[k].color};flex:${by[k]}"></i>`).join("")}</div>
+          <p class="pc-legend">${CLUSTER_KEYS.filter(k => by[k]).map(k => `<span style="--c:${CLUSTERS[k].color}">${CLUSTERS[k].ico} ${by[k]}</span>`).join("")}<em>${trS("Signed by {n} folk").replace("{n}", tot)}</em></p>` : ""}`;
+      box.hidden = false;
+      box.querySelectorAll("[data-member]").forEach(b => b.addEventListener("click", () => openMemberProfile(b.dataset.member)));
+    } else box.hidden = true;
+    // il polso: cosa è successo qui negli ultimi 30 giorni
+    if (pbox) {
+      const since = new Date(Date.now() - 30 * 864e5).toISOString(), recent = x => String(x.created_at || "") >= since;
+      const rows = [["👥", "New signatures (30 days)", folkSigns.filter(recent).length], ["📷", "New photos", photos.filter(recent).length],
+        ["💬", "New stories", reviews.filter(r => r.body && recent(r)).length], ["🌿", "Tips from the folk", signs.filter(g => g.tip && recent(g)).length]].filter(r => r[2] > 0);
+      pbox.innerHTML = rows.length ? `<p class="pc-h"><span aria-hidden="true">〰</span>Folk pulse <small>This place is alive in the community.</small></p>
+        <ul>${rows.map(([i, l, n]) => `<li><span aria-hidden="true">${i}</span>${l}<b>+${n}</b></li>`).join("")}</ul>` : "";
+      pbox.hidden = !rows.length;
+    }
+    popup.update();
   }
 
   /* ---------- foto ---------- */

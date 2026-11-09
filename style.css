@@ -3501,3 +3501,67 @@ html.sf #spots .sx-user .me-link,html.sf #spots .sx-user #spotsAdd,html.sf #spot
 .legal-table td:first-child{color:var(--head,#fff);font-weight:500}
 .legal p{margin:8px 0}
 .legal-page .section-heading .eyebrow{display:block;margin-bottom:8px;color:var(--accent,#9cc8ff)}
+
+/* =========================================================
+   Place card: the folk first (who signed it, who told it), then the consensus and the stories
+   ========================================================= */
+.pc-folk,.pc-cons,.pc-pulse{margin:8px 0;padding:10px 10px 12px;border-radius:16px;border:1px solid rgba(255,190,122,.22);background:linear-gradient(180deg,rgba(255,190,122,.06),rgba(255,255,255,.02))}
+.pc-folk[hidden],.pc-cons[hidden],.pc-pulse[hidden]{display:none}
+.pc-h{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 8px;margin:0 0 8px !important;font:600 17px/1.15 'Cormorant Garamond',Georgia,serif !important;color:#f2f6fb !important}
+.pc-h > span{font:400 14px var(--sans);color:#ffbe7a}
+.pc-h small{flex-basis:100%;font:400 11.5px var(--sans);color:#9fb0c6}
+.pc-n{font:600 11px var(--sans);font-style:normal;padding:1px 8px;border-radius:999px;background:rgba(255,190,122,.16);color:#ffbe7a}
+.pc-people{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px 2px;align-items:start}
+.pc-p{position:relative;display:grid;justify-items:center;gap:1px;padding:0;border:0;background:none;color:#e6ecf3;text-align:center;cursor:pointer;font:inherit}
+.pc-av{display:grid;place-items:center;padding:2.5px;border-radius:50%;background:conic-gradient(var(--c),color-mix(in srgb,var(--c) 40%,#0b1626),var(--c));transition:transform .2s}
+.pc-p:hover .pc-av{transform:translateY(-2px) scale(1.04)}
+.pc-av .me-avatar{border:2px solid #0b1626}
+.pc-av .me-avatar span{font-family:'Cormorant Garamond',Georgia,serif;color:#ffd9a0}
+.pc-p.first .pc-av{background:conic-gradient(#ffd27a,#f28c1e,#ffd27a);box-shadow:0 0 16px rgba(255,190,122,.45)}
+.pc-crown{position:absolute;top:-11px;left:50%;transform:translateX(-50%);font-style:normal;font-size:14px;z-index:2;filter:drop-shadow(0 1px 2px rgba(0,0,0,.6))}
+.pc-first{margin-top:-9px;padding:1px 7px;border-radius:999px;background:#f28c1e;color:#1a1206;font:700 9px var(--sans);font-style:normal;letter-spacing:.02em;position:relative;z-index:2;white-space:nowrap}
+.pc-p b{margin-top:3px;font:600 13px/1.1 'Cormorant Garamond',Georgia,serif;color:#f2f6fb;max-width:70px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pc-p small{font-size:10px;color:color-mix(in srgb,var(--c) 75%,#fff);white-space:nowrap}
+.pc-p time{font-size:9.5px;color:#8a99ab;white-space:nowrap}
+.pc-more{display:grid;justify-items:center;align-content:start;gap:2px;padding-top:6px;color:#b8c4d2}
+.pc-more b{width:46px;height:46px;display:grid;place-items:center;border-radius:50%;border:1.5px solid rgba(255,190,122,.4);font:600 16px 'Cormorant Garamond',Georgia,serif;color:#f2f6fb}
+.pc-more small{font-size:10px}
+.pc-bar{display:flex;gap:2px;height:6px;margin:12px 0 6px;border-radius:999px;overflow:hidden}
+.pc-bar i{background:var(--c)}
+.pc-legend{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;margin:0 !important;font-size:11px}
+.pc-legend span{color:var(--c);font-weight:700}
+.pc-legend em{margin-left:auto;font-style:normal;color:#9fb0c6}
+.pc-cbox{display:grid;grid-template-columns:82px 1fr;gap:10px;align-items:center}
+.pc-cbox.solo{grid-template-columns:82px auto;justify-content:start}
+.pc-ring{width:82px;height:82px;border-radius:50%;display:grid;place-items:center;align-content:center;background:radial-gradient(circle,#0d1b2c 58%,transparent 59%),conic-gradient(#ffbe7a var(--p),rgba(255,255,255,.08) 0)}
+.pc-ring b{font:600 24px/1 'Cormorant Garamond',Georgia,serif;color:#f2f6fb}
+.pc-ring small{font-size:10px;color:#9fb0c6;margin-top:-2px}
+.pc-ring span{font-size:9.5px;color:#b8c4d2}
+.pc-subs{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.pc-subs li{display:grid;grid-template-columns:1fr auto;align-items:center;gap:0 6px;font-size:11.5px;color:#e6ecf3}
+.pc-subs li span{line-height:1.15}
+.pc-subs small{display:block;font-size:9.5px;color:#8a99ab}
+.pc-subs b{font:600 14px 'Cormorant Garamond',Georgia,serif;color:#f2f6fb}
+.pc-subs i{grid-column:1/-1;height:4px;margin-top:3px;border-radius:999px;background:linear-gradient(90deg,#ffbe7a var(--v),rgba(255,255,255,.08) 0)}
+.pc-solo{display:grid;gap:3px;margin:0 !important;font-size:12px;color:#b8c4d2}
+.pc-cons .rev-byfolk{margin:8px 0 0 !important}
+.pc-pulse ul{list-style:none;margin:0;padding:0;display:grid;gap:4px}
+.pc-pulse li{display:flex;align-items:center;gap:8px;font-size:12px;color:#e6ecf3}
+.pc-pulse li b{margin-left:auto;font:600 15px 'Cormorant Garamond',Georgia,serif;color:#ffbe7a}
+/* folk stories: the person first, then the words */
+.pc-story{padding:10px 0 4px}
+.pc-story .rev-head{flex-wrap:nowrap;align-items:center;gap:8px}
+.pc-face{padding:2px;border:0;border-radius:50%;background:conic-gradient(var(--c),color-mix(in srgb,var(--c) 40%,#0b1626),var(--c));cursor:pointer}
+.pc-face .me-avatar{border:2px solid #0b1626}
+.pc-who{flex:1;min-width:0;display:grid;line-height:1.2}
+.pc-who b{font:600 15px 'Cormorant Garamond',Georgia,serif !important;color:#f2f6fb}
+.pc-who small{font-size:10.5px;color:#9fb0c6}
+.pc-stars{margin:4px 0 0 !important;font-size:12px;color:#ffbe7a}
+.pc-stars i{font-style:normal;color:rgba(255,255,255,.18)}
+/* the four ratings in the review form */
+.rev-subs{display:grid;gap:6px;margin:6px 0}
+.rev-sub{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px;color:#e6ecf3}
+.rev-sub small{display:block;font-size:10px;color:#8a99ab}
+.rev-dots{display:flex;gap:4px}
+.rev-dots button{width:15px;height:15px;padding:0;border-radius:50%;border:1.5px solid rgba(255,190,122,.5);background:none;cursor:pointer}
+.rev-dots button.on{background:#ffbe7a;border-color:#ffbe7a}
