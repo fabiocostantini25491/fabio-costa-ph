@@ -4312,12 +4312,12 @@ const Spots = (() => {
     const by = {}; folkSigns.forEach(g => { by[g.cluster] = (by[g.cluster] || 0) + 1; });
     const tot = folkSigns.length;
     if (list.length) {
-      const show = list.length <= 4 ? list : list.slice(0, 3), more = list.length - show.length;
+      const show = list.slice(0, 12), more = list.length - show.length;   // tutti in fila (si scorre), oltre 12 «+N»
       box.innerHTML = `<div class="pc-people">${show.map(p => { const prof = profiles.find(x => x.user_id === p.uid) || { display_name: p.name }, c = CLUSTERS[p.folk];
           return `<button type="button" class="pc-p${p.uid === first ? " first" : ""}" data-member="${esc(p.uid)}" style="--c:${c ? c.color : "#ffbe7a"}">
-            ${p.uid === first ? `<i class="pc-crown" aria-hidden="true">👑</i>` : ""}<span class="pc-av">${avatarHtml(prof, 50)}</span>
+            ${p.uid === first ? `<i class="pc-crown" aria-hidden="true">👑</i>` : ""}<span class="pc-av">${avatarHtml(prof, 56)}</span>
             ${p.uid === first ? `<em class="pc-first">First folk</em>` : ""}
-            <b>${esc(shortName(prof.display_name || p.name))}</b><small>${c ? `${c.ico} ${esc(c.label)}` : "Folk"}</small><time>${p.onSpot ? "📍 " : ""}${esc(fmtWhen(p.at))}</time></button>`; }).join("")}
+            <b>${esc(shortName(prof.display_name || p.name))}</b><small>${c ? `${c.ico} ${esc(folkOf(p.folk))}` : "Folk"}</small><time title="Signed on">${p.onSpot ? "📍 " : "✍ "}${esc(fmtWhen(p.at))}</time></button>`; }).join("")}
           ${more > 0 ? `<span class="pc-more"><b>+${more}</b><small>other folk</small></span>` : ""}</div>
         ${tot ? `<div class="pc-bar" role="img" aria-label="Signed by ${tot} folk">${CLUSTER_KEYS.filter(k => by[k]).map(k => `<i style="--c:${CLUSTERS[k].color};flex:${by[k]}"></i>`).join("")}</div>
           <p class="pc-legend">${CLUSTER_KEYS.filter(k => by[k]).map(k => `<span style="--c:${CLUSTERS[k].color}">${CLUSTERS[k].ico} ${by[k]}</span>`).join("")}<em>${trS("Signed by {n} folk").replace("{n}", tot)}</em></p>` : ""}`;

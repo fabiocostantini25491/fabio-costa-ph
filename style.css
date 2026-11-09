@@ -3676,3 +3676,16 @@ span.pc-useful{cursor:default}
 .pc-more b{width:42px;height:42px;font-size:15px}
 .pc-cbox{grid-template-columns:88px 1fr;gap:10px}
 .pc-ring{width:88px;height:88px}
+/* the folk who know this place: bigger faces, name, folk and date of signature under each */
+.pc-av .me-avatar{--s:56px!important;width:56px;height:56px}
+.pc-av{padding:3px}
+.pc-p{gap:2px}
+.pc-p b{font-size:13px}
+.pc-p small{font-size:10px}
+.pc-p time{font-size:9.5px;color:#b8c4d2}
+.pc-more b{width:52px;height:52px;margin-top:2px;font-size:17px}
+.pc-crown{top:-12px;font-size:16px}
+.pc-people{display:flex;gap:10px;overflow-x:auto;padding:12px 2px 6px;margin:0 -2px;scroll-snap-type:x proximity;scrollbar-width:thin;scrollbar-color:rgba(255,190,122,.3) transparent}
+.pc-p,.pc-more{flex:0 0 78px;scroll-snap-align:start}
+.pc-p b,.pc-p small,.pc-p time{max-width:78px}
+.pc-first{position:absolute;top:52px;left:50%;transform:translateX(-50%);margin:0}
