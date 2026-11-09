@@ -3743,3 +3743,6 @@ span.pc-useful{cursor:default}
 .rev-subs.need{padding:6px;border-radius:10px;outline:1.5px solid rgba(255,140,120,.7)}
 .pc-photos .pop-fig{flex:0 0 118px;max-width:118px;min-width:0}.pc-photos figcaption{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pc-photos .pop-thumb{display:block;padding:0;width:118px}.pc-photos .pop-thumb img{width:118px!important;height:80px!important;object-fit:cover;border-radius:10px}.pc-badge .soc-sub{margin:6px 0 2px!important;font:600 11px var(--sans)!important;letter-spacing:.02em!important;text-transform:none!important;color:#b8c4d2!important}
+/* in every story the folk comes before the name */
+.pc-sline{display:flex;align-items:center;flex-wrap:wrap;gap:3px 7px}
+.pc-sline .pc-sfolk{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;border:1px solid color-mix(in srgb,var(--c) 60%,transparent);background:color-mix(in srgb,var(--c) 14%,transparent);color:#f2f6fb;font:700 10.5px var(--sans);white-space:nowrap}

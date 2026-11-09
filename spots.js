@@ -4250,14 +4250,16 @@ const Spots = (() => {
       const faceOf = r => profiles.find(p => p.user_id === r.user_id) || { display_name: r.author_name || "Member" };
       const onSpotOf = r => (el._signs || []).some(g => g.user_id === r.user_id && g.on_spot);
       const photosOf = r => photos.filter(p => p.user_id === r.user_id && urls[p.path]).slice(0, 3);
-      el.querySelector("[data-reviews]").innerHTML = reviews.length ? reviews.map(r => { const sc = revScore(r), ph = photosOf(r), c = CLUSTERS[r.folk], mineR = r.user_id === uid, canDel = mineR || admin || canCurate(s);
+      // il folk di chi racconta: quello scelto nel racconto, altrimenti quello con cui ha firmato il luogo, altrimenti il primo del suo profilo
+      const folkOfR = r => CLUSTERS[r.folk] ? r.folk : ((el._signs || []).find(g => g.user_id === r.user_id && CLUSTERS[g.cluster]) || {}).cluster || pFolks(faceOf(r))[0] || null;
+      el.querySelector("[data-reviews]").innerHTML = reviews.length ? reviews.map(r => { const sc = revScore(r), ph = photosOf(r), c = CLUSTERS[folkOfR(r)], mineR = r.user_id === uid, canDel = mineR || admin || canCurate(s);
         return `<article class="pop-rev pc-story${experts.has(r.user_id) ? " by-expert" : ""}${ph.length ? " has-photo" : ""}" style="--c:${c?.color || "#ffbe7a"}">
         ${ph.length ? `<button type="button" class="pc-cover" data-sphoto="${photos.indexOf(ph[0])}" aria-label="Photo by ${esc(r.author_name || "")}"><img src="${esc(urls[ph[0].path])}" alt="" loading="lazy"></button>` : ""}
         <div class="pc-sbody">
           <header class="pc-shead">
             <button type="button" class="pc-face" data-member="${esc(r.user_id || "")}" aria-label="${esc(r.author_name || "Member")}">${avatarHtml(faceOf(r), 30)}</button>
-            <span class="pc-swho"><span><b class="pc-sname">${esc(shortName(r.author_name || "Member"))}</b>${xpBadge(r.user_id)}</span>
-              <small>${c ? `<span class="pc-sfolk">${c.ico} ${esc(folkOf(r.folk))}</span> · ` : ""}<time>${fmtDay(r.created_at.slice(0, 10))}</time></small></span>
+            <span class="pc-swho"><span class="pc-sline">${c ? `<span class="pc-sfolk">${c.ico} ${esc(c.folk)}</span>` : ""}<b class="pc-sname">${esc(shortName(r.author_name || "Member"))}</b>${xpBadge(r.user_id)}</span>
+              <small><time>${fmtDay(r.created_at.slice(0, 10))}</time></small></span>
             ${onSpotOf(r) ? `<span class="pc-onspot">📍 On the spot</span>` : ""}
           </header>
           ${r.r_title ? `<h4 class="pc-title">${esc(r.r_title)}</h4>` : ""}
