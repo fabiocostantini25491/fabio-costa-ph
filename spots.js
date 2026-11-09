@@ -870,7 +870,7 @@ const Spots = (() => {
         <div class="sx-modes" role="group" aria-label="Map view">
           ${[["globe", "Globe"], ["sat", "Satellite"], ["terrain", "Terrain"]].map(([k, l]) => `<button type="button" data-sxmode="${k}" class="${viewMode === k ? "on" : ""}" aria-pressed="${viewMode === k}">${SX_ICON[k]}<span>${l}</span></button>`).join("")}
         </div>
-        ${schemaV2 ? `<button type="button" class="osm-scan" id="osmScan">${ICON_SCAN}Scan this area</button>` : ""}
+        ${schemaV2 && OSM_SUGGEST ? `<button type="button" class="osm-scan" id="osmScan">${ICON_SCAN}Scan this area</button>` : ""}
         <p class="sx-hint" id="sxHint" hidden></p>
         <div class="sx-sheet" id="sxSheet"></div>
       </div>
@@ -1325,7 +1325,7 @@ const Spots = (() => {
         </header>
         <div class="around-cols">
           <div class="around-col" id="spotsNear"></div>
-          <div class="around-col osm-col" id="osmCol"></div>
+          ${OSM_SUGGEST ? `<div class="around-col osm-col" id="osmCol"></div>` : ""}
         </div>
       </section>
       <aside class="spots-disclaimer" role="note">
@@ -1414,7 +1414,7 @@ const Spots = (() => {
       <div class="spots-stage">
         <div id="spotsMap" class="map map-spots" aria-label="Members map of photo spots"></div>
         <span class="hud-frame" aria-hidden="true"></span>
-        ${schemaV2 ? `<button type="button" class="osm-scan" id="osmScan">${ICON_SCAN}Scan this area</button>` : ""}
+        ${schemaV2 && OSM_SUGGEST ? `<button type="button" class="osm-scan" id="osmScan">${ICON_SCAN}Scan this area</button>` : ""}
       </div>
       ${aboutHtml()}
       <section class="spots-around" id="spotsAround" aria-live="polite" hidden>
@@ -1426,7 +1426,7 @@ const Spots = (() => {
         </header>
         <div class="around-cols">
           <div class="around-col" id="spotsNear"></div>
-          <div class="around-col osm-col" id="osmCol"></div>
+          ${OSM_SUGGEST ? `<div class="around-col osm-col" id="osmCol"></div>` : ""}
         </div>
       </section>
       <aside class="spots-disclaimer" role="note">
@@ -1811,7 +1811,10 @@ const Spots = (() => {
   }
   const osmCache = new Map();
   const OVERPASS = ["https://overpass-api.de/api/interpreter", "https://overpass.private.coffee/api/interpreter", "https://maps.mail.ru/osm/tools/overpass/api/interpreter"];
+  /* la mappa è solo della community: niente suggerimenti da OpenStreetMap (si riattiva con OSM_SUGGEST = true) */
+  const OSM_SUGGEST = false;
   async function scanOsm(o, extent) {
+    if (!OSM_SUGGEST) { osmItems = []; drawOsm(); return; }
     const seq = ++osmSeq;
     let r = Math.min(25000, o.radius || nearKm * 1000);   // OpenStreetMap: al massimo 25 km per non sovraccaricarlo
     r = Math.round(r);
