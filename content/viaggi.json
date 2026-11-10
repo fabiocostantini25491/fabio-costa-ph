@@ -54,6 +54,12 @@
           "immagini": [
             "/img/foto/ftzh8029-2026-09-18t15-57-51-767.jpg"
           ]
+        },
+        {
+          "nome": "Monticchiello",
+          "lat": "43.068161008007465",
+          "lon": "11.725395835438858",
+          "categoria": "Urban"
         }
       ]
     },
