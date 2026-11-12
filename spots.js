@@ -4232,11 +4232,11 @@ const Spots = (() => {
         api(`/rest/v1/spot_photos?select=id,path,user_id,author_name,created_at&spot_id=eq.${s.id}&order=created_at.desc`),
         fetchReviews(s.id)
       ]);
-      const urls = photos.length ? await signPhotos(photos.map(p => p.path)) : {};
+      const urls = photos.length ? await signPhotos(photos.map(p => p.path), true) : {};
       const pbox = el.querySelector("[data-photos]"), uid0 = myUid();
       pbox.innerHTML = photos.map((p, i) => urls[p.path] ? `<figure class="pop-fig">
         <button type="button" class="pop-thumb" data-photo="${i}" aria-label="Open photo ${i + 1} by ${esc(p.author_name || "a member")}">
-        <img src="${esc(urls[p.path])}" alt="" loading="lazy"></button><figcaption>© ${esc(p.author_name || "Member")}${xpBadge(p.user_id)}${commV && p.user_id !== uid0 ? ` <button type="button" class="rev-flag" data-flagphoto="${p.id}" title="Flag this photo" aria-label="Flag this photo">⚑</button>` : ""}</figcaption></figure>` : "").join("");
+        <img src="${esc(thumbUrl(urls, p))}" alt="" loading="lazy"></button><figcaption>© ${esc(p.author_name || "Member")}${xpBadge(p.user_id)}${commV && p.user_id !== uid0 ? ` <button type="button" class="rev-flag" data-flagphoto="${p.id}" title="Flag this photo" aria-label="Flag this photo">⚑</button>` : ""}</figcaption></figure>` : "").join("");
       pbox.querySelectorAll("[data-photo]").forEach(b => b.addEventListener("click", () => openPhotos(photos, urls, +b.dataset.photo, s)));
       el._reviews = reviews; el._photos = photos; el._urls = urls;
       if (!subV) { const rs = el.querySelector("[data-revsubs]"); if (rs && admin) rs.outerHTML = `<p class="gate-help left">Admin: the four impressions are off because the database doesn't have their columns yet. Run supabase-voti-recensioni.sql in Supabase, then reload.</p>`; else rs?.remove(); }
@@ -4276,7 +4276,7 @@ const Spots = (() => {
           </header>
           ${r.r_title ? `<h4 class="pc-title">${esc(r.r_title)}</h4>` : ""}
           ${r.body ? `<p class="pc-text">${esc(r.body)}</p>` : ""}
-          ${ph.length > 1 ? `<div class="pc-sphotos">${ph.slice(1).map(p => `<button type="button" data-sphoto="${photos.indexOf(p)}" aria-label="Photo by ${esc(p.author_name || "")}"><img src="${esc(urls[p.path])}" alt="" loading="lazy"></button>`).join("")}</div>` : ""}
+          ${ph.length > 1 ? `<div class="pc-sphotos">${ph.slice(1).map(p => `<button type="button" data-sphoto="${photos.indexOf(p)}" aria-label="Photo by ${esc(p.author_name || "")}"><img src="${esc(thumbUrl(urls, p))}" alt="" loading="lazy"></button>`).join("")}</div>` : ""}
           ${r.paid != null ? `<p class="rev-paid">💶 Paid ${fmtMoney(r.paid, r.currency)}${r.people ? ` for ${r.people} ${r.people > 1 ? "people" : "person"}` : ""}${r.nights ? `, ${r.nights} night${r.nights > 1 ? "s" : ""}` : ""}${r.stay_type ? ` · ${esc(r.stay_type)}` : ""}</p>` : ""}
           <footer class="pc-sfoot">${sc ? `<span class="pc-score" title="Their impression">${sc.toFixed(1)}<small>/5</small></span>` : ""}
             ${rvV && !mineR ? `<button type="button" class="pc-useful${vMine(r.id) ? " on" : ""}" data-ruseful="${r.id}" aria-pressed="${vMine(r.id)}">👍 ${vCount(r.id) ? `${vCount(r.id)} ` : ""}Useful</button>` : rvV && vCount(r.id) ? `<span class="pc-useful">👍 ${vCount(r.id)} Useful</span>` : ""}
@@ -4381,8 +4381,28 @@ const Spots = (() => {
     popup.update();
   }
 
+  async function purgeMyFiles() {
+    const uid = myUid(); if (!uid) return;
+    for (const bucket of ["spot-photos", "avatars", "journal"]) {
+      try {
+        for (let round = 0; round < 20; round++) {
+          const list = await api(`/storage/v1/object/list/${bucket}`, { method: "POST", body: { prefix: `${uid}/`, limit: 1000, offset: 0 } });
+          const names = (list || []).filter(o => o.name && o.id).map(o => `${uid}/${o.name}`);
+          if (!names.length) break;
+          await api(`/storage/v1/object/${bucket}`, { method: "DELETE", body: { prefixes: names } });
+          if (names.length < 1000) break;
+        }
+      } catch {}
+    }
+  }
+
   /* ---------- foto ---------- */
-  async function signPhotos(paths) {
+  // every photo is stored twice: the full one (opened on tap, story covers) and a small one (-t.jpg) for thumbnails and strips.
+  // older photos have no small copy: thumbUrl falls back to the full one
+  const thumbPath = path => path.replace(/\.jpg$/i, "-t.jpg");
+  const thumbUrl = (urls, p) => urls[thumbPath(p.path)] || urls[p.path];
+  async function signPhotos(paths, thumbs = false) {
+    if (thumbs) paths = [...paths, ...paths.map(thumbPath)];
     const { data } = await api("/storage/v1/object/sign/spot-photos", { method: "POST", body: { expiresIn: 3600, paths } });
     const out = {};
     (data || []).forEach(x => { if (x.signedURL) out[x.path] = SPOTS_CONFIG.url.replace(/\/$/, "") + "/storage/v1" + x.signedURL; });
@@ -4420,6 +4440,11 @@ const Spots = (() => {
       method: "POST", body: blob,
       headers: { apikey: SPOTS_CONFIG.anonKey, Authorization: `Bearer ${session.access_token}`, "Content-Type": "image/jpeg", "x-upsert": "false" } });
     if (!res.ok) { let m = `HTTP ${res.status}`; try { const j = await res.json(); m = j.message || j.error || m; } catch {} throw new Error(m); }
+    try {   // the small copy for thumbnails: about 10x lighter to serve; if it fails, the full photo is used instead
+      const small = await resizeImage(file, 480, 0.8, true);
+      await fetch(`${SPOTS_CONFIG.url.replace(/\/$/, "")}/storage/v1/object/spot-photos/${thumbPath(path)}`, { method: "POST", body: small,
+        headers: { apikey: SPOTS_CONFIG.anonKey, Authorization: `Bearer ${session.access_token}`, "Content-Type": "image/jpeg", "x-upsert": "false" } });
+    } catch {}
     await api("/rest/v1/spot_photos", { method: "POST", body: { spot_id: spotId, path, author_name: displayName() }, headers: { Prefer: "return=minimal" } });
   }
   function openPhotos(photos, urls, start, s) {
@@ -4446,7 +4471,7 @@ const Spots = (() => {
         if (b.dataset.confirm !== "1") { b.dataset.confirm = "1"; b.textContent = "Confirm delete"; return; }
         try {
           await api(`/rest/v1/spot_photos?id=eq.${p.id}`, { method: "DELETE" });
-          try { await api(`/storage/v1/object/spot-photos/${p.path}`, { method: "DELETE" }); } catch {}
+          try { await api("/storage/v1/object/spot-photos", { method: "DELETE", body: { prefixes: [p.path, thumbPath(p.path)] } }); } catch {}
           d.close(); toast("Photo deleted.");
           const m = markerById.get(s.id); if (m?.isPopupOpen()) loadExtras(m.getPopup(), s);
         } catch (err) { toast(`Could not delete: ${err.message}`, true); }
@@ -4668,6 +4693,7 @@ const Spots = (() => {
         dg.disabled = true; dm.className = "gate-note"; dm.textContent = "Deleting your account…";
         try {
           if (!(await ensureSession())) throw new Error("please log in again");
+          await purgeMyFiles();   // photos, profile picture and story images: the files go too, not only the rows
           await api("/rest/v1/rpc/delete_my_account", { method: "POST", body: {} });
           window.fcTrack?.("Spots: account deleted");
           try { localStorage.removeItem(HANDOFF); localStorage.removeItem(CONDUCT_KEY); } catch {}
@@ -4684,13 +4710,13 @@ const Spots = (() => {
       return;
     }
     if (meTab === "contrib") {
-      const photoUrls = data.photos.length ? await signPhotos(data.photos.slice(0, 24).map(p => p.path)).catch(() => ({})) : {};
+      const photoUrls = data.photos.length ? await signPhotos(data.photos.slice(0, 24).map(p => p.path), true).catch(() => ({})) : {};
       const meetMine = (meetups || []).filter(m => m.created_by === uid);
       box.innerHTML = `
         <h3 class="me-h">Places <small>${mine.length}</small></h3>
         ${mine.length ? `<ul class="me-list">${mine.slice(0, 30).map(s => spotRow(s)).join("")}</ul>` : `<p class="muted">You haven't added any place yet. <button type="button" class="text-link" data-meadd>Add your first place</button></p>`}
         <h3 class="me-h">Photos <small>${data.photos.length}</small></h3>
-        ${data.photos.length ? `<div class="me-photos">${data.photos.slice(0, 24).map(p => `<button type="button" data-open-photo="${p.spot_id}" title="${esc(spotById(p.spot_id)?.name || "")}">${photoUrls[p.path] ? `<img src="${esc(photoUrls[p.path])}" alt="" loading="lazy">` : ""}</button>`).join("")}</div>` : `<p class="muted">No photos yet.</p>`}
+        ${data.photos.length ? `<div class="me-photos">${data.photos.slice(0, 24).map(p => `<button type="button" data-open-photo="${p.spot_id}" title="${esc(spotById(p.spot_id)?.name || "")}">${photoUrls[p.path] ? `<img src="${esc(thumbUrl(photoUrls, p))}" alt="" loading="lazy">` : ""}</button>`).join("")}</div>` : `<p class="muted">No photos yet.</p>`}
         <h3 class="me-h">Reviews <small>${data.reviews.length}</small></h3>
         ${data.reviews.length ? `<ul class="me-list">${data.reviews.slice(0, 30).map(r => { const s = spotById(r.spot_id); return s ? spotRow(s, `<span class="me-meta">${r.rating ? "★".repeat(r.rating) : ""}${r.body ? `<em>${esc(r.body.slice(0, 90))}${r.body.length > 90 ? "…" : ""}</em>` : ""}</span>`) : ""; }).join("")}</ul>` : `<p class="muted">No reviews yet.</p>`}
         <h3 class="me-h">Meetups organised <small>${meetMine.length}</small></h3>
@@ -5339,8 +5365,8 @@ const Spots = (() => {
     if (!wz?.edit || !schemaV2) return;
     try {
       const { data } = await api(`/rest/v1/spot_photos?select=id,path,user_id&spot_id=eq.${wz.edit.id}&order=created_at.asc`);
-      const urls = data?.length ? await signPhotos(data.map(p => p.path)) : {};
-      wz.photos = (data || []).map(p => ({ ...p, url: urls[p.path] || "" }));
+      const urls = data?.length ? await signPhotos(data.map(p => p.path), true) : {};
+      wz.photos = (data || []).map(p => ({ ...p, url: thumbUrl(urls, p) || "" }));
       drawThumbs();
     } catch {}
   }
@@ -5373,7 +5399,7 @@ const Spots = (() => {
       let photoErr = "";
       for (const id of wz.removePhotos) {
         const p = wz.photos.find(x => x.id === id);
-        try { await api(`/rest/v1/spot_photos?id=eq.${id}`, { method: "DELETE" }); if (p) await api(`/storage/v1/object/spot-photos/${p.path}`, { method: "DELETE" }); } catch (err) { photoErr = err.message; }
+        try { await api(`/rest/v1/spot_photos?id=eq.${id}`, { method: "DELETE" }); if (p) await api("/storage/v1/object/spot-photos", { method: "DELETE", body: { prefixes: [p.path, thumbPath(p.path)] } }); } catch (err) { photoErr = err.message; }
       }
       for (let i = 0; i < wz.files.length; i++) {
         status(`Uploading photo ${i + 1} of ${wz.files.length}…`);
