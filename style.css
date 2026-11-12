@@ -3303,7 +3303,7 @@ body[data-page="explore"]::after{background:radial-gradient(90% 55% at 85% 0,rgb
    SPOTFOLK ON ITS OWN (spotfolk.eu): same app, its own look — warm fire on night blue
    ========================================================= */
 .sf-top,.sf-bar{display:none}
-html.sf{--sf-fire:#f28c1e;--sf-warm:#ffbe7a;--sf-ink:#1a1206;--sf-wline:rgba(255,190,122,.3);--sf-serif:'Cormorant Garamond',Georgia,serif}
+html.sf,html.sfskin{--sf-fire:#f28c1e;--sf-warm:#ffbe7a;--sf-ink:#1a1206;--sf-wline:rgba(255,190,122,.3);--sf-serif:'Cormorant Garamond',Georgia,serif}
 html.sf .site-header,html.sf .footer-guide[href="#crew"]{display:none}
 html.sf .sf-top{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:7px clamp(16px,3vw,32px);background:#02060c;font-size:13px;color:#8a99ab}
 .sf-top a{display:inline-flex;align-items:center;gap:8px;color:#b8c4d2}
@@ -3324,27 +3324,27 @@ html.sf .sf-bar{position:sticky;top:0;z-index:1000;display:flex;align-items:cent
 .sf-me{display:inline-flex;align-items:center;gap:9px;padding:4px 14px 4px 4px;border-radius:999px;border:1px solid var(--sf-wline);color:#f2f6fb;font:600 14px var(--sans)}
 .sf-me i{width:34px;height:34px;display:grid;place-items:center;border-radius:50%;background:var(--sf-fire);color:var(--sf-ink);font:600 17px var(--sf-serif);font-style:normal}
 html.sf .sf-acts .lang-pick{margin-right:4px}
-html.sf:not(.sf-folk) .sf-folk-only,html.sf.sf-folk .sf-guest-only{display:none !important}
+html:not(.sf-folk) .sf-folk-only,html.sf-folk .sf-guest-only{display:none !important}
 /* the page: the map fills the screen under the bar */
-html.sf #spots.content-page{padding-top:18px}
-html.sf #spots .sx-kick,html.sf #spots .sx-home{display:none !important}
-html.sf #spots .sx-title{font:600 clamp(34px,3.6vw,50px)/1.02 var(--sf-serif);color:#f2f6fb}
-html.sf #spots .sx-title em{font-style:italic;color:var(--sf-warm)}
-html.sf #spots .sx-lead{color:#b8c4d2}
+:is(html.sf,html.sfskin) #spots.content-page{padding-top:18px}
+:is(html.sf,html.sfskin) #spots .sx-kick,:is(html.sf,html.sfskin) #spots .sx-home{display:none !important}
+:is(html.sf,html.sfskin) #spots .sx-title{font:600 clamp(34px,3.6vw,50px)/1.02 var(--sf-serif);color:#f2f6fb}
+:is(html.sf,html.sfskin) #spots .sx-title em{font-style:italic;color:var(--sf-warm)}
+:is(html.sf,html.sfskin) #spots .sx-lead{color:#b8c4d2}
 /* the menu on the left, renewed */
-html.sf #spots .sx-panel{border-color:var(--sf-wline);background:linear-gradient(180deg,rgba(16,29,46,.92),rgba(8,18,31,.94));border-radius:24px}
-html.sf #spots .sx-group{border-color:rgba(255,190,122,.14);background:rgba(2,6,12,.45)}
-html.sf #spots .sx-group.open{border-color:rgba(255,190,122,.5);box-shadow:0 0 0 1px rgba(255,190,122,.18),0 0 24px rgba(242,140,30,.12)}
-html.sf #spots .sx-gico{border-radius:50%;background:rgba(242,140,30,.1);border-color:rgba(255,190,122,.35)}
-html.sf #spots .sx-gtext b{font:600 22px/1.1 var(--sf-serif);letter-spacing:0;text-transform:none;color:#f2f6fb}
-html.sf #spots .sx-gcount{color:var(--sf-warm);border-color:var(--sf-wline)}
-html.sf #spots .sx-item{border-radius:14px}
-html.sf #spots .sx-item.on{border-color:color-mix(in srgb,var(--c,#ffbe7a) 55%,transparent);background:color-mix(in srgb,var(--c,#ffbe7a) 9%,transparent)}
-html.sf #spots .sx-check{border-radius:50%}
-html.sf #spots .sx-foot a,html.sf #spots .sx-more a,html.sf #spots .sx-more .text-link,html.sf #spots .sx-links .text-link{color:var(--sf-warm)}
-html.sf #spots .spots-search input{border-radius:999px}
-html.sf #spots .sx-stage.spots-stage:not(.on-globe){border-color:var(--sf-wline)}
-html.sf #spots .sx-modes button.on,html.sf #spots .sx-modes button[aria-pressed="true"]{background:#f2f6fb;color:#071226}
+:is(html.sf,html.sfskin) #spots .sx-panel{border-color:var(--sf-wline);background:linear-gradient(180deg,rgba(16,29,46,.92),rgba(8,18,31,.94));border-radius:24px}
+:is(html.sf,html.sfskin) #spots .sx-group{border-color:rgba(255,190,122,.14);background:rgba(2,6,12,.45)}
+:is(html.sf,html.sfskin) #spots .sx-group.open{border-color:rgba(255,190,122,.5);box-shadow:0 0 0 1px rgba(255,190,122,.18),0 0 24px rgba(242,140,30,.12)}
+:is(html.sf,html.sfskin) #spots .sx-gico{border-radius:50%;background:rgba(242,140,30,.1);border-color:rgba(255,190,122,.35)}
+:is(html.sf,html.sfskin) #spots .sx-gtext b{font:600 22px/1.1 var(--sf-serif);letter-spacing:0;text-transform:none;color:#f2f6fb}
+:is(html.sf,html.sfskin) #spots .sx-gcount{color:var(--sf-warm);border-color:var(--sf-wline)}
+:is(html.sf,html.sfskin) #spots .sx-item{border-radius:14px}
+:is(html.sf,html.sfskin) #spots .sx-item.on{border-color:color-mix(in srgb,var(--c,#ffbe7a) 55%,transparent);background:color-mix(in srgb,var(--c,#ffbe7a) 9%,transparent)}
+:is(html.sf,html.sfskin) #spots .sx-check{border-radius:50%}
+:is(html.sf,html.sfskin) #spots .sx-foot a,:is(html.sf,html.sfskin) #spots .sx-more a,:is(html.sf,html.sfskin) #spots .sx-more .text-link,:is(html.sf,html.sfskin) #spots .sx-links .text-link{color:var(--sf-warm)}
+:is(html.sf,html.sfskin) #spots .spots-search input{border-radius:999px}
+:is(html.sf,html.sfskin) #spots .sx-stage.spots-stage:not(.on-globe){border-color:var(--sf-wline)}
+:is(html.sf,html.sfskin) #spots .sx-modes button.on,:is(html.sf,html.sfskin) #spots .sx-modes button[aria-pressed="true"]{background:#f2f6fb;color:#071226}
 .sf-near{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:50px;margin:0 0 12px;border:0;border-radius:999px;background:var(--sf-fire);color:var(--sf-ink);font:700 16px var(--sans);cursor:pointer}
 .sf-near:hover{background:#ffa041}
 .sf-near svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
@@ -3357,52 +3357,52 @@ html.sf #spots .sx-modes button.on,html.sf #spots .sx-modes button[aria-pressed=
   .sf-me span{display:none}.sf-me{padding:3px}
   .sf-logo img{width:86px}
   html.sf .sf-born{display:none}
-  html.sf #spots .sf-near{order:4;margin:0}
-  html.sf #spots .sx-groups{border-color:var(--sf-wline);background:linear-gradient(180deg,rgba(16,29,46,.92),rgba(8,18,31,.94))}
+  :is(html.sf,html.sfskin) #spots .sf-near{order:4;margin:0}
+  :is(html.sf,html.sfskin) #spots .sx-groups{border-color:var(--sf-wline);background:linear-gradient(180deg,rgba(16,29,46,.92),rgba(8,18,31,.94))}
 }
 /* on spotfolk.eu the guide shows only SpotFolk */
 html.sf #guide .guide-card:not(#guide-spots),html.sf #guide .guide-toc,html.sf #guide .guide-downloads a:not([href*="spots"]):not([href*="contributors"]){display:none}
 html.sf #guide .section-heading p{display:none}
-html.sf #spots .spots-search .spots-locate{display:none}
+:is(html.sf,html.sfskin) #spots .spots-search .spots-locate{display:none}
 /* spotfolk.eu on the phone: the bar of groups under the globe stays compact (small labels, as on fabiocostaph.com) */
 @media (max-width:980px){
-  html.sf #spots .sx-sheet .sx-gtext b{font:600 8.6px/1.15 var(--sans);letter-spacing:.03em;text-transform:uppercase;color:#f2f6fb;white-space:normal;overflow-wrap:anywhere;hyphens:auto}
-  html.sf #spots .sx-sheet .sx-gtext{width:100%}
-  html.sf #spots .sx-sheet .sx-groups{border-color:var(--sf-wline);background:rgba(8,18,31,.92)}
-  html.sf #spots .sx-sheet .sx-group{border-color:transparent;background:none}
-  html.sf #spots .sx-sheet .sx-group.open{border-color:rgba(255,190,122,.6);background:rgba(242,140,30,.1)}
+  :is(html.sf,html.sfskin) #spots .sx-sheet .sx-gtext b{font:600 8.6px/1.15 var(--sans);letter-spacing:.03em;text-transform:uppercase;color:#f2f6fb;white-space:normal;overflow-wrap:anywhere;hyphens:auto}
+  :is(html.sf,html.sfskin) #spots .sx-sheet .sx-gtext{width:100%}
+  :is(html.sf,html.sfskin) #spots .sx-sheet .sx-groups{border-color:var(--sf-wline);background:rgba(8,18,31,.92)}
+  :is(html.sf,html.sfskin) #spots .sx-sheet .sx-group{border-color:transparent;background:none}
+  :is(html.sf,html.sfskin) #spots .sx-sheet .sx-group.open{border-color:rgba(255,190,122,.6);background:rgba(242,140,30,.1)}
 }
 /* spotfolk.eu: log in / become folk with SpotFolk's own look */
 html.sf .install-tip{display:none !important}
-html.sf .spots-gate.sf-door{max-width:480px;margin:6px auto 0;padding:26px 26px 22px;text-align:left;border:1px solid var(--sf-wline);border-radius:22px;background:linear-gradient(180deg,#101d2e,#08121f 60%);box-shadow:0 30px 80px rgba(0,0,0,.5)}
+:is(html.sf,html.sfskin) .spots-gate.sf-door{max-width:480px;margin:6px auto 0;padding:26px 26px 22px;text-align:left;border:1px solid var(--sf-wline);border-radius:22px;background:linear-gradient(180deg,#101d2e,#08121f 60%);box-shadow:0 30px 80px rgba(0,0,0,.5)}
 .sf-door-logo{display:block;width:96px;height:auto;margin:0 0 8px}
-html.sf .sf-door h2{margin:0;font:600 34px/1.05 var(--sf-serif);letter-spacing:0;text-transform:none;color:#f2f6fb}
-html.sf .sf-door h2 em{font-style:italic;color:var(--sf-warm)}
-html.sf .sf-door > p{margin:8px 0 16px;max-width:none;color:#b8c4d2;font-size:14.5px;line-height:1.5}
-html.sf .sf-door .gate-tabs{display:grid;grid-template-columns:1fr 1fr;width:auto;margin:0 0 18px;border-color:rgba(156,200,255,.14);background:rgba(255,255,255,.05)}
-html.sf .sf-door .gate-tabs button{min-height:40px;font-weight:700;font-size:14px;color:#b8c4d2}
-html.sf .sf-door .gate-tabs button.on{background:var(--sf-fire);color:var(--sf-ink);box-shadow:none}
-html.sf .sf-door .gate-form{gap:6px}
-html.sf .sf-door .gate-form label{margin-top:6px;font:500 12px/1 'Oswald','Arial Narrow',sans-serif;letter-spacing:.14em;color:#8a99ab}
-html.sf .sf-door .gate-form input:not([type=checkbox]){min-height:46px;padding:0 14px;border-radius:12px;border-color:rgba(156,200,255,.22);background:rgba(2,6,12,.55);font-size:16px}
-html.sf .sf-door .gate-form input:focus{border-color:var(--sf-warm);box-shadow:0 0 0 3px rgba(242,140,30,.2)}
-html.sf .sf-door .gate-row > div{gap:6px}
-html.sf .sf-door .gate-row{grid-template-columns:1fr 1fr}
-html.sf .sf-door .cl-pick{grid-template-columns:repeat(3,1fr);gap:6px;margin:10px 0 6px}
-html.sf .sf-door .cl-pick legend{font:500 12px/1 'Oswald','Arial Narrow',sans-serif;letter-spacing:.14em;color:#8a99ab;margin-bottom:8px;opacity:1}
-html.sf .sf-door .cl-pick legend small{display:block;margin-top:5px;font:400 12px var(--sans);letter-spacing:0;color:#8a99ab}
-html.sf .sf-door .cl-pick span{display:flex;flex-direction:column;align-items:center;gap:4px;padding:9px 4px;border-radius:12px;border-color:rgba(156,200,255,.14);background:rgba(255,255,255,.03);font-size:12.5px;font-weight:700;text-align:center;color:#e6ecf3}
-html.sf .sf-door .cl-pick span i{font-style:normal;font-size:20px;line-height:1}
-html.sf .sf-door .cl-pick input:checked + span{border-color:var(--sf-warm);background:rgba(242,140,30,.14);color:#f2f6fb}
-html.sf .sf-door .gate-form .gate-check{margin-top:6px;color:#b8c4d2;font-size:13.5px}
-html.sf .sf-door .gate-form .gate-check input{accent-color:var(--sf-fire)}
-html.sf .sf-door .gate-check a,html.sf .sf-door .gate-check .text-link,html.sf .sf-door .gate-help a{color:var(--sf-warm)}
-html.sf .sf-door .wf-found{color:var(--sf-warm);font-size:13.5px}
+:is(html.sf,html.sfskin) .sf-door h2{margin:0;font:600 34px/1.05 var(--sf-serif);letter-spacing:0;text-transform:none;color:#f2f6fb}
+:is(html.sf,html.sfskin) .sf-door h2 em{font-style:italic;color:var(--sf-warm)}
+:is(html.sf,html.sfskin) .sf-door > p{margin:8px 0 16px;max-width:none;color:#b8c4d2;font-size:14.5px;line-height:1.5}
+:is(html.sf,html.sfskin) .sf-door .gate-tabs{display:grid;grid-template-columns:1fr 1fr;width:auto;margin:0 0 18px;border-color:rgba(156,200,255,.14);background:rgba(255,255,255,.05)}
+:is(html.sf,html.sfskin) .sf-door .gate-tabs button{min-height:40px;font-weight:700;font-size:14px;color:#b8c4d2}
+:is(html.sf,html.sfskin) .sf-door .gate-tabs button.on{background:var(--sf-fire);color:var(--sf-ink);box-shadow:none}
+:is(html.sf,html.sfskin) .sf-door .gate-form{gap:6px}
+:is(html.sf,html.sfskin) .sf-door .gate-form label{margin-top:6px;font:500 12px/1 'Oswald','Arial Narrow',sans-serif;letter-spacing:.14em;color:#8a99ab}
+:is(html.sf,html.sfskin) .sf-door .gate-form input:not([type=checkbox]){min-height:46px;padding:0 14px;border-radius:12px;border-color:rgba(156,200,255,.22);background:rgba(2,6,12,.55);font-size:16px}
+:is(html.sf,html.sfskin) .sf-door .gate-form input:focus{border-color:var(--sf-warm);box-shadow:0 0 0 3px rgba(242,140,30,.2)}
+:is(html.sf,html.sfskin) .sf-door .gate-row > div{gap:6px}
+:is(html.sf,html.sfskin) .sf-door .gate-row{grid-template-columns:1fr 1fr}
+:is(html.sf,html.sfskin) .sf-door .cl-pick{grid-template-columns:repeat(3,1fr);gap:6px;margin:10px 0 6px}
+:is(html.sf,html.sfskin) .sf-door .cl-pick legend{font:500 12px/1 'Oswald','Arial Narrow',sans-serif;letter-spacing:.14em;color:#8a99ab;margin-bottom:8px;opacity:1}
+:is(html.sf,html.sfskin) .sf-door .cl-pick legend small{display:block;margin-top:5px;font:400 12px var(--sans);letter-spacing:0;color:#8a99ab}
+:is(html.sf,html.sfskin) .sf-door .cl-pick span{display:flex;flex-direction:column;align-items:center;gap:4px;padding:9px 4px;border-radius:12px;border-color:rgba(156,200,255,.14);background:rgba(255,255,255,.03);font-size:12.5px;font-weight:700;text-align:center;color:#e6ecf3}
+:is(html.sf,html.sfskin) .sf-door .cl-pick span i{font-style:normal;font-size:20px;line-height:1}
+:is(html.sf,html.sfskin) .sf-door .cl-pick input:checked + span{border-color:var(--sf-warm);background:rgba(242,140,30,.14);color:#f2f6fb}
+:is(html.sf,html.sfskin) .sf-door .gate-form .gate-check{margin-top:6px;color:#b8c4d2;font-size:13.5px}
+:is(html.sf,html.sfskin) .sf-door .gate-form .gate-check input{accent-color:var(--sf-fire)}
+:is(html.sf,html.sfskin) .sf-door .gate-check a,:is(html.sf,html.sfskin) .sf-door .gate-check .text-link,:is(html.sf,html.sfskin) .sf-door .gate-help a{color:var(--sf-warm)}
+:is(html.sf,html.sfskin) .sf-door .wf-found{color:var(--sf-warm);font-size:13.5px}
 .sf-submit{width:100%;min-height:52px;margin-top:10px;border:0;border-radius:999px;background:var(--sf-fire,#f28c1e);color:var(--sf-ink,#1a1206);font:700 16px var(--sans);cursor:pointer}
 .sf-submit:hover{background:#ffa041}.sf-submit:disabled{opacity:.6;cursor:progress}
-html.sf .sf-door .gate-back{color:#b8c4d2}
-@media (max-width:520px){html.sf .spots-gate.sf-door{padding:22px 18px 18px;border-radius:18px}html.sf .sf-door h2{font-size:30px}}
-html.sf .sf-door .cl-pick span,html.sf .sf-door .gate-form .gate-check,html.sf .sf-door .gate-form .gate-check *{text-transform:none;letter-spacing:0}
+:is(html.sf,html.sfskin) .sf-door .gate-back{color:#b8c4d2}
+@media (max-width:520px){:is(html.sf,html.sfskin) .spots-gate.sf-door{padding:22px 18px 18px;border-radius:18px}:is(html.sf,html.sfskin) .sf-door h2{font-size:30px}}
+:is(html.sf,html.sfskin) .sf-door .cl-pick span,:is(html.sf,html.sfskin) .sf-door .gate-form .gate-check,:is(html.sf,html.sfskin) .sf-door .gate-form .gate-check *{text-transform:none;letter-spacing:0}
 html.sf #spotsRoot,html.sf .sf-door{scroll-margin-top:150px}
 /* spotfolk.eu: while the page starts (before the address is read) never show fabiocostaph.com's home */
 html.sf body:not([data-page]) main > .page{display:none !important}
@@ -3473,7 +3473,7 @@ html.sf.sf-on-me .crew-band{display:none}
 .sf-quick .sf-addplace{background:transparent;color:var(--sf-warm,#ffbe7a);border:1.5px solid var(--sf-wline,rgba(255,190,122,.3))}
 .sf-quick .sf-addplace:hover{background:rgba(242,140,30,.1)}
 .sf-quick svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
-html.sf #spots .sx-user .me-link,html.sf #spots .sx-user #spotsAdd,html.sf #spots .sx-user .spots-email,html.sf #spots .sx-user #spotsLogout{display:none}
+:is(html.sf,html.sfskin) #spots .sx-user .me-link,:is(html.sf,html.sfskin) #spots .sx-user #spotsAdd,:is(html.sf,html.sfskin) #spots .sx-user .spots-email,:is(html.sf,html.sfskin) #spots .sx-user #spotsLogout{display:none}
 .sf-out{display:inline-flex;align-items:center;gap:7px;min-height:42px;padding:0 14px;border-radius:999px;border:1px solid rgba(230,236,243,.25);background:none;color:#b8c4d2;font:600 14px var(--sans);cursor:pointer}
 .sf-out:hover{color:#fff;border-color:rgba(230,236,243,.55)}
 .sf-out svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
@@ -3756,3 +3756,18 @@ span.pc-useful{cursor:default}
 .near-group .near-list{padding:0 6px 6px}
 .near-more > summary{padding:4px 14px 10px;cursor:pointer;font-size:12px;color:#ffbe7a;list-style:none}
 .near-more > summary::-webkit-details-marker{display:none}
+
+@media (max-width:980px){html.sfskin .sf-quick{order:4}}
+/* account in the fabiocostaph.com header, next to search and the menu */
+.hd-login{min-height:36px;padding:0 16px;margin-left:4px;border-radius:999px;border:1px solid rgba(255,190,122,.55);background:rgba(242,140,30,.12);color:#ffd9a8;font:600 12px/1 var(--sans);letter-spacing:.14em;text-transform:uppercase;cursor:pointer;white-space:nowrap}
+.hd-login{display:inline-flex;align-items:center;gap:7px}.hd-login svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round}
+.hd-login:hover{background:#f28c1e;color:#1a1206;border-color:#f28c1e}
+.hd-me{display:grid;place-items:center;width:38px;height:38px;margin-left:4px;border-radius:50%;padding:2px;background:conic-gradient(#ffd27a,#f28c1e,#ffd27a)}
+.hd-me i{display:grid;place-items:center;width:100%;height:100%;border-radius:50%;background:#0b1626;color:#ffd9a0;font:600 17px 'Cormorant Garamond',Georgia,serif;font-style:normal}
+.hd-out{display:grid;place-items:center;width:36px;height:36px;border-radius:50%;border:0;background:none;color:#8a99ab;cursor:pointer}
+.hd-out:hover{color:#fff;background:rgba(255,255,255,.06)}
+.hd-out svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+@media (max-width:620px){.hd-login{width:36px;min-height:36px;padding:0;justify-content:center}.hd-login span{display:none}.hd-login svg{width:18px;height:18px}.hd-out{display:none!important}.hd-me{width:36px;height:36px}}
+@media (max-width:620px){.site-header .header-actions{gap:2px}.brand strong{font-size:12px;letter-spacing:1.2px}}
+@media (max-width:380px){.brand strong{font-size:11px;letter-spacing:.6px}}
+@media (max-width:620px){.site-header .brand{gap:9px}.site-header .brand-mark{width:50px;height:auto}.site-header .header-actions .icon-button{width:38px}}

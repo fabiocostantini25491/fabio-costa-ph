@@ -2491,6 +2491,12 @@ if (SF) {
   });
 }
 
+// account in the header of fabiocostaph.com: log in, your passport, log out
+document.addEventListener("DOMContentLoaded", () => {
+  $("#hdLogin")?.addEventListener("click", () => window.Spots?.login());
+  $("#hdLogout")?.addEventListener("click", () => window.Spots?.logout());
+});
+
 function route() {
   // chi arriva da wayfolk.eu (inoltro del dominio a fabiocostaph.com/?wayfolk) va dritto a SpotFolk
   if (/(^\?|&)(wayfolk|spotfolk)\b/.test(location.search) && !location.hash) { history.replaceState(null, "", location.pathname + "#spotfolk"); trackEvent("Wayfolk domain"); }

@@ -148,6 +148,7 @@ const Spots = (() => {
 
   /* ---------- sessione ---------- */
   function updateNav() {
+    setTimeout(sfState, 0);
     const link = document.querySelector(".nav-spots");
     if (link) link.hidden = !(configured() && (SPOTS_CONFIG.showInMenu || session));
   }
@@ -207,6 +208,8 @@ const Spots = (() => {
      porta con sé (una volta sola). Su spotfolk.eu l'altro sito è fabiocostaph.com, e viceversa. */
   const HANDOFF = "fcph-handoff";
   const SF_MODE = document.documentElement.classList.contains("sf");
+  const SF_LOOK = true;   // the SpotFolk look (door, map panel, passport) on both sites; SF_MODE is only spotfolk.eu
+  document.documentElement.classList.add("sfskin");
   const OTHER = SF_MODE ? "https://fabiocostaph.com" : "https://spotfolk.eu";
   async function spareForSpotfolk(email, password) {
     try { const { data } = await api("/auth/v1/token?grant_type=password", { method: "POST", auth: false, body: { email, password } }); localStorage.setItem(HANDOFF, data.refresh_token); } catch {}
@@ -229,12 +232,13 @@ const Spots = (() => {
     goOther(a.href, a.target === "_blank");
   }, true);
   // SpotFolk on its own (spotfolk.eu): the bar on top follows who is looking
-  function sfState() {
-    if (!SF_MODE) return;
+  function sfState() {   // the bar on spotfolk.eu and the account button in the fabiocostaph.com header
     const inside = !!session && !guest;
     document.documentElement.classList.toggle("sf-folk", inside);
-    const i = document.getElementById("sfMeI"); if (i) i.textContent = ((memberName || "F").trim()[0] || "F").toUpperCase();
-    const n = document.querySelector("#sfMe span"); if (n && memberName) n.textContent = memberName.trim().split(/\s+/)[0];
+    let name = memberName; if (!name && session?.access_token) { const m = jwtMeta(session.access_token); name = m.first_name || m.full_name || ""; }
+    const ini = ((name || "F").trim()[0] || "F").toUpperCase();
+    document.querySelectorAll("#sfMeI,[data-me-i]").forEach(i => { i.textContent = ini; });
+    const n = document.querySelector("#sfMe span"); if (n && name) n.textContent = name.trim().split(/\s+/)[0];
   }
   /* Iscrizione dal sito: nome, cognome, email, password. L'account entra «in attesa» finché non lo approvi */
   const PRIVACY_VERSION = "2026-11-09", TERMS_VERSION = "2026-11-07";   // versions of the privacy notice and terms shown at sign-up
@@ -490,7 +494,7 @@ const Spots = (() => {
   }
 
   function gateHtml(inner) {
-    if (SF_MODE) return `<div class="spots-gate sf-door">
+    if (SF_LOOK) return `<div class="spots-gate sf-door">
       <img class="sf-door-logo" src="img/spotfolk-logo.png" alt="SpotFolk" width="640" height="365">
       <h2>${wantJoin ? "Pull up a seat, <em>folk.</em>" : "Welcome back, <em>folk.</em>"}</h2>
       <p>${wantJoin ? "Free, one minute. Sign places, read the tips, get your passport." : "Log in to see the signatures and the tips on every place."}</p>
@@ -539,7 +543,7 @@ const Spots = (() => {
       ${notice ? `<p class="gate-note warn">${esc(notice)}</p>` : ""}
       <div class="gate-tabs" role="tablist">
         <button type="button" role="tab" class="${join ? "" : "on"}" aria-selected="${!join}" data-gtab="login">Log in</button>
-        <button type="button" role="tab" class="${join ? "on" : ""}" aria-selected="${join}" data-gtab="join">${SF_MODE ? "Become folk" : "Find your folk — free"}</button>
+        <button type="button" role="tab" class="${join ? "on" : ""}" aria-selected="${join}" data-gtab="join">${SF_LOOK ? "Become folk" : "Find your folk — free"}</button>
       </div>
       ${join ? `<form class="gate-form" id="joinForm" novalidate>
         <div class="gate-row">
@@ -553,19 +557,19 @@ const Spots = (() => {
         <label for="joinPassword">Password</label>
         <input id="joinPassword" type="password" autocomplete="new-password" minlength="8" placeholder="At least 8 characters" required>
         <fieldset class="cl-pick" id="joinStyles"><legend>Choose your folk <small>(how you travel: pick all that fit)</small></legend>
-          ${CLUSTER_KEYS.map(k => `<label><input type="checkbox" value="${k}"${DOORS[doorNow()] === k || joinFolk() === k ? " checked" : ""}><span>${SF_MODE ? `<i aria-hidden="true">${CLUSTERS[k].ico}</i>${CLUSTERS[k].label}` : `${CLUSTERS[k].ico} ${CLUSTERS[k].long}`}</span></label>`).join("")}
+          ${CLUSTER_KEYS.map(k => `<label><input type="checkbox" value="${k}"${DOORS[doorNow()] === k || joinFolk() === k ? " checked" : ""}><span>${SF_LOOK ? `<i aria-hidden="true">${CLUSTERS[k].ico}</i>${CLUSTERS[k].label}` : `${CLUSTERS[k].ico} ${CLUSTERS[k].long}`}</span></label>`).join("")}
         </fieldset>
         ${foundersLeft != null && foundersLeft > 0 ? `<p class="wf-found">🏅 Join now and you're one of the first 100 <b>Founding folk</b> <span class="wf-left">${foundersLeft}</span> <span>places left.</span></p>` : ""}
         <label class="gate-check"><input type="checkbox" id="joinPrivacy"> <span><a href="#privacy" target="_blank">I have read the privacy notice</a> (art. 13 GDPR).</span></label>
         <label class="gate-check"><input type="checkbox" id="joinCode"> <span>I accept the <button type="button" class="text-link" id="joinShowCode">community code</button> and agree to the <a href="#terms" target="_blank">terms</a>. I'm 16 or older.</span></label>
-        ${SF_MODE ? `<button class="sf-submit" type="submit" id="joinSend">Become folk — free →</button>` : `<button class="outline-link" type="submit" id="joinSend">JOIN <span aria-hidden="true">→</span></button>`}
+        ${SF_LOOK ? `<button class="sf-submit" type="submit" id="joinSend">Become folk — free →</button>` : `<button class="outline-link" type="submit" id="joinSend">JOIN <span aria-hidden="true">→</span></button>`}
         <p class="gate-note" id="gateMsg" role="status"></p>
       </form>` : `<form class="gate-form" id="gateForm" novalidate>
         <label for="gateEmail">Email</label>
         <input id="gateEmail" type="email" autocomplete="username" placeholder="you@example.com" required>
         <label for="gatePassword">Password</label>
         <input id="gatePassword" type="password" autocomplete="current-password" required>
-        ${SF_MODE ? `<button class="sf-submit" type="submit" id="gateSend">Log in →</button>` : `<button class="outline-link" type="submit" id="gateSend">LOG IN <span aria-hidden="true">→</span></button>`}
+        ${SF_LOOK ? `<button class="sf-submit" type="submit" id="gateSend">Log in →</button>` : `<button class="outline-link" type="submit" id="gateSend">LOG IN <span aria-hidden="true">→</span></button>`}
         <p class="gate-note" id="gateMsg" role="status"></p>
         <p class="gate-help">Forgot your password? <a href="#about">Contact me</a> and I will reset it.</p>
       </form>`}
@@ -837,11 +841,11 @@ const Spots = (() => {
       <aside class="sx-side">
         <p class="sx-kick"><img class="sx-logo" src="img/spotfolk-logo.png" alt="SpotFolk" width="640" height="365"></p>
         <a class="sx-home" href="https://spotfolk.eu" target="_blank" rel="noopener">spotfolk.eu ↗</a>
-        <h2 class="sx-title">${SF_MODE ? "The map, <em>signed by the folk.</em>" : "Explore the Earth"}</h2>
+        <h2 class="sx-title">${SF_LOOK ? "The map, <em>signed by the folk.</em>" : "Explore the Earth"}</h2>
         <p class="sx-lead">${esc(DOOR_LEAD[doorNow()] || "Made by its community: travellers like you share, sign and review the places worth the trip, and look after them.")}</p>
         <div class="sx-panel">
           ${guest && !session ? welcomeHtml() : ""}
-          ${SF_MODE ? `<div class="sf-quick${!guest && (schemaV2 || admin) ? " two" : ""}"><button type="button" class="sf-near" id="sfNear">${SX_ICON.near}<span>Places near me</span></button>${!guest && (schemaV2 || admin) ? `<button type="button" class="sf-near sf-addplace" id="sfAddPlace">${ICON_PLUS}<span>Add a place</span></button>` : ""}</div>` : ""}
+          ${SF_LOOK ? `<div class="sf-quick${!guest && (schemaV2 || admin) ? " two" : ""}"><button type="button" class="sf-near" id="sfNear">${SX_ICON.near}<span>Places near me</span></button>${!guest && (schemaV2 || admin) ? `<button type="button" class="sf-near sf-addplace" id="sfAddPlace">${ICON_PLUS}<span>Add a place</span></button>` : ""}</div>` : ""}
           ${searchHtml}
           <div class="onb-folk" id="onbFolk" hidden></div>
           <div class="sx-groups">${groups}</div>
@@ -4535,7 +4539,7 @@ const Spots = (() => {
     const uid = myUid(), me = profiles.find(p => p.user_id === uid) || { display_name: displayName() };
     const mine = spots.filter(s => s.created_by === uid);
     const stats = [["Places", data.profile?.places ?? mine.length], ["Reviews", data.profile?.reviews ?? data.reviews.length], ["Photos", data.profile?.photos ?? data.photos.length], ["Saved", data.profile?.saved ?? favs.size]];
-    if (SF_MODE) { sfState(); document.documentElement.classList.add("sf-on-me"); return renderMeSF(el, data, uid, me, stats); }
+    if (SF_LOOK) { sfState(); document.documentElement.classList.add("sf-on-me"); return renderMeSF(el, data, uid, me, stats); }
     el.innerHTML = `<div class="me">
       <a class="text-link me-back" href="#spotfolk">${ICON.prev}Back to the map</a>
       <header class="me-head">
