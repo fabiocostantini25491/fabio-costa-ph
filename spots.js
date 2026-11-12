@@ -2431,6 +2431,7 @@ const Spots = (() => {
         ${s.support_local || s.fragile ? `<p class="pc-flags">${s.fragile ? `<button type="button" class="pc-flag fragile" data-gotravel>🛡️ Fragile place</button>` : ""}${s.support_local ? `<button type="button" class="pc-flag local" data-gotravel>🌱 Support local</button>` : ""}</p>` : ""}
         ${schemaV2 ? `<div class="pop-photos pc-photos" data-photos></div>` : ""}
         <div class="pop-alerts" data-alerts>${alertsHtml(s)}</div>
+        ${admin && !guest && pubV ? `<div data-pubpick>${pubPickHtml(s)}</div>` : ""}
       </header>
       ${pcSec("folk", "The folk who know this place", "Real people, real experiences.", folkBody, true)}
       ${pcSec("cons", "Folk consensus", "The collective impression of the folk.", consBody)}
@@ -2587,6 +2588,7 @@ const Spots = (() => {
       const set = (n, v) => { const x = form.querySelector(`[name=${n}]`); if (x && v != null) x.value = v; };
       set("paid", r?.paid); set("currency", r?.currency); set("people", r?.people); set("nights", r?.nights); set("stay", r?.stay_type);
     };
+    wirePubPick(popup, s);
     loadExtras(popup, s);
   }
 
@@ -2845,6 +2847,26 @@ const Spots = (() => {
     if (s.verified_at) return `<p class="vf">✓ <b>Verified by a local</b>${s.verified_name ? ` · ${esc(s.verified_name)}` : ""} · ${new Date(s.verified_at).toLocaleDateString(window.I18N?.locale || "en-GB", { month: "short", year: "numeric" })}</p>`;
     return "";
   }
+  // admin: one tap to decide whether visitors see this place (and its full card) on the public map
+  function pubPickHtml(s) {
+    if (s.fragile) return `<p class="pc-pub"><span>👁 Visitors</span><em>Fragile: never shown to visitors</em></p>`;
+    const v = s.public_pick === true ? "yes" : s.public_pick === false ? "no" : "auto";
+    const b = (k, l, t) => `<button type="button" data-pub="${k}" class="${v === k ? "on" : ""}" aria-pressed="${v === k}" title="${t}">${l}</button>`;
+    return `<p class="pc-pub"><span>👁 Visitors</span>${b("yes", "Public", "Always on the public map, with its full card")}${b("auto", "Auto", "Public if it's the pick of its ~15 km area")}${b("no", "Hidden", "Never shown to visitors")}</p>`;
+  }
+  function wirePubPick(popup, s) {
+    const box = popup.getElement()?.querySelector("[data-pubpick]"); if (!box) return;
+    box.querySelectorAll("[data-pub]").forEach(btn => btn.addEventListener("click", async () => {
+      const k = btn.dataset.pub, pick = k === "auto" ? null : k === "yes";
+      try {
+        await api("/rest/v1/rpc/set_public", { method: "POST", body: { p_spot: s.id, p_pick: pick } });
+        s.public_pick = pick; box.innerHTML = pubPickHtml(s); wirePubPick(popup, s);
+        try { idb.set("public", null); } catch {}
+        toast(k === "yes" ? "Public: visitors see this place with its full card." : k === "no" ? "Hidden from visitors." : "Automatic: public if it's the pick of its area.");
+      } catch (err) { toast(`Could not change it: ${err.message}`, true); }
+    }));
+  }
+
   function curateHtml(s) {
     if (!nodiV || !canCurate(s)) return "";
     return `<div class="pop-actions curate">
