@@ -45,7 +45,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,500&family=Oswald:wght@500;700&family=Libre+Caslon+Text:ital,wght@0,400;0,700;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap">
-  <link rel="stylesheet" href="style.css?v=20261112b">
+  <link rel="stylesheet" href="style.css?v=20261112c">
   <!-- statistiche anonime, senza cookie (Umami): le pagine e i clic li segnala app.js -->
   <script>
   /* single login with spotfolk.eu: a link from there can carry a one-time session of its own (#sfh=…).
@@ -343,7 +343,7 @@
             <div>
               <h3>Visitors and members</h3>
               <ul>
-                <li><b>Everyone</b> sees a free preview: one spot every ~15 km, in an approximate position.</li>
+                <li><b>Everyone</b> sees a free preview: one place every ~15 km, each with its full card — exact location, the folk who signed it, stories and photos.</li>
                 <li><b>Members</b> see every spot with its exact location, photos, reviews, real prices and live alerts — and can add their own.</li>
                 <li><b>Joining is free:</b> go to <a href="#join">fabiocostaph.com/#join</a>, enter your name, email and a password. You're in straight away.</li>
               </ul>
@@ -424,7 +424,7 @@
 
     <!-- PRIVACY e TERMINI (pagine richieste anche da Google per l'accesso con Google) -->
     <section class="page content-page legal-page" id="privacy" data-page="privacy" hidden>
-      <div class="section-heading"><div><span class="eyebrow">PRIVACY NOTICE · ART. 13 GDPR · UPDATED 9 NOVEMBER 2026</span><h1>Privacy</h1></div>
+      <div class="section-heading"><div><span class="eyebrow">PRIVACY NOTICE · ART. 13 GDPR · UPDATED 12 NOVEMBER 2026</span><h1>Privacy</h1></div>
         <p>How fabiocostaph.com and SpotFolk (spotfolk.eu) use your personal data, why, for how long, and what you can do about it. No advertising, no tracking cookies, nothing sold to anyone.</p></div>
       <div class="legal">
       <h2>1. Data controller</h2>
@@ -447,7 +447,7 @@
       <tr><td>Showing the site and keeping it secure</td><td>Legitimate interest (art. 6.1.f)</td><td>Technical logs kept by the providers for their own short periods</td></tr>
       <tr><td>Anonymous statistics</td><td>Legitimate interest (art. 6.1.f)</td><td>Only aggregated, anonymous figures</td></tr>
       <tr><td>Creating and managing your SpotFolk account</td><td>Performance of the service you ask for (art. 6.1.b)</td><td>Until you delete your account</td></tr>
-      <tr><td>Showing what you share to the other members</td><td>Performance of the service (art. 6.1.b)</td><td>Until you delete it or your account; places stay on the map without your name</td></tr>
+      <tr><td>Showing what you share to the other members and, on the places of the public selection, to every visitor</td><td>Performance of the service (art. 6.1.b)</td><td>Until you delete it or your account; places stay on the map without your name</td></tr>
       <tr><td>Moderation, flags, abuse, defending legal claims</td><td>Legitimate interest (art. 6.1.f)</td><td>As long as needed to handle them and any related claim</td></tr>
       <tr><td>Answering your messages and requests</td><td>Your request (art. 6.1.b) and legitimate interest (art. 6.1.f)</td><td>Until the matter is closed, or until you ask me to delete them</td></tr>
       <tr><td>Complying with the law and with authorities' requests</td><td>Legal obligation (art. 6.1.c)</td><td>As long as the law requires</td></tr>
@@ -461,7 +461,7 @@
       <li><b>GitHub Inc.</b> — hosting of the two sites and of the downloadable PDFs.</li>
       <li><b>Umami</b> — anonymous statistics, without cookies.</li>
       <li><b>Map, font and data services</b> — Esri, NASA, OpenStreetMap, Komoot (Photon), Nominatim, Open-Meteo, Google Fonts, jsDelivr and cdnjs receive your IP address to deliver their content, as with any website.</li>
-      <li><b>Other members</b> — see your name next to what you share. Nothing you share is visible to visitors who are not members, except a selection of places shown on the public map without the author's name.</li>
+      <li><b>Other members</b> — see your name next to what you share. On the places of the public selection (about one every 15 km, never fragile places) the full card is visible to everyone, including visitors who are not members: your name, folk, profile photo, signatures, stories and photos on those places. Everything else stays visible to members only.</li>
       <li><b>Authorities</b> — only when the law requires it.</li>
       </ul>
       <p>Data is never sold, rented or used for advertising or profiling.</p>
@@ -509,7 +509,7 @@
     </section>
 
     <section class="page content-page legal-page" id="terms" data-page="terms" hidden>
-      <div class="section-heading"><div><span class="eyebrow">LAST UPDATED 7 NOVEMBER 2026</span><h1>Terms</h1></div>
+      <div class="section-heading"><div><span class="eyebrow">LAST UPDATED 12 NOVEMBER 2026</span><h1>Terms</h1></div>
         <p>The rules for using this site and the SpotFolk members' map. By joining SpotFolk, or by using any of its features, you accept them.</p></div>
       <div class="legal">
         <h2>The site</h2>
@@ -523,6 +523,7 @@
         <h2>What you share</h2>
         <ul>
           <li>Members publish places, photos, reviews, prices, alerts, meetups, trips, Pass it on notices, articles and profiles on their own initiative and under their own responsibility. You are solely responsible for what you publish and for its consequences. I don't check content before it is published and I don't endorse it.</li>
+          <li>On the places of the public selection (about one every 15 km, never fragile places) the full card, including what you share there, is visible to anyone visiting the site, members or not.</li>
           <li>Share only accurate information, and only photos and texts that are yours or that you have the right to share. Photos must not show identifiable people without their consent. Don't publish other people's personal data.</li>
           <li>You keep the copyright of your photos and texts. You give Fabio Costa Ph a free, non-exclusive permission to show them to members inside SpotFolk (and, for articles you submit, in the Journal); you can withdraw it at any time by deleting them.</li>
           <li>No insults, spam, advertising disguised as reviews, or content that is illegal or puts people or places at risk. Follow the community code: leave no trace, protect fragile places, respect people and property.</li>
@@ -693,12 +694,12 @@
 <!--BODY-END-->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
-  <script src="i18n.js?v=20261112b"></script>
-  <script src="app.js?v=20261112b"></script>
-  <script src="spots.js?v=20261112b"></script>
-  <script src="tools.js?v=20261112b"></script>
-  <script src="pwa.js?v=20261112b"></script>
-  <script src="feedback.js?v=20261112b"></script>
-  <script src="system.js?v=20261112b"></script>
+  <script src="i18n.js?v=20261112c"></script>
+  <script src="app.js?v=20261112c"></script>
+  <script src="spots.js?v=20261112c"></script>
+  <script src="tools.js?v=20261112c"></script>
+  <script src="pwa.js?v=20261112c"></script>
+  <script src="feedback.js?v=20261112c"></script>
+  <script src="system.js?v=20261112c"></script>
 </body>
 </html>

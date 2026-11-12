@@ -241,7 +241,7 @@ const Spots = (() => {
     const n = document.querySelector("#sfMe span"); if (n && name) n.textContent = name.trim().split(/\s+/)[0];
   }
   /* Iscrizione dal sito: nome, cognome, email, password. L'account entra «in attesa» finché non lo approvi */
-  const PRIVACY_VERSION = "2026-11-09", TERMS_VERSION = "2026-11-07";   // versions of the privacy notice and terms shown at sign-up
+  const PRIVACY_VERSION = "2026-11-12", TERMS_VERSION = "2026-11-12";   // versions of the privacy notice and terms shown at sign-up
   async function signUp(first, last, email, password, styles = []) {
     const { data } = await api("/auth/v1/signup", { method: "POST", auth: false,
       body: { email, password, data: { first_name: first, last_name: last, full_name: `${first} ${last}`.trim(), travel_style: styles, source: doorNow() || null,
@@ -2133,14 +2133,16 @@ const Spots = (() => {
     m.bindTooltip(esc(s.name), { direction: "top" });
     // la scheda è un nodo creato una sola volta: Leaflet la ridisegna a ogni update() e così non perde foto, recensioni e pulsanti
     let node = null;
-    m.bindPopup(() => node || (node = Object.assign(document.createElement("div"), { innerHTML: guest ? guestPopup(s) : popupHtml(s) }).firstElementChild),
+    m.bindPopup(() => (guest && m._full) || node || (node = Object.assign(document.createElement("div"), { innerHTML: guest ? guestPopup(s) : popupHtml(s) }).firstElementChild),
       { maxWidth: 320, minWidth: 260, className: "spot-popup" });
     m.on("popupopen", e => {
       openId = s.id;
       if (!guest && signV && commV) setTimeout(() => loadSigns(e.popup, s), 0);
       if (guest) {
+        if (m._full) { loadExtras(e.popup, s); if (signV && commV) loadSigns(e.popup, s); return; }
         node.querySelector("[data-login]")?.addEventListener("click", () => { map.closePopup(); wantLogin = true; wantJoin = false; render(); });
         node.querySelector("[data-join]")?.addEventListener("click", () => { map.closePopup(); wantJoin = true; render(); });
+        if (cardV) openPublicCard(e.popup, s, m);
         return;
       }
       if (!node.dataset.wired) { node.dataset.wired = "1"; wirePopup(e.popup, s); } else if (schemaV2) loadExtras(e.popup, s);
@@ -2267,6 +2269,36 @@ const Spots = (() => {
   function wireTkGrade(root, id) {
     const upd = () => { const t = readTk(root, id), g = tkGrade(t); const o = root.querySelector(`#${id}Grade`); if (o) o.textContent = g != null ? `≈ ${g}% · ${gradeWord(g)}` : "—"; };
     ["Km", "Gain", "Route"].forEach(n => root.querySelector(`#${id}${n}`)?.addEventListener("input", upd)); upd();
+  }
+
+  /* visitors: every place of the public selection opens with its full card (exact position, folk, stories, photos).
+     The data come from public_place() in the database, only for those places; anything that writes asks to join. */
+  let cardV = true;   // false until supabase-schede-pubbliche.sql has run
+  const pubCache = new Map();
+  function pubPlace(id) {
+    if (!pubCache.has(id)) pubCache.set(id, api("/rest/v1/rpc/public_place", { method: "POST", body: { p_spot: id }, auth: false })
+      .then(r => r.data || null).catch(err => { if ([400, 404].includes(err.status)) cardV = false; pubCache.delete(id); return null; }));
+    return pubCache.get(id);
+  }
+  const GUEST_ACTS = "[data-fav],[data-meethere],[data-flagspot],[data-addphoto],[data-review],[data-flagphoto],[data-flagrev],[data-flagsign],[data-sign],[data-signas],[data-unsign],[data-useful],[data-ruseful],[data-favstory],[data-pickstyles],[data-member],[data-authorp],[data-report],[data-curate],[data-alerts],[data-delrev],[data-editspot],[data-delete],[data-tkedit],[data-wsedit]";
+  async function openPublicCard(popup, s, m) {
+    const d = await pubPlace(s.id);
+    if (!d?.spot || !guest || !popup.isOpen()) return;
+    const x = d.spot;
+    Object.assign(s, x, { lat: +x.lat, lon: +x.lon, category: CATS[x.category] ? x.category : "spot", list: s.list || "Public" });
+    (d.profiles || []).forEach(p => { if (!profiles.some(q => q.user_id === p.user_id)) profiles.push(p); });
+    const card = Object.assign(document.createElement("div"), { innerHTML: popupHtml(s) }).firstElementChild;
+    card.addEventListener("click", ev => {   // signing, saving, writing: that's for the folk
+      if (!ev.target.closest?.(GUEST_ACTS)) return;
+      ev.preventDefault(); ev.stopImmediatePropagation();
+      map.closePopup(); wantJoin = true; wantLogin = false; render(); setTimeout(() => root()?.scrollIntoView({ behavior: "smooth" }), 60);
+    }, true);
+    m._full = card;
+    m.setLatLng([s.lat, s.lon]);
+    popup.setContent(card);
+    wirePopup(popup, s);
+    if (signV && commV) loadSigns(popup, s);
+    window.fcTrack?.("Spots: public card opened");
   }
 
   function guestPopup(s) {
@@ -4125,7 +4157,7 @@ const Spots = (() => {
     const el = popup.getElement()?.querySelector("[data-signs]");
     if (!el) return;
     let signs = [];
-    try { signs = (await api(`/rest/v1/place_signs?select=id,cluster,tip,user_id,author_name,created_at${evoV ? ",on_spot" : ""}&spot_id=eq.${s.id}&order=created_at.desc&limit=500`)).data || []; }
+    try { signs = guest ? ((await pubPlace(s.id))?.signs || []) : (await api(`/rest/v1/place_signs?select=id,cluster,tip,user_id,author_name,created_at${evoV ? ",on_spot" : ""}&spot_id=eq.${s.id}&order=created_at.desc&limit=500`)).data || []; }
     catch (err) { if (evoV && err.status === 400) { evoV = false; return loadSigns(popup, s); } if ([400, 404].includes(err.status)) { signV = false; el.remove(); } return; }
     const uid = myUid(), by = {};
     signs.forEach(g => { by[g.cluster] = (by[g.cluster] || 0) + 1; });
@@ -4140,7 +4172,8 @@ const Spots = (() => {
     // «Useful» sui consigli: i più utili salgono in cima
     let votes = [];
     const tipIds = signs.filter(g => g.tip).map(g => g.id);
-    if (evoV && tipIds.length) { try { votes = (await api(`/rest/v1/sign_votes?select=sign_id,user_id&sign_id=in.(${tipIds.join(",")})`)).data || []; } catch (err) { if ([400, 404].includes(err.status)) evoV = false; } }
+    if (guest) votes = ((await pubPlace(s.id))?.sign_votes || []).filter(v => tipIds.includes(v.sign_id));
+    else if (evoV && tipIds.length) { try { votes = (await api(`/rest/v1/sign_votes?select=sign_id,user_id&sign_id=in.(${tipIds.join(",")})`)).data || []; } catch (err) { if ([400, 404].includes(err.status)) evoV = false; } }
     const vCount = id => votes.filter(v => v.sign_id === id).length, vMine = id => votes.some(v => v.sign_id === id && v.user_id === uid);
     const tips = signs.filter(g => g.tip).sort((a, b) => vCount(b.id) - vCount(a.id) || String(b.created_at).localeCompare(String(a.created_at))).slice(0, 6);
     const who = g => `<button type="button" class="sg-who" data-member="${esc(g.user_id)}">${esc(g.author_name || "Member")}</button> · ${g.cluster === "fabio" ? "★ Fabio's pick" : `${CLUSTERS[g.cluster]?.ico || ""} ${esc(folkOf(g.cluster))}`}${g.on_spot ? ` <span class="sg-spot" title="Signed on the spot">📍 on the spot</span>` : ""}`;
@@ -4228,7 +4261,8 @@ const Spots = (() => {
     const el = popup.getElement();
     if (!el) return;
     try {
-      const [{ data: photos }, { data: reviews }] = await Promise.all([
+      const pub = guest ? await pubPlace(s.id) : null;
+      const [{ data: photos }, { data: reviews }] = pub ? [{ data: pub.photos || [] }, { data: pub.reviews || [] }] : await Promise.all([
         api(`/rest/v1/spot_photos?select=id,path,user_id,author_name,created_at&spot_id=eq.${s.id}&order=created_at.desc`),
         fetchReviews(s.id)
       ]);
@@ -4243,7 +4277,8 @@ const Spots = (() => {
       if (!subV || !titleV) el.querySelector("[data-reviewform] [name=title]")?.remove();
       // «Useful» sui racconti
       let rvotes = [];
-      if (rvV && reviews.length) { try { rvotes = (await api(`/rest/v1/review_votes?select=review_id,user_id&review_id=in.(${reviews.map(r => r.id).join(",")})`)).data || []; } catch (err) { if ([400, 404].includes(err.status)) rvV = false; } }
+      if (pub) rvotes = pub.review_votes || [];
+      else if (rvV && reviews.length) { try { rvotes = (await api(`/rest/v1/review_votes?select=review_id,user_id&review_id=in.(${reviews.map(r => r.id).join(",")})`)).data || []; } catch (err) { if ([400, 404].includes(err.status)) rvV = false; } }
       el._rvotes = rvotes;
       const rbox = el.querySelector("[data-rating]");
       const cons = consensusHtml(reviews, s);
