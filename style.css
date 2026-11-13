@@ -3911,3 +3911,26 @@ span.pc-useful{cursor:default}
 .imp-who li em{font:600 16px 'Cormorant Garamond',Georgia,serif;font-style:normal;color:#ffd9a8}
 .imp-who li.more{justify-content:center;font-size:11.5px;color:#8a99ab}
 .imp-who .pc-face{padding:0;border:0;background:none;cursor:pointer}
+/* ✨ Photo forecast */
+.pf-btn{position:relative;width:46px;height:46px;border-radius:50%;border:1.5px solid rgba(255,190,122,.7);background:rgba(10,21,36,.9);color:#fff;font-size:20px;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.45)}
+.pf-btn.on{background:#f28c1e;border-color:#f28c1e}
+.pf-badge{position:absolute;top:-4px;right:-4px;min-width:19px;height:19px;padding:0 5px;border-radius:999px;background:#f28c1e;color:#1a1206;font:800 11px/19px var(--sans)}
+.pf-btn.on .pf-badge{background:#fff}
+.pf-panel{position:absolute;right:66px;top:12px;z-index:900;width:min(340px,calc(100% - 84px));max-height:calc(100% - 24px);overflow:auto;padding:12px;border-radius:18px;background:rgba(8,16,28,.96);border:1px solid rgba(255,190,122,.35);box-shadow:0 18px 50px rgba(0,0,0,.55);color:#f2f6fb}
+.pf-panel[hidden]{display:none}
+.pf-h{display:flex;align-items:baseline;gap:8px;margin-bottom:6px}.pf-h b{font:600 20px 'Cormorant Garamond',Georgia,serif}.pf-h small{color:#8a99ab;font-size:11.5px}
+.pf-h button{margin-left:auto;border:0;background:none;color:#b8c4d2;font-size:22px;line-height:1;cursor:pointer}
+.pf-day{margin:10px 0 4px;font:700 11px var(--sans);letter-spacing:.14em;text-transform:uppercase;color:#ffbe7a}
+.pf-list{list-style:none;margin:0;padding:0;display:grid;gap:4px}
+.pf-list button{display:flex;align-items:center;gap:10px;width:100%;padding:7px 9px;border-radius:12px;border:1px solid rgba(156,200,255,.12);background:rgba(255,255,255,.03);color:#f2f6fb;text-align:left;cursor:pointer}
+.pf-list button.on{border-color:var(--c);background:color-mix(in srgb,var(--c) 16%,transparent)}
+.pf-list i{font-style:normal;font-size:20px;width:26px;text-align:center}
+.pf-list span{flex:1;min-width:0}.pf-list b{display:block;font:600 13px var(--sans)}.pf-list small{display:block;color:#8a99ab;font-size:11.5px}
+.pf-conf{font-style:normal;font-size:15px}.pf-conf.high{color:#9fe3c8}.pf-conf.med{color:#ffd166}.pf-conf.low{color:#8a99ab}
+.pf-empty{color:#b8c4d2;font-size:13px;margin:8px 0}
+.pf-foot{margin-top:12px;font-size:10.5px;line-height:1.45;color:#8a99ab}.pf-foot span{display:block;color:#c9d6e6;margin-bottom:3px}.pf-foot a{color:#ffbe7a}
+.pf-glow{width:54px;height:54px;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle,color-mix(in srgb,var(--c) 55%,transparent) 0%,color-mix(in srgb,var(--c) 18%,transparent) 55%,transparent 72%);animation:pfpulse 2.2s ease-in-out infinite;pointer-events:none}
+.pf-glow i{font-style:normal;font-size:15px;transform:translate(14px,-14px);filter:drop-shadow(0 1px 2px rgba(0,0,0,.7))}
+@keyframes pfpulse{0%,100%{transform:scale(.85);opacity:.75}50%{transform:scale(1.12);opacity:1}}
+@media (prefers-reduced-motion:reduce){.pf-glow{animation:none}}
+@media (max-width:600px){.pf-panel{right:8px;left:8px;width:auto;top:64px}}

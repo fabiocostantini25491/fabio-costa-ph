@@ -2070,6 +2070,7 @@ const Spots = (() => {
     osmLayer = L.layerGroup().addTo(map);
     commLayer = L.layerGroup().addTo(map);
     camLayer = L.layerGroup().addTo(map); camKey = "";
+    addPfControl(); pfKey = ""; if (pfOpen || pfOn) setTimeout(drawPf, 500);
     map.on("moveend", scheduleCams); setTimeout(scheduleCams, 400);
     map.on("popupclose", () => setTimeout(() => { if (commDirty) drawCommunity(); }, 0));
     tripLayer = L.layerGroup().addTo(map); drawTrips();
@@ -2484,6 +2485,162 @@ const Spots = (() => {
         loadFacts(popup, s);
       } catch (err) { toast(/row-level|policy|42501/i.test(err.message) ? "You've added a lot today: thank you, try again tomorrow." : `Could not save it: ${err.message}`, true); btn.disabled = false; }
     });
+  }
+
+  /* ✨ Photo forecast: the next 7 days for photographers, on the visible map.
+     Weather from Open-Meteo (one request for a 5×5 grid), sun, moon and Milky Way calculated here (Astro, tools.js),
+     aurora from NOAA SWPC. Nothing is stored: only the browser asks and calculates. */
+  const PF = {
+    clear_rise: ["🌅", "Clear sunrise", "#ffd27a"], clear_set: ["🌇", "Clear sunset", "#ffbe7a"], fiery: ["🔥", "Fiery sky possible", "#ff7a45"],
+    cloudsea: ["☁️", "Sea of clouds likely", "#cfe2ff"], fog: ["🌫️", "Fog in the valleys", "#b8c4d2"], snow: ["❄️", "Fresh snow", "#e8f4ff"],
+    drama: ["⛈️", "Dramatic light possible", "#c9a7ff"], stars: ["✨", "Dark sky for stars", "#9ec5ff"], milky: ["🌌", "Milky Way core visible", "#b39dff"],
+    moonrise: ["🌕", "Full moon rising at sunset", "#fff3c4"], aurora: ["🟢", "Aurora possible", "#7ee0a1"]
+  };
+  let pfLayer = null, pfOpen = false, pfAlerts = [], pfOn = null, pfKey = "", pfBusy = false, pfKp = null;
+  const pfCache = new Map(), elevCache = new Map();
+  const PF_ZOOM = 7;
+  const confOf = d => d <= 1 ? ["●", "high", "reliable"] : d <= 3 ? ["◐", "med", "indicative"] : ["○", "low", "just a trend"];
+  function addPfControl() {
+    const Ctl = L.Control.extend({ options: { position: "topright" }, onAdd() {
+      const b = L.DomUtil.create("button", "pf-btn"); b.type = "button"; b.title = "Photo forecast: the next 7 days"; b.setAttribute("aria-label", "Photo forecast");
+      b.innerHTML = `<span aria-hidden="true">✨</span><b class="pf-badge" hidden></b>`;
+      L.DomEvent.disableClickPropagation(b);
+      b.addEventListener("click", () => { pfOpen = !pfOpen; window.fcTrack?.(pfOpen ? "Spots: photo forecast opened" : "Spots: photo forecast closed"); drawPf(); });
+      return b; } });
+    new Ctl().addTo(map);
+    pfLayer = L.layerGroup().addTo(map);
+    map.on("moveend", () => { if (pfOpen || pfOn) { clearTimeout(pfLayer._t); pfLayer._t = setTimeout(drawPf, 500); } });
+  }
+  function pfPanel() {
+    let p = map.getContainer().querySelector(".pf-panel");
+    if (!p) { p = L.DomUtil.create("div", "pf-panel", map.getContainer()); L.DomEvent.disableClickPropagation(p); L.DomEvent.disableScrollPropagation(p); }
+    return p;
+  }
+  async function drawPf() {
+    if (!map) return;
+    const panel = pfPanel(); panel.hidden = !pfOpen;
+    const btn = map.getContainer().querySelector(".pf-btn"); btn?.classList.toggle("on", pfOpen);
+    if (map.getZoom() < PF_ZOOM) { pfLayer.clearLayers(); pfOn = null; if (pfOpen) panel.innerHTML = `${pfHead()}<p class="pf-empty">Zoom in to a region (a few valleys wide) to see the photo forecast of its places.</p>${pfFoot()}`; setBadge(0); return; }
+    const b = map.getBounds(), key = [b.getSouth(), b.getWest(), b.getNorth(), b.getEast()].map(x => x.toFixed(1)).join(",");
+    if (key !== pfKey && !pfBusy) {
+      pfBusy = true; if (pfOpen) panel.innerHTML = `${pfHead()}<p class="pf-empty">Reading the sky…</p>`;
+      try { pfAlerts = await computePf(b); pfKey = key; } catch { pfAlerts = []; }
+      pfBusy = false;
+      if (pfOn && !pfAlerts.some(a => a.id === pfOn)) pfOn = null;
+    }
+    setBadge(pfAlerts.filter(a => a.day <= 1).length);
+    paintPfGlow();
+    if (!pfOpen) return;
+    const days = [...new Set(pfAlerts.map(a => a.day))].sort((x, y) => x - y);
+    const dayName = (d, date) => d === 0 ? "Today" : d === 1 ? "Tomorrow" : new Date(date + "T12:00:00").toLocaleDateString(window.I18N?.locale || "en-GB", { weekday: "long", day: "numeric", month: "short" });
+    panel.innerHTML = `${pfHead()}
+      ${pfAlerts.length ? days.map(d => { const list = pfAlerts.filter(a => a.day === d); return `<p class="pf-day">${esc(dayName(d, list[0].date))}</p>
+        <ul class="pf-list">${list.map(a => { const [ic, lb, col] = PF[a.type], c = confOf(a.conf ?? d);
+          return `<li><button type="button" data-pf="${a.id}" class="${pfOn === a.id ? "on" : ""}" style="--c:${col}"><i>${ic}</i><span><b>${esc(lb)}</b><small>${esc(a.when)} · ${a.places.length} place${a.places.length > 1 ? "s" : ""}</small></span><em class="pf-conf ${c[1]}" title="${c[2]}">${c[0]}</em></button></li>`; }).join("")}</ul>`; }).join("")
+        : `<p class="pf-empty">Nothing special in the next 7 days for the places in view. Try another area.</p>`}
+      ${pfFoot()}`;
+    panel.querySelector("[data-pfclose]")?.addEventListener("click", () => { pfOpen = false; drawPf(); });
+    panel.querySelectorAll("[data-pf]").forEach(x => x.addEventListener("click", () => { pfOn = pfOn === x.dataset.pf ? null : x.dataset.pf; window.fcTrack?.("Spots: photo alert shown", { type: x.dataset.pf.split(":")[0] }); drawPf(); }));
+  }
+  const pfHead = () => `<div class="pf-h"><b>✨ Photo forecast</b><small>next 7 days · places in view</small><button type="button" data-pfclose aria-label="Close">×</button></div>`;
+  const pfFoot = () => `<p class="pf-foot"><span>● reliable ◐ indicative ○ just a trend</span>Estimates from weather models, calculated for the area: always check the forecast before you go.
+    <br>Weather <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a> · aurora <a href="https://www.swpc.noaa.gov/" target="_blank" rel="noopener">NOAA SWPC</a> · sun, moon and Milky Way calculated here</p>`;
+  function setBadge(n) { const bd = map?.getContainer().querySelector(".pf-badge"); if (bd) { bd.textContent = n; bd.hidden = !n; } }
+  function paintPfGlow() {
+    pfLayer.clearLayers();
+    const a = pfAlerts.find(x => x.id === pfOn); if (!a) return;
+    const col = PF[a.type][2];
+    a.places.slice(0, 200).forEach(id => { const s = spotById(id); if (!s) return;
+      L.marker([s.lat, s.lon], { interactive: false, keyboard: false, zIndexOffset: -1000,
+        icon: L.divIcon({ className: "", iconSize: [54, 54], iconAnchor: [27, 27], html: `<div class="pf-glow" style="--c:${col}"><i>${PF[a.type][0]}</i></div>` }) }).addTo(pfLayer); });
+  }
+  async function pfElev(list) {
+    const need = list.filter(s => !elevCache.has(s.id)).slice(0, 300);
+    for (let i = 0; i < need.length; i += 100) {
+      const ch = need.slice(i, i + 100);
+      try { const r = await fetch(`https://api.open-meteo.com/v1/elevation?latitude=${ch.map(s => s.lat.toFixed(4)).join(",")}&longitude=${ch.map(s => s.lon.toFixed(4)).join(",")}`);
+        const j = await r.json(); (j.elevation || []).forEach((e, k) => elevCache.set(ch[k].id, e)); } catch {}
+    }
+  }
+  async function pfKpForecast() {
+    if (pfKp && Date.now() - pfKp.at < 3 * 36e5) return pfKp.rows;
+    try { const r = await fetch("https://services.swpc.noaa.gov/products/noaa-planetary-k-index-forecast.json"); const j = await r.json();
+      const rows = (Array.isArray(j) ? j.slice(1) : []).map(x => Array.isArray(x) ? { t: Date.parse(String(x[0]).replace(" ", "T") + "Z"), kp: +x[1] } : { t: Date.parse(x.time_tag + "Z"), kp: +x.kp }).filter(x => Number.isFinite(x.kp));
+      pfKp = { at: Date.now(), rows }; return rows; } catch { return []; }
+  }
+  async function computePf(b) {
+    const N = 5, S = b.getSouth(), W = b.getWest(), dLat = (b.getNorth() - S) / N, dLon = (b.getEast() - W) / N;
+    const grid = []; for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) grid.push({ lat: S + dLat * (i + .5), lon: W + dLon * (j + .5), places: [] });
+    const inView = spots.filter(s => b.contains([s.lat, s.lon]) && !s.fragile).slice(0, 2500);
+    inView.forEach(s => { const i = Math.min(N - 1, Math.max(0, Math.floor((s.lat - S) / dLat))), j = Math.min(N - 1, Math.max(0, Math.floor((s.lon - W) / dLon))); grid[i * N + j].places.push(s); });
+    const cells = grid.filter(g => g.places.length);
+    if (!cells.length) return [];
+    const ck = cells.map(g => `${g.lat.toFixed(2)},${g.lon.toFixed(2)}`).join("|");
+    let data = pfCache.get(ck);
+    if (!data || Date.now() - data.at > 36e5) {
+      const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${cells.map(g => g.lat.toFixed(3)).join(",")}&longitude=${cells.map(g => g.lon.toFixed(3)).join(",")}`
+        + "&hourly=cloud_cover,cloud_cover_low,cloud_cover_mid,cloud_cover_high,visibility,precipitation,weather_code&daily=sunrise,sunset,snowfall_sum&timezone=auto&forecast_days=7");
+      if (!r.ok) throw new Error("weather"); let j = await r.json(); if (!Array.isArray(j)) j = [j];
+      data = { at: Date.now(), list: j }; pfCache.set(ck, data);
+    }
+    const kp = cells.some(g => Math.abs(g.lat) > 44) ? await pfKpForecast() : [];
+    const out = new Map();
+    const add = (type, day, date, when, places, conf) => { if (!places.length) return; const id = `${type}:${day}`; const a = out.get(id) || out.set(id, { id, type, day, date, when, conf, places: [] }).get(id); places.forEach(s => a.places.includes(s.id) || a.places.push(s.id)); if (!a.when.includes(when) && a.when.split(" · ").length < 2) a.when += ` · ${when}`; };
+    const highPlaces = async g => { await pfElev(g.places); return g.places.filter(s => (elevCache.get(s.id) ?? 0) >= 1400); };
+    for (let c = 0; c < cells.length; c++) {
+      const g = cells[c], w = data.list[c]; if (!w?.hourly) continue;
+      const H = w.hourly, D = w.daily, off = (w.utc_offset_seconds || 0) * 1000;
+      const hi = t => H.time.indexOf(String(t).slice(0, 13) + ":00");
+      const at = (k, i) => i >= 0 && i < H[k].length ? H[k][i] : null;
+      for (let d = 0; d < D.time.length; d++) {
+        const date = D.time[d], sr = hi(D.sunrise[d]), ss = hi(D.sunset[d]), riseT = String(D.sunrise[d]).slice(11, 16), setT = String(D.sunset[d]).slice(11, 16);
+        const clearAt = i => at("cloud_cover_low", i) < 20 && at("cloud_cover_mid", i) < 25 && at("cloud_cover_high", i) < 30 && !(at("precipitation", i) > 0);
+        const fieryAt = i => at("cloud_cover_low", i) < 30 && Math.max(at("cloud_cover_mid", i), at("cloud_cover_high", i)) >= 30 && Math.max(at("cloud_cover_mid", i), at("cloud_cover_high", i)) <= 80 && !(at("precipitation", i) > 0.2);
+        if (sr >= 0 && clearAt(sr)) add("clear_rise", d, date, `sunrise ${riseT}`, g.places, d);
+        if (ss >= 0 && clearAt(ss)) add("clear_set", d, date, `sunset ${setT}`, g.places, d);
+        if (ss >= 0 && fieryAt(ss)) add("fiery", d, date, `sunset ${setT}`, g.places, d); else if (sr >= 0 && fieryAt(sr)) add("fiery", d, date, `sunrise ${riseT}`, g.places, d);
+        if (sr >= 0 && [sr, sr + 1, sr + 2].some(i => at("cloud_cover_low", i) >= 75 && at("cloud_cover_mid", i) < 35 && at("cloud_cover_high", i) < 60)) { const hp = await highPlaces(g); add("cloudsea", d, date, `morning, above 1,400 m`, hp, d); }
+        if (sr >= 0 && [sr, sr + 1, sr + 2].some(i => at("visibility", i) != null && at("visibility", i) < 1000)) add("fog", d, date, "early morning", g.places, d);
+        if (d > 0 && D.snowfall_sum[d - 1] >= 3) add("snow", d, date, `${Math.round(D.snowfall_sum[d - 1])} cm the day before`, g.places, d - 1);
+        if (ss >= 0 && [ss - 1, ss, ss + 1].some(i => [80, 81, 82, 95, 96, 99].includes(at("weather_code", i)) && at("cloud_cover_low", i) < 70)) add("drama", d, date, `around sunset ${setT}`, g.places, d);
+        // the night after this day: dark sky, Milky Way, moon, aurora
+        if (typeof Astro === "undefined") continue;
+        const noon = Date.parse(date + "T12:00:00Z") - off, st = Astro.sunTimes(noon, g.lat, g.lon, [-18, -0.833]);
+        const dusk = st[-18]?.set, dawn = Astro.sunTimes(noon + 864e5, g.lat, g.lon, [-18])[-18]?.rise;
+        if (dusk && dawn && dawn > dusk) {
+          let dark = 0, core = 0, from = null, to = null, cloudsN = [];
+          for (let t = dusk; t < dawn; t += 18e5) {
+            const li = hi(new Date(t + off).toISOString()), cl = at("cloud_cover", li);
+            if (cl != null) cloudsN.push(cl);
+            const moonUp = Astro.moonAlt(t, g.lat, g.lon) > 0 && Astro.moonIllum(t).fraction > 0.25;
+            if (!moonUp && cl != null && cl < 20) { dark += 30; if (Astro.coreAlt(t, g.lat, g.lon) > 10) { core += 30; from ??= t; to = t + 18e5; } }
+          }
+          const hm = t => new Date(t + off).toISOString().slice(11, 16);
+          if (core >= 60) add("milky", d, date, `${hm(from)}–${hm(to)}`, g.places, d);
+          else if (dark >= 120) add("stars", d, date, `${Math.round(dark / 60)} h of dark sky`, g.places, d);
+          // aurora: NOAA Kp in the dark hours, against what this latitude needs, with a clear-ish sky
+          if (kp.length && Math.abs(g.lat) > 44) {
+            const need = Math.max(1, Math.min(9, (67 - Math.abs(g.lat)) / 2.5));
+            const maxKp = Math.max(0, ...kp.filter(x => x.t >= dusk - 3 * 36e5 && x.t <= dawn).map(x => x.kp));
+            const cloudy = cloudsN.length ? cloudsN.reduce((a, x) => a + x, 0) / cloudsN.length : 100;
+            if (maxKp >= need && cloudy < 50) add("aurora", d, date, `Kp ${maxKp.toFixed(0)} · needs ${need.toFixed(0)} here`, g.places, d === 0 ? 2 : 4);
+          }
+        }
+        // full moon rising within an hour of sunset
+        const sunset = st[-0.833]?.set;
+        if (sunset && Astro.moonIllum(sunset).fraction > 0.93) {
+          for (let t = sunset - 45 * 6e4; t < sunset + 75 * 6e4; t += 5 * 6e4) {
+            if (Astro.moonAlt(t, g.lat, g.lon) <= 0 && Astro.moonAlt(t + 5 * 6e4, g.lat, g.lon) > 0) {
+              const li = hi(new Date(t + off).toISOString());
+              if (!(at("cloud_cover_low", li) > 60)) add("moonrise", d, date, `moonrise ${new Date(t + 5 * 6e4 + off).toISOString().slice(11, 16)} · sunset ${setT}`, g.places, d);
+              break;
+            }
+          }
+        }
+      }
+    }
+    const order = Object.keys(PF);
+    return [...out.values()].sort((a, b2) => a.day - b2.day || order.indexOf(a.type) - order.indexOf(b2.type));
   }
 
   /* Place pulse: the sea, only for places on the coast (Open-Meteo Marine: waves, swell, water temperature, tides) */

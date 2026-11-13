@@ -4,7 +4,7 @@
 //  - immagini del sito, librerie e font: copia salvata, aggiornata in background
 //  - tasselli delle mappe: copia salvata (le zone già viste funzionano offline), con un limite
 //  - Supabase, OpenStreetMap, meteo, statistiche: sempre e solo rete (dati personali o in tempo reale)
-const VERSION = "fcph-20261113n";
+const VERSION = "fcph-20261113o";
 const CORE = `${VERSION}-core`;
 const ASSETS = `${VERSION}-assets`;
 const TILES = "fcph-tiles";            // non legato alla versione: le mappe salvate restano
@@ -24,7 +24,7 @@ self.addEventListener("activate", e => {
   })());
 });
 
-const NEVER = /supabase\.co|windy|overpass|private\.coffee|maps\.mail\.ru|open-meteo|umami|photon\.komoot|wikipedia\.org|ig\.me|huggingface|deepl/;
+const NEVER = /supabase\.co|windy|swpc\.noaa|overpass|private\.coffee|maps\.mail\.ru|open-meteo|umami|photon\.komoot|wikipedia\.org|ig\.me|huggingface|deepl/;
 const TILE_HOSTS = /arcgisonline\.com|basemaps\.cartocdn\.com|tile\.openstreetmap|s3\.amazonaws\.com\/elevation-tiles|tiles\.stadiamaps|opentopomap/;
 const LIB_HOSTS = /cdnjs\.cloudflare\.com|unpkg\.com|cdn\.jsdelivr\.net|fonts\.googleapis\.com|fonts\.gstatic\.com/;
 
