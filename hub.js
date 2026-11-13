@@ -576,6 +576,7 @@ window.FolkHub = (() => {
     const ds = t.dataset, i = t.closest(".hb-card") ? itemOf(t) : null;
     if (ds.view) { const dlg = t.closest("dialog"); dlg?.close?.(); return setView(ds.view); }
     if (ds.filter) { S.filter = ds.filter; S.items = []; S.end = false; box.querySelectorAll("[data-view]").forEach(b => b.classList.toggle("on", b.dataset.view === (S.filter === "following" ? "following" : "feed"))); paintMain(); return; }
+    if (ds.qfolk !== undefined) { S.qFolk = ds.qfolk; box.querySelectorAll("[data-qfolk]").forEach(x => x.classList.toggle("on", x.dataset.qfolk === S.qFolk)); K.track("Hub: discover by folk"); return findFolk(); }
     if (ds.loadmore !== undefined) return loadFeed();
     if (ds.retry !== undefined) { S.err = ""; S.items = []; S.end = false; return paintMain(); }
     if (ds.react && i) return react(t, i);
