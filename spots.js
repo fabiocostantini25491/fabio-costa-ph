@@ -883,6 +883,7 @@ const Spots = (() => {
         <div class="sx-sheet" id="sxSheet"></div>
       </div>
     </div>
+    <section class="fh" id="folkHub" aria-label="The Folk Hub"></section>
     ${aboutHtml()}
     ${bannerHtml}
     ${tailHtml}`;
@@ -1279,6 +1280,7 @@ const Spots = (() => {
 
   function renderApp() {
     setTimeout(sfState, 0);
+    setTimeout(() => loadHub(), 0);
     document.documentElement.classList.remove("sf-on-me");
     const lists = [...new Set(spots.map(s => s.list))].sort((a, b) => a.localeCompare(b));
     if (!activeLists) activeLists = new Set(lists);
@@ -2649,6 +2651,146 @@ const Spots = (() => {
     }
     const order = Object.keys(PF);
     return [...out.values()].sort((a, b2) => a.day - b2.day || order.indexOf(a.type) - order.indexOf(b2.type));
+  }
+
+  /* ======== The Folk Hub: right now on the map (photo forecast), from Fabio, the folk room, the founding folk ======== */
+  let hubV = true, hubData = null, hubAt = 0, hubBusy = false, hubPf = null, hubPfAt = 0;
+  const HUB_IMG = { snow: "photo", cloudsea: "photo", fog: "photo", fiery: "hike", clear_set: "hike", clear_rise: "hike", drama: "road", stars: "night", milky: "night", aurora: "night", moonrise: "night" };
+  const CAT_IMG = { spot: "photo", trekking: "hike", restaurant: "food", hotel: "slow", experience: "road", workshop: "photo" };
+  const wfImg = k => `img/wf/${k || "photo"}.jpg`;
+  const DEFAULT_AREA = { s: 46.25, w: 11.3, n: 46.85, e: 12.35, name: "the Dolomites" };
+  const weekStart = t => { const d = new Date(t); const day = (d.getDay() + 6) % 7; d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - day); return d.getTime(); };
+  async function loadHub(force) {
+    const box = document.getElementById("folkHub"); if (!box || !hubV) return;
+    if (!force && hubData && Date.now() - hubAt < 5 * 60e3) { paintHub(box); return; }
+    if (hubBusy) return; hubBusy = true;
+    try { const { data } = await api("/rest/v1/rpc/folk_hub", { method: "POST", body: {} }); hubData = data || {}; hubAt = Date.now(); }
+    catch (err) { hubBusy = false; if ([400, 404].includes(err.status)) { hubV = false; box.remove(); } return; }
+    hubBusy = false;
+    // photos of the places in the feed (thumbnails; visitors only get the public ones)
+    const paths = [...new Set([...(hubData.items || []).map(i => i.photo || i.extra?.path), ...(hubData.opportunities || []).map(o => o.photo)].filter(Boolean))].slice(0, 60);
+    hubData._urls = paths.length ? await signPhotos(paths, true).catch(() => ({})) : {};
+    paintHub(box);
+    hubForecast(box);
+  }
+  const hubPhoto = (path, fallback) => (path && (hubData._urls?.[path.replace(/\.jpg$/i, "-t.jpg")] || hubData._urls?.[path])) || wfImg(fallback);
+  const hubWho = i => i.name || `A ${i.folk && CLUSTERS[i.folk] ? folkOf(i.folk).toLowerCase() : "folk"}`;
+  function hubFace(i, size = 52) {
+    const c = CLUSTERS[i.folk];
+    return `<span class="fh-av" style="--c:${c?.color || "#ffd27a"};--s:${size}px">${i.avatar ? `<img src="${esc(avatarUrl(i.avatar))}" alt="">` : `<span>${esc(i.name ? initials(i.name) : "?")}</span>`}${i.folk === "fabio" ? "<i>★</i>" : c ? `<i>${c.ico}</i>` : ""}</span>`;
+  }
+  function hubItem(i) {
+    const c = CLUSTERS[i.folk], when = condAgo(i.at), place = i.open ? `<b>${esc(i.spot)}</b>` : `a place in <b>${esc(i.zone)}</b>`;
+    const head = `<div class="fh-who">${hubFace(i)}<span><b>${esc(hubWho(i))}</b>${c ? `<span class="fh-chip" style="--c:${c.color}">${c.ico} ${esc(folkOf(i.folk))}</span>` : i.folk === "fabio" ? `<span class="fh-chip" style="--c:#ffd27a">★ Fabio's pick</span>` : ""}<small>${when}${i.extra?.on_spot ? " · 📍 on the spot" : ""}</small></span></div>`;
+    const lock = !i.open ? (guest && !session ? `<div class="fh-lock"><span>🔒 This place is on the folk's map.</span><button type="button" data-hubjoin>Become folk to see where →</button></div>` : `<p class="fh-what" style="color:var(--fh-mute)">🛡️ A fragile place: its name stays among the folk who know it.</p>`) : "";
+    const open = i.open && i.spot_id ? `<button type="button" data-hubgo="${i.spot_id}">Open the place →</button>` : "";
+    let what = "", extra = "", big = false, acts = open;
+    if (i.kind === "sign") { what = `${i.folk === "fabio" ? "picked" : "signed"} ${place}`; big = i.open && !!i.txt;
+      extra = `${i.extra?.first ? `<span class="fh-tag gold">👑 First to sign it</span>` : ""}${i.txt ? `<p class="fh-q">“${esc(i.txt)}”</p>` : ""}`; }
+    if (i.kind === "cond") { const k = COND[i.extra?.cond] || ["📣", "An update"]; what = `says how it is now at ${place}`; extra = `<span class="fh-cond">${k[0]} ${esc(k[1])}</span>${i.txt ? `<p class="fh-what">“${esc(i.txt)}”</p>` : ""}`;
+      if (i.open) acts = `<button type="button" class="y" data-hubsame="${i.spot_id}:${esc(i.extra?.cond || "")}">✓ Still so</button>${open}`; }
+    if (i.kind === "fact" || i.kind === "check") { const t = TOPIC[i.extra?.topic] || ["🧭", "Before you go"]; what = `${i.kind === "check" ? "checked" : i.extra?.changed ? "updated" : "added"} <b>${t[0]} ${esc(t[1])}</b> at ${place}`;
+      extra = i.txt ? `<p class="fh-what">“${esc(i.txt)}”</p>` : ""; if (i.open && i.extra?.fact_id) acts = `<button type="button" class="y" data-hubcheck="${i.extra.fact_id}">✓ Still correct</button>${open}`; }
+    if (i.kind === "story") { what = `told a story about ${place}`; big = i.open; extra = `${i.extra?.title ? `<p class="fh-title">${esc(i.extra.title)}</p>` : ""}${i.txt ? `<p class="fh-what">${esc(i.txt)}${i.txt.length >= 240 ? "…" : ""}</p>` : ""}`; }
+    if (i.kind === "impression") { const b = BASIS[i.extra?.on_spot ? "onspot" : i.extra?.basis]; what = `gave impressions of ${place}`; extra = `<span class="fh-cond">⛰ ${i.extra?.score ?? ""}/5${b ? ` · ${b[0]} ${b[1]}` : ""}</span>`; }
+    if (i.kind === "photo") { what = `added a photo of ${place}`; big = i.open && !!i.extra?.path; }
+    if (i.kind === "place") { what = `added ${place} to the map`; extra = `<span class="fh-tag">No folk yet: be the first to sign it</span>`; }
+    const img = big ? `<div class="fh-ph"><img src="${esc(hubPhoto(i.kind === "photo" ? i.extra?.path : i.photo, CAT_IMG[i.category]))}" alt="" loading="lazy"><span class="fh-ty">${i.kind === "sign" ? (i.folk === "fabio" ? "★ Fabio's pick" : i.extra?.first ? "✍ Signed · 👑 First folk" : "✍ Signed") : i.kind === "story" ? "💬 Story" : "📷 Photo"}</span><div class="fh-pl"><b>${esc(i.spot)}</b><small>${esc(i.zone)}</small></div></div>` : "";
+    return `<article class="fh-it${big ? " big" : ""}">${img}<div class="fh-in">${head}<p class="fh-what">${what}</p>${extra}${lock}${acts ? `<div class="fh-acts">${acts}</div>` : ""}</div></article>`;
+  }
+  function paintHub(box) {
+    const d = hubData || {}, items = (d.items || []).filter(i => i.kind !== "place" || i.open), st = d.stats || {};
+    const tot = (st.signs || 0) + (st.checks || 0) + (st.stories || 0);
+    const faces = [...new Map(items.filter(i => i.name).map(i => [i.user_id, i])).values()].slice(0, 6);
+    // weeks
+    const weeks = new Map(); items.forEach(i => { const w = weekStart(i.at); (weeks.get(w) || weeks.set(w, []).get(w)).push(i); });
+    const thisW = weekStart(Date.now()), loc = window.I18N?.locale || "en-GB";
+    const wLabel = w => w === thisW ? "This week" : w === thisW - 7 * 864e5 ? "Last week" : `${new Date(w).toLocaleDateString(loc, { day: "numeric", month: "short" })} – ${new Date(w + 6 * 864e5).toLocaleDateString(loc, { day: "numeric", month: "short" })}`;
+    const fab = items.find(i => i.folk === "fabio" && i.open && i.txt);
+    const left = st.members != null ? Math.max(0, 100 - st.members) : null;
+    box.innerHTML = `
+      <div class="fh-hero" data-hubhero style="--img:url(${wfImg("photo")})"><div class="fh-hero-in"><span class="fh-live">THE FOLK HUB</span><h2>The map, <em>signed by the folk.</em></h2><p>What's happening on the map right now, and what the folk are bringing to it.</p></div></div>
+      <div class="fh-wrap">
+        <div data-hubnow hidden><div class="fh-sh"><div><p class="fh-kick">Right now</p><h2>What's happening <em>on the map</em></h2></div><p>Light, snow, stars and sea for the next 7 days, from the weather models. Always check before you go.</p></div>
+        <div class="fh-mosaic" data-hubmosaic></div></div>
+        ${fab ? `<div class="fh-sh"><div><p class="fh-kick">From Fabio</p><h2>Where it <em>all started</em></h2></div><p>The photographer behind the map, and his places.</p></div>
+          <article class="fh-fabio"><div class="fh-fph"><img src="${esc(hubPhoto(fab.photo, CAT_IMG[fab.category]))}" alt="" loading="lazy"></div>
+            <div class="fh-ftx"><p class="fh-kick">★ Fabio's pick · ${esc(fab.spot)}</p><q>${esc(fab.txt)}</q>
+              <div class="fh-who">${hubFace(fab, 58)}<span><b>Fabio</b><small>📷 Photo folk · founding folk #1</small></span></div>
+              <div class="fh-acts"><button type="button" data-hubgo="${fab.spot_id}">Open the place →</button></div></div></article>` : ""}
+        <div class="fh-sh" id="folkRoom"><div><p class="fh-kick">The folk room</p><h2>What the folk <em>are bringing</em></h2></div><p>Signatures, conditions, checks and stories from people who were there. Every line has a name and a date.</p></div>
+        ${tot >= 10 ? `<div class="fh-sum"><div class="fh-faces">${faces.map(f => hubFace(f, 44)).join("")}</div><p><b>This month: ${st.signs} signatures · ${st.checks} checks · ${st.stories} stories</b> from ${st.folk} folk</p></div>` : ""}
+        <div class="fh-tabs">${[["all", "All"], ["sign", "✍ Signatures"], ["cond", "📣 Conditions"], ["fact", "🧭 Before you go"], ["story", "💬 Stories"]].map(([k, l]) => `<button type="button" data-hubtab="${k}" class="${(box._tab || "all") === k ? "on" : ""}">${l}</button>`).join("")}</div>
+        <div class="fh-feed">${items.length ? [...weeks.entries()].sort((a, b) => b[0] - a[0]).map(([w, list]) => {
+            const shown = list.filter(i => !box._tab || box._tab === "all" || i.kind === box._tab || (box._tab === "fact" && i.kind === "check") || (box._tab === "story" && i.kind === "impression"));
+            return shown.length ? `<p class="fh-wk"><b>${esc(wLabel(w))}</b></p>${shown.map(hubItem).join("")}` : ""; }).join("") || `<p class="fh-empty">Nothing of this kind yet: be the first.</p>`
+          : `<div class="fh-room"><h3>The folk room <em>is waiting for its first voices.</em></h3><p>Sign a place you've been, tell the folk how it is now, or check what they wrote: your name will be among the first.</p></div>`}</div>
+        ${(d.opportunities || []).length || (d.to_check || []).length ? `<div class="fh-sh"><div><p class="fh-kick">👑 Your turn</p><h2>Waiting for their <em>First folk</em></h2></div><p>Sign one of these first, and your name stays on it. Forever.</p></div>
+          <div class="fh-crowns">${(d.opportunities || []).map(o => `<button type="button" class="fh-cr" data-hubgo="${o.spot_id}"><img src="${esc(hubPhoto(o.photo, CAT_IMG[o.category]))}" alt="" loading="lazy"><span class="fh-crown">👑</span><span class="fh-ct"><b>${esc(o.spot)}</b><small>${esc((CATS[o.category] || CATS.spot).label)}${o.zone ? ` · ${esc(o.zone)}` : ""}</small><span>Sign it first</span></span></button>`).join("")}</div>
+          ${(d.to_check || []).length ? `<ul class="fh-old">${d.to_check.map(o => `<li>🧭 <b>${esc(o.spot)}</b> · ${esc((TOPIC[o.topic] || ["", "info"])[1])} from ${condAgo(o.at)} <button type="button" data-hubgo="${o.spot_id}">Check it →</button></li>`).join("")}</ul>` : ""}` : ""}
+        ${(d.founders || []).length ? `<div class="fh-sh"><div><p class="fh-kick">The first 100</p><h2>The <em>founding folk</em></h2></div><p>A number in the passport that will never come back.</p></div>
+          <div class="fh-founders">${d.founders.map(f => `<div class="fh-fd">${hubFace({ name: f.name, avatar: f.avatar, folk: null }, 96)}<b>${esc(f.name)}</b><small>#${f.rank}</small></div>`).join("")}
+            ${guest && !session && left > 0 ? `<button type="button" class="fh-fd you" data-hubjoin><span class="fh-av" style="--s:96px"><span>#${(st.members || 0) + 1}</span></span><b>You?</b><small>${left} left</small></button>` : ""}</div>` : ""}
+      </div>
+      ${guest && !session ? `<div class="fh-end"><h2>Your signature <em>could be next.</em></h2><p>Pick your folk, sign a place you love, and you're part of the map.</p><button type="button" class="fh-btn" data-hubjoin>Become folk — free</button></div>` : ""}`;
+    wireHub(box);
+    if (hubPf) paintHubForecast(box);
+  }
+  function wireHub(box) {
+    const goSpot = id => { const s = spotById(+id); if (!s) return toast("This place is in a filter you've hidden: show all categories to see it."); $("#spotsMap")?.scrollIntoView({ behavior: "smooth", block: "center" }); setTimeout(() => focusSpot(s), 450); };
+    box.querySelectorAll("[data-hubgo]").forEach(b => b.addEventListener("click", () => { window.fcTrack?.("Hub: place opened from feed"); goSpot(b.dataset.hubgo); }));
+    box.querySelectorAll("[data-hubjoin]").forEach(b => b.addEventListener("click", () => { window.fcTrack?.("Hub: join"); wantJoin = true; wantLogin = false; render(); setTimeout(() => root()?.scrollIntoView({ behavior: "smooth" }), 60); }));
+    box.querySelectorAll("[data-hubtab]").forEach(b => b.addEventListener("click", () => { box._tab = b.dataset.hubtab; paintHub(box); }));
+    const member = () => { if (guest || !session) { wantJoin = true; render(); setTimeout(() => root()?.scrollIntoView({ behavior: "smooth" }), 60); return false; } return true; };
+    box.querySelectorAll("[data-hubcheck]").forEach(b => b.addEventListener("click", async () => {
+      if (!member()) return; b.disabled = true;
+      try { await api("/rest/v1/fact_checks", { method: "POST", headers: { Prefer: "return=minimal,resolution=ignore-duplicates" }, body: { fact_id: +b.dataset.hubcheck, author_name: displayName() } });
+        b.textContent = "✓ Thanks!"; window.fcTrack?.("Hub: fact checked"); } catch (err) { toast(/row-level|policy/i.test(err.message) ? "You can't confirm your own information." : `Could not save it: ${err.message}`, true); b.disabled = false; }
+    }));
+    box.querySelectorAll("[data-hubsame]").forEach(b => b.addEventListener("click", async () => {
+      if (!member()) return; const [id, kind] = b.dataset.hubsame.split(":"); if (!COND[kind]) return; b.disabled = true;
+      try { await api("/rest/v1/place_conditions", { method: "POST", headers: { Prefer: "return=minimal" }, body: { spot_id: +id, kind, author_name: displayName(), expires_at: new Date(Date.now() + COND[kind][2] * 36e5).toISOString() } });
+        b.textContent = "✓ Thanks!"; window.fcTrack?.("Hub: condition confirmed"); } catch (err) { toast(`Could not save it: ${err.message}`, true); b.disabled = false; }
+    }));
+  }
+  // «Right now on the map»: the photo forecast of the area in view (or the Dolomites), as a hero and a mosaic
+  async function hubForecast(box) {
+    if (typeof Astro === "undefined" || !spots.length) return;
+    if (hubPf && Date.now() - hubPfAt < 30 * 60e3) return paintHubForecast(box);
+    let area = DEFAULT_AREA, b;
+    if (map && map.getZoom?.() >= PF_ZOOM && !(ui === "earth" && onGlobe)) { const mb = map.getBounds(); area = { s: mb.getSouth(), w: mb.getWest(), n: mb.getNorth(), e: mb.getEast(), name: "the area on the map" }; }
+    b = { getSouth: () => area.s, getWest: () => area.w, getNorth: () => area.n, getEast: () => area.e, contains: ([la, lo]) => la >= area.s && la <= area.n && lo >= area.w && lo <= area.e };
+    try { hubPf = { area, alerts: await computePf(b) }; hubPfAt = Date.now(); } catch { return; }
+    paintHubForecast(document.getElementById("folkHub") || box);
+  }
+  function paintHubForecast(box) {
+    const hero = box.querySelector("[data-hubhero]"), mos = box.querySelector("[data-hubmosaic]"); if (!hero || !hubPf) return;
+    const prio = ["snow", "aurora", "milky", "cloudsea", "moonrise", "fiery", "drama", "fog", "stars", "clear_set", "clear_rise"];
+    const al = hubPf.alerts.slice().sort((a, b) => a.day - b.day || prio.indexOf(a.type) - prio.indexOf(b.type));
+    const top = al.filter(a => a.day <= 2).sort((a, b) => prio.indexOf(a.type) - prio.indexOf(b.type) || a.day - b.day)[0] || al[0];
+    const dayW = d => d === 0 ? "today" : d === 1 ? "tomorrow" : "in " + d + " days";
+    const HERO_T = { snow: ["The first snow", "is here."], aurora: ["Aurora", "possible."], milky: ["The Milky Way", "is up."], cloudsea: ["A sea of clouds", "is coming."], moonrise: ["A full moon", "at sunset."],
+      fiery: ["The sky could", "catch fire."], drama: ["Dramatic light", "is coming."], fog: ["Fog in the valleys,", "light above."], stars: ["Dark skies", "for the stars."], clear_set: ["A clear sunset", "is coming."], clear_rise: ["A clear sunrise", "is coming."] };
+    if (top) {
+      const [ic, lb] = PF[top.type], [t1, t2] = HERO_T[top.type];
+      hero.style.setProperty("--img", `url(${wfImg(HUB_IMG[top.type])})`);
+      hero.innerHTML = `<div class="fh-hero-in"><span class="fh-live">LIVE ON THE MAP · ${esc(hubPf.area.name)}</span><h2>${esc(t1)} <em>${esc(t2)}</em></h2>
+        <p>${ic} ${esc(lb)} ${dayW(top.day)} · ${esc(top.when)} · ${top.places.length} place${top.places.length > 1 ? "s" : ""}. ${confOf(top.conf ?? top.day)[2] === "reliable" ? "" : "An estimate: check the forecast before you go."}</p>
+        <div class="fh-ctas"><button type="button" class="fh-btn" data-hubalert="${top.id}">See the places on the map →</button></div></div>`;
+    } else hero.innerHTML = `<div class="fh-hero-in"><span class="fh-live">ON THE MAP</span><h2>Quiet skies <em>this week.</em></h2><p>Nothing special in the forecast for ${esc(hubPf.area.name)}: a good week to plan, or to try another area.</p></div>`;
+    const tiles = al.filter(a => a !== top).slice(0, 3);
+    const now = box.querySelector("[data-hubnow]"); if (now) now.hidden = !tiles.length;
+    if (mos) mos.innerHTML = tiles.length ? tiles.map((a, n) => { const [ic, lb] = PF[a.type]; return `<button type="button" class="fh-tile${n === 0 ? " big" : ""}" data-hubalert="${a.id}" style="--img:url(${wfImg(HUB_IMG[a.type])})">
+        <span class="fh-src">${a.type === "aurora" ? "NOAA SWPC" : ["moonrise"].includes(a.type) ? "astronomy" : "Open-Meteo"} · ${confOf(a.conf ?? a.day)[0]}</span>
+        <span class="fh-tt"><small>${ic} ${esc(dayW(a.day))}</small><b>${esc(lb)}</b><span>${esc(a.when)} · ${a.places.length} place${a.places.length > 1 ? "s" : ""}</span></span></button>`; }).join("") : "";
+    box.querySelectorAll("[data-hubalert]").forEach(b => b.addEventListener("click", () => {
+      const a = hubPf.alerts.find(x => x.id === b.dataset.hubalert); if (!a || !map) return;
+      window.fcTrack?.("Hub: photo alert opened", { type: a.type });
+      const pts = a.places.map(spotById).filter(Boolean); if (!pts.length) return;
+      $("#spotsMap")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      const go = () => { map.fitBounds(L.latLngBounds(pts.map(s => [s.lat, s.lon])).pad(0.3), { maxZoom: 11 }); pfOn = a.id; pfOpen = true; pfKey = ""; setTimeout(drawPf, 900); };
+      if (ui === "earth" && onGlobe && pts[0]) { cinematic(pts[0].lat, pts[0].lon, go); } else setTimeout(go, 300);
+    }));
   }
 
   /* Place pulse: the sea, only for places on the coast (Open-Meteo Marine: waves, swell, water temperature, tides) */
