@@ -2107,6 +2107,36 @@ const Spots = (() => {
   }
   let justSigned = null;
 
+  /* Place pulse: live webcams near the place (Windy, through the «webcams» function on Supabase that keeps the key) */
+  let camsV = true;
+  const camCache = new Map();
+  async function loadCams(popup, s) {
+    const box = popup.getElement()?.querySelector("[data-cams]");
+    if (!box || !camsV || box.dataset.done) return;
+    box.dataset.done = "1";
+    const k = `${s.lat.toFixed(3)},${s.lon.toFixed(3)}`;
+    let cams = camCache.get(k);
+    if (!cams || Date.now() - cams.at > 8 * 60e3) {
+      try {
+        const r = await fetch(`${SPOTS_CONFIG.url.replace(/\/$/, "")}/functions/v1/webcams?lat=${s.lat.toFixed(4)}&lon=${s.lon.toFixed(4)}`, { headers: { apikey: SPOTS_CONFIG.anonKey } });
+        if (r.status === 404) { camsV = false; return; }
+        if (!r.ok) return;
+        cams = { at: Date.now(), list: (await r.json()).cams || [] }; camCache.set(k, cams);
+      } catch { return; }
+    }
+    if (!cams.list.length) return;
+    const ago = t => { const m = Math.round((Date.now() - new Date(t)) / 60e3); return !t || !Number.isFinite(m) ? "" : m < 60 ? `${Math.max(m, 1)} min ago` : m < 48 * 60 ? `${Math.round(m / 60)} h ago` : `${Math.round(m / 1440)} days ago`; };
+    box.innerHTML = `<p class="pc-cams-h">📹 Live webcams nearby</p>
+      <div class="pc-cams-grid">${cams.list.map(c => `<a href="${esc(c.url)}" target="_blank" rel="noopener" class="pc-cam">
+        <img src="${esc(c.image)}" alt="Webcam: ${esc(c.title)}" loading="lazy">
+        <span><b>${esc(c.title)}</b><small>${c.lat != null ? `${kmBetween(s.lat, s.lon, c.lat, c.lon).toFixed(1)} km · ` : ""}${ago(c.updated)}</small></span></a>`).join("")}</div>
+      <p class="pc-cams-by">Webcams provided by <a href="https://www.windy.com/" target="_blank" rel="noopener">Windy.com</a></p>`;
+    box.hidden = false;
+    box.querySelectorAll("img").forEach(i => i.addEventListener("error", () => i.closest(".pc-cam")?.remove()));
+    popup.update();
+    window.fcTrack?.("Spots: webcams shown");
+  }
+
   function drawClusters() {
     setTimeout(openDeepPlace, 0);
     if (!map || !layer) return;
@@ -2428,7 +2458,7 @@ const Spots = (() => {
           <button type="submit" class="pop-btn primary">Publish your story</button>
         </form>` : ""}
         <div class="pop-reviews" data-reviews><p class="pc-empty">No stories yet.</p></div>`;
-    const pulseBody = `<div data-pulse><p class="pc-empty">Quiet for now: the first signatures will make it move.</p></div>`;
+    const pulseBody = `<div class="pc-cams" data-cams hidden></div><div data-pulse><p class="pc-empty">Quiet for now: the first signatures will make it move.</p></div>`;
     const travelBody = `
       ${s.fragile ? `<div class="pc-badge fragile"><p class="pc-bh"><span aria-hidden="true">🛡️</span><b>Fragile place</b></p>
         <ul><li>Stay on the paths and keep groups small.</li><li>No drones, no fires, nothing left behind.</li><li>No geotags on social media: the exact spot stays among the folk.</li></ul></div>` : ""}
@@ -2468,7 +2498,7 @@ const Spots = (() => {
       ${pcSec("folk", "The folk who know this place", "Real people, real experiences.", folkBody, true)}
       ${pcSec("cons", "Folk consensus", "The collective impression of the folk.", consBody)}
       ${pcSec("stories", "Folk stories", "Experiences, tips and real advice.", storiesBody)}
-      ${pcSec("pulse", "Folk pulse", "Is this place alive in the community?", pulseBody)}
+      ${pcSec("pulse", "Place pulse", "Conditions now: live webcams and the folk.", pulseBody)}
       ${pcSec("travel", "Travel better", "Help keep this place special.", travelBody)}
       ${pcSec("details", "Place details", "Where, when, how.", detailsBody)}
       ${schemaV2 ? `<div class="pop-actions pc-acts">
@@ -2512,6 +2542,7 @@ const Spots = (() => {
     el.querySelector("[data-copy]")?.addEventListener("click", ev => copyText(ev.currentTarget, `${s.lat.toFixed(6)}, ${s.lon.toFixed(6)}`));
     el.querySelectorAll("[data-gotravel]").forEach(b => b.addEventListener("click", () => { const d = el.querySelector('[data-sec="travel"]'); if (d) { d.open = true; popup.update(); setTimeout(() => d.scrollIntoView({ behavior: "smooth", block: "nearest" }), 60); } }));
     el.querySelectorAll(".pc-sec").forEach(d => d.addEventListener("toggle", () => popup.update()));
+    el.querySelector('[data-sec="pulse"]')?.addEventListener("toggle", ev => { if (ev.currentTarget.open) loadCams(popup, s); });
     el.querySelector("[data-editspot]")?.addEventListener("click", () => { map.closePopup(); openEditPlace(s); });
     el.querySelector("[data-authorp]")?.addEventListener("click", () => openMemberProfile(s.created_by));
     el.querySelector("[data-delete]")?.addEventListener("click", async ev => {

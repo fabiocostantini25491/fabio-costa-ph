@@ -3783,3 +3783,13 @@ span.pc-useful{cursor:default}
 .sg-after{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;margin:0 0 10px;padding:10px 12px;border-radius:14px;border:1px solid rgba(255,190,122,.45);background:rgba(242,140,30,.1);font-size:13px;color:#e6ecf3}
 .sg-after b{color:#ffd9a8}
 .sg-after span{flex:1 1 140px}
+/* Place pulse: live webcams */
+.pc-cams{margin:0 0 12px}
+.pc-cams-h{margin:0 0 8px;font:700 12px var(--sans);letter-spacing:.06em;color:#ffd9a8}
+.pc-cams-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.pc-cam{display:block;border-radius:12px;overflow:hidden;border:1px solid rgba(156,200,255,.16);background:#0b1626;color:#e6ecf3;text-decoration:none}
+.pc-cam img{display:block;width:100%;aspect-ratio:16/9;object-fit:cover}
+.pc-cam span{display:block;padding:6px 8px}
+.pc-cam b{display:block;font:600 12px/1.25 var(--sans);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pc-cam small{display:block;font-size:11px;color:#8a99ab}
+.pc-cams-by{margin:6px 0 0;font-size:11px;color:#8a99ab}.pc-cams-by a{color:#c9d6e6}
