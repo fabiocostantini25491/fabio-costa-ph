@@ -2665,7 +2665,7 @@ const Spots = (() => {
     if (!force && hubData && Date.now() - hubAt < 5 * 60e3) { paintHub(box); return; }
     if (hubBusy) return; hubBusy = true;
     try { const { data } = await api("/rest/v1/rpc/folk_hub", { method: "POST", body: {} }); hubData = data || {}; hubAt = Date.now(); }
-    catch (err) { hubBusy = false; if ([400, 404].includes(err.status)) { hubV = false; box.remove(); } return; }
+    catch (err) { hubData = { items: [], stats: {}, founders: [], opportunities: [], to_check: [] }; hubAt = Date.now(); }   // the folk room needs supabase-folk-hub.sql: the rest of the Hub works anyway
     hubBusy = false;
     // photos of the places in the feed (thumbnails; visitors only get the public ones)
     const paths = [...new Set([...(hubData.items || []).map(i => i.photo || i.extra?.path), ...(hubData.opportunities || []).map(o => o.photo)].filter(Boolean))].slice(0, 60);
