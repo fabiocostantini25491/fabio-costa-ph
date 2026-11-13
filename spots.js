@@ -2234,6 +2234,258 @@ const Spots = (() => {
     popup.update();
   }
 
+  /* «Before you go» and «Go gently»: what to know about a place, written and checked by the folk.
+     Each topic keeps its versions; ✓ Still correct confirms the latest one, ✎ It changed writes a new one.
+     Status: Checked (confirmed by another folk, recently) · Unverified (no one else yet) · Needs update (too old) · Disputed (a change no one confirmed yet). */
+  const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  // [icon, label, section, type, days it stays fresh, example]
+  const TOPIC = {
+    fee:          ["💶", "Fee", "know", "fee", 120],
+    limited_entry:["🎟️", "Limited entry / booking", "know", "booking", 120],
+    booking:      ["📅", "Booking", "know", "booking", 120],
+    tickets:      ["🎟️", "Tickets", "know", "fee", 120],
+    guide:        ["👣", "Guide only", "know", "text", 180, "Only with a licensed guide, from June to September."],
+    rules:        ["🐑", "Landowner's rules", "know", "text", 365, "No dogs. Stay on the marked path, close the gates."],
+    season:       ["🕐", "Season", "know", "months", 180, "Closed in May for the lambing season."],
+    hours:        ["🕐", "Opening hours", "know", "text", 90, "9–17, closed on Mondays."],
+    parking:      ["🅿️", "Parking", "know", "text", 120, "Free car park at the trailhead, full by 10:00 in summer."],
+    getting_there:["🚙", "Getting there", "know", "access", 21],
+    time:         ["⏱️", "Time & difficulty", "know", "text", 365, "2 h return, steep last part, no shade."],
+    signal:       ["📶", "Phone signal", "know", "text", 365, "No signal after the second bridge."],
+    drones:       ["🛸", "Drones", "know", "text", 180, "Drones forbidden: nature reserve."],
+    tripod:       ["📷", "Tripod & permits", "know", "text", 180, "Tripods fine outside; a permit is needed inside."],
+    facilities:   ["🚻", "Facilities", "know", "text", 180, "No toilets or water: bring everything."],
+    swimming:     ["🏊", "Swimming", "know", "text", 60, "Strong currents with north wind; no lifeguard."],
+    dress:        ["👔", "Dress code", "know", "text", 365, "Shoulders and knees covered."],
+    payment:      ["💳", "Payment", "know", "text", 180, "Cash only."],
+    closing:      ["🚪", "Closing days", "know", "text", 120, "Closed on Tuesdays and in January."],
+    specialities: ["🍽️", "What to order", "know", "text", 365, "The lamb soup, and ask for the aged cheese."],
+    checkin:      ["🔑", "Check-in", "know", "text", 180, "Key box, the code arrives the day before."],
+    access_road:  ["🛣️", "The road there", "know", "text", 60, "Last 3 km on gravel, fine with a normal car."],
+    group:        ["👥", "Group size", "know", "text", 180, "Max 8 people."],
+    meeting:      ["📍", "Meeting point", "know", "text", 180, "In front of the harbour café, 15 min early."],
+    bring:        ["🎒", "What to bring", "know", "text", 365, "Waterproof shoes and a head torch."],
+    other:        ["💡", "Other tip", "know", "text", 120, "Anything the next folk should know."],
+    another_season:["🍂", "Another season", "gently", "months", 365, "In October it's empty and the light is golden."],
+    quiet_hours:  ["🌅", "Quiet hours", "gently", "text", 180, "Before 9 you're alone; groups arrive around 10–14."],
+    alternative:  ["🔁", "A quieter alternative nearby", "gently", "alt", 365],
+    respect:      ["🌿", "Respect", "gently", "text", 365, "Stay on the path, take your rubbish home."],
+    support_local:["🤝", "Support local", "gently", "text", 180, "The fee goes to the farmers; coffee at the farm café."],
+    dont_geotag:  ["🛡️", "Don't geotag", "gently", "text", 365, "Fragile spot: please don't tag the exact place."],
+    private:      ["🏡", "Private property", "gently", "text", 365, "The viewpoint is on a family's land: ask, and be quiet."],
+    sand:         ["🐚", "Leave sand & shells", "gently", "text", 365, "Taking sand or pebbles is forbidden and fined."],
+    anchors:      ["⚓", "No anchors on posidonia", "gently", "text", 365, "Anchor on sand only; use the buoys."],
+    residents:    ["🏘️", "Respect the residents", "gently", "text", 365, "People live here: keep voices low after 22."],
+    stay_longer:  ["🛏️", "Stay, don't rush", "gently", "text", 365, "Sleep in the village: day-trippers crowd it at noon."],
+    saving:       ["💧", "Save water and energy", "gently", "text", 365, "Water comes from a cistern: short showers."],
+    small_groups: ["👪", "Small groups", "gently", "text", 365, "Choose groups under 10: the path is narrow."],
+    local_operator:["🤝", "Local operators", "gently", "text", 365, "Book with the family-run boat from the village."],
+    wildlife:     ["🐦", "Wildlife", "gently", "text", 365, "Puffins nest here: keep 5 m from the burrows."]
+  };
+  const TOPICS_FOR = {
+    trail: ["fee", "booking", "guide", "rules", "season", "parking", "getting_there", "time", "signal", "other", "another_season", "quiet_hours", "alternative", "respect", "support_local", "dont_geotag"],
+    photo: ["fee", "parking", "getting_there", "drones", "tripod", "season", "other", "another_season", "quiet_hours", "alternative", "dont_geotag", "private", "respect"],
+    sea: ["limited_entry", "getting_there", "facilities", "swimming", "season", "parking", "other", "another_season", "quiet_hours", "alternative", "sand", "anchors", "respect"],
+    water: ["fee", "parking", "getting_there", "swimming", "season", "time", "other", "another_season", "quiet_hours", "alternative", "respect"],
+    city: ["tickets", "hours", "dress", "getting_there", "parking", "other", "another_season", "quiet_hours", "residents", "stay_longer"],
+    food: ["booking", "payment", "closing", "specialities", "other", "support_local", "quiet_hours"],
+    stay: ["booking", "checkin", "access_road", "payment", "other", "support_local", "saving", "stay_longer"],
+    experience: ["booking", "group", "meeting", "bring", "other", "small_groups", "local_operator", "wildlife"]
+  };
+  function factKind(s) {
+    const t = `${s.name || ""} ${s.note || ""} ${s.list || ""}`.toLowerCase();
+    if (s.category === "restaurant") return "food";
+    if (s.category === "hotel") return "stay";
+    if (s.category === "experience" || s.category === "workshop") return "experience";
+    if (/cascat|waterfall|wasserfall|cascade|\bfoss|\blago\b|\blake\b|\bsee\b|\blac\b|laghetto|gola|forra|gorge|canyon/.test(t)) return "water";
+    if (/spiaggi|beach|plage|playa|strand|\bcala\b|baia|\bbay\b|scogl|caletta|coast|costa|mare\b|sea\b/.test(t)) return "sea";
+    if (s.category === "trekking" || /rifugio|sentiero|trail|hike|trek|cima|\bpiz\b|peak|forcella|malga|vetta|cliff|nípa|nipa/.test(t)) return "trail";
+    if (s.category === "spot" && spotSub(s) === "poi") return "city";
+    return "photo";
+  }
+  const FEE_PER = { person: "per person", adult: "per adult", car: "per car", group: "per group" };
+  const FEE_HOW = { online: "🌐 Online, before", gate: "🎫 At the gate", cash: "💵 Cash only", app: "📱 App" };
+  const VEH = { car: "🚗 Any car", awd: "🚙 4x4", high: "🛻 High 4x4", bus: "🚌 Bus or tour only", foot: "🥾 On foot only" };
+  const ROAD = { paved: "Paved", gravel: "Gravel", ftrack: "Mountain track / F-road" };
+  const RIVERS = { none: "No river crossings", few: "1–2 river crossings", many: "Several river crossings" };
+  const CURRENCIES_B = ["EUR", "DKK", "ISK", "NOK", "SEK", "CHF", "GBP", "USD"];
+  let factV = true;
+  const monthsBar = (on = []) => `<div class="byg-months">${MONTHS.map((m, i) => `<span class="${on.includes(i + 1) ? "on" : ""}">${m[0]}</span>`).join("")}</div>`;
+  const monthsText = on => { const a = [...on].sort((x, y) => x - y); if (!a.length) return ""; const runs = []; let st = a[0], pr = a[0];
+    a.slice(1).concat(99).forEach(m => { if (m !== pr + 1) { runs.push(st === pr ? MONTHS[st - 1] : `${MONTHS[st - 1]}–${MONTHS[pr - 1]}`); st = m; } pr = m; }); return runs.join(", "); };
+  function factValue(f) {
+    const [, , , type] = TOPIC[f.topic] || [];
+    const d = f.data || {}, note = f.note ? `<p class="byg-note">${esc(f.note)}</p>` : "";
+    if (type === "fee") return `<p class="byg-val">${d.free ? "Free" : `${esc(d.amount ?? "")} ${esc(d.currency || "")} ${esc(FEE_PER[d.per] || "")}`}${(d.how || []).length ? ` · ${(d.how || []).map(k => esc(FEE_HOW[k] || k)).join(" or ")}` : ""}${d.link ? ` · <a href="${esc(d.link)}" target="_blank" rel="noopener">Pay ↗</a>` : ""}</p>${note}`;
+    if (type === "booking") return `<p class="byg-val">${d.required ? "Booking required" : "No booking needed"}${d.advance ? ` · ${esc(d.advance)}` : ""}${d.link ? ` · <a href="${esc(d.link)}" target="_blank" rel="noopener">Book ↗</a>` : ""}</p>${note}`;
+    if (type === "months") return `${monthsBar(d.months || [])}${(d.months || []).length ? `<p class="byg-val">${f.topic === "another_season" ? "Folk suggest" : "Open"}: ${esc(monthsText(d.months))}</p>` : ""}${note}`;
+    if (type === "access") return `<p class="byg-val">${[VEH[d.vehicle], ROAD[d.road], RIVERS[d.rivers], d.fuel ? `⛽ ${esc(d.fuel)}` : ""].filter(Boolean).map(x => x.startsWith("⛽") ? x : esc(x)).join(" · ")}</p>${note}`;
+    if (type === "alt") { const a = spotById(+d.spot); return `${a ? `<button type="button" class="byg-alt" data-gospot="${a.id}"><b>${esc(a.name)}</b><small>${kmBetween(a.lat, a.lon, f._s.lat, f._s.lon).toFixed(1)} km away</small><em>→</em></button>` : d.name ? `<p class="byg-val">${esc(d.name)}</p>` : ""}${note}`; }
+    return note || "";
+  }
+  // the state of a topic from its versions and their confirmations
+  function factState(versions, checks) {
+    const others = f => checks.filter(k => k.fact_id === f.id && k.user_id !== f.user_id);
+    const [v0, v1] = versions, fresh = (TOPIC[v0.topic]?.[4] || 120) * 864e5, now = Date.now();
+    let cur = v0, prev = null;
+    if (v1) {   // a change: who confirmed what after it was written?
+      const after = others(v1).filter(k => new Date(k.created_at) > new Date(v0.created_at));
+      if (!others(v0).length && after.length) { cur = v1; prev = v0; } else if (!others(v0).length) { return { cur: v0, prev: v1, state: "disputed", yes: [] }; }
+    }
+    const yes = others(cur).sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
+    if (yes.length) return { cur, prev, yes, state: now - new Date(yes[0].created_at) <= fresh ? "checked" : "update" };
+    return { cur, prev, yes, state: now - new Date(cur.created_at) <= fresh ? "unverified" : "update" };
+  }
+  const STATE_LABEL = { checked: "✓ Checked", unverified: "Unverified", update: "Needs update", disputed: "Disputed" };
+  const ageText = t => condAgo(t);
+  async function loadFacts(popup, s) {
+    const el = popup.getElement(); const box = el?.querySelector("[data-byg]"); if (!box || !factV) return;
+    let facts = [], checks = [];
+    try {
+      if (guest) { const p = await pubPlace(s.id); facts = p?.facts || []; checks = p?.fact_checks || []; }
+      else {
+        facts = (await api(`/rest/v1/place_facts?select=*&spot_id=eq.${s.id}&order=created_at.desc&limit=300`)).data || [];
+        if (facts.length) checks = (await api(`/rest/v1/fact_checks?select=fact_id,user_id,author_name,on_spot,created_at&fact_id=in.(${facts.map(f => f.id).join(",")})`)).data || [];
+      }
+    } catch (err) { if ([400, 404].includes(err.status)) { factV = false; el.querySelector('[data-sec="before"]')?.remove(); } return; }
+    facts.forEach(f => { f._s = s; });
+    const kind = factKind(s), allowed = TOPICS_FOR[kind];
+    const byTopic = new Map();
+    facts.filter(f => TOPIC[f.topic]).forEach(f => (byTopic.get(f.topic) || byTopic.set(f.topic, []).get(f.topic)).push(f));
+    const items = [...byTopic.entries()].map(([t, vs]) => ({ topic: t, ...factState(vs, checks) }));
+    const uid = myUid();
+    const rank = it => (allowed.indexOf(it.topic) + 1 || 99);
+    const card = it => {
+      const [ic, lb, sec] = TOPIC[it.topic], f = it.cur, last = it.yes?.[0];
+      const who = last ? `Checked by ${new Set(it.yes.map(k => k.user_id)).size} folk · last ${esc(last.author_name || "Folk")}, ${ageText(last.created_at)}${last.on_spot ? " · 📍 on the spot" : ""}`
+        : `${it.state === "disputed" ? "Changed by" : "Added by"} ${esc(f.author_name || "Folk")}${f.folk && CLUSTERS[f.folk] ? ` · ${esc(folkOf(f.folk))}` : ""} · ${ageText(f.created_at)}${f.on_spot ? " · 📍 on the spot" : ""}${it.state === "unverified" ? " · not yet checked by other folk" : ""}`;
+      const mine = f.user_id === uid;
+      return `<div class="byg-item ${sec === "gently" ? "gg" : ""}" data-topic="${it.topic}">
+        <div class="byg-h"><b>${ic} ${esc(lb)}</b><span class="byg-st ${it.state}">${STATE_LABEL[it.state]}</span></div>
+        ${factValue(f)}
+        <p class="byg-by">${who}</p>
+        ${it.state === "update" ? `<p class="byg-prompt">Been here recently? Check it in one tap.</p>` : ""}
+        ${it.prev ? `<div class="byg-prev"><small>${it.state === "disputed" ? "Before:" : "Suggested change, not confirmed:"}</small>${factValue(it.prev)}<p class="byg-by">${esc(it.prev.author_name || "Folk")} · ${ageText(it.prev.created_at)}</p></div>` : ""}
+        <div class="byg-acts">
+          ${mine ? `<button type="button" class="byg-del" data-factdel="${f.id}">Remove mine</button>` : `<button type="button" class="byg-yes" data-factyes="${f.id}">${it.state === "disputed" ? "✓ The newer one is right" : "✓ Still correct"}</button>`}
+          ${it.state === "disputed" && it.prev && it.prev.user_id !== uid ? `<button type="button" class="byg-yes" data-factyes="${it.prev.id}">↩ The older one is right</button>` : ""}
+          <button type="button" class="byg-chg" data-factchg="${it.topic}">✎ It changed</button>
+          ${admin && !mine ? `<button type="button" class="byg-del" data-factdel="${f.id}" title="Admin: remove">✕</button>` : ""}
+        </div></div>`;
+    };
+    const know = items.filter(i => TOPIC[i.topic][2] === "know").sort((a, b) => rank(a) - rank(b));
+    const gently = items.filter(i => TOPIC[i.topic][2] === "gently").sort((a, b) => rank(a) - rank(b));
+    const missing = allowed.filter(t => !byTopic.has(t));
+    box.innerHTML = `
+      ${know.length ? `<p class="byg-sub">🧭 Good to know</p>${know.map(card).join("")}` : ""}
+      ${gently.length ? `<p class="byg-sub g">🌿 Go gently <small>help keep this place special</small></p>${gently.map(card).join("")}` : ""}
+      ${!items.length ? `<p class="pc-empty">Nothing here yet. Fees, booking, the way there, the quiet season: what should the next folk know?</p>` : ""}
+      ${missing.length ? `<button type="button" class="byg-add" data-factadd>＋ Add something to know</button>` : ""}
+      <div class="byg-form" data-factform hidden></div>
+      <p class="byg-disc">Information shared by the folk from their own experience. Always check the official source before you go.</p>`;
+    // chips under the name
+    const top = el.querySelector("[data-facttop]");
+    if (top) {
+      const cur = t => items.find(i => i.topic === t && i.state !== "disputed")?.cur;
+      const chips = [];
+      const fee = cur("fee") || cur("tickets"); if (fee && !fee.data?.free) chips.push(`<span class="byg-chip fee">💶 Paid access${fee.data?.how?.includes("online") ? " · pay online" : ""}</span>`);
+      const bk = cur("limited_entry") || cur("booking"); if (bk?.data?.required) chips.push(`<span class="byg-chip fee">📅 Booking required</span>`);
+      const gt = cur("getting_there"); if (gt && ["awd", "high", "bus", "foot"].includes(gt.data?.vehicle)) chips.push(`<span class="byg-chip warn">${esc(VEH[gt.data.vehicle])}</span>`);
+      const as = cur("another_season"); if (as?.data?.months?.length) chips.push(`<span class="byg-chip gg">🌿 Quieter in ${esc(monthsText(as.data.months))}</span>`);
+      top.innerHTML = chips.join(""); top.hidden = !chips.length;
+      top.querySelectorAll(".byg-chip").forEach(c => c.addEventListener("click", () => { const d = el.querySelector('[data-sec="before"]'); if (d) { d.open = true; popup.update(); } }));
+    }
+    setCnt(el, "before", items.length ? String(items.length) : "");
+    // actions
+    box.querySelectorAll("[data-gospot]").forEach(b => b.addEventListener("click", () => { const a = spotById(+b.dataset.gospot); if (a) { map.closePopup(); focusSpot(a); } }));
+    box.querySelectorAll("[data-factyes]").forEach(b => b.addEventListener("click", async () => {
+      b.disabled = true;
+      const onSpot = await nearHere(s);
+      try { await api("/rest/v1/fact_checks", { method: "POST", headers: { Prefer: "return=minimal,resolution=ignore-duplicates" }, body: { fact_id: +b.dataset.factyes, author_name: displayName(), on_spot: onSpot } });
+        toast(`✓ Thanks! You're the freshest eyes on this place${onSpot ? " — 📍 on the spot" : ""}.`); window.fcTrack?.("Spots: fact checked"); loadFacts(popup, s);
+      } catch (err) { toast(`Could not save it: ${err.message}`, true); b.disabled = false; }
+    }));
+    box.querySelectorAll("[data-factdel]").forEach(b => b.addEventListener("click", async () => {
+      if (b.dataset.confirm !== "1") { b.dataset.confirm = "1"; b.textContent = "Remove?"; return; }
+      try { await api(`/rest/v1/place_facts?id=eq.${b.dataset.factdel}`, { method: "DELETE" }); loadFacts(popup, s); } catch (err) { toast(`Could not remove it: ${err.message}`, true); }
+    }));
+    const formBox = box.querySelector("[data-factform]");
+    const openForm = (topic, base) => { formBox.innerHTML = factFormHtml(topic, base, s); formBox.hidden = false; wireFactForm(formBox, topic, base, popup, s); popup.update(); formBox.scrollIntoView({ behavior: "smooth", block: "nearest" }); };
+    box.querySelectorAll("[data-factchg]").forEach(b => b.addEventListener("click", () => { const it = items.find(i => i.topic === b.dataset.factchg); openForm(b.dataset.factchg, it?.cur); }));
+    box.querySelector("[data-factadd]")?.addEventListener("click", () => {
+      const pick = sec => missing.filter(t => TOPIC[t][2] === sec).map(t => `<button type="button" data-picktopic="${t}">${TOPIC[t][0]} ${esc(TOPIC[t][1])}</button>`).join("");
+      formBox.innerHTML = `<p class="byg-q">What would you like to add?</p>
+        ${pick("know") ? `<p class="byg-sub">🧭 Good to know</p><div class="byg-pick">${pick("know")}</div>` : ""}
+        ${pick("gently") ? `<p class="byg-sub g">🌿 Go gently</p><div class="byg-pick g">${pick("gently")}</div>` : ""}`;
+      formBox.hidden = false;
+      formBox.querySelectorAll("[data-picktopic]").forEach(x => x.addEventListener("click", () => openForm(x.dataset.picktopic, null)));
+      popup.update();
+    });
+    popup.update();
+  }
+  function nearHere(s) {
+    if (!navigator.geolocation) return Promise.resolve(false);
+    return new Promise(res => navigator.geolocation.getCurrentPosition(p => res(kmBetween(p.coords.latitude, p.coords.longitude, s.lat, s.lon) <= 0.5), () => res(false), { timeout: 5000, maximumAge: 300000 }));
+  }
+  function factFormHtml(topic, base, s) {
+    const [ic, lb, sec, type, , ex] = TOPIC[topic], d = base?.data || {};
+    const chips = (name, obj, sel, multi) => `<div class="byg-pick${multi ? " multi" : ""}" data-field="${name}">${Object.entries(obj).map(([k, l]) => `<button type="button" data-v="${k}" class="${(multi ? (sel || []).includes(k) : sel === k) ? "on" : ""}">${esc(l)}</button>`).join("")}</div>`;
+    let fields = "";
+    if (type === "fee") fields = `<label>How much</label><div class="byg-row"><input name="amount" type="number" min="0" step="any" inputmode="decimal" value="${esc(d.amount ?? "")}" placeholder="200">
+        <select name="currency">${CURRENCIES_B.map(c => `<option${(d.currency || "EUR") === c ? " selected" : ""}>${c}</option>`).join("")}</select>
+        <select name="per">${Object.entries(FEE_PER).map(([k, l]) => `<option value="${k}"${(d.per || "person") === k ? " selected" : ""}>${l}</option>`).join("")}</select></div>
+      <label class="byg-chk"><input type="checkbox" name="free"${d.free ? " checked" : ""}> It's free</label>
+      <label>How do you pay?</label>${chips("how", FEE_HOW, d.how, true)}
+      <label>Link to pay (optional)</label><input name="link" type="url" placeholder="https://…" value="${esc(d.link || "")}">`;
+    if (type === "booking") fields = `<label>Booking</label>${chips("required", { yes: "Required", no: "Not needed" }, d.required === false ? "no" : d.required ? "yes" : "")}
+      <label>How far ahead (optional)</label><input name="advance" maxlength="60" placeholder="e.g. 2 days ahead in summer" value="${esc(d.advance || "")}">
+      <label>Link (optional)</label><input name="link" type="url" placeholder="https://…" value="${esc(d.link || "")}">`;
+    if (type === "months") fields = `<label>${topic === "another_season" ? "Better months to come" : "Open or accessible in"}</label>
+      <div class="byg-pick multi months" data-field="months">${MONTHS.map((m, i) => `<button type="button" data-v="${i + 1}" class="${(d.months || []).includes(i + 1) ? "on" : ""}">${m}</button>`).join("")}</div>`;
+    if (type === "access") fields = `<label>Vehicle</label>${chips("vehicle", VEH, d.vehicle)}<label>Road</label>${chips("road", ROAD, d.road)}
+      <label>River crossings</label>${chips("rivers", RIVERS, d.rivers)}<label>Last fuel or signal (optional)</label><input name="fuel" maxlength="60" placeholder="e.g. last fuel in Hella, 70 km before" value="${esc(d.fuel || "")}">`;
+    if (type === "alt") { const near = spots.filter(x => x.id !== s.id && kmBetween(x.lat, x.lon, s.lat, s.lon) <= 40).sort((a, b) => kmBetween(a.lat, a.lon, s.lat, s.lon) - kmBetween(b.lat, b.lon, s.lat, s.lon)).slice(0, 40);
+      fields = `<label>Which place? (within 40 km)</label><select name="spot"><option value="">Choose a place…</option>${near.map(x => `<option value="${x.id}"${+d.spot === x.id ? " selected" : ""}>${esc(x.name)} · ${kmBetween(x.lat, x.lon, s.lat, s.lon).toFixed(1)} km</option>`).join("")}</select>`; }
+    return `<p class="byg-q">${ic} ${esc(lb)}${base ? " · what changed?" : ""}</p>
+      ${base ? `<p class="byg-old">${esc(stripTags(factValue(base)))}</p><p class="byg-hint">Your version goes up as <b>Unverified</b> until another folk checks it.</p>` : ""}
+      <form data-fform class="${sec === "gently" ? "g" : ""}">${fields}
+        <label>${type === "text" ? "What should the next folk know?" : "Anything else? (optional)"}</label>
+        <textarea name="note" maxlength="300" rows="2" placeholder="${esc(ex || "")}">${esc(base?.note || "")}</textarea>
+        <button type="submit" class="pop-btn primary">${base ? "Update" : "Add"}</button>
+        <p class="byg-hint">Shown with your name, your folk and today's date. If your phone is here, it says 📍 on the spot.</p>
+      </form>`;
+  }
+  const stripTags = h => { const x = document.createElement("div"); x.innerHTML = h; return [...x.children].map(c => c.textContent.trim()).filter(Boolean).join(" · ") || x.textContent.trim(); };
+  function wireFactForm(box, topic, base, popup, s) {
+    const form = box.querySelector("[data-fform]"); if (!form) return;
+    form.querySelectorAll(".byg-pick").forEach(g => g.querySelectorAll("[data-v]").forEach(b => b.addEventListener("click", () => {
+      if (g.classList.contains("multi")) b.classList.toggle("on"); else g.querySelectorAll("[data-v]").forEach(x => x.classList.toggle("on", x === b));
+    })));
+    form.addEventListener("submit", async ev => {
+      ev.preventDefault();
+      const [, , , type] = TOPIC[topic], v = n => form.querySelector(`[name=${n}]`)?.value?.trim() || "";
+      const sel = n => [...form.querySelectorAll(`[data-field="${n}"] .on`)].map(b => b.dataset.v);
+      let data = {};
+      if (type === "fee") { data = { amount: v("amount") ? +v("amount") : null, currency: v("currency"), per: v("per"), how: sel("how"), link: /^https?:\/\//.test(v("link")) ? v("link") : null, free: form.querySelector("[name=free]")?.checked || false };
+        if (!data.free && !data.amount) return toast("Write how much it costs, or tick «It's free».", true); }
+      if (type === "booking") { const r = sel("required")[0]; if (!r) return toast("Is booking required or not?", true); data = { required: r === "yes", advance: v("advance") || null, link: /^https?:\/\//.test(v("link")) ? v("link") : null }; }
+      if (type === "months") { data = { months: sel("months").map(Number) }; if (!data.months.length) return toast("Tap at least one month.", true); }
+      if (type === "access") { data = { vehicle: sel("vehicle")[0] || null, road: sel("road")[0] || null, rivers: sel("rivers")[0] || null, fuel: v("fuel") || null }; if (!data.vehicle && !data.road) return toast("Tell the folk at least the vehicle or the road.", true); }
+      if (type === "alt") { data = { spot: +v("spot") || null }; if (!data.spot) return toast("Choose the quieter place nearby.", true); }
+      const note = v("note");
+      if (type === "text" && !note) return toast("Write a line for the next folk.", true);
+      const btn = form.querySelector("[type=submit]"); btn.disabled = true;
+      const onSpot = await nearHere(s);
+      try {
+        await api("/rest/v1/place_facts", { method: "POST", headers: { Prefer: "return=minimal" },
+          body: { spot_id: s.id, topic, data, note: note || null, replaces: base?.id || null, author_name: displayName(), folk: myStyles[0] || null, on_spot: onSpot } });
+        toast(base ? "Updated: the folk will check it. Thanks!" : `Added${onSpot ? " — 📍 on the spot" : ""}. Thanks, the next folk will travel better!`);
+        window.fcTrack?.(base ? "Spots: fact changed" : "Spots: fact added", { topic });
+        loadFacts(popup, s);
+      } catch (err) { toast(/row-level|policy|42501/i.test(err.message) ? "You've added a lot today: thank you, try again tomorrow." : `Could not save it: ${err.message}`, true); btn.disabled = false; }
+    });
+  }
+
   /* Place pulse: the sea, only for places on the coast (Open-Meteo Marine: waves, swell, water temperature, tides) */
   const seaCache = new Map();
   const SEA_STATE = h => h < 0.1 ? ["Calm", "glassy water, perfect reflections"] : h < 0.5 ? ["Calm", "reflections and silky long exposures"]
@@ -2568,7 +2820,7 @@ const Spots = (() => {
       .then(r => r.data || null).catch(err => { if ([400, 404].includes(err.status)) cardV = false; pubCache.delete(id); return null; }));
     return pubCache.get(id);
   }
-  const GUEST_ACTS = "[data-condreport],[data-condsame],[data-meethere],[data-flagspot],[data-addphoto],[data-review],[data-flagphoto],[data-flagrev],[data-flagsign],[data-sign],[data-signas],[data-unsign],[data-useful],[data-ruseful],[data-pickstyles],[data-member],[data-authorp],[data-report],[data-curate],[data-alerts],[data-delrev],[data-editspot],[data-delete],[data-tkedit],[data-wsedit]";
+  const GUEST_ACTS = "[data-factadd],[data-factyes],[data-factchg],[data-factdel],[data-condreport],[data-condsame],[data-meethere],[data-flagspot],[data-addphoto],[data-review],[data-flagphoto],[data-flagrev],[data-flagsign],[data-sign],[data-signas],[data-unsign],[data-useful],[data-ruseful],[data-pickstyles],[data-member],[data-authorp],[data-report],[data-curate],[data-alerts],[data-delrev],[data-editspot],[data-delete],[data-tkedit],[data-wsedit]";
   async function openPublicCard(popup, s, m) {
     const d = await pubPlace(s.id);
     if (!d?.spot || !guest || !popup.isOpen()) return;
@@ -2636,6 +2888,7 @@ const Spots = (() => {
   /* ---------- la scheda del luogo, a tendine: prima le persone (chi l'ha firmato, chi l'ha raccontato), poi il resto ----------
      The folk who know this place · Folk consensus · Folk stories · Folk pulse · Travel better · Place details */
   const PC_ICON = {
+    before: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="m15.5 8.5-2 5-5 2 2-5z"/></svg>',
     folk: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 4c-6 0-11 4.5-12.5 11L6 20M8.5 13.5l4 1M10 10l5 .5M12.5 7l4 .2"/><path d="M6 20c3-.5 6-2 8-4.5C17.5 11 19 7 20 4"/></svg>',
     cons: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 20c-2-1.5-3.5-4-3.5-7.5M17 20c2-1.5 3.5-4 3.5-7.5M4.5 9c0 1.5 1 2.5 2 3M19.5 9c0 1.5-1 2.5-2 3M6 5.5c0 1.6.8 2.6 2 3.2M18 5.5c0 1.6-.8 2.6-2 3.2"/><path d="m12 7 1.4 2.8 3.1.5-2.2 2.2.5 3.1-2.8-1.5-2.8 1.5.5-3.1-2.2-2.2 3.1-.5z"/></svg>',
     stories: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 10.5h.01M12 10.5h.01M16 10.5h.01"/></svg>',
@@ -2719,10 +2972,12 @@ const Spots = (() => {
         ${s.support_local || s.fragile ? `<p class="pc-flags">${s.fragile ? `<button type="button" class="pc-flag fragile" data-gotravel>🛡️ Fragile place</button>` : ""}${s.support_local ? `<button type="button" class="pc-flag local" data-gotravel>🌱 Support local</button>` : ""}</p>` : ""}
         ${schemaV2 ? `<div class="pop-photos pc-photos" data-photos></div>` : ""}
         <p class="pc-condtop" data-condtop hidden></p>
+        <p class="byg-top" data-facttop hidden></p>
         <div class="pop-alerts" data-alerts>${alertsHtml(s)}</div>
         ${admin && !guest && pubV ? `<div data-pubpick>${pubPickHtml(s)}</div>` : ""}
       </header>
       ${pcSec("folk", "The folk who know this place", "Real people, real experiences.", folkBody, true)}
+      ${pcSec("before", "Before you go", "What to know, checked by the folk.", `<div class="pc-byg" data-byg><p class="pc-empty">Loading…</p></div>`)}
       ${pcSec("cons", "Folk consensus", "The collective impression of the folk.", consBody)}
       ${pcSec("stories", "Folk stories", "Experiences, tips and real advice.", storiesBody)}
       ${pcSec("pulse", "Place pulse", "Conditions now: weather, live webcams and the folk.", pulseBody)}
@@ -4602,6 +4857,7 @@ const Spots = (() => {
     const el = popup.getElement();
     if (!el) return;
     loadConditions(popup, s);
+    loadFacts(popup, s);
     try {
       const pub = guest ? await pubPlace(s.id) : null;
       const [{ data: photos }, { data: reviews }] = pub ? [{ data: pub.photos || [] }, { data: pub.reviews || [] }] : await Promise.all([
