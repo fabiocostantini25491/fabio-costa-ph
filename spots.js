@@ -873,6 +873,7 @@ const Spots = (() => {
           <div class="sx-zoom"><button type="button" class="sx-btn" id="sxIn" aria-label="Zoom in">+</button><button type="button" class="sx-btn" id="sxOut" aria-label="Zoom out">−</button></div>
           <button type="button" class="sx-btn" id="sxHome" title="The whole Earth" aria-label="Back to the whole Earth">${SX_ICON.target}</button>
           <button type="button" class="sx-btn" id="sxFull" title="Full screen" aria-label="Full screen">${SX_ICON.full}</button>
+          <button type="button" class="sx-btn pf-sx" id="sxPf" title="Photo forecast: the next 7 days" aria-label="Photo forecast"><span aria-hidden="true">✨</span><b class="pf-badge" hidden></b></button>
         </div>
         <div class="sx-modes" role="group" aria-label="Map view">
           ${[["globe", "Globe"], ["sat", "Satellite"], ["terrain", "Terrain"]].map(([k, l]) => `<button type="button" data-sxmode="${k}" class="${viewMode === k ? "on" : ""}" aria-pressed="${viewMode === k}">${SX_ICON[k]}<span>${l}</span></button>`).join("")}
@@ -2501,6 +2502,13 @@ const Spots = (() => {
   const PF_ZOOM = 7;
   const confOf = d => d <= 1 ? ["●", "high", "reliable"] : d <= 3 ? ["◐", "med", "indicative"] : ["○", "low", "just a trend"];
   function addPfControl() {
+    pfLayer = L.layerGroup().addTo(map);
+    map.on("moveend", () => { if (pfOpen || pfOn) { clearTimeout(pfLayer._t); pfLayer._t = setTimeout(drawPf, 500); } });
+    const sx = $("#sxPf");
+    if (sx) {   // the Earth view: the button lives in the column of map buttons, top right
+      if (!sx.dataset.wired) { sx.dataset.wired = "1"; sx.addEventListener("click", () => { pfOpen = !pfOpen; window.fcTrack?.(pfOpen ? "Spots: photo forecast opened" : "Spots: photo forecast closed"); drawPf(); }); }
+      return;
+    }
     const Ctl = L.Control.extend({ options: { position: "topright" }, onAdd() {
       const b = L.DomUtil.create("button", "pf-btn"); b.type = "button"; b.title = "Photo forecast: the next 7 days"; b.setAttribute("aria-label", "Photo forecast");
       b.innerHTML = `<span aria-hidden="true">✨</span><b class="pf-badge" hidden></b>`;
@@ -2508,19 +2516,19 @@ const Spots = (() => {
       b.addEventListener("click", () => { pfOpen = !pfOpen; window.fcTrack?.(pfOpen ? "Spots: photo forecast opened" : "Spots: photo forecast closed"); drawPf(); });
       return b; } });
     new Ctl().addTo(map);
-    pfLayer = L.layerGroup().addTo(map);
-    map.on("moveend", () => { if (pfOpen || pfOn) { clearTimeout(pfLayer._t); pfLayer._t = setTimeout(drawPf, 500); } });
   }
+  const pfHost = () => map.getContainer().closest(".sx-stage") || map.getContainer();
   function pfPanel() {
-    let p = map.getContainer().querySelector(".pf-panel");
-    if (!p) { p = L.DomUtil.create("div", "pf-panel", map.getContainer()); L.DomEvent.disableClickPropagation(p); L.DomEvent.disableScrollPropagation(p); }
+    const host = pfHost();
+    let p = host.querySelector(".pf-panel");
+    if (!p) { p = L.DomUtil.create("div", "pf-panel", host); L.DomEvent.disableClickPropagation(p); L.DomEvent.disableScrollPropagation(p); }
     return p;
   }
   async function drawPf() {
     if (!map) return;
     const panel = pfPanel(); panel.hidden = !pfOpen;
-    const btn = map.getContainer().querySelector(".pf-btn"); btn?.classList.toggle("on", pfOpen);
-    if (map.getZoom() < PF_ZOOM) { pfLayer.clearLayers(); pfOn = null; if (pfOpen) panel.innerHTML = `${pfHead()}<p class="pf-empty">Zoom in to a region (a few valleys wide) to see the photo forecast of its places.</p>${pfFoot()}`; setBadge(0); return; }
+    const btn = $("#sxPf") || map.getContainer().querySelector(".pf-btn"); btn?.classList.toggle("on", pfOpen);
+    if (map.getZoom() < PF_ZOOM || (ui === "earth" && onGlobe)) { pfLayer.clearLayers(); pfOn = null; if (pfOpen) panel.innerHTML = `${pfHead()}<p class="pf-empty">Zoom in to a region (a few valleys wide) to see the photo forecast of its places.</p>${pfFoot()}`; setBadge(0); return; }
     const b = map.getBounds(), key = [b.getSouth(), b.getWest(), b.getNorth(), b.getEast()].map(x => x.toFixed(1)).join(",");
     if (key !== pfKey && !pfBusy) {
       pfBusy = true; if (pfOpen) panel.innerHTML = `${pfHead()}<p class="pf-empty">Reading the sky…</p>`;
@@ -2545,7 +2553,7 @@ const Spots = (() => {
   const pfHead = () => `<div class="pf-h"><b>✨ Photo forecast</b><small>next 7 days · places in view</small><button type="button" data-pfclose aria-label="Close">×</button></div>`;
   const pfFoot = () => `<p class="pf-foot"><span>● reliable ◐ indicative ○ just a trend</span>Estimates from weather models, calculated for the area: always check the forecast before you go.
     <br>Weather <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a> · aurora <a href="https://www.swpc.noaa.gov/" target="_blank" rel="noopener">NOAA SWPC</a> · sun, moon and Milky Way calculated here</p>`;
-  function setBadge(n) { const bd = map?.getContainer().querySelector(".pf-badge"); if (bd) { bd.textContent = n; bd.hidden = !n; } }
+  function setBadge(n) { const bd = ($("#sxPf") || map?.getContainer())?.querySelector(".pf-badge"); if (bd) { bd.textContent = n; bd.hidden = !n; } }
   function paintPfGlow() {
     pfLayer.clearLayers();
     const a = pfAlerts.find(x => x.id === pfOn); if (!a) return;

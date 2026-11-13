@@ -3934,3 +3934,7 @@ span.pc-useful{cursor:default}
 @keyframes pfpulse{0%,100%{transform:scale(.85);opacity:.75}50%{transform:scale(1.12);opacity:1}}
 @media (prefers-reduced-motion:reduce){.pf-glow{animation:none}}
 @media (max-width:600px){.pf-panel{right:8px;left:8px;width:auto;top:64px}}
+.sx-btn.pf-sx{position:relative;font-size:19px;border-color:rgba(255,190,122,.7)}
+.sx-btn.pf-sx.on{background:#f28c1e;border-color:#f28c1e}
+.sx-stage>.pf-panel{right:72px;top:14px;z-index:1200}
+@media (max-width:600px){.sx-stage>.pf-panel{right:8px;left:8px;top:auto;bottom:70px;max-height:60%}}
