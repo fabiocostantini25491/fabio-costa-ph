@@ -709,13 +709,14 @@ const Spots = (() => {
   /* --- BENVENUTO per chi non è ancora folk: cos'è, perché entrare, quale folk sei --- */
   function welcomeHtml() {
     return `<section class="wf-welcome" aria-label="Join SpotFolk">
-      <h3>You don't join as a user.<br><em>You join as folk.</em></h3>
+      <h3>Is it worth the trip? <em>Ask the folk who went.</em></h3>
+      <p class="wf-lead">Every place here is signed by someone who's been there, with a face, a name and a way of travelling. Read it through people who travel like you.</p>
       <ul class="wf-ben">
-        <li><b>8,000+ places</b> scouted with a photographer's eye: some I've shot, many found while researching future trips. The folk who go confirm them.</li>
-        <li><b>Signed by the folk:</b> travellers like you vouch for the places they love.</li>
-        <li><b>Trips, Pass it on, meetups</b> and your own SpotFolk passport.</li>
+        <li><b>Advice you can trace:</b> who signed it, when, and whether they were on the spot.</li>
+        <li><b>The right moment:</b> the best hour and season, from those who stood there.</li>
+        <li><b>8,000+ places</b> scouted with a photographer's eye, waiting for the folk to confirm them.</li>
       </ul>
-      <p class="wf-pick">Which folk are you?</p>
+      <p class="wf-pick">You don't join as a user. Which folk are you?</p>
       <div class="wf-folks">${CLUSTER_KEYS.map(k => `<button type="button" data-joinfolk="${k}" style="--c:${CLUSTERS[k].color}"><span>${CLUSTERS[k].ico}</span>${esc(CLUSTERS[k].label)}</button>`).join("")}</div>
       <button type="button" class="wf-cta" id="wfJoin">Find your folk — free <span aria-hidden="true">→</span></button>
       ${foundersLeft != null && foundersLeft > 0 ? `<p class="wf-found">🏅 <b>${foundersLeft}</b> of 100 places left as <b>Founding folk</b>: a badge in your passport, forever.</p>` : ""}
