@@ -2163,6 +2163,58 @@ const Spots = (() => {
     window.fcTrack?.("Spots: weather shown");
   }
 
+  /* Place pulse: the sea, only for places on the coast (Open-Meteo Marine: waves, swell, water temperature, tides) */
+  const seaCache = new Map();
+  const SEA_STATE = h => h < 0.1 ? ["Calm", "glassy water, perfect reflections"] : h < 0.5 ? ["Calm", "reflections and silky long exposures"]
+    : h < 1.25 ? ["Slight", "gentle movement on the rocks"] : h < 2.5 ? ["Rough", "foam and breaking waves"] : ["Very rough", "dramatic swell: keep well away from the rocks"];
+  const compass = d => Number.isFinite(d) ? ["N", "NE", "E", "SE", "S", "SW", "W", "NW"][Math.round(((d % 360) + 360) % 360 / 45) % 8] : "";
+  async function loadSea(popup, s) {
+    const box = popup.getElement()?.querySelector("[data-sea]");
+    if (!box || box.dataset.done) return;
+    box.dataset.done = "1";
+    const k = `${s.lat.toFixed(2)},${s.lon.toFixed(2)}`;
+    let w = seaCache.get(k);
+    if (!w || Date.now() - w.at > 30 * 60e3) {
+      try {
+        const r = await fetch(`https://marine-api.open-meteo.com/v1/marine?latitude=${s.lat.toFixed(4)}&longitude=${s.lon.toFixed(4)}`
+          + "&current=wave_height,wave_direction,wave_period,swell_wave_height,sea_surface_temperature"
+          + "&daily=wave_height_max,wave_direction_dominant&hourly=sea_level_height_msl&timezone=auto&forecast_days=7");
+        if (!r.ok) { seaCache.set(k, { at: Date.now(), d: null }); return; }
+        w = { at: Date.now(), d: await r.json() }; seaCache.set(k, w);
+      } catch { return; }
+    }
+    const c = w.d?.current || {}, d = w.d?.daily || {};
+    if (!Number.isFinite(c.wave_height)) return;   // inland: no sea here
+    const loc = window.I18N?.locale || "en-GB";
+    const [state, hint] = SEA_STATE(c.wave_height);
+    const m = x => x.toFixed(1).replace(/\.0$/, "");
+    // tides today: highs and lows of the sea level, shown only where the tide is worth it (≥ 0.5 m)
+    let tides = "";
+    const hh = w.d.hourly || {}, lv = (hh.sea_level_height_msl || []).slice(0, 25), tt = (hh.time || []).slice(0, 25);
+    if (lv.filter(Number.isFinite).length > 12 && Math.max(...lv.filter(Number.isFinite)) - Math.min(...lv.filter(Number.isFinite)) >= 0.5) {
+      const ev = [];
+      for (let i = 1; i < lv.length - 1; i++) {
+        if (![lv[i - 1], lv[i], lv[i + 1]].every(Number.isFinite)) continue;
+        if (lv[i] >= lv[i - 1] && lv[i] > lv[i + 1]) ev.push(["🌕", "High tide", tt[i].slice(11, 16)]);
+        if (lv[i] <= lv[i - 1] && lv[i] < lv[i + 1]) ev.push(["🌑", "Low tide", tt[i].slice(11, 16)]);
+      }
+      if (ev.length) tides = `<p class="sea-tides">${ev.slice(0, 4).map(([ic, l, h]) => `<span>${ic} <i>${l}</i> <b>${h}</b></span>`).join("")}</p>`;
+    }
+    const day = (t, i) => i === 0 ? "Today" : new Date(t + "T12:00:00").toLocaleDateString(loc, { weekday: "short" });
+    box.innerHTML = `<p class="pc-cams-h">🌊 Sea now</p>
+      <div class="wx-now sea-now sea-${state.toLowerCase().replace(/\s+/g, "-")}"><b>🌊</b><div><strong>${esc(state)}</strong> <em>${esc(hint)}</em>
+        <p><span><i>waves</i> <b>${m(c.wave_height)} m</b>${Number.isFinite(c.wave_period) ? ` · ${Math.round(c.wave_period)} s` : ""}${compass(c.wave_direction) ? ` · ${compass(c.wave_direction)}` : ""}</span>
+          ${Number.isFinite(c.swell_wave_height) ? `<span><i>swell</i> <b>${m(c.swell_wave_height)} m</b></span>` : ""}
+          ${Number.isFinite(c.sea_surface_temperature) ? `<span><i>water</i> <b>${Math.round(c.sea_surface_temperature)}°</b></span>` : ""}</p></div></div>
+      ${tides}
+      ${d.time?.length ? `<div class="wx-days">${d.time.map((t, i) => { const h = d.wave_height_max[i]; const st = Number.isFinite(h) ? SEA_STATE(h)[0] : "";
+        return `<div class="sea-d sea-${st.toLowerCase().replace(/\s+/g, "-")}"><small>${esc(day(t, i))}</small><b>${Number.isFinite(h) ? `${m(h)} m` : "–"}</b><em>${esc(st)}</em></div>`; }).join("")}</div>` : ""}
+      <p class="pc-cams-by">Marine data by <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo.com</a> (CC BY 4.0) · Indicative, not for navigation</p>`;
+    box.hidden = false;
+    popup.update();
+    window.fcTrack?.("Spots: sea shown");
+  }
+
   /* webcams on the map: a layer to switch on, from valley zoom, one request per stop of the map */
   const CAMS_KEY = "sf-cams", CAM_ZOOM = 9;
   let camsOn = lsGet(CAMS_KEY, "0") === "1", camLayer = null, camKey = "", camTimer = null;
@@ -2561,7 +2613,7 @@ const Spots = (() => {
           <button type="submit" class="pop-btn primary">Publish your story</button>
         </form>` : ""}
         <div class="pop-reviews" data-reviews><p class="pc-empty">No stories yet.</p></div>`;
-    const pulseBody = `<div class="pc-wx" data-wx hidden></div><div class="pc-cams" data-cams hidden></div><div data-pulse><p class="pc-empty">Quiet for now: the first signatures will make it move.</p></div>`;
+    const pulseBody = `<div class="pc-wx" data-wx hidden></div><div class="pc-wx pc-sea" data-sea hidden></div><div class="pc-cams" data-cams hidden></div><div data-pulse><p class="pc-empty">Quiet for now: the first signatures will make it move.</p></div>`;
     const travelBody = `
       ${s.fragile ? `<div class="pc-badge fragile"><p class="pc-bh"><span aria-hidden="true">🛡️</span><b>Fragile place</b></p>
         <ul><li>Stay on the paths and keep groups small.</li><li>No drones, no fires, nothing left behind.</li><li>No geotags on social media: the exact spot stays among the folk.</li></ul></div>` : ""}
@@ -2645,7 +2697,7 @@ const Spots = (() => {
     el.querySelector("[data-copy]")?.addEventListener("click", ev => copyText(ev.currentTarget, `${s.lat.toFixed(6)}, ${s.lon.toFixed(6)}`));
     el.querySelectorAll("[data-gotravel]").forEach(b => b.addEventListener("click", () => { const d = el.querySelector('[data-sec="travel"]'); if (d) { d.open = true; popup.update(); setTimeout(() => d.scrollIntoView({ behavior: "smooth", block: "nearest" }), 60); } }));
     el.querySelectorAll(".pc-sec").forEach(d => d.addEventListener("toggle", () => popup.update()));
-    el.querySelector('[data-sec="pulse"]')?.addEventListener("toggle", ev => { if (ev.currentTarget.open) { loadWeather(popup, s); loadCams(popup, s); } });
+    el.querySelector('[data-sec="pulse"]')?.addEventListener("toggle", ev => { if (ev.currentTarget.open) { loadWeather(popup, s); loadSea(popup, s); loadCams(popup, s); } });
     el.querySelector("[data-editspot]")?.addEventListener("click", () => { map.closePopup(); openEditPlace(s); });
     el.querySelector("[data-authorp]")?.addEventListener("click", () => openMemberProfile(s.created_by));
     el.querySelector("[data-delete]")?.addEventListener("click", async ev => {
