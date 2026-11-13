@@ -1178,6 +1178,25 @@ function openTrip(id, photoId, subId) {
    ========================================================= */
 const gallery = { category: "Tutte", trip: null, sub: "", collection: "" };
 
+/* SpotFolk ↔ the photos: the place of Fabio's trips nearest to a point (within 300 m), for the «Fabio's photos of this place» link on SpotFolk cards.
+   Everything is in content/viaggi.json, already loaded: nothing is stored anywhere. */
+function photosNear(lat, lon, km = 0.3) {
+  if (!Number.isFinite(lat) || !Number.isFinite(lon) || !photos.length) return null;
+  let best = null;
+  const consider = (trip, sub, p) => { const d = distKm({ lat, lon }, p); if (d <= km && (!best || d < best.d)) best = { trip, sub, d }; };
+  trips.forEach(t => t.subs.forEach(sb => { if (sb.ownCoords) consider(t, sb, sb); }));
+  photos.forEach(p => { if (p.ownCoords) { const t = tripById(p.trip); if (t) consider(t, t.subs.find(x => x.id === p.sub) || null, p); } });
+  if (!best) return null;
+  const n = photos.filter(p => best.sub ? p.sub === best.sub.id : p.trip === best.trip.id).length;
+  if (!n) return null;
+  return { name: best.sub ? best.sub.name : best.trip.name, n, hash: `gallery-${best.sub ? best.sub.id : best.trip.id}` };
+}
+// #gallery-<place>: the Gallery already filtered on one place of a trip (or on a whole trip)
+function galleryFromHash(key) {
+  const t = trips.find(x => x.id === key || x.subs.some(sb => sb.id === key));
+  if (!t) { gallery.pendingKey = key; return; }
+  gallery.pendingKey = ""; gallery.trip = t.id; gallery.sub = t.subs.some(sb => sb.id === key) ? key : ""; gallery.collection = ""; gallery.category = "Tutte";
+}
 function galleryItems() {
   return photos
     .filter(p => gallery.category === "Tutte" || p.category === gallery.category)
@@ -1201,6 +1220,7 @@ gallery.view = (() => { try { return localStorage.getItem("fcph-gallery-view") =
 gallery.allJourneys = false;
 
 function renderGallery() {
+  if (gallery.pendingKey && trips.length) galleryFromHash(gallery.pendingKey);
   const tr = s => window.I18N ? I18N.t(s) : s;
   // filtri: solo le categorie che hanno almeno una foto
   const fbox = $("#galleryFilters");
@@ -2555,6 +2575,8 @@ function route() {
   if (hash.startsWith("author-")) { page = "journal"; authorSlug = hash.slice(7); }
   // porte d'ingresso dei folk (link nei post): #wayfolk-hikers, #wayfolk-backpackers… (anche #spots-…)
   if (hash === "spotfolk" || hash === "wayfolk") page = "spots";
+  const galleryKey = (hash.match(/^gallery-(.+)$/) || [])[1];
+  if (galleryKey) { page = "gallery"; if (!SF) galleryFromHash(galleryKey); }
   // The Folk Hub (#hub): members see everything, visitors an active preview of the public places
   if (hash === "folkhub" || hash === "folk-hub") { history.replaceState(null, "", "#hub"); return route(); }
   hubPreview();   // old preview links (?hub=1 / ?hub=0) keep working: the Hub is now open to everyone   // #spotfolk è l'indirizzo della sezione (#wayfolk e #spots continuano a funzionare)

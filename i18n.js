@@ -1046,6 +1046,7 @@ const I18N = (() => {
     "Log in to see the whole map, sign the places you know, plan trips and open your passport.": ["Accedi per vedere tutta la mappa, firmare i posti che conosci, pianificare viaggi e aprire il tuo passaporto."],
     "Which hour, which bench, which trattoria the locals actually use. One line each, from people who stood there. Open a place on the map to read who signed it; become folk to add your own.": ["Quale ora, quale panchina, quale trattoria frequentano davvero i locali. Una riga ciascuno, da chi c'è stato. Apri un luogo sulla mappa per leggere chi l'ha firmato; diventa folk per aggiungere il tuo."],
     "Become folk to add yours": ["Diventa folk per aggiungere il tuo"],
+    "Fabio's photos of this place": ["Le foto di Fabio di questo posto"],
     "what the folk are bringing to the map": ["cosa portano i folk sulla mappa"],
     "Gathering": ["Raduno"],
     "the folk…": ["dei folk…"],

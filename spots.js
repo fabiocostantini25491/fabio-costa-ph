@@ -3285,6 +3285,12 @@ const Spots = (() => {
     t.push(["♻️", "Leave no trace — take your waste with you."]);
     return `<ul class="pc-tips">${t.map(([i, x]) => `<li><span aria-hidden="true">${i}</span><p>${x}</p></li>`).join("")}</ul>`;
   }
+  // «Fabio's photos of this place»: the nearest place of Fabio's trips (app.js photosNear, from viaggi.json), opens the Gallery filtered on it
+  function fabioPhotosHtml(s) {
+    const m = window.photosNear?.(+s.lat, +s.lon); if (!m) return "";
+    const href = `${SF_MODE ? "https://fabiocostaph.com/" : ""}#${m.hash}`;
+    return `<a class="pc-fabio" href="${esc(href)}"${SF_MODE ? ' target="_blank" rel="noopener"' : ""} data-fabiophotos><span aria-hidden="true">📷</span><span><b>Fabio's photos of this place</b><small>${esc(m.name)} · ${m.n} ${window.I18N?.lang === "it" ? "foto" : m.n === 1 ? "photo" : "photos"}</small></span><em aria-hidden="true">→</em></a>`;
+  }
   function popupHtml(s) {
     const cat = CATS[s.category] || CATS.spot;
     const gm = s.url && /^https?:\/\//.test(s.url) ? s.url : `https://www.google.com/maps/search/?api=1&query=${s.lat.toFixed(6)},${s.lon.toFixed(6)}`;
@@ -3359,6 +3365,7 @@ const Spots = (() => {
         <p class="pc-condtop" data-condtop hidden></p>
         <p class="byg-top" data-facttop hidden></p>
         <div class="pop-alerts" data-alerts>${alertsHtml(s)}</div>
+        ${fabioPhotosHtml(s)}
         ${admin && !guest && pubV ? `<div data-pubpick>${pubPickHtml(s)}</div>` : ""}
       </header>
       ${pcSec("folk", "The folk who know this place", "Real people, real experiences.", folkBody, true)}
