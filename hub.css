@@ -182,3 +182,6 @@ html.hb-noscroll,html.hb-noscroll body{overflow:hidden}
   .hb-fol{padding:5px 10px}
   .hb-head{margin-bottom:10px}
 }
+
+.hb-preview{margin:0 0 14px;padding:12px 16px;border-radius:16px;border:1px solid rgba(255,190,122,.35);background:rgba(242,140,30,.08);font-size:14px;color:#dfe7f0}
+.hb-preview b{color:var(--hb-warm)}.hb-preview a{color:var(--hb-warm);white-space:nowrap}

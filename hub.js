@@ -80,7 +80,12 @@ window.FolkHub = (() => {
     "just now": "adesso", "{n} min ago": "{n} min fa", "{n} h ago": "{n} h fa", "yesterday": "ieri", "{n} days ago": "{n} giorni fa", "in {n} h": "tra {n} h", "in {n} days": "tra {n} giorni",
     "Your passport and reputation": "Il tuo passaporto e la reputazione", "Become folk — free": "Diventa folk — è gratis",
     "description": "la descrizione", "useful info": "le info utili", "best months": "i mesi migliori", "position": "la posizione", "type": "il tipo", "link": "il link", "name": "il nome", "category": "la categoria", "trail info": "le info del sentiero", "workshop info": "le info del workshop", "dates": "le date", "Support local": "Support local",
-    "Wrong or outdated?": "Sbagliato o superato?"
+    "Wrong or outdated?": "Sbagliato o superato?",
+    "Finding and following other folk is for members. Join free to meet the people behind the places.": "Trovare e seguire gli altri folk è per gli iscritti. Iscriviti gratis per conoscere le persone dietro i posti.",
+    "Your passport collects the places you've signed, your stamps and your folk. It's free.": "Il passaporto raccoglie i posti che hai firmato, i tuoi timbri e i tuoi folk. È gratis.",
+    "Find your folk": "Trova i tuoi folk", "Follow the folk who travel like you and the places you love: their news comes to you.": "Segui i folk che viaggiano come te e i posti che ami: le loro novità arrivano a te.",
+    "You're seeing a preview.": "Stai vedendo un'anteprima.",
+    "Here is what the folk bring to the places of the public map. Become folk to see the whole map, follow people and places, and take part.": "Ecco cosa portano i folk sui posti della mappa pubblica. Diventa folk per vedere tutta la mappa, seguire persone e posti e partecipare."
   };
   const tx = (s, v = {}) => { let o = (lang === "it" && IT[s]) || s; for (const k in v) o = o.split(`{${k}}`).join(v[k]); return o; };
   const e = s => K.esc(String(s ?? ""));
@@ -211,7 +216,6 @@ window.FolkHub = (() => {
             <div class="hb-mf"><button type="button" data-days="7">${e(tx("7 days"))}</button><button type="button" data-days="30">${e(tx("30 days"))}</button>${isMember() ? `<button type="button" data-mapfol>${e(tx("Folk I follow"))}</button>` : ""}</div>
           </section>
           <section class="hb-box" data-sugg></section>
-          <section class="hb-box" data-rep></section>
         </aside>
       </div>
       <nav class="hb-tabs" aria-label="Folk Hub">${[["feed", "🏠", "Feed"], ["discover", "🧭", "Discover"], ["map", "🗺️", "Map"], ["places", "♡", "Places"], ["alerts", "🔔", "Alerts"], ["me", "🪪", "Me"]].map(([k, ic, l]) => `<button type="button" data-view="${k}"><span aria-hidden="true">${ic}</span>${e(tx(l))}<b data-badge="${k}" hidden></b></button>`).join("")}</nav>
@@ -243,6 +247,7 @@ window.FolkHub = (() => {
     const fol = S.filter === "following";
     m.innerHTML = `
       <div class="hb-head"><h2>${e(tx("What's"))} <em>${e(tx("happening"))}</em></h2><p>${e(tx(fol ? "From folk you follow and places you saved." : "From the folk and the places on the map."))}</p></div>
+      ${who().guest ? `<div class="hb-preview"><b>${e(tx("You're seeing a preview."))}</b> ${e(tx("Here is what the folk bring to the places of the public map. Become folk to see the whole map, follow people and places, and take part."))} <a href="#join">${e(tx("Become folk — free"))}</a></div>` : ""}
       <div class="hb-chips" role="tablist">${FILTERS.map(([k, l]) => `<button type="button" role="tab" aria-selected="${S.filter === k}" class="${S.filter === k ? "on" : ""}" data-filter="${k}">${e(tx(l))}</button>`).join("")}</div>
       <div class="hb-feed" data-feed aria-live="polite"></div>
       <div class="hb-more" data-more></div>`;
@@ -255,7 +260,8 @@ window.FolkHub = (() => {
     if (S.err) { f.innerHTML = errorHtml(S.err); more.innerHTML = ""; return; }
     if (!S.items.length) {
       if (S.busy || !S.end) { f.innerHTML = skeleton(); more.innerHTML = ""; return; }
-      f.innerHTML = S.filter === "following" ? `<div class="hb-empty"><h3>${e(tx("Follow folk or save places to see their news here."))}</h3><div class="hb-row"><button type="button" class="hb-btn" data-view="discover">${e(tx("Discover folk"))}</button><button type="button" class="hb-btn line" data-tomap>${e(tx("Open the map"))}</button></div></div>`
+      f.innerHTML = S.filter === "following" && who().guest ? `<div class="hb-empty"><p>${e(tx("Follow folk or save places to see their news here."))}</p><div class="hb-row"><a class="hb-btn" href="#join">${e(tx("Become folk — free"))}</a></div></div>`
+        : S.filter === "following" ? `<div class="hb-empty"><h3>${e(tx("Follow folk or save places to see their news here."))}</h3><div class="hb-row"><button type="button" class="hb-btn" data-view="discover">${e(tx("Discover folk"))}</button><button type="button" class="hb-btn line" data-tomap>${e(tx("Open the map"))}</button></div></div>`
         : S.filter === "all" ? `<div class="hb-empty"><h3>${e(tx("The folk room is waiting for its first voices."))}</h3><p>${e(tx("Sign a place you've been, tell the folk how it is now, or check what they wrote."))}</p><div class="hb-row"><button type="button" class="hb-btn" data-tomap>${e(tx("Open the map"))}</button></div></div>`
         : `<div class="hb-empty"><p>${e(tx("Nothing of this kind yet."))}</p></div>`;
       more.innerHTML = ""; return;
@@ -277,6 +283,7 @@ window.FolkHub = (() => {
     if (S.end) return;
     S.busy = true; if (!S.items.length) drawFeed(); else { const b = box.querySelector("[data-loadmore]"); if (b) { b.disabled = true; b.textContent = tx("Loading…"); } }
     const filter = S.filter;
+    if (filter === "following" && who().guest) { S.busy = false; S.end = true; return drawFeed(); }
     try {
       const d = await rpc("hub_feed", { p_filter: filter, p_before: S.next, p_limit: 10 });
       if (filter !== S.filter) return;
@@ -289,7 +296,11 @@ window.FolkHub = (() => {
   }
 
   /* ---------- discover ---------- */
+  function invite(m, title, text) {
+    m.innerHTML = `<div class="hb-head"><h2>${e(tx(title))}</h2></div><div class="hb-empty"><p>${e(tx(text))}</p><div class="hb-row"><a class="hb-btn" href="#join">${e(tx("Become folk — free"))}</a></div></div>`;
+  }
   function paintDiscover(m) {
+    if (!isMember()) return invite(m, "Discover folk", "Finding and following other folk is for members. Join free to meet the people behind the places.");
     m.innerHTML = `
       <div class="hb-head"><h2>${e(tx("Discover folk"))}</h2></div>
       <div class="hb-search"><input type="search" id="hbQ" placeholder="${e(tx("Search folk by name or area"))}" value="${e(S.q)}" autocomplete="off"></div>
@@ -383,7 +394,7 @@ window.FolkHub = (() => {
     el.innerHTML = `
       ${(d.items || []).length ? `<ul class="hb-ulist">${d.items.map(u => `<li class="${u.new ? "new" : ""}">${face(u, 40)}<div><p>${updText(u)}</p><small>${ago(u.at)}${u.why === "place" ? ` · ${e(tx("on your places"))}` : u.why === "folk" ? ` · ${e(tx("from folk you follow"))}` : ""}</small></div>${u.spot_id ? `<button type="button" class="hb-link" data-gospot="${u.spot_id}">↗</button>` : ""}</li>`).join("")}</ul>`
         : `<div class="hb-empty"><p>${e(tx("Nothing new. When something happens on your places, to your folk or to your contributions, it shows up here."))}</p></div>`}
-      <div class="hb-box hb-prefs"><p class="hb-kick">${e(tx("Notify me about"))}</p>${[["places", "My places"], ["folk", "Folk I follow "], ["you", "My contributions"], ["followers", "New followers"]].map(([k, l]) => `<label><input type="checkbox" id="hbPref-${k}" data-pref="${k}" ${off.includes(k) ? "" : "checked"}> ${e(tx(l))}</label>`).join("")}</div>`;
+      <div class="hb-box hb-prefs"><p class="hb-kick">${e(tx("Notify me about"))}</p>${[["places", "My places"], ["folk", "Folk I follow "], ["you", "My contributions"]].map(([k, l]) => `<label><input type="checkbox" id="hbPref-${k}" data-pref="${k}" ${off.includes(k) ? "" : "checked"}> ${e(tx(l))}</label>`).join("")}</div>`;
     if (d.unread) { try { await rpc("hub_seen"); } catch {} d.unread = 0; badges(); }
   }
   async function savePrefs(patch) {
@@ -418,6 +429,8 @@ window.FolkHub = (() => {
     if (!S.rep) { await loadRep(); el.innerHTML = `<div class="hb-bh"><h2>${e(tx("Your reputation"))}</h2><button type="button" class="hb-link" data-view="me">${e(tx("How it works"))}</button></div>${repHtml(S.rep)}`; }
   }
   async function paintMe(m) {
+    if (isMember()) { location.hash = "me"; return; }
+    return invite(m, "Your passport", "Your passport collects the places you've signed, your stamps and your folk. It's free.");
     if (!isMember()) { m.innerHTML = `<div class="hb-head"><h2>${e(tx("How reputation works"))}</h2></div><div class="hb-box"><p>${e(tx("Every folk has a level from I to V, built from six things others can verify: being on the spot, information confirmed by other folk, people who found you useful, places you added that others signed, knowledge of your area, and the trust of the community. Each one grows slowly: posting a lot doesn't make you rise, being right does."))}</p><a class="hb-btn" href="#join">${e(tx("Become folk — free"))}</a></div>`; return; }
     m.innerHTML = `<div class="hb-head"><h2>${e(tx("Your passport and reputation"))}</h2></div><div class="hb-box" data-repfull>${skeleton(1)}</div><div class="hb-row"><a class="hb-btn" href="#me">${e(tx("Open your passport →"))}</a></div>`;
     if (!S.rep) await loadRep();
@@ -427,6 +440,7 @@ window.FolkHub = (() => {
   /* ---------- folk to follow ---------- */
   async function paintSugg() {
     const el = box.querySelector("[data-sugg]"); if (!el) return;
+    if (!isMember()) { el.innerHTML = `<div class="hb-bh"><h2>${e(tx("Find your folk"))}</h2></div><p class="hb-small">${e(tx("Follow the folk who travel like you and the places you love: their news comes to you."))}</p><a class="hb-btn" href="#join">${e(tx("Become folk — free"))}</a>`; return; }
     const title = tx(isMember() ? "Folk to follow" : "Folk to know");
     el.innerHTML = `<div class="hb-bh"><h2>${e(title)}</h2><button type="button" class="hb-link" data-view="discover">${e(tx("Discover →"))}</button></div><div data-slist>${skeleton(1)}</div>`;
     try { S.sugg = await rpc("discover_folk", { p_suggest: isMember(), p_limit: 4 }); } catch { S.sugg = []; }
@@ -478,7 +492,7 @@ window.FolkHub = (() => {
     try { d.showModal(); } catch { d.setAttribute("open", ""); }
     K.track("Hub: folk preview");
     try {
-      const [rep, fs, feed] = await Promise.all([rpc("folk_reputation", { p_user: uid }).catch(() => null), rpc("folk_follow_state", { p_user: uid }).catch(() => null), rpc("hub_feed", { p_filter: "all", p_limit: 5, p_user: uid }).catch(() => ({ items: [] }))]);
+      const [fs, feed] = await Promise.all([rpc("folk_follow_state", { p_user: uid }).catch(() => null), rpc("hub_feed", { p_filter: "all", p_limit: 5, p_user: uid }).catch(() => ({ items: [] }))]);
       const items = feed?.items || [];
       const name = items[0]?.name || known.name || "", folks = items[0]?.folks || known.folks || [];
       d.querySelector(".hb-pvh h2").textContent = name;
@@ -488,9 +502,7 @@ window.FolkHub = (() => {
       await sign(items.map(i => i.kind === "photo" ? i.extra?.path : i.photo));
       S.prev = { items };
       d.querySelector("[data-pvbody]").innerHTML = `
-        <div class="hb-pvrow"><span><b>${fs?.followers ?? 0}</b> ${e(tx("followers"))}</span><span><b>${fs?.following ?? 0}</b> ${e(tx("following"))}</span>
-          ${uid !== who().uid ? `<button type="button" class="hb-fol ${follows ? "on" : ""}" data-follow="${e(uid)}">${e(tx(follows ? "Following ✓" : "+ Follow"))}</button>` : ""}</div>
-        ${rep ? `<div class="hb-box">${repHtml({ ...rep, detail: rep.detail })}</div>` : ""}
+        ${uid !== who().uid ? `<div class="hb-pvrow"><button type="button" class="hb-fol ${follows ? "on" : ""}" data-follow="${e(uid)}">${e(tx(follows ? "Following ✓" : "+ Follow"))}</button></div>` : ""}
         <p class="hb-kick">${e(tx("Recent activity"))}</p>
         <div class="hb-feed">${items.length ? items.map(card).join("") : `<p class="hb-mute">${e(tx("No public activity yet."))}</p>`}</div>
         ${isMember() ? `<button type="button" class="hb-btn line" data-fullprof="${e(uid)}">${e(tx("Open full profile →"))}</button>` : ""}`;
@@ -565,7 +577,7 @@ window.FolkHub = (() => {
     if (ds.retry !== undefined) { S.err = ""; S.items = []; S.end = false; return paintMain(); }
     if (ds.react && i) return react(t, i);
     if (ds.follow) return follow(t, ds.follow);
-    if (ds.folk) { ev.preventDefault(); return preview(ds.folk); }
+    if (ds.folk) { ev.preventDefault(); if (!isMember()) return joinNote(t.closest(".hb-card, .hb-box") || t.parentElement); return preview(ds.folk); }
     if (ds.save !== undefined && i) return save(t, i);
     if (ds.same !== undefined && i) return confirmCond(t, i);
     if (ds.check !== undefined && i) return confirmFact(t, i);
@@ -615,7 +627,7 @@ window.FolkHub = (() => {
     const d = box.querySelector("[data-dlg]"); d?.addEventListener("click", ev => { if (ev.target === d) d.close(); });
     if (!mount._esc) { mount._esc = true; document.addEventListener("keydown", ev => { if (ev.key === "Escape" && S.mapFull) openFull(false); }); }
     setView("feed");
-    loadMap(); paintSugg(); paintRepBox();
+    loadMap(); paintSugg();
     loadPlaces().then(p => { S.places = p; paintMyPlaces();
       if (who().guest && p.length) rpc("hub_feed", { p_filter: "all", p_limit: 20, p_spots: p.map(x => x.id) }).then(f => { S.placeFeed = f; badges(); }).catch(() => {}); }).catch(() => paintMyPlaces());
     if (isMember()) loadUpdates();

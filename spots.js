@@ -849,6 +849,7 @@ const Spots = (() => {
         <div class="sx-panel">
           ${guest && !session ? welcomeHtml() : ""}
           ${SF_LOOK ? `<div class="sf-quick${!guest && (schemaV2 || admin) ? " two" : ""}"><button type="button" class="sf-near" id="sfNear">${SX_ICON.near}<span>Places near me</span></button>${!guest && (schemaV2 || admin) ? `<button type="button" class="sf-near sf-addplace" id="sfAddPlace">${ICON_PLUS}<span>Add a place</span></button>` : ""}</div>` : ""}
+          <a class="sf-hubdoor" href="#hub"><span aria-hidden="true">👥</span><span><b>The Folk Hub</b><small>what the folk are bringing to the map</small></span><em aria-hidden="true">→</em></a>
           ${searchHtml}
           <div class="onb-folk" id="onbFolk" hidden></div>
           <div class="sx-groups">${groups}</div>

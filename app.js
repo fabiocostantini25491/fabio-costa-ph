@@ -2524,9 +2524,9 @@ function route() {
   if (hash.startsWith("author-")) { page = "journal"; authorSlug = hash.slice(7); }
   // porte d'ingresso dei folk (link nei post): #wayfolk-hikers, #wayfolk-backpackers… (anche #spots-…)
   if (hash === "spotfolk" || hash === "wayfolk") page = "spots";
-  // The Folk Hub: in preview, open only with the link ?hub=1 (remembered on this device; ?hub=0 forgets it). Without it, its addresses lead to the map.
+  // The Folk Hub (#hub): members see everything, visitors an active preview of the public places
   if (hash === "folkhub" || hash === "folk-hub") { history.replaceState(null, "", "#hub"); return route(); }
-  if (hash === "hub" && !hubPreview()) { history.replaceState(null, "", "#spotfolk"); page = "spots"; }   // #spotfolk è l'indirizzo della sezione (#wayfolk e #spots continuano a funzionare)
+  hubPreview();   // old preview links (?hub=1 / ?hub=0) keep working: the Hub is now open to everyone   // #spotfolk è l'indirizzo della sezione (#wayfolk e #spots continuano a funzionare)
   const door = (hash.match(/^(?:spots|wayfolk|spotfolk)-(photographers|hikers|backpackers|roadtrips|nomads|foodies)$/) || [])[1];
   if (door) { page = "spots"; try { if (localStorage.getItem("fcph-door") !== door) { localStorage.setItem("fcph-door", door); trackEvent("Spots door", { door }); } } catch {} }
   const join = hash === "join";
