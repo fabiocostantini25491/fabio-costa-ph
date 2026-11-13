@@ -2920,10 +2920,21 @@ const Spots = (() => {
     const dates = datesText(s), crit = critFor(s);
     const folkBody = `<div data-folkbox><p class="pc-empty">No folk has signed it yet: be the first.</p></div>
       ${signV && commV ? `<div class="pop-signs" data-signs></div>` : ""}`;
-    const consBody = `<div data-rating><p class="pc-empty">No impressions yet: share your story to give the first.</p></div>`;
+    const consBody = `<div data-rating><p class="pc-empty">No impressions yet: be the first folk to give them.</p></div>
+      ${schemaV2 ? `<button type="button" class="pc-share imp-open" data-impress>Give your impressions <span aria-hidden="true">＋</span></button>
+        <form class="pop-review pc-form imp-form" data-impform hidden>
+          <div class="rev-subs" data-revsubs><p class="rev-subs-h">Your impressions <small>all four, from 1 to 5</small></p>${crit.map(([k, l, d]) => `<div class="rev-sub" data-sub="${k}"><span>${l}<small>${d}</small></span><span class="rev-dots" role="radiogroup" aria-label="${l}">${[1, 2, 3, 4, 5].map(n => `<button type="button" role="radio" aria-checked="false" aria-label="${n}/5" data-subv="${n}"></button>`).join("")}</span></div>`).join("")}</div>
+          <p class="rev-subs-h">How do you know this place?</p>
+          <div class="imp-basis" data-basis>
+            <button type="button" data-b="here">📍 I'm here now</button><button type="button" data-b="visited">🧳 I've been here</button><button type="button" data-b="local">🏡 I know the area</button>
+          </div>
+          <label class="imp-when" data-impwhen hidden>When? <input type="month" name="visited"></label>
+          <label class="rev-folk" data-impfolk hidden>As <select name="ifolk"></select></label>
+          <button type="submit" class="pop-btn primary">Save my impressions</button>
+          <p class="byg-hint">Shown with your name, your folk and how you know the place: «I'm here now» is checked with your phone's position.</p>
+        </form>` : ""}`;
     const storiesBody = `${schemaV2 ? `<button type="button" class="pc-share" data-review>Share your story <span aria-hidden="true">＋</span></button>
         <form class="pop-review pc-form" data-reviewform hidden>
-          <div class="rev-subs" data-revsubs><p class="rev-subs-h">Your impressions <small>all four, from 1 to 5</small></p>${crit.map(([k, l, d]) => `<div class="rev-sub" data-sub="${k}"><span>${l}<small>${d}</small></span><span class="rev-dots" role="radiogroup" aria-label="${l}">${[1, 2, 3, 4, 5].map(n => `<button type="button" role="radio" aria-checked="false" aria-label="${n}/5" data-subv="${n}"></button>`).join("")}</span></div>`).join("")}</div>
           <label class="rev-folk" data-revfolk hidden>Telling it as <select name="folk"></select></label>
           <input type="text" name="title" maxlength="120" placeholder="A title, e.g. A magical morning at the lake" aria-label="Title of your story">
           <textarea rows="4" maxlength="2000" placeholder="Your story: what it was like, when to go, what to know…" aria-label="Your story"></textarea>
@@ -3095,28 +3106,61 @@ const Spots = (() => {
       loadExtras(popup, s);
     });
     const form = el.querySelector("[data-reviewform]");
-    el.querySelector("[data-review]").addEventListener("click", () => withConduct(() => { form.hidden = !form.hidden; popup.update(); if (!form.hidden) (form.querySelector("[data-subv]") || form.querySelector("textarea")).focus(); }));
+    el.querySelector("[data-review]").addEventListener("click", () => withConduct(() => { form.hidden = !form.hidden; popup.update(); if (!form.hidden) (form.querySelector("[name=title]") || form.querySelector("textarea")).focus(); }));
     let rating = 0;
     const paint = () => form.querySelectorAll("[data-star]").forEach(b => { const on = +b.dataset.star <= rating; b.classList.toggle("on", on); b.setAttribute("aria-checked", +b.dataset.star === rating ? "true" : "false"); });
     form.querySelectorAll("[data-star]").forEach(b => b.addEventListener("click", () => { rating = +b.dataset.star === rating ? 0 : +b.dataset.star; paint(); }));
     const subs = {};
-    const paintSubs = () => form.querySelectorAll("[data-sub]").forEach(row => { const v = subs[row.dataset.sub] || 0;
+    const imp = el.querySelector("[data-impform]");
+    const paintSubs = () => imp?.querySelectorAll("[data-sub]").forEach(row => { const v = subs[row.dataset.sub] || 0;
       row.querySelectorAll("[data-subv]").forEach(b => { b.classList.toggle("on", +b.dataset.subv <= v); b.setAttribute("aria-checked", +b.dataset.subv === v ? "true" : "false"); }); });
-    form.querySelectorAll("[data-sub]").forEach(row => row.querySelectorAll("[data-subv]").forEach(b => b.addEventListener("click", () => {
+    imp?.querySelectorAll("[data-sub]").forEach(row => row.querySelectorAll("[data-subv]").forEach(b => b.addEventListener("click", () => {
       const k = row.dataset.sub, n = +b.dataset.subv; subs[k] = subs[k] === n ? 0 : n; paintSubs(); })));
+    let basis = "";
+    el.querySelector("[data-impress]")?.addEventListener("click", () => withConduct(() => { imp.hidden = !imp.hidden; popup.update(); }));
+    imp?.querySelectorAll("[data-b]").forEach(b => b.addEventListener("click", () => {
+      basis = b.dataset.b; imp.querySelectorAll("[data-b]").forEach(x => x.classList.toggle("on", x === b));
+      imp.querySelector("[data-impwhen]").hidden = basis !== "visited"; popup.update();
+    }));
+    imp?.addEventListener("submit", async e => {
+      e.preventDefault();
+      const given = SUBR.map(([k]) => subs[k]).filter(Boolean);
+      if (given.length < SUBR.length) { imp.querySelector("[data-revsubs]")?.classList.add("need"); return toast("Give your impression on all four levels.", true); }
+      if (!basis) return toast("Tell the folk how you know this place.", true);
+      const btn = imp.querySelector("[type=submit]"); btn.disabled = true;
+      let onSpot = false, b = basis;
+      if (b === "here") { onSpot = await nearHere(s); if (!onSpot) { b = "visited"; toast("Your phone isn't at the place right now: saved as «I've been here».", true); } }
+      const ym = imp.querySelector("[name=visited]")?.value;
+      const body = { spot_id: s.id, author_name: displayName(), rating: Math.round(given.reduce((a, x) => a + x, 0) / given.length),
+        ...Object.fromEntries(SUBR.map(([k]) => [k, subs[k]])), ...(folkV && clusterV ? { folk: imp.querySelector("[name=ifolk]")?.value || myStyles[0] || null } : {}),
+        ...(basisV ? { basis: b === "here" ? "onspot" : b, on_spot: onSpot, visited_on: b === "visited" && ym ? `${ym}-01` : onSpot ? new Date().toISOString().slice(0, 10) : null } : {}) };
+      try {
+        await api("/rest/v1/spot_reviews?on_conflict=spot_id,user_id", { method: "POST", body, headers: { Prefer: "resolution=merge-duplicates,return=minimal" } });
+        imp.hidden = true; toast(onSpot ? "📍 Impressions saved, on the spot. Thanks!" : "Impressions saved. Thanks!");
+        window.fcTrack?.("Spots: impressions given", { basis: b });
+        loadExtras(popup, s);
+      } catch (err) {
+        if (basisV && /basis|on_spot|visited_on/.test(err.message)) { basisV = false; btn.disabled = false; imp.requestSubmit(); return; }
+        toast(`Could not save: ${err.message}`, true);
+      }
+      btn.disabled = false;
+    });
+    imp && (imp._setMine = r => {
+      SUBR.forEach(([k]) => { subs[k] = r?.[k] || 0; }); paintSubs();
+      basis = r?.basis === "onspot" ? "" : r?.basis || "";
+      imp.querySelectorAll("[data-b]").forEach(x => x.classList.toggle("on", x.dataset.b === basis));
+      imp.querySelector("[data-impwhen]").hidden = basis !== "visited";
+      if (r?.visited_on) imp.querySelector("[name=visited]").value = String(r.visited_on).slice(0, 7);
+    });
     form.addEventListener("submit", async e => {
       e.preventDefault();
       const body = form.querySelector("textarea").value.trim(), btn = form.querySelector("[type=submit]");
       const fv = n => form.querySelector(`[name=${n}]`)?.value;
       const paid = parseFloat(fv("paid")) >= 0 ? parseFloat(fv("paid")) : null;
-      const subBody = subV ? Object.fromEntries(SUBR.map(([k]) => [k, subs[k] || null])) : {};
-      const given = SUBR.map(([k]) => subs[k]).filter(Boolean);
-      // ogni racconto porta le sue 4 impressioni: sono loro a fare il parere dei folk
-      if (subV && given.length < SUBR.length) { form.querySelector("[data-revsubs]")?.classList.add("need"); toast("Give your impression on all four levels: they make the folk consensus.", true); return; }
-      form.querySelector("[data-revsubs]")?.classList.remove("need");
-      if (given.length) rating = Math.round(given.reduce((a, b) => a + b, 0) / given.length);   // la media resta anche come voto generale
+      // the story is only the story: the impressions are given apart, in «Folk consensus»
+      const subBody = {};
       if (subV && titleV) subBody.r_title = (form.querySelector("[name=title]")?.value || "").trim() || null;
-      if (!rating && !body && paid == null && !Object.values(subBody).some(Boolean)) { form.querySelector("textarea").focus(); return; }
+      if (!body && paid == null && !subBody.r_title) { form.querySelector("textarea").focus(); return; }
       const extra = pricesV2 && PRICED[s.category] ? { paid, currency: paid != null ? fv("currency") : null,
         people: paid != null ? Math.max(1, parseInt(fv("people")) || 1) : null,
         nights: paid != null && s.category === "hotel" ? Math.max(1, parseInt(fv("nights")) || 1) : null,
@@ -3124,7 +3168,7 @@ const Spots = (() => {
       btn.disabled = true;
       try {
         await api("/rest/v1/spot_reviews?on_conflict=spot_id,user_id", { method: "POST",
-          body: { spot_id: s.id, rating: rating || null, body: body || null, author_name: displayName(), ...extra, ...subBody, ...(folkV && clusterV ? { folk: fv("folk") || null } : {}) },
+          body: { spot_id: s.id, body: body || null, author_name: displayName(), ...extra, ...subBody, ...(folkV && clusterV ? { folk: fv("folk") || null } : {}) },
           headers: { Prefer: "resolution=merge-duplicates,return=minimal" } });
         form.hidden = true; toast("Thanks for your story!");
         loadExtras(popup, s);
@@ -3133,7 +3177,6 @@ const Spots = (() => {
     });
     form._setMine = r => {
       rating = r?.rating || 0; form.querySelector("textarea").value = r?.body || ""; paint();
-      SUBR.forEach(([k]) => { subs[k] = r?.[k] || 0; }); paintSubs();
       const ti = form.querySelector("[name=title]"); if (ti) ti.value = r?.r_title || "";
       const set = (n, v) => { const x = form.querySelector(`[name=${n}]`); if (x && v != null) x.value = v; };
       set("paid", r?.paid); set("currency", r?.currency); set("people", r?.people); set("nights", r?.nights); set("stay", r?.stay_type);
@@ -3163,6 +3206,7 @@ const Spots = (() => {
   const critFor = s => SUBR.map(([k], i) => [k, ...(CRIT[s.category] || CRIT.spot)[i]]);
   // il punteggio di un racconto: la media dei suoi 4 livelli (le vecchie recensioni: le stelle)
   const revScore = r => { const v = SUBR.map(([k]) => r[k]).filter(Boolean); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : r.rating || null; };
+  let basisV = true;   // false until supabase-impressioni.sql has run (how the folk knows the place)
   let rvV = true;   // false finché non c'è la tabella review_votes («Useful» sui racconti)
   let titleV = true;
   /* le recensioni con le colonne opzionali: se il database ne rifiuta una (file SQL non ancora eseguito),
@@ -3172,12 +3216,14 @@ const Spots = (() => {
     if (folkV) cols.push("folk");
     if (subV) cols.push(...SUBR.map(x => x[0]));
     if (subV && titleV) cols.push("r_title");
+    if (subV && basisV) cols.push("basis", "on_spot", "visited_on");
     if (pricesV2) cols.push("paid", "currency", "people", "nights", "stay_type");
     try { return await api(`/rest/v1/spot_reviews?select=${cols.join(",")}&spot_id=eq.${id}&order=created_at.desc`); }
     catch (err) {
       if (err.status !== 400 || tries > 4) throw err;
       const m = String(err.message || "");
       if (/r_title/.test(m)) titleV = false;
+      else if (/basis|on_spot|visited_on/.test(m)) basisV = false;
       else if (/r_experience|r_authentic|r_access|r_worth/.test(m)) subV = false;
       else if (/paid|currency|people|nights|stay_type/.test(m)) pricesV2 = false;
       else if (/folk/.test(m)) folkV = false;
@@ -4883,10 +4929,11 @@ const Spots = (() => {
       el._rvotes = rvotes;
       const rbox = el.querySelector("[data-rating]");
       const cons = consensusHtml(reviews, s);
-      rbox.innerHTML = cons || `<p class="pc-empty">No impressions yet: share your story to give the first.</p>`;
+      rbox.innerHTML = cons || `<p class="pc-empty">No impressions yet: be the first folk to give them.</p>`;
+      rbox.querySelectorAll("[data-member]").forEach(b => b.addEventListener("click", () => b.dataset.member && openMemberProfile(b.dataset.member)));
       const sc = reviews.map(revScore).filter(Boolean);
       setCnt(el, "cons", sc.length ? (sc.reduce((a, b) => a + b, 0) / sc.length).toFixed(1) : "");
-      setCnt(el, "stories", reviews.length || "");
+      setCnt(el, "stories", reviews.filter(r => r.body || r.r_title).length || "");
       paintFolk(popup, s);
       // quanto si spende: media di quanto hanno pagato i membri
       const pbox2 = el.querySelector("[data-spend]");
@@ -4900,7 +4947,8 @@ const Spots = (() => {
       const photosOf = r => photos.filter(p => p.user_id === r.user_id && urls[p.path]).slice(0, 3);
       // il folk di chi racconta: quello scelto nel racconto, altrimenti quello con cui ha firmato il luogo, altrimenti il primo del suo profilo
       const folkOfR = r => CLUSTERS[r.folk] ? r.folk : ((el._signs || []).find(g => g.user_id === r.user_id && CLUSTERS[g.cluster]) || {}).cluster || pFolks(faceOf(r))[0] || null;
-      el.querySelector("[data-reviews]").innerHTML = reviews.length ? reviews.map(r => { const sc = revScore(r), ph = photosOf(r), c = CLUSTERS[folkOfR(r)], mineR = r.user_id === uid, canDel = mineR || admin || canCurate(s);
+      const stories = reviews.filter(r => r.body || r.r_title);
+      el.querySelector("[data-reviews]").innerHTML = stories.length ? stories.map(r => { const sc = revScore(r), ph = photosOf(r), c = CLUSTERS[folkOfR(r)], mineR = r.user_id === uid, canDel = mineR || admin || canCurate(s);
         return `<article class="pop-rev pc-story${experts.has(r.user_id) ? " by-expert" : ""}${ph.length ? " has-photo" : ""}" style="--c:${c?.color || "#ffbe7a"}">
         ${ph.length ? `<button type="button" class="pc-cover" data-sphoto="${photos.indexOf(ph[0])}" aria-label="Photo by ${esc(r.author_name || "")}"><img src="${esc(urls[ph[0].path])}" alt="" loading="lazy"></button>` : ""}
         <div class="pc-sbody">
@@ -4942,12 +4990,16 @@ const Spots = (() => {
       const mine = reviews.find(r => r.user_id === uid);
       const form = el.querySelector("[data-reviewform]");
       form?._setMine?.(mine);
+      el.querySelector("[data-impform]")?._setMine?.(mine);
+      const ib = el.querySelector("[data-impress]"); if (ib) ib.firstChild.textContent = mine && revScore(mine) ? "Update your impressions " : "Give your impressions ";
       const rf = el.querySelector("[data-revfolk]");   // con quale folk recensisci (le medie si vedono per folk)
       if (rf && folkV && clusterV && myStyles.length) {
         const pref = PREFERRED[s.category] || [], opts = [...myStyles].sort((a, b) => (pref.includes(b) ? 1 : 0) - (pref.includes(a) ? 1 : 0));
         const cur = mine?.folk && opts.includes(mine.folk) ? mine.folk : opts[0];
         rf.querySelector("select").innerHTML = opts.map(k => `<option value="${k}"${k === cur ? " selected" : ""}>${CLUSTERS[k].ico} ${folkOf(k)}</option>`).join("");
         rf.hidden = false;
+        const fi = el.querySelector("[data-impfolk]");
+        if (fi) { fi.querySelector("select").innerHTML = rf.querySelector("select").innerHTML; fi.hidden = false; }
       }
       const rb = el.querySelector("[data-review]");
       if (rb) rb.firstChild.textContent = mine ? "Edit your story " : "Share your story ";
@@ -4959,11 +5011,22 @@ const Spots = (() => {
      «The folk who know this place»: chi l'ha firmato o raccontato, dal primo (First folk) in poi; poi il consenso e il polso */
   const shortName = n => { const w = String(n || "Folk").trim().split(/\s+/); return w.length > 1 ? `${w[0]} ${w[w.length - 1][0]}.` : w[0]; };
   const setCnt = (el, k, v) => { const c = el.querySelector(`[data-cnt="${k}"]`); if (c) { c.textContent = v; c.hidden = v === "" || v == null; } };
+  // not every impression weighs the same: on the spot counts more, then who knows the area and who has been there
+  const BASIS = { onspot: ["📍", "on the spot", 1.5], local: ["🏡", "knows the area", 1.25], visited: ["🧳", "has been here", 1] };
+  const impWeight = r => (BASIS[r.on_spot ? "onspot" : r.basis] || [, , 1])[2] * (experts.has(r.user_id) ? 1.2 : 1);
   function consensusHtml(reviews, s) {
     const scored = reviews.map(r => [r, revScore(r)]).filter(x => x[1]);
     if (!scored.length) return "";
-    const avg = scored.reduce((a, x) => a + x[1], 0) / scored.length;
-    const subs = critFor(s).map(([k, l, d]) => { const v = reviews.filter(r => r[k]).map(r => r[k]); return v.length ? [l, d, v.reduce((a, b) => a + b, 0) / v.length] : null; }).filter(Boolean);
+    const wsum = scored.reduce((a, [r]) => a + impWeight(r), 0);
+    const avg = scored.reduce((a, [r, v]) => a + v * impWeight(r), 0) / wsum;
+    const subs = critFor(s).map(([k, l, d]) => { const v = reviews.filter(r => r[k]); const w = v.reduce((a, r) => a + impWeight(r), 0); return v.length ? [l, d, v.reduce((a, r) => a + r[k] * impWeight(r), 0) / w] : null; }).filter(Boolean);
+    const cnt = k => scored.filter(([r]) => (r.on_spot ? "onspot" : r.basis) === k).length;
+    const who = scored.slice().sort((a, b) => impWeight(b[0]) - impWeight(a[0]) || String(b[0].created_at).localeCompare(String(a[0].created_at)));
+    const peopleHtml = `<p class="imp-basis-sum">${Object.keys(BASIS).filter(k => cnt(k)).map(k => `<span>${BASIS[k][0]} ${cnt(k)} ${BASIS[k][1]}</span>`).join("")}</p>
+      <ul class="imp-who">${who.slice(0, 6).map(([r, v]) => { const b = BASIS[r.on_spot ? "onspot" : r.basis], c = CLUSTERS[r.folk];
+        return `<li><button type="button" class="pc-face" data-member="${esc(r.user_id || "")}">${avatarHtml(profiles.find(p => p.user_id === r.user_id) || { display_name: r.author_name || "Folk" }, 26)}</button>
+          <span><b>${esc(r.author_name || "Folk")}</b>${c ? ` <i style="--c:${c.color}">${c.ico} ${esc(folkOf(r.folk))}</i>` : ""}<small>${b ? `${b[0]} ${b[1]}` : "earlier impression"}${r.visited_on && !r.on_spot ? ` · ${new Date(r.visited_on).toLocaleDateString(window.I18N?.locale || "en-GB", { month: "short", year: "numeric" })}` : ""}</small></span>
+          <em>${v.toFixed(1)}</em></li>`; }).join("")}${who.length > 6 ? `<li class="more">+${who.length - 6} folk</li>` : ""}</ul>`;
     const byF = {};
     scored.filter(([r]) => CLUSTERS[r.folk]).forEach(([r, v]) => { (byF[r.folk] ||= []).push(v); });
     const dots = v => `<span class="pc-dots" aria-hidden="true">${[1, 2, 3, 4, 5].map(n => `<i style="--f:${Math.max(0, Math.min(1, v - n + 1)) * 100}%"></i>`).join("")}</span>`;
@@ -4971,7 +5034,8 @@ const Spots = (() => {
         <div class="pc-ring" style="--p:${(avg / 5 * 100).toFixed(1)}%"><span class="pc-ring-ico" aria-hidden="true">⛰</span><b>${avg.toFixed(1)}<small>/5</small></b><em>Overall</em><span>👥 ${scored.length} folk</span></div>
         ${subs.length ? `<ul class="pc-subs">${subs.map(([l, d, v]) => `<li><span>${l}<small>${d}</small></span><b>${v.toFixed(1)}</b>${dots(v)}</li>`).join("")}</ul>` : ""}
       </div>
-      ${Object.keys(byF).length > 1 ? `<p class="rev-byfolk">${CLUSTER_KEYS.filter(k => byF[k]).map(k => `<span style="--c:${CLUSTERS[k].color}" title="${folkOf(k)}">${CLUSTERS[k].ico} ${(byF[k].reduce((a, b) => a + b, 0) / byF[k].length).toFixed(1)}</span>`).join("")}</p>` : ""}`;
+      ${Object.keys(byF).length > 1 ? `<p class="rev-byfolk">${CLUSTER_KEYS.filter(k => byF[k]).map(k => `<span style="--c:${CLUSTERS[k].color}" title="${folkOf(k)}">${CLUSTERS[k].ico} ${(byF[k].reduce((a, b) => a + b, 0) / byF[k].length).toFixed(1)}</span>`).join("")}</p>` : ""}
+      ${peopleHtml}`;
   }
   function paintFolk(popup, s) {
     const el = popup.getElement(); if (!el) return;
