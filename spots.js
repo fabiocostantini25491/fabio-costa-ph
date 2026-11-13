@@ -2673,7 +2673,7 @@ const Spots = (() => {
     m.bindTooltip(esc(s.name), { direction: "top" });
     // la scheda è un nodo creato una sola volta: Leaflet la ridisegna a ogni update() e così non perde foto, recensioni e pulsanti
     let node = null;
-    m.bindPopup(() => (guest && m._full) || node || (node = Object.assign(document.createElement("div"), { innerHTML: guest ? guestPopup(s) : popupHtml(s) }).firstElementChild),
+    m.bindPopup(() => (guest && m._full) || node || (node = keepOpen(Object.assign(document.createElement("div"), { innerHTML: guest ? guestPopup(s) : popupHtml(s) }).firstElementChild)),
       { maxWidth: 320, minWidth: 260, className: "spot-popup" });
     m.on("popupopen", e => {
       openId = s.id;
@@ -2827,7 +2827,7 @@ const Spots = (() => {
     const x = d.spot;
     Object.assign(s, x, { lat: +x.lat, lon: +x.lon, category: CATS[x.category] ? x.category : "spot", list: s.list || "Public" });
     (d.profiles || []).forEach(p => { if (!profiles.some(q => q.user_id === p.user_id)) profiles.push(p); });
-    const card = Object.assign(document.createElement("div"), { innerHTML: popupHtml(s) }).firstElementChild;
+    const card = keepOpen(Object.assign(document.createElement("div"), { innerHTML: popupHtml(s) }).firstElementChild);
     card.addEventListener("click", ev => {   // signing, saving, writing: that's for the folk
       if (!ev.target.closest?.(GUEST_ACTS)) return;
       ev.preventDefault(); ev.stopImmediatePropagation();
@@ -2840,6 +2840,9 @@ const Spots = (() => {
     if (signV && commV) loadSigns(popup, s);
     window.fcTrack?.("Spots: public card opened");
   }
+
+  // a tap inside a card never reaches the map: when a button redraws part of the card, Leaflet would take it for a tap on the map and close the card
+  function keepOpen(n) { n?.addEventListener("click", e => e.stopPropagation()); return n; }
 
   function guestPopup(s) {
     const cat = CATS[s.category] || CATS.spot;
