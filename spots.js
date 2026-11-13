@@ -497,13 +497,13 @@ const Spots = (() => {
     if (SF_LOOK) return `<div class="spots-gate sf-door">
       <img class="sf-door-logo" src="img/spotfolk-logo.png" alt="SpotFolk" width="640" height="365">
       <h2>${wantJoin ? "Pull up a seat, <em>folk.</em>" : "Welcome back, <em>folk.</em>"}</h2>
-      <p>${wantJoin ? "Free, one minute. Sign places, read the tips, get your passport." : "Log in to see the signatures and the tips on every place."}</p>
+      <p>${wantJoin ? "Free, one minute. Sign places, read the tips, get your passport." : "Log in to see the whole map, sign the places you know and share your stories."}</p>
       ${inner}
     </div>`;
     return `<div class="spots-gate">
       <div class="gate-icon" aria-hidden="true">${LOCK_SVG}</div>
       <h2>${wantJoin ? "Become folk" : "Welcome back, folk"}</h2>
-      <p>${wantJoin ? "Free, in a minute. Pick your folk and step in: you can explore, sign, review and add places right away." : "Log in to see every place with its exact location, the signatures of the folk, trips and your passport."}</p>
+      <p>${wantJoin ? "Free, in a minute. Pick your folk and step in: you can explore, sign, review and add places right away." : "Log in to see the whole map, sign the places you know, plan trips and open your passport."}</p>
       ${inner}
     </div>`;
   }
@@ -742,16 +742,16 @@ const Spots = (() => {
         <div>
           <p class="wfa-kick">What the maps don't tell you</p>
           <h2 class="wfa-h2">Every place has a secret. <em>The folk who went know it.</em></h2>
-          <p class="wfa-lead">Which hour, which bench, which trattoria the locals actually use. One line each, from people who stood there. The map is open to everyone; the signatures and the tips are for folk.</p>
+          <p class="wfa-lead">Which hour, which bench, which trattoria the locals actually use. One line each, from people who stood there. Open a place on the map to read who signed it; become folk to add your own.</p>
         </div>
         <article class="wfa-place" aria-label="Example of a place card">
           <div class="wfa-ph"><img src="img/wf/photo.jpg" alt="The Odle peaks above Val di Funes" loading="lazy" width="900" height="600"><span>Fabio's pick</span></div>
           <div class="wfa-in">
             <b class="wfa-pn">Santa Maddalena viewpoint</b>
             <p class="wfa-tip"><small>Photo folk · on the spot</small><q>Come at first light in October, stand by the wooden fence above the church.</q></p>
-            <p class="wfa-tip${inside ? "" : " lock"}"${inside ? "" : ' aria-hidden="true"'}><small>Hiker folk · useful</small><q>Park lower down and take the trail through the meadows, twenty minutes.</q></p>
-            <p class="wfa-tip${inside ? "" : " lock"}"${inside ? "" : ' aria-hidden="true"'}><small>Foodie folk · support local</small><q>The farm below sells cheese and speck, ask for the aged one.</q></p>
-            ${inside ? `<p class="wfa-note">Tap a place on the map to read its signatures and tips.</p>` : `<button type="button" class="wfa-btn" id="wfaPeek">Become folk to read them</button>`}
+            <p class="wfa-tip"><small>Hiker folk · useful</small><q>Park lower down and take the trail through the meadows, twenty minutes.</q></p>
+            <p class="wfa-tip"><small>Foodie folk · support local</small><q>The farm below sells cheese and speck, ask for the aged one.</q></p>
+            ${inside ? `<p class="wfa-note">Tap a place on the map to read its signatures and tips.</p>` : `<button type="button" class="wfa-btn" id="wfaPeek">Become folk to add yours</button>`}
           </div>
         </article>
       </section>
@@ -1309,11 +1309,11 @@ const Spots = (() => {
       ${guest && session ? `<div class="guest-banner pending-banner">${LOCK_SVG}<p>${esc(pendingText())}</p></div>` : ""}
       ${pendingMode ? `<div class="guest-banner pending-banner in"><p><strong>Welcome, folk!</strong> Explore everything. Signing, reviews and adding places unlock in a moment: reload the page if they don't.</p></div>` : ""}
       ${guest && !session ? `<div class="guest-banner">${LOCK_SVG}<p>${guestLoading || !spots.length ? `<strong>${guestLoading ? "Loading the shared spots…" : "The community map"}</strong>
-          Members see every spot with its exact location, photos, reviews, prices and live alerts — and can add their own.
+          Open any place to read who signed it, the stories and the photos. Folk see the whole map, and sign, share and add their own.
           <em>Membership is free:</em> <a href="#join">join in a minute</a>.` : (() => {
-          const tr = window.I18N ? I18N.t("GUEST_BANNER") : "GUEST_BANNER";
-          const tpl = tr !== "GUEST_BANNER" ? tr : `<strong>You're seeing {n} of {total} spots</strong>, in approximate positions.
-          Members see every spot with its exact location, photos, reviews, prices and live alerts — and can add their own.
+          const tr = window.I18N ? I18N.t("GUEST_BANNER2") : "GUEST_BANNER2";
+          const tpl = tr !== "GUEST_BANNER2" ? tr : `<strong>You're seeing {n} of {total} places</strong>: open any of them to read who signed it, the stories and the photos.
+          Folk see the whole map, and sign, share and add their own.
           <em>Membership is free:</em> <a href="#join">join in a minute</a>.`;
           return tpl.replace("{n}", fmtN(spots.length)).replace("{total}", fmtN(Math.max(publicTotal, spots.length)));
         })()}</p>
@@ -1382,11 +1382,11 @@ const Spots = (() => {
       ${guest && session ? `<div class="guest-banner pending-banner">${LOCK_SVG}<p>${esc(pendingText())}</p></div>` : ""}
       ${pendingMode ? `<div class="guest-banner pending-banner in"><p><strong>Welcome, folk!</strong> Explore everything. Signing, reviews and adding places unlock in a moment: reload the page if they don't.</p></div>` : ""}
       ${guest && !session ? `<div class="guest-banner">${LOCK_SVG}<p>${guestLoading || !spots.length ? `<strong>${guestLoading ? "Loading the shared spots…" : "The community map"}</strong>
-          Members see every spot with its exact location, photos, reviews, prices and live alerts — and can add their own.
+          Open any place to read who signed it, the stories and the photos. Folk see the whole map, and sign, share and add their own.
           <em>Membership is free:</em> <a href="#join">join in a minute</a>.` : (() => {
-          const tr = window.I18N ? I18N.t("GUEST_BANNER") : "GUEST_BANNER";
-          const tpl = tr !== "GUEST_BANNER" ? tr : `<strong>You're seeing {n} of {total} spots</strong>, in approximate positions.
-          Members see every spot with its exact location, photos, reviews, prices and live alerts — and can add their own.
+          const tr = window.I18N ? I18N.t("GUEST_BANNER2") : "GUEST_BANNER2";
+          const tpl = tr !== "GUEST_BANNER2" ? tr : `<strong>You're seeing {n} of {total} places</strong>: open any of them to read who signed it, the stories and the photos.
+          Folk see the whole map, and sign, share and add their own.
           <em>Membership is free:</em> <a href="#join">join in a minute</a>.`;
           return tpl.replace("{n}", fmtN(spots.length)).replace("{total}", fmtN(Math.max(publicTotal, spots.length)));
         })()}</p>
@@ -2310,8 +2310,8 @@ const Spots = (() => {
       ${s.status && s.status !== "published" ? `<span class="ws-chip st-chip">${s.status === "review" ? "In review" : "Hidden"}</span>` : ""}
       ${s.avg_rating ? `<p class="pop-rating"><span class="stars-static" style="--v:${(s.avg_rating / 5 * 100).toFixed(0)}%">★★★★★</span> <b>${(+s.avg_rating).toFixed(1)}</b> · ${s.reviews} review${s.reviews > 1 ? "s" : ""}</p>` : ""}
       ${s.support_local ? `<p class="soc-note">🌱 Support local — your visit helps this place</p>` : ""}
-      <p class="spot-coords">${ICON.pin}<span>Approximate area (about 1 km)</span></p>
-      ${session ? `<div class="guest-cta">${LOCK_SVG}<p><b>Members see more.</b> You'll see the exact location, photos, reviews and alerts as soon as your account is approved.</p></div>`
+      ${cardV && !session ? `<p class="spot-coords">${ICON.pin}<span>Opening the full card…</span></p>` : `<p class="spot-coords">${ICON.pin}<span>Approximate area (about 1 km)</span></p>`}
+      ${cardV && !session ? "" : session ? `<div class="guest-cta">${LOCK_SVG}<p><b>Members see more.</b> You'll see the exact location, photos, reviews and alerts as soon as your account is approved.</p></div>`
       : `<div class="guest-cta">${LOCK_SVG}<p><b>Members see more:</b> exact location and directions, photos, reviews, prices, live alerts and all the other spots nearby. Membership is free.</p>
         <button type="button" class="pop-btn primary" data-join>Join free</button> <button type="button" class="pop-btn" data-login>Log in</button></div>`}
     </div>`;
