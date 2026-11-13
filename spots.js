@@ -3293,6 +3293,18 @@ const Spots = (() => {
     const href = `${SF_MODE ? "https://fabiocostaph.com/" : ""}#${m.hash}`;
     return `<a class="pc-fabio" href="${esc(href)}"${SF_MODE ? ' target="_blank" rel="noopener"' : ""} data-fabiophotos><span aria-hidden="true">📷</span><span><b>Fabio's photos of this place</b><small>${esc(m.name)} · ${m.n} ${window.I18N?.lang === "it" ? "foto" : m.n === 1 ? "photo" : "photos"}</small></span><em aria-hidden="true">→</em></a>`;
   }
+  // «Meet here»: meet other folk at this place. Shows the meetups planned here (or within 1 km), or invites to plan one
+  function meetHereHtml(s) {
+    const near = upcomingMeetups().filter(m => m.spot_id === s.id || kmBetween(m.lat, m.lon, s.lat, s.lon) <= 1).sort((a, b) => String(a.meet_on).localeCompare(String(b.meet_on)));
+    const next = near[0], going = next ? (meetupJoins.get(next.id) || []).length : 0;
+    return `<div class="pc-meet${next ? " on" : ""}">
+      <span class="pc-meet-ic" aria-hidden="true">👥</span>
+      <span class="pc-meet-tx">${next ? `<b>${esc(next.title)}</b><small>${fmtDay(next.meet_on)}${next.meet_time ? ` · ${esc(next.meet_time)}` : ""} · ${going} ${window.I18N?.lang === "it" ? "partecipanti" : "going"}${near.length > 1 ? ` · +${near.length - 1}` : ""}</small>`
+        : `<b>Meet the folk here</b><small>Pick a day: the folk nearby can join you.</small>`}</span>
+      ${next ? `<button type="button" class="pc-meet-btn" data-meetgo="${next.id}">See it</button>` : ""}
+      <button type="button" class="pc-meet-btn${next ? " line" : ""}" data-meethere>${next ? "＋ Another day" : "＋ Meet here"}</button>
+    </div>`;
+  }
   function popupHtml(s) {
     const cat = CATS[s.category] || CATS.spot;
     const gm = s.url && /^https?:\/\//.test(s.url) ? s.url : `https://www.google.com/maps/search/?api=1&query=${s.lat.toFixed(6)},${s.lon.toFixed(6)}`;
@@ -3368,6 +3380,7 @@ const Spots = (() => {
         <p class="byg-top" data-facttop hidden></p>
         <div class="pop-alerts" data-alerts>${alertsHtml(s)}</div>
         ${fabioPhotosHtml(s)}
+        ${commV ? meetHereHtml(s) : ""}
         ${admin && !guest && pubV ? `<div data-pubpick>${pubPickHtml(s)}</div>` : ""}
       </header>
       ${pcSec("folk", "The folk who know this place", "Real people, real experiences.", folkBody, true)}
@@ -3387,7 +3400,6 @@ const Spots = (() => {
       ${schemaV2 && socialV ? `<div class="pop-actions">
           <button type="button" class="pop-btn" data-report>${ICON_ALERT}Report</button>
           ${canEdit(s) || canCurate(s) ? `<button type="button" class="pop-btn" data-social>Community settings</button>` : ""}
-          ${commV ? `<button type="button" class="pop-btn" data-meethere>👥 Meet here</button>` : ""}
           ${commV && !canEdit(s) ? `<button type="button" class="text-link pop-flag" data-flagspot>⚑ Flag</button>` : ""}
         </div>
         <form class="pop-review pop-reportform" data-reportform hidden>
@@ -3435,6 +3447,12 @@ const Spots = (() => {
     el.querySelector("[data-share]")?.addEventListener("click", () => sharePlace(s));
     wireCurate(popup, s);
     el.querySelector("[data-meethere]")?.addEventListener("click", () => { map.closePopup(); withConduct(() => openMeetup({ lat: s.lat, lon: s.lon, spot: s })); });
+    el.querySelector("[data-meetgo]")?.addEventListener("click", () => {
+      const m = meetups.find(x => x.id === +el.querySelector("[data-meetgo]").dataset.meetgo); if (!m || !map) return;
+      map.closePopup(); map.flyTo([m.lat, m.lon], Math.max(map.getZoom(), 14), { duration: .9 });
+      map.once("moveend", () => commLayer?.eachLayer(l => { const ll = l.getLatLng?.(); if (ll && Math.abs(ll.lat - m.lat) < 1e-9 && Math.abs(ll.lng - m.lon) < 1e-9) l.openPopup(); }));
+      window.fcTrack?.("Spots: meetup opened from a place");
+    });
     el.querySelector("[data-flagspot]")?.addEventListener("click", () => openFlag("spot", String(s.id), s.name));
     const tf = el.querySelector("[data-tkform]");
     if (tf) wireTkGrade(tf, "tk");
