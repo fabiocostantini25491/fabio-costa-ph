@@ -2163,6 +2163,77 @@ const Spots = (() => {
     window.fcTrack?.("Spots: weather shown");
   }
 
+  /* «How is it now?»: the folk report the conditions in one tap, chosen for the kind of place, with an optional comment.
+     Each report expires on its own (hours = how long it stays true). */
+  const COND = {
+    flow:     ["💧", "In full flow", 72],   low:      ["🌱", "Low water", 168],     frozen:  ["🧊", "Frozen", 168],
+    rough:    ["🌊", "Rough sea", 12],      calm:     ["🪞", "Calm water", 12],      jelly:   ["🪼", "Jellyfish", 48],
+    beachfull:["🏖️", "Crowded beach", 6],   windy:    ["💨", "Strong wind", 8],
+    snow:     ["❄️", "Snow on the trail", 96], ice:   ["🧊", "Ice on the trail", 72], clear_trail: ["🥾", "Trail clear", 96],
+    fog:      ["🌫️", "Fog", 6],              cloudsea: ["☁️", "Sea of clouds", 8],    clearsky: ["🌅", "Clear sky", 8],
+    foliage:  ["🍂", "Foliage", 168],        bloom:    ["🌸", "In bloom", 240],       stars:   ["🌌", "Dark sky, great stars", 12],
+    crowded:  ["👥", "Crowded", 6],          quiet:    ["🍃", "Quiet", 6],            parking: ["🅿️", "Parking full", 6],
+    open:     ["✅", "Open", 336],           closed:   ["⛔", "Closed", 336],         wait:    ["⏳", "Long wait", 4], full: ["🛏️", "Fully booked", 24],
+    works:    ["🚧", "Works or blocked", 720]
+  };
+  function condKinds(s) {
+    const t = `${s.name || ""} ${s.note || ""} ${s.list || ""}`.toLowerCase();
+    if (s.category === "restaurant") return ["open", "closed", "wait", "crowded", "quiet"];
+    if (s.category === "hotel") return ["open", "closed", "full", "snow", "works"];
+    if (/cascat|waterfall|wasserfall|cascade|salto |chute|gola|forra|gorge/.test(t)) return ["flow", "low", "frozen", "foliage", "fog", "crowded", "works"];
+    if (/spiaggi|beach|plage|playa|strand|\bcala\b|baia|bay|scogl|cliff|falesi|coast|costa|mare\b|sea\b|faro|lighthouse|caletta|grotta marina/.test(t)) return ["rough", "calm", "windy", "jelly", "beachfull", "fog", "clearsky"];
+    if (/\blago\b|\blake\b|\bsee\b|\blac\b|laghetto|lagh/.test(t)) return ["calm", "windy", "frozen", "low", "foliage", "fog", "crowded"];
+    if (s.category === "trekking" || /rifugio|passo|sentiero|trail|cima|monte|\bpiz\b|peak|forcella|malga|alpe|vetta/.test(t)) return ["snow", "ice", "clear_trail", "fog", "cloudsea", "foliage", "parking"];
+    return ["fog", "clearsky", "foliage", "bloom", "stars", "crowded", "quiet", "closed"];
+  }
+  let condV = true;
+  const condAgo = t => { const m = Math.round((Date.now() - new Date(t)) / 60e3); return m < 60 ? `${Math.max(m, 1)} min ago` : m < 24 * 60 ? `${Math.round(m / 60)} h ago` : m < 48 * 60 ? "yesterday" : `${Math.round(m / 1440)} days ago`; };
+  async function loadConditions(popup, s) {
+    const el = popup.getElement(); const box = el?.querySelector("[data-cond]"); if (!box || !condV) return;
+    let list = [];
+    try {
+      list = guest ? ((await pubPlace(s.id))?.conditions || [])
+        : (await api(`/rest/v1/place_conditions?select=id,kind,note,on_spot,user_id,author_name,created_at,expires_at&spot_id=eq.${s.id}&expires_at=gt.${encodeURIComponent(new Date().toISOString())}&order=created_at.desc&limit=100`)).data || [];
+    } catch (err) { if ([400, 404].includes(err.status)) { condV = false; box.remove(); } return; }
+    list = list.filter(c => COND[c.kind] && new Date(c.expires_at) > new Date());
+    // group by condition: how many folk, the latest one
+    const by = new Map();
+    list.forEach(c => { const g = by.get(c.kind) || by.set(c.kind, { kind: c.kind, n: new Set(), last: c, notes: [] }).get(c.kind); g.n.add(c.user_id); if (c.note) g.notes.push(c); });
+    const groups = [...by.values()].sort((a, b) => b.n.size - a.n.size || String(b.last.created_at).localeCompare(String(a.last.created_at)));
+    const top = el.querySelector("[data-condtop]");
+    if (top) { if (groups.length) { const g = groups[0], [ic, lb] = COND[g.kind]; top.innerHTML = `<button type="button" data-gopulse>${ic} <b>${esc(lb)}</b> · ${condAgo(g.last.created_at)}${g.n.size > 1 ? ` · ${g.n.size} folk` : ""}</button>`; top.hidden = false; top.querySelector("[data-gopulse]").onclick = () => { const d = el.querySelector('[data-sec="pulse"]'); if (d) { d.open = true; popup.update(); setTimeout(() => d.scrollIntoView({ behavior: "smooth", block: "nearest" }), 60); } }; } else top.hidden = true; }
+    const kinds = condKinds(s);
+    box.innerHTML = `<p class="pc-cams-h">📣 How is it now? <small>${groups.length ? `last folk update ${condAgo(list[0].created_at)}` : "no recent news from the folk"}</small></p>
+      ${groups.length ? `<ul class="cond-list">${groups.map(g => { const [ic, lb] = COND[g.kind]; return `<li><span class="cond-chip">${ic} ${esc(lb)}</span>
+          <small>${g.n.size > 1 ? `${g.n.size} folk · ` : `${esc(g.last.author_name || "Folk")} · `}${condAgo(g.last.created_at)}${g.last.on_spot ? " · 📍 on the spot" : ""}</small>
+          <button type="button" class="cond-same" data-condsame="${g.kind}" title="Still like this">✓ Still so</button>
+          ${g.notes.slice(0, 2).map(c => `<q>${esc(c.note)}<cite>— ${esc(c.author_name || "Folk")}</cite></q>`).join("")}</li>`; }).join("")}</ul>` : ""}
+      <button type="button" class="pc-share cond-open" data-condreport>${groups.length ? "Update the conditions" : "Been here today? Tell the folk how it is"} <span aria-hidden="true">＋</span></button>
+      <form class="cond-form" data-condform hidden>
+        <div class="cond-pick">${kinds.map(k => `<button type="button" data-condk="${k}">${COND[k][0]} ${esc(COND[k][1])}</button>`).join("")}</div>
+        <textarea maxlength="200" rows="2" placeholder="A comment, if you like (optional)"></textarea>
+        <button type="submit" class="pop-btn primary" disabled>Send</button>
+      </form>`;
+    const form = box.querySelector("[data-condform]"); let pick = null;
+    box.querySelector("[data-condreport]")?.addEventListener("click", () => { form.hidden = !form.hidden; popup.update(); });
+    form.querySelectorAll("[data-condk]").forEach(b => b.addEventListener("click", () => { pick = b.dataset.condk; form.querySelectorAll("[data-condk]").forEach(x => x.classList.toggle("on", x === b)); form.querySelector("[type=submit]").disabled = false; }));
+    const send = async (kind, note, btn) => {
+      if (btn) { btn.disabled = true; }
+      let onSpot = false;
+      if (navigator.geolocation) onSpot = await new Promise(res => navigator.geolocation.getCurrentPosition(p => res(kmBetween(p.coords.latitude, p.coords.longitude, s.lat, s.lon) <= 0.5), () => res(false), { timeout: 5000, maximumAge: 300000 }));
+      try {
+        await api("/rest/v1/place_conditions", { method: "POST", headers: { Prefer: "return=minimal" },
+          body: { spot_id: s.id, kind, note: note || null, on_spot: onSpot, author_name: displayName(), expires_at: new Date(Date.now() + COND[kind][2] * 36e5).toISOString() } });
+        toast(`${COND[kind][0]} Thanks! The folk will see it${onSpot ? " — 📍 on the spot" : ""}.`);
+        window.fcTrack?.("Spots: condition reported", { kind });
+        loadConditions(popup, s);
+      } catch (err) { toast(/row-level|policy|42501/i.test(err.message) ? "You've sent a lot of updates today: thank you, try again tomorrow." : `Could not send it: ${err.message}`, true); if (btn) btn.disabled = false; }
+    };
+    form.addEventListener("submit", ev => { ev.preventDefault(); if (pick) send(pick, form.querySelector("textarea").value.trim(), form.querySelector("[type=submit]")); });
+    box.querySelectorAll("[data-condsame]").forEach(b => b.addEventListener("click", () => send(b.dataset.condsame, "", b)));
+    popup.update();
+  }
+
   /* Place pulse: the sea, only for places on the coast (Open-Meteo Marine: waves, swell, water temperature, tides) */
   const seaCache = new Map();
   const SEA_STATE = h => h < 0.1 ? ["Calm", "glassy water, perfect reflections"] : h < 0.5 ? ["Calm", "reflections and silky long exposures"]
@@ -2279,7 +2350,7 @@ const Spots = (() => {
       } catch { return; }
     }
     if (!cams.list.length) return;
-    const ago = t => { const m = Math.round((Date.now() - new Date(t)) / 60e3); return !t || !Number.isFinite(m) ? "" : m < 60 ? `${Math.max(m, 1)} min ago` : m < 48 * 60 ? `${Math.round(m / 60)} h ago` : `${Math.round(m / 1440)} days ago`; };
+    const ago = t => { const m = Math.round((Date.now() - new Date(t)) / 60e3); return !t || !Number.isFinite(m) ? "" : m < 60 ? `${Math.max(m, 1)} min ago` : m < 24 * 60 ? `${Math.round(m / 60)} h ago` : m < 48 * 60 ? "yesterday" : `${Math.round(m / 1440)} days ago`; };
     box.innerHTML = `<p class="pc-cams-h">📹 Live webcams nearby</p>
       <div class="pc-cams-grid">${cams.list.map(c => `<a href="${esc(c.url)}" target="_blank" rel="noopener" class="pc-cam">
         <img src="${esc(c.image)}" alt="Webcam: ${esc(camName(c.title))}" loading="lazy">
@@ -2497,7 +2568,7 @@ const Spots = (() => {
       .then(r => r.data || null).catch(err => { if ([400, 404].includes(err.status)) cardV = false; pubCache.delete(id); return null; }));
     return pubCache.get(id);
   }
-  const GUEST_ACTS = "[data-meethere],[data-flagspot],[data-addphoto],[data-review],[data-flagphoto],[data-flagrev],[data-flagsign],[data-sign],[data-signas],[data-unsign],[data-useful],[data-ruseful],[data-pickstyles],[data-member],[data-authorp],[data-report],[data-curate],[data-alerts],[data-delrev],[data-editspot],[data-delete],[data-tkedit],[data-wsedit]";
+  const GUEST_ACTS = "[data-condreport],[data-condsame],[data-meethere],[data-flagspot],[data-addphoto],[data-review],[data-flagphoto],[data-flagrev],[data-flagsign],[data-sign],[data-signas],[data-unsign],[data-useful],[data-ruseful],[data-pickstyles],[data-member],[data-authorp],[data-report],[data-curate],[data-alerts],[data-delrev],[data-editspot],[data-delete],[data-tkedit],[data-wsedit]";
   async function openPublicCard(popup, s, m) {
     const d = await pubPlace(s.id);
     if (!d?.spot || !guest || !popup.isOpen()) return;
@@ -2613,7 +2684,7 @@ const Spots = (() => {
           <button type="submit" class="pop-btn primary">Publish your story</button>
         </form>` : ""}
         <div class="pop-reviews" data-reviews><p class="pc-empty">No stories yet.</p></div>`;
-    const pulseBody = `<div class="pc-wx" data-wx hidden></div><div class="pc-wx pc-sea" data-sea hidden></div><div class="pc-cams" data-cams hidden></div><div data-pulse><p class="pc-empty">Quiet for now: the first signatures will make it move.</p></div>`;
+    const pulseBody = `<div class="pc-cond" data-cond></div><div class="pc-wx" data-wx hidden></div><div class="pc-wx pc-sea" data-sea hidden></div><div class="pc-cams" data-cams hidden></div><div data-pulse><p class="pc-empty">Quiet for now: the first signatures will make it move.</p></div>`;
     const travelBody = `
       ${s.fragile ? `<div class="pc-badge fragile"><p class="pc-bh"><span aria-hidden="true">🛡️</span><b>Fragile place</b></p>
         <ul><li>Stay on the paths and keep groups small.</li><li>No drones, no fires, nothing left behind.</li><li>No geotags on social media: the exact spot stays among the folk.</li></ul></div>` : ""}
@@ -2647,6 +2718,7 @@ const Spots = (() => {
         ${dates ? `<p class="pop-dates">${ICON.cal}<span>${dates}</span></p>` : ""}
         ${s.support_local || s.fragile ? `<p class="pc-flags">${s.fragile ? `<button type="button" class="pc-flag fragile" data-gotravel>🛡️ Fragile place</button>` : ""}${s.support_local ? `<button type="button" class="pc-flag local" data-gotravel>🌱 Support local</button>` : ""}</p>` : ""}
         ${schemaV2 ? `<div class="pop-photos pc-photos" data-photos></div>` : ""}
+        <p class="pc-condtop" data-condtop hidden></p>
         <div class="pop-alerts" data-alerts>${alertsHtml(s)}</div>
         ${admin && !guest && pubV ? `<div data-pubpick>${pubPickHtml(s)}</div>` : ""}
       </header>
@@ -4529,6 +4601,7 @@ const Spots = (() => {
   async function loadExtras(popup, s) {
     const el = popup.getElement();
     if (!el) return;
+    loadConditions(popup, s);
     try {
       const pub = guest ? await pubPlace(s.id) : null;
       const [{ data: photos }, { data: reviews }] = pub ? [{ data: pub.photos || [] }, { data: pub.reviews || [] }] : await Promise.all([
