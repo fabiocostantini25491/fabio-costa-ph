@@ -2461,6 +2461,16 @@ document.addEventListener("change", e => { if (e.target.id === "shotFile" && e.t
 
 /* SpotFolk on its own (spotfolk.eu): only SpotFolk lives here; the rest of the site opens on fabiocostaph.com */
 const SF = document.documentElement.classList.contains("sf");
+// The Folk Hub preview switch: fabiocostaph.com/?hub=1#hub turns it on for this device, ?hub=0 turns it off
+function hubPreview() {
+  try {
+    const q = new URLSearchParams(location.search), v = q.get("hub");
+    if (v === "1") localStorage.setItem("sf-hub", "1"); else if (v === "0") localStorage.removeItem("sf-hub");
+    if (v !== null) { q.delete("hub"); const qs = q.toString(); history.replaceState(null, "", location.pathname + (qs ? "?" + qs : "") + location.hash); }
+    return localStorage.getItem("sf-hub") === "1";
+  } catch { return false; }
+}
+if (/[?&]hub=1(&|$)/.test(location.search) && (!location.hash || location.hash === "#")) history.replaceState(null, "", location.pathname + location.search + "#hub");
 const SF_PAGES = ["spots", "hub", "privacy", "terms", "cookies", "guide"];
 const FCPH = "https://fabiocostaph.com/";
 function sfOutside(hash) {   // the page a hash leads to, if it isn't part of SpotFolk
@@ -2514,8 +2524,9 @@ function route() {
   if (hash.startsWith("author-")) { page = "journal"; authorSlug = hash.slice(7); }
   // porte d'ingresso dei folk (link nei post): #wayfolk-hikers, #wayfolk-backpackers… (anche #spots-…)
   if (hash === "spotfolk" || hash === "wayfolk") page = "spots";
-  // The Folk Hub is being redesigned: its addresses lead to the map for now (the code stays in spots.js)
-  if (hash === "hub" || hash === "folkhub" || hash === "folk-hub") { history.replaceState(null, "", "#spotfolk"); page = "spots"; }   // #spotfolk è l'indirizzo della sezione (#wayfolk e #spots continuano a funzionare)
+  // The Folk Hub: in preview, open only with the link ?hub=1 (remembered on this device; ?hub=0 forgets it). Without it, its addresses lead to the map.
+  if (hash === "folkhub" || hash === "folk-hub") { history.replaceState(null, "", "#hub"); return route(); }
+  if (hash === "hub" && !hubPreview()) { history.replaceState(null, "", "#spotfolk"); page = "spots"; }   // #spotfolk è l'indirizzo della sezione (#wayfolk e #spots continuano a funzionare)
   const door = (hash.match(/^(?:spots|wayfolk|spotfolk)-(photographers|hikers|backpackers|roadtrips|nomads|foodies)$/) || [])[1];
   if (door) { page = "spots"; try { if (localStorage.getItem("fcph-door") !== door) { localStorage.setItem("fcph-door", door); trackEvent("Spots door", { door }); } } catch {} }
   const join = hash === "join";

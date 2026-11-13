@@ -2652,7 +2652,51 @@ const Spots = (() => {
   }
 
   let hubAlert = null;
-  async function showHub() {
+  /* ======== The Folk Hub (hub.js + hub.css, loaded only when the Hub opens; data from supabase-folk-hub-2.sql) ======== */
+  let hubJs = null;
+  function hubKit() {
+    const fitTo = (pts, n = 0) => {
+      if (!pts.length) return;
+      if (!map || (!loaded && !guestLoaded)) { if (n < 25) setTimeout(() => fitTo(pts, n + 1), 400); return; }
+      const go = () => map.fitBounds(L.latLngBounds(pts.map(p => [p.lat, p.lon])).pad(0.2), { maxZoom: 12 });
+      if (ui === "earth" && onGlobe) cinematic(pts[0].lat, pts[0].lon, go); else go();
+    };
+    return {
+      api, ensureSession, esc, avatarUrl, initials, signPhotos, condAgo, factValue: f => factValue(f), displayName, toast,
+      CLUSTERS, COND, TOPIC, BASIS, CATS,
+      who: () => { const member = !!session && !guest && (admin || memberStatus === "approved"); return { session: !!session, member, guest: !member, uid: myUid(), admin }; },
+      track: ev => window.fcTrack?.(ev),
+      goPlace: id => { deepPlace = +id; hubToMap(() => openDeepPlace()); },
+      toMap: pts => { location.hash = "spotfolk"; setTimeout(() => fitTo((pts || []).filter(p => p.lat != null)), 700); },
+      guestFavs: () => [...(guest ? favs : guestFavs())],
+      setFav: async (id, on) => {
+        id = +id;
+        if (!session || guest) {
+          const set = guest ? favs : guestFavs(); on ? set.add(id) : set.delete(id);
+          try { localStorage.setItem(GUEST_FAVS, JSON.stringify([...set])); } catch {}
+        } else {
+          if (on) await api("/rest/v1/spot_favorites", { method: "POST", body: { spot_id: id }, headers: { Prefer: "return=minimal,resolution=ignore-duplicates" } });
+          else await api(`/rest/v1/spot_favorites?spot_id=eq.${id}&user_id=eq.${encodeURIComponent(myUid())}`, { method: "DELETE" });
+          on ? favs.add(id) : favs.delete(id);
+        }
+        const s = spotById(id); if (s) markerById.get(id)?.setIcon(pinIcon(s));
+      },
+      openProfile: uid => openMemberProfile(uid)
+    };
+  }
+  function showHub() {
+    const box = document.getElementById("folkHub"); if (!box) return;
+    if (!hubJs) hubJs = new Promise((res, rej) => {
+      const v = (document.querySelector('script[src*="spots.js"]')?.getAttribute("src") || "").split("?v=")[1] || "";
+      const css = document.createElement("link"); css.rel = "stylesheet"; css.href = `hub.css${v ? `?v=${v}` : ""}`; document.head.append(css);
+      const js = document.createElement("script"); js.src = `hub.js${v ? `?v=${v}` : ""}`; js.onload = res; js.onerror = rej; document.head.append(js);
+    });
+    if (!box.firstElementChild) box.innerHTML = `<p class="gate-note" style="text-align:center;padding:80px 16px">The Folk Hub is loading…</p>`;
+    hubJs.then(() => window.FolkHub.mount(box, hubKit()))
+      .catch(() => { hubJs = null; box.innerHTML = `<p class="gate-note" style="text-align:center;padding:80px 16px">The Folk Hub could not load. Check your connection and try again.</p>`; });
+  }
+  // the first Folk Hub (photo forecast, From Fabio, the folk room, the founding folk): kept, not shown
+  async function showHubV1() {
     const box = document.getElementById("folkHub"); if (!box) return;
     if (!hubData) box.innerHTML = `<div class="fh-hero"><div class="fh-hero-in"><span class="fh-live">THE FOLK HUB</span><h2>Gathering <em>the folk…</em></h2></div></div>`;
     loadHub();
