@@ -2110,6 +2110,8 @@ const Spots = (() => {
   /* Place pulse: live webcams near the place (Windy, through the «webcams» function on Supabase that keeps the key) */
   let camsV = true;
   const camCache = new Map();
+  // Windy titles read «Town - Ort - Paese: Valley - View»: keep what the camera looks at
+  const camName = t => { const x = String(t || "").split(/:\s|›/).pop().trim(); return x.split(" - ").slice(-2).join(" · ") || t; };
   async function loadCams(popup, s) {
     const box = popup.getElement()?.querySelector("[data-cams]");
     if (!box || !camsV || box.dataset.done) return;
@@ -2128,8 +2130,8 @@ const Spots = (() => {
     const ago = t => { const m = Math.round((Date.now() - new Date(t)) / 60e3); return !t || !Number.isFinite(m) ? "" : m < 60 ? `${Math.max(m, 1)} min ago` : m < 48 * 60 ? `${Math.round(m / 60)} h ago` : `${Math.round(m / 1440)} days ago`; };
     box.innerHTML = `<p class="pc-cams-h">📹 Live webcams nearby</p>
       <div class="pc-cams-grid">${cams.list.map(c => `<a href="${esc(c.url)}" target="_blank" rel="noopener" class="pc-cam">
-        <img src="${esc(c.image)}" alt="Webcam: ${esc(c.title)}" loading="lazy">
-        <span><b>${esc(c.title)}</b><small>${c.lat != null ? `${kmBetween(s.lat, s.lon, c.lat, c.lon).toFixed(1)} km · ` : ""}${ago(c.updated)}</small></span></a>`).join("")}</div>
+        <img src="${esc(c.image)}" alt="Webcam: ${esc(camName(c.title))}" loading="lazy">
+        <span><b title="${esc(c.title)}">${esc(camName(c.title))}</b><small>${c.lat != null ? `${kmBetween(s.lat, s.lon, c.lat, c.lon).toFixed(1)} km · ` : ""}${ago(c.updated)}</small></span></a>`).join("")}</div>
       <p class="pc-cams-by">Webcams provided by <a href="https://www.windy.com/" target="_blank" rel="noopener">Windy.com</a></p>`;
     box.hidden = false;
     box.querySelectorAll("img").forEach(i => i.addEventListener("error", () => i.closest(".pc-cam")?.remove()));
