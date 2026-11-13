@@ -80,7 +80,7 @@ window.FolkHub = (() => {
     "just now": "adesso", "{n} min ago": "{n} min fa", "{n} h ago": "{n} h fa", "yesterday": "ieri", "{n} days ago": "{n} giorni fa", "in {n} h": "tra {n} h", "in {n} days": "tra {n} giorni",
     "Your passport and reputation": "Il tuo passaporto e la reputazione", "Become folk — free": "Diventa folk — è gratis",
     "description": "la descrizione", "useful info": "le info utili", "best months": "i mesi migliori", "position": "la posizione", "type": "il tipo", "link": "il link", "name": "il nome", "category": "la categoria", "trail info": "le info del sentiero", "workshop info": "le info del workshop", "dates": "le date", "Support local": "Support local",
-    "Wrong or outdated?": "Sbagliato o superato?",
+    "Wrong or outdated?": "Sbagliato o superato?", "Back to the map": "Torna alla mappa",
     "Finding and following other folk is for members. Join free to meet the people behind the places.": "Trovare e seguire gli altri folk è per gli iscritti. Iscriviti gratis per conoscere le persone dietro i posti.",
     "Your passport collects the places you've signed, your stamps and your folk. It's free.": "Il passaporto raccoglie i posti che hai firmato, i tuoi timbri e i tuoi folk. È gratis.",
     "Find your folk": "Trova i tuoi folk", "Follow the folk who travel like you and the places you love: their news comes to you.": "Segui i folk che viaggiano come te e i posti che ami: le loro novità arrivano a te.",
@@ -203,6 +203,7 @@ window.FolkHub = (() => {
     box.innerHTML = `
       <div class="hb">
         <aside class="hb-left">
+          <a class="hb-back" href="#spotfolk">← ${e(tx("Back to the map"))}</a>
           <div class="hb-brand"><h1>${e(tx("The Folk"))} <em>${e(tx("Hub"))}</em></h1><p>${e(tx("People, places and shared knowledge."))}</p></div>
           <nav class="hb-menu" aria-label="Folk Hub">${VIEWS.map(([k, ic, l]) => `<button type="button" data-view="${k}"><span aria-hidden="true">${ic}</span>${e(tx(l))}<b data-badge="${k}" hidden></b></button>`).join("")}</nav>
           <div class="hb-box hb-myplaces" data-myplaces></div>
@@ -218,13 +219,14 @@ window.FolkHub = (() => {
           <section class="hb-box" data-sugg></section>
         </aside>
       </div>
-      <nav class="hb-tabs" aria-label="Folk Hub">${[["feed", "🏠", "Feed"], ["discover", "🧭", "Discover"], ["map", "🗺️", "Map"], ["places", "♡", "Places"], ["alerts", "🔔", "Alerts"], ["me", "🪪", "Me"]].map(([k, ic, l]) => `<button type="button" data-view="${k}"><span aria-hidden="true">${ic}</span>${e(tx(l))}<b data-badge="${k}" hidden></b></button>`).join("")}</nav>
+      <nav class="hb-tabs" aria-label="Folk Hub">${[["feed", "🏠", "Feed"], ["discover", "🧭", "Discover"], ["tomain", "🗺️", "Map"], ["places", "♡", "Places"], ["alerts", "🔔", "Alerts"], ["me", "🪪", "Me"]].map(([k, ic, l]) => `<button type="button" data-view="${k}"><span aria-hidden="true">${ic}</span>${e(tx(l))}<b data-badge="${k}" hidden></b></button>`).join("")}</nav>
       <dialog class="hb-dlg" data-dlg></dialog>`;
   }
 
   /* ---------- views ---------- */
   function setView(v) {
     if (v === "map") { openFull(true); return; }
+    if (v === "tomain") { location.hash = "spotfolk"; return; }
     const f = v === "following" ? "following" : v === "feed" && S.filter === "following" ? "all" : S.filter;
     if (f !== S.filter) { S.filter = f; S.items = []; S.end = false; S.err = ""; }
     S.view = v === "following" ? "feed" : v;
@@ -246,7 +248,7 @@ window.FolkHub = (() => {
   function paintFeed(m) {
     const fol = S.filter === "following";
     m.innerHTML = `
-      <div class="hb-head"><h2>${e(tx("What's"))} <em>${e(tx("happening"))}</em></h2><p>${e(tx(fol ? "From folk you follow and places you saved." : "From the folk and the places on the map."))}</p></div>
+      <div class="hb-head"><h2>${e(tx("What's"))} <em>${e(tx("happening"))}</em></h2><button type="button" class="hb-actmap" data-view="map">🗺️ ${e(tx("Activity on the map"))}</button><p>${e(tx(fol ? "From folk you follow and places you saved." : "From the folk and the places on the map."))}</p></div>
       ${who().guest ? `<div class="hb-preview"><b>${e(tx("You're seeing a preview."))}</b> ${e(tx("Here is what the folk bring to the places of the public map. Become folk to see the whole map, follow people and places, and take part."))} <a href="#join">${e(tx("Become folk — free"))}</a></div>` : ""}
       <div class="hb-chips" role="tablist">${FILTERS.map(([k, l]) => `<button type="button" role="tab" aria-selected="${S.filter === k}" class="${S.filter === k ? "on" : ""}" data-filter="${k}">${e(tx(l))}</button>`).join("")}</div>
       <div class="hb-feed" data-feed aria-live="polite"></div>

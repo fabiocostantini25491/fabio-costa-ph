@@ -185,3 +185,8 @@ html.hb-noscroll,html.hb-noscroll body{overflow:hidden}
 
 .hb-preview{margin:0 0 14px;padding:12px 16px;border-radius:16px;border:1px solid rgba(255,190,122,.35);background:rgba(242,140,30,.08);font-size:14px;color:#dfe7f0}
 .hb-preview b{color:var(--hb-warm)}.hb-preview a{color:var(--hb-warm);white-space:nowrap}
+
+.hb-back{align-self:flex-start;display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:999px;border:1px solid rgba(255,190,122,.4);color:var(--hb-warm);font:600 13.5px var(--sans);text-decoration:none}
+.hb-back:hover{background:rgba(242,140,30,.1)}
+.hb-actmap{display:none;margin-left:auto;padding:7px 12px;border-radius:999px;border:1px solid var(--hb-line);background:var(--hb-panel);color:#dbe4ee;font-size:13px}
+@media (max-width:1100px){.hb-actmap{display:inline-flex}.hb-left{gap:10px}}

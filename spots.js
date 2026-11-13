@@ -5629,7 +5629,7 @@ const Spots = (() => {
     onGlobe = false;
     const el = root();
     if (guest) { el.innerHTML = gateHtml(`<p class="gate-note">${esc(pendingText())}</p>`); return; }
-    el.innerHTML = `<div class="me"><a class="text-link me-back" href="#spotfolk">${ICON.prev}Back to the map</a><p class="gate-note">Loading your profile…</p></div>`;
+    el.innerHTML = `<div class="me"><p class="me-backs"><a class="text-link me-back" href="#spotfolk">${ICON.prev}Back to the map</a><a class="text-link me-back" href="#hub">👥 The Folk Hub</a></p><p class="gate-note">Loading your profile…</p></div>`;
     const data = await loadMe();
     if (!meView) return;
     const uid = myUid(), me = profiles.find(p => p.user_id === uid) || { display_name: displayName() };
@@ -5637,7 +5637,7 @@ const Spots = (() => {
     const stats = [["Places", data.profile?.places ?? mine.length], ["Reviews", data.profile?.reviews ?? data.reviews.length], ["Photos", data.profile?.photos ?? data.photos.length], ["Saved", data.profile?.saved ?? favs.size]];
     if (SF_LOOK) { sfState(); document.documentElement.classList.add("sf-on-me"); return renderMeSF(el, data, uid, me, stats); }
     el.innerHTML = `<div class="me">
-      <a class="text-link me-back" href="#spotfolk">${ICON.prev}Back to the map</a>
+      <p class="me-backs"><a class="text-link me-back" href="#spotfolk">${ICON.prev}Back to the map</a><a class="text-link me-back" href="#hub">👥 The Folk Hub</a></p>
       <header class="me-head">
         ${avatarHtml(me, 84)}
         <div class="me-id">
@@ -5669,7 +5669,7 @@ const Spots = (() => {
     const goTab = { Places: "places", Reviews: "contrib", Photos: "contrib", Saved: "saved" };
     const sIco = { Places: "📍", Reviews: "★", Photos: "📷", Saved: "♥" };
     el.innerHTML = `<div class="me sfme">
-      <a class="text-link me-back" href="#spotfolk">${ICON.prev}Back to the map</a>
+      <p class="me-backs"><a class="text-link me-back" href="#spotfolk">${ICON.prev}Back to the map</a><a class="text-link me-back" href="#hub">👥 The Folk Hub</a></p>
       <header class="sfme-hero">
         <div class="sfme-cover" aria-hidden="true"></div>
         <div class="sfme-main">
