@@ -532,6 +532,7 @@ const Spots = (() => {
       }
       spots = all.filter(x => Number.isFinite(+x.lat)).map(x => ({ ...x, lat: +x.lat, lon: +x.lon, list: "Public", category: CATS[x.category] ? x.category : "spot", fragile: false }));
       admin = false; guest = true; guestLoaded = true; reports = new Map();
+      favs = guestFavs();
       return true;
     } catch { return false; }
   }
@@ -799,7 +800,7 @@ const Spots = (() => {
           <option value="show"${alertMode === "show" ? " selected" : ""}>Show</option>
           <option value="hide"${alertMode === "hide" ? " selected" : ""}>Hide places with alerts</option>
           <option value="only"${alertMode === "only" ? " selected" : ""}>Only places with alerts</option></select></label>` : "")
-        + (!guest && commV ? `<button type="button" class="sx-item${onlyFavs ? " on" : ""}" id="onlyFavs" aria-pressed="${onlyFavs}" style="--c:#ff8fb1"><span class="sx-ico">♥</span><span class="sx-name">My spots</span><small>${favs.size}</small><span class="sx-check" aria-hidden="true"></span></button>` : "");
+        + (commV ? `<button type="button" class="sx-item${onlyFavs ? " on" : ""}" id="onlyFavs" aria-pressed="${onlyFavs}" style="--c:#ff8fb1"><span class="sx-ico">♥</span><span class="sx-name">My spots</span><small>${favs.size}</small><span class="sx-check" aria-hidden="true"></span></button>` : "");
       if (g.id === "pass") {
         const intro = `<p class="sx-pass-intro">Leaving and can't take it home? Sell it or give it away to the travellers arriving after you: chargers, adapters, tents, guidebooks…</p>`;
         if (guest || !commV) return intro + lockItem("Pass it on", "🎁");
@@ -2280,7 +2281,7 @@ const Spots = (() => {
       .then(r => r.data || null).catch(err => { if ([400, 404].includes(err.status)) cardV = false; pubCache.delete(id); return null; }));
     return pubCache.get(id);
   }
-  const GUEST_ACTS = "[data-fav],[data-meethere],[data-flagspot],[data-addphoto],[data-review],[data-flagphoto],[data-flagrev],[data-flagsign],[data-sign],[data-signas],[data-unsign],[data-useful],[data-ruseful],[data-favstory],[data-pickstyles],[data-member],[data-authorp],[data-report],[data-curate],[data-alerts],[data-delrev],[data-editspot],[data-delete],[data-tkedit],[data-wsedit]";
+  const GUEST_ACTS = "[data-meethere],[data-flagspot],[data-addphoto],[data-review],[data-flagphoto],[data-flagrev],[data-flagsign],[data-sign],[data-signas],[data-unsign],[data-useful],[data-ruseful],[data-pickstyles],[data-member],[data-authorp],[data-report],[data-curate],[data-alerts],[data-delrev],[data-editspot],[data-delete],[data-tkedit],[data-wsedit]";
   async function openPublicCard(popup, s, m) {
     const d = await pubPlace(s.id);
     if (!d?.spot || !guest || !popup.isOpen()) return;
@@ -2817,6 +2818,7 @@ const Spots = (() => {
       meetupJoins = new Map();
       (jo.data || []).forEach(j => (meetupJoins.get(j.meetup_id) || meetupJoins.set(j.meetup_id, []).get(j.meetup_id)).push(j));
       favs = new Set((fa.data || []).map(f => f.spot_id));
+      mergeGuestFavs();
       profiles = pr.data || [];
       experts = new Map();
       contribs = new Map();
@@ -3005,8 +3007,29 @@ const Spots = (() => {
   }
 
   /* --- preferiti --- */
+  // visitors can save places too: kept on this device, and moved into the passport when they become folk
+  const GUEST_FAVS = "spotfolk-saved";
+  function guestFavs() { try { return new Set(JSON.parse(localStorage.getItem(GUEST_FAVS) || "[]").map(Number).filter(Number.isFinite)); } catch { return new Set(); } }
+  function mergeGuestFavs() {
+    const local = guestFavs(); if (!local.size || !session) return;
+    const add = [...local].filter(id => !favs.has(id));
+    add.forEach(id => favs.add(id));
+    try { localStorage.removeItem(GUEST_FAVS); } catch {}
+    if (add.length) api("/rest/v1/spot_favorites", { method: "POST", body: add.map(id => ({ spot_id: id })), headers: { Prefer: "return=minimal,resolution=ignore-duplicates" } })
+      .then(() => window.fcTrack?.("Spots: saved places moved into the passport")).catch(() => {});
+  }
   async function toggleFav(s, btn) {
     const on = !favs.has(s.id);
+    if (guest) {
+      on ? favs.add(s.id) : favs.delete(s.id);
+      try { localStorage.setItem(GUEST_FAVS, JSON.stringify([...favs])); } catch {}
+      btn.classList.toggle("on", on); btn.textContent = on ? "♥ Saved" : "♡ Save";
+      markerById.get(s.id)?.setIcon(pinIcon(s));
+      const fb = $("#onlyFavs"); if (fb) fb.querySelector("small").textContent = favs.size;
+      if (on) toast("Saved. Find it under ♥ My spots in the map menu.");
+      window.fcTrack?.(on ? "Spots: visitor saved a place" : "Spots: visitor unsaved a place");
+      return;
+    }
     btn.disabled = true;
     try {
       if (on) await api("/rest/v1/spot_favorites", { method: "POST", body: { spot_id: s.id }, headers: { Prefer: "return=minimal,resolution=ignore-duplicates" } });
