@@ -16,6 +16,8 @@ const SPOTS_CONFIG = {
 };
 
 const Spots = (() => {
+  // what the folk write (stories, tips, notes): marked so that app.js can offer «Translate» when it is in another language
+  const ugc = t => `<span class="ugc">${esc(t)}</span>`;
   const SESSION_KEY = "fcph-session";
   const PAGE_SIZE = 1000;
   const COMMUNITY = "Community";
@@ -1947,7 +1949,7 @@ const Spots = (() => {
       <span class="spot-cat" style="--c:#e6edf7">${T.icon}${T.label}<em>OpenStreetMap</em></span>
       <strong>${esc(it.name)}</strong>
       ${osmFacts(t).length ? `<p class="osm-facts">${osmFacts(t).join(" · ")}</p>` : ""}
-      ${t.description ? `<p class="pop-desc">${esc(t.description)}</p>` : ""}
+      ${t.description ? `<p class="pop-desc">${ugc(t.description)}</p>` : ""}
       <div class="osm-wiki" data-wiki></div>
       <p class="pop-author">${fmtKm(it.d)} from ${origin?.kind === "me" ? "you" : esc(origin?.label || "the point")}${it.fresh ? ` · ⚡ updated on OpenStreetMap ${ago(it.age)}` : ""}</p>
       <div class="osm-links">
@@ -2210,7 +2212,7 @@ const Spots = (() => {
       ${groups.length ? `<ul class="cond-list">${groups.map(g => { const [ic, lb] = COND[g.kind]; return `<li><span class="cond-chip">${ic} ${esc(lb)}</span>
           <small>${g.n.size > 1 ? `${g.n.size} folk · ` : `${esc(g.last.author_name || "Folk")} · `}${condAgo(g.last.created_at)}${g.last.on_spot ? " · 📍 on the spot" : ""}</small>
           <button type="button" class="cond-same" data-condsame="${g.kind}" title="Still like this">✓ Still so</button>
-          ${g.notes.slice(0, 2).map(c => `<q>${esc(c.note)}<cite>— ${esc(c.author_name || "Folk")}</cite></q>`).join("")}</li>`; }).join("")}</ul>` : ""}
+          ${g.notes.slice(0, 2).map(c => `<q>${ugc(c.note)}<cite>— ${esc(c.author_name || "Folk")}</cite></q>`).join("")}</li>`; }).join("")}</ul>` : ""}
       <button type="button" class="pc-share cond-open" data-condreport>${groups.length ? "Update the conditions" : "Been here today? Tell the folk how it is"} <span aria-hidden="true">＋</span></button>
       <form class="cond-form" data-condform hidden>
         <div class="cond-pick">${kinds.map(k => `<button type="button" data-condk="${k}">${COND[k][0]} ${esc(COND[k][1])}</button>`).join("")}</div>
@@ -2318,7 +2320,7 @@ const Spots = (() => {
     a.slice(1).concat(99).forEach(m => { if (m !== pr + 1) { runs.push(st === pr ? MONTHS[st - 1] : `${MONTHS[st - 1]}–${MONTHS[pr - 1]}`); st = m; } pr = m; }); return runs.join(", "); };
   function factValue(f) {
     const [, , , type] = TOPIC[f.topic] || [];
-    const d = f.data || {}, note = f.note ? `<p class="byg-note">${esc(f.note)}</p>` : "";
+    const d = f.data || {}, note = f.note ? `<p class="byg-note">${ugc(f.note)}</p>` : "";
     if (type === "fee") return `<p class="byg-val">${d.free ? "Free" : `${esc(d.amount ?? "")} ${esc(d.currency || "")} ${esc(FEE_PER[d.per] || "")}`}${(d.how || []).length ? ` · ${(d.how || []).map(k => esc(FEE_HOW[k] || k)).join(" or ")}` : ""}${d.link ? ` · <a href="${esc(d.link)}" target="_blank" rel="noopener">Pay ↗</a>` : ""}</p>${note}`;
     if (type === "booking") return `<p class="byg-val">${d.required ? "Booking required" : "No booking needed"}${d.advance ? ` · ${esc(d.advance)}` : ""}${d.link ? ` · <a href="${esc(d.link)}" target="_blank" rel="noopener">Book ↗</a>` : ""}</p>${note}`;
     if (type === "months") return `${monthsBar(d.months || [])}${(d.months || []).length ? `<p class="byg-val">${f.topic === "another_season" ? "Folk suggest" : "Open"}: ${esc(monthsText(d.months))}</p>` : ""}${note}`;
@@ -3336,7 +3338,7 @@ const Spots = (() => {
         <p>This place lives on visitors like you: eat, sleep and buy from the people who live here.</p><div data-nearby></div></div>` : ""}
       ${travelBetter(s)}`;
     const detailsBody = `
-      ${s.note ? `<p class="pop-desc">${esc(s.note)}</p>` : ""}
+      ${s.note ? `<p class="pop-desc">${ugc(s.note)}</p>` : ""}
       <dl class="pc-dl">
         <div><dt>${ICON.pin}Coordinates</dt><dd data-coords>${s.fragile ? `Approximate area (about 1 km)` : `${fmtCoord(s.lat, s.lon).replace("  |  ", " · ")} <button type="button" class="spot-copy" data-copy>Copy</button>`}</dd></div>
         ${s.best_months ? `<div><dt>📅 Best period</dt><dd>${esc(s.best_months)}</dd></div>` : ""}
@@ -3635,7 +3637,7 @@ const Spots = (() => {
     const list = reports.get(s.id) || [];
     const al = list.filter(r => ALERTS[r.kind]), req = admin ? list.filter(r => REQUESTS[r.kind]) : [];
     return al.map(r => `<div class="alert-box" data-rid="${r.id}">
-        <b>${ALERTS[r.kind].icon} ${ALERTS[r.kind].label}</b>${r.note ? `<p>${esc(r.note)}</p>` : ""}
+        <b>${ALERTS[r.kind].icon} ${ALERTS[r.kind].label}</b>${r.note ? `<p>${ugc(r.note)}</p>` : ""}
         <small>${esc(r.author_name || "Member")} · ${fmtDay(r.created_at.slice(0, 10))}${r.until ? ` · until ${fmtDay(r.until)}` : ""}${r.confirmations ? ` · confirmed ${r.confirmations}×` : ""}</small>
         <div class="alert-act"><button type="button" class="pop-btn" data-confirm="${r.id}">Still valid</button><button type="button" class="pop-btn" data-resolve="${r.id}">Not valid anymore</button></div>
       </div>`).join("")
@@ -4064,7 +4066,7 @@ const Spots = (() => {
       <span class="spot-cat" style="--c:#ffd166">${MEET_ICON}Meetup</span>
       <strong>${esc(m.title)}</strong>
       <p class="pop-dates">${ICON.cal}<span>${fmtDay(m.meet_on)}${m.meet_time ? ` · ${esc(m.meet_time)}` : ""}</span></p>
-      ${m.note ? `<p class="pop-desc">${esc(m.note)}</p>` : ""}
+      ${m.note ? `<p class="pop-desc">${ugc(m.note)}</p>` : ""}
       <p class="pop-author">Organised by ${esc(m.author_name || "a member")}${xpBadge(m.created_by)}</p>
       <p class="meet-who" data-who>${who.length ? `👥 ${who.length} going: ${who.map(j => esc(j.name || "Member")).join(", ")}` : "Nobody has joined yet."}</p>
       <div class="pop-actions">
@@ -4175,7 +4177,7 @@ const Spots = (() => {
       <strong>${esc(t.title)}</strong>
       <p class="trip-meta">${tripModes(t).map(m => `<span title="${MODES[m][1]}">${MODES[m][0]}</span>`).join("")}<b>${fmtKm(km)}</b> · ${st.length} stops${dates ? ` · ${dates}` : ""}</p>
       <p class="trip-ends"><span class="trip-end start">▶</span>${esc(st[0].n || "Start")} <span class="trip-arrow">→</span> <span class="trip-end finish">⚑</span>${esc(st[st.length - 1].n || "Arrival")}</p>
-      ${t.note ? `<p class="pop-desc">${esc(t.note)}</p>` : ""}
+      ${t.note ? `<p class="pop-desc">${ugc(t.note)}</p>` : ""}
       <details class="trip-stops"><summary>All stops</summary><ol>${st.map((p, i) => `<li>${i ? `<span title="${MODES[modeOf(t, i)][1]}">${MODES[modeOf(t, i)][0]}</span>` : "▶"} ${esc(p.n || `Stop ${i + 1}`)}</li>`).join("")}</ol></details>
       <p class="pop-author">By ${esc(t.author_name || "a member")}${xpBadge(t.created_by)}</p>
       <div class="pop-actions">
@@ -4341,7 +4343,7 @@ const Spots = (() => {
       <strong>${esc(it.item)}</strong>
       ${it.kind === "sell" && it.price != null ? `<p class="pass-price">${esc(fmtPrice(it))}</p>` : it.kind === "give" ? `<p class="pass-price free">Free</p>` : ""}
       ${it.place ? `<p class="pop-dates">${ICON.pin}<span>${esc(it.place)}</span></p>` : ""}
-      ${it.note ? `<p class="pop-desc">${esc(it.note)}</p>` : ""}
+      ${it.note ? `<p class="pop-desc">${ugc(it.note)}</p>` : ""}
       <p class="pass-contact"><b>Contact</b> ${linkify(it.contact || "")}</p>
       <p class="pop-author">Posted by ${esc(it.author_name || "a member")}${xpBadge(it.created_by)} · ${fmtDay(String(it.created_at).slice(0, 10))}</p>
       <div class="pop-actions">
@@ -4447,7 +4449,7 @@ const Spots = (() => {
       ${p.base_name ? `<p class="pop-dates">${ICON.pin}<span>${esc(p.base_name)}</span></p>` : ""}
       ${isCo(p.user_id) ? `<p class="pop-dates co-line">${ICON_APERTURE}<span>Contributor of Fabio Costa Ph — <a href="#author-${encodeURIComponent(slugify(p.display_name))}">see their work</a></span></p>` : ""}
       ${experts.has(p.user_id) ? `<p class="pop-dates">🧭 <span>Local expert · ${esc(experts.get(p.user_id).area_name)}</span></p>` : ""}
-      ${p.bio ? `<p class="pop-desc">${esc(p.bio)}</p>` : ""}
+      ${p.bio ? `<p class="pop-desc">${ugc(p.bio)}</p>` : ""}
       ${postFresh(p) && p.last_post_url ? `<a class="pop-btn primary ig-new" href="${esc(p.last_post_url)}" target="_blank" rel="noopener">📣 See the new post</a>` : ""}
       <div class="pop-actions">
         ${ig ? `<a class="pop-btn primary" href="${esc(ig)}" target="_blank" rel="noopener">Instagram @${esc(p.instagram)}</a>` : ""}
@@ -5211,7 +5213,7 @@ const Spots = (() => {
         <input type="text" maxlength="140" placeholder="A tip in one line (optional), e.g. Go before 8, the car park fills up" aria-label="Your tip">
         <button type="submit" class="pop-btn primary">Sign</button>
       </form>
-      ${tips.length ? `<ul class="sg-tips">${tips.map(g => `<li><span style="--c:${(CLUSTERS[g.cluster] || { color: "#ffd27a" }).color}">${g.cluster === "fabio" ? "★" : CLUSTERS[g.cluster]?.ico || ""}</span><p>${esc(g.tip)}<small>${who(g)}${evoV ? ` <button type="button" class="sg-useful${vMine(g.id) ? " on" : ""}" data-useful="${g.id}"${g.user_id === uid ? " disabled" : ""} aria-pressed="${vMine(g.id)}">👍 Useful${vCount(g.id) ? ` ${vCount(g.id)}` : ""}</button>` : ""}${g.user_id !== uid ? ` <button type="button" class="rev-flag" data-flagsign="${g.id}" title="Flag this tip" aria-label="Flag this tip">⚑</button>` : ""}</small></p></li>`).join("")}</ul>` : ""}`;
+      ${tips.length ? `<ul class="sg-tips">${tips.map(g => `<li><span style="--c:${(CLUSTERS[g.cluster] || { color: "#ffd27a" }).color}">${g.cluster === "fabio" ? "★" : CLUSTERS[g.cluster]?.ico || ""}</span><p>${ugc(g.tip)}<small>${who(g)}${evoV ? ` <button type="button" class="sg-useful${vMine(g.id) ? " on" : ""}" data-useful="${g.id}"${g.user_id === uid ? " disabled" : ""} aria-pressed="${vMine(g.id)}">👍 Useful${vCount(g.id) ? ` ${vCount(g.id)}` : ""}</button>` : ""}${g.user_id !== uid ? ` <button type="button" class="rev-flag" data-flagsign="${g.id}" title="Flag this tip" aria-label="Flag this tip">⚑</button>` : ""}</small></p></li>`).join("")}</ul>` : ""}`;
     el.querySelector("[data-sgshare]")?.addEventListener("click", () => sharePlace(s));
     el.querySelector("[data-sginvite]")?.addEventListener("click", () => sharePlace(s, true));
     let pending = null;
@@ -5336,8 +5338,8 @@ const Spots = (() => {
               <small><time>${fmtDay(r.created_at.slice(0, 10))}</time></small></span>
             ${onSpotOf(r) ? `<span class="pc-onspot">📍 On the spot</span>` : ""}
           </header>
-          ${r.r_title ? `<h4 class="pc-title">${esc(r.r_title)}</h4>` : ""}
-          ${r.body ? `<p class="pc-text">${esc(r.body)}</p>` : ""}
+          ${r.r_title ? `<h4 class="pc-title">${ugc(r.r_title)}</h4>` : ""}
+          ${r.body ? `<p class="pc-text">${ugc(r.body)}</p>` : ""}
           ${ph.length > 1 ? `<div class="pc-sphotos">${ph.slice(1).map(p => `<button type="button" data-sphoto="${photos.indexOf(p)}" aria-label="Photo by ${esc(p.author_name || "")}"><img src="${esc(thumbUrl(urls, p))}" alt="" loading="lazy"></button>`).join("")}</div>` : ""}
           ${r.paid != null ? `<p class="rev-paid">💶 Paid ${fmtMoney(r.paid, r.currency)}${r.people ? ` for ${r.people} ${r.people > 1 ? "people" : "person"}` : ""}${r.nights ? `, ${r.nights} night${r.nights > 1 ? "s" : ""}` : ""}${r.stay_type ? ` · ${esc(r.stay_type)}` : ""}</p>` : ""}
           <footer class="pc-sfoot">${sc ? `<span class="pc-score" title="Their impression">${sc.toFixed(1)}<small>/5</small></span>` : ""}
@@ -5963,7 +5965,7 @@ const Spots = (() => {
     const body = d.querySelector(".me-pub");
     body.innerHTML = `<header class="me-head small">${avatarHtml(p, 64)}<div class="me-id"><p class="eyebrow">Member${contribs.has(uid) ? " · Contributor" : ""}${experts.has(uid) ? ` · Local expert, ${esc(experts.get(uid).area_name)}` : ""}</p>
         <h2>${esc(p.display_name)}</h2><p class="me-sub">${p.username ? `@${esc(p.username)}` : ""}${p.base_name ? ` · ${esc(p.base_name)}` : ""}${p.since ? ` · since ${esc(fmtWhen(p.since))}` : ""}</p></div></header>
-      ${p.bio ? `<p class="me-bio">${esc(p.bio)}</p>` : ""}
+      ${p.bio ? `<p class="me-bio">${ugc(p.bio)}</p>` : ""}
       <dl class="me-stats">${[["Places", p.places ?? places.length], ["Reviews", p.reviews], ["Photos", p.photos], ["Meetups", p.meetups]].filter(([, v]) => v != null).map(([k, v]) => `<div><dt>${k}</dt><dd>${fmtN(+v || 0)}</dd></div>`).join("")}</dl>
       <p class="sx-links">${p.instagram ? `<a class="text-link" href="https://www.instagram.com/${encodeURIComponent(p.instagram)}/" target="_blank" rel="noopener">Instagram @${esc(p.instagram)}</a>` : ""}${p.website ? `<a class="text-link" href="${esc(p.website)}" target="_blank" rel="noopener">${ICON.ext}Website</a>` : ""}</p>
       <div data-pp><p class="muted">Loading the passport…</p></div>

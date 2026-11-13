@@ -89,6 +89,7 @@ window.FolkHub = (() => {
   };
   const tx = (s, v = {}) => { let o = (lang === "it" && IT[s]) || s; for (const k in v) o = o.split(`{${k}}`).join(v[k]); return o; };
   const e = s => K.esc(String(s ?? ""));
+  const u = s => `<span class="ugc">${e(s)}</span>`;   // what the folk wrote: app.js offers «Translate» when it is in another language
   const ago = t => {
     const m = Math.round((Date.now() - new Date(t)) / 60e3);
     if (m < 1) return tx("just now"); if (m < 60) return tx("{n} min ago", { n: m }); if (m < 1440) return tx("{n} h ago", { n: Math.round(m / 60) });
@@ -157,16 +158,16 @@ window.FolkHub = (() => {
     let what = "", body = "", big = false, img = "";
     switch (i.kind) {
       case "sign": what = tx(i.folk === "fabio" ? "picked {p}" : "signed {p}", { p: place }); big = open && !!i.txt;
-        body = `${i.extra?.first ? `<span class="hb-tag gold">${e(tx("👑 First to sign it"))}</span>` : ""}${i.txt ? `<p class="hb-quote">“${e(i.txt)}”</p>` : ""}`; break;
+        body = `${i.extra?.first ? `<span class="hb-tag gold">${e(tx("👑 First to sign it"))}</span>` : ""}${i.txt ? `<p class="hb-quote">“${u(i.txt)}”</p>` : ""}`; break;
       case "cond": { const c = K.COND[i.extra?.cond] || ["📣", "An update"]; what = tx("says how it is now at {p}", { p: place });
-        body = `<div class="hb-conds"><span>${c[0]} ${e(c[1])}</span>${i.extra?.expires ? `<small>${e(until(i.extra.expires))}</small>` : ""}${nn.checks ? `<small>· ${e(tx("Confirmed by {n} folk", { n: nn.checks }))}</small>` : ""}</div>${i.txt ? `<p class="hb-txt">${e(i.txt)}</p>` : ""}`; break; }
+        body = `<div class="hb-conds"><span>${c[0]} ${e(c[1])}</span>${i.extra?.expires ? `<small>${e(until(i.extra.expires))}</small>` : ""}${nn.checks ? `<small>· ${e(tx("Confirmed by {n} folk", { n: nn.checks }))}</small>` : ""}</div>${i.txt ? `<p class="hb-txt">${u(i.txt)}</p>` : ""}`; break; }
       case "fact": case "check": {
         what = tx(i.kind === "check" ? "checked {t} at {p}" : i.extra?.changed ? "updated {t} at {p}" : "added {t} at {p}", { t: `<b>${t[0]} ${e(t[1])}</b>`, p: place });
         let val = ""; if (open && i.extra?.data) { try { val = K.factValue({ topic: i.extra.topic, data: i.extra.data, note: i.kind === "fact" ? i.txt : null, _s: { lat: i.lat, lon: i.lon } }); } catch {} }
         const conf = nn.checks ? tx("Confirmed by {n} folk", { n: nn.checks }) : tx("Not confirmed yet");
         body = open ? `<div class="hb-fact"><i>${t[0]}</i><div><b>${e(t[1])}</b>${val}<small>${e(conf)}</small></div>${nn.checks ? `<span class="hb-st">✓ ${e(tx("Checked"))}</span>` : ""}</div>` : ""; break; }
       case "story": what = tx("told a story about {p}", { p: place }); big = !!open;
-        body = `${i.extra?.title ? `<h3 class="hb-title">${e(i.extra.title)}</h3>` : ""}${i.txt ? `<p class="hb-txt">${e(i.txt)}${i.txt.length >= 280 ? "…" : ""}</p>` : ""}`; break;
+        body = `${i.extra?.title ? `<h3 class="hb-title">${u(i.extra.title)}</h3>` : ""}${i.txt ? `<p class="hb-txt">${u(i.txt)}${i.txt.length >= 280 ? "…" : ""}</p>` : ""}`; break;
       case "impression": { what = tx("gave impressions of {p}", { p: place }); const b = K.BASIS[i.extra?.on_spot ? "onspot" : i.extra?.basis];
         body = i.extra?.score != null ? `<div class="hb-conds"><span>⛰ ${e(i.extra.score)}/5</span>${b ? `<small>${b[0]} ${e(b[1])}</small>` : ""}</div>` : ""; break; }
       case "photo": what = tx("added a photo of {p}", { p: place }); big = open && !!i.extra?.path; break;

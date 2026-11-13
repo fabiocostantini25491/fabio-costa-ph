@@ -143,6 +143,74 @@ async function showNotice() {
   }, 6000);
 }
 
+/* TRANSLATE WHAT THE FOLK WRITE (stories, tips, notes: <span class="ugc">). When a text is in another language, a small «Translate» appears next to it.
+   Chrome's built-in translator works on the device: the text never leaves the computer. Where it isn't available, the button opens
+   Google Translate in a new tab, and only when the person taps it. The original always stays one tap away. */
+(() => {
+  const L = { en: ["Translate", "Show original"], it: ["Traduci", "Mostra originale"], es: ["Traducir", "Ver original"], fr: ["Traduire", "Voir l'original"], de: ["Übersetzen", "Original anzeigen"] };
+  const SW = {
+    en: "the and you is it to of in for with this are was on at be not but very there from have get your",
+    it: "il lo la di che non è un una per con del della sono ma molto si ci gli le al da nel alla anche più",
+    es: "el la de que no es un una por con los las para muy pero se del al y en hay está",
+    fr: "le la les de des que est un une pour avec pas très mais sur du au et il y a dans",
+    de: "der die das und ist nicht ein eine mit für sehr aber auf den dem zu es im von gibt"
+  };
+  const SETS = Object.fromEntries(Object.entries(SW).map(([k, v]) => [k, new Set(v.split(" "))]));
+  const target = () => String(window.I18N?.lang || document.documentElement.lang || "en").slice(0, 2);
+  function guess(text) {
+    const w = text.toLowerCase().replace(/[^\p{L}\s']/gu, " ").split(/\s+/).filter(Boolean);
+    if (w.length < 3) return "";
+    let best = "", bn = 0, second = 0;
+    for (const [l, set] of Object.entries(SETS)) { const n = w.filter(x => set.has(x)).length; if (n > bn) { second = bn; bn = n; best = l; } else if (n > second) second = n; }
+    return bn >= 2 && bn > second ? best : "";
+  }
+  let det = null;
+  async function detect(text) {
+    try {
+      if ("LanguageDetector" in self) {
+        det ||= LanguageDetector.create();
+        const r = (await (await det).detect(text))[0];
+        if (r && r.confidence >= 0.6 && r.detectedLanguage !== "und") return r.detectedLanguage.slice(0, 2);
+      }
+    } catch { det = null; }
+    return guess(text);
+  }
+  const done = new WeakSet();
+  async function enhance(el) {
+    if (done.has(el)) return; done.add(el);
+    const text = el.textContent.trim(); if (text.length < 12) return;
+    const to = target(), from = await detect(text);
+    if (!from || from === to) return;
+    const lbl = L[to] || L.en;
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "ugc-tr"; b.setAttribute("data-no-i18n", ""); b.textContent = lbl[0];
+    b.addEventListener("click", async ev => {
+      ev.preventDefault(); ev.stopPropagation();
+      if (b.dataset.on) { el.textContent = el.dataset.orig; delete b.dataset.on; b.textContent = lbl[0]; return; }
+      if (el.dataset.tr) { el.dataset.orig = text; el.textContent = el.dataset.tr; b.dataset.on = "1"; b.textContent = lbl[1]; return; }
+      if ("Translator" in self) {
+        try {
+          if ((await Translator.availability({ sourceLanguage: from, targetLanguage: to })) !== "unavailable") {
+            b.textContent = "…"; b.disabled = true;
+            const tr = await Translator.create({ sourceLanguage: from, targetLanguage: to });
+            const out = await tr.translate(text);
+            el.dataset.orig = text; el.dataset.tr = out; el.textContent = out;
+            b.dataset.on = "1"; b.textContent = lbl[1]; b.disabled = false;
+            trackEvent("Translate: on the device", { from, to });
+            return;
+          }
+        } catch { b.disabled = false; b.textContent = lbl[0]; }
+      }
+      window.open(`https://translate.google.com/?sl=${encodeURIComponent(from)}&tl=${encodeURIComponent(to)}&text=${encodeURIComponent(text)}&op=translate`, "_blank", "noopener");
+      trackEvent("Translate: Google Translate", { from, to });
+    });
+    (el.parentElement || el).append(b);   // at the end of its paragraph, after the closing quote or the signature
+  }
+  const scan = root => { if (root.nodeType !== 1) return; if (root.matches?.(".ugc")) enhance(root); root.querySelectorAll?.(".ugc").forEach(enhance); };
+  const start = () => { scan(document.body); new MutationObserver(list => list.forEach(m => m.addedNodes.forEach(scan))).observe(document.body, { childList: true, subtree: true }); };
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start); else start();
+})();
+
 async function getJSON(path) {
   const res = await fetch(path, { cache: "no-cache" });
   if (!res.ok) throw new Error(`${path}: HTTP ${res.status}`);

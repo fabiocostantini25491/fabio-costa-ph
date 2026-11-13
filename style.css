@@ -4062,3 +4062,8 @@ body[data-page="hub"] .sf-nav a.sf-map{background:none;color:#e6ecf3}
 .pc-fabio em{margin-left:auto;font-style:normal;color:#ffbe7a}.pc-fabio:hover{background:rgba(242,140,30,.13)}
 /* the Gallery's place chip shares its class name with the trip picker buttons: keep it a chip */
 #tripChip.trip-chip{width:auto;height:auto;border-radius:999px;border:1px solid var(--accent);background:none;font-size:13px;line-height:1.4;white-space:nowrap;cursor:default}
+
+/* «Translate» next to what the folk write (app.js) */
+.ugc-tr,button.ugc-tr.ugc-tr{display:inline-block;margin:0 0 0 8px;padding:1px 9px;border-radius:999px;border:1px solid rgba(156,200,255,.3);background:none;color:#9cc8ff;font:600 11.5px/1.6 var(--sans);font-style:normal;letter-spacing:0;text-transform:none;vertical-align:1px;cursor:pointer;white-space:nowrap}
+.ugc-tr:hover{background:rgba(156,200,255,.1)}.ugc-tr:disabled{opacity:.6;cursor:default}
+.ugc-tr:focus-visible{outline:2px solid #ffbe7a;outline-offset:2px}
