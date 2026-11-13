@@ -3793,3 +3793,15 @@ span.pc-useful{cursor:default}
 .pc-cam b{display:block;font:600 12px/1.25 var(--sans);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pc-cam small{display:block;font-size:11px;color:#8a99ab}
 .pc-cams-by{margin:6px 0 0;font-size:11px;color:#8a99ab}.pc-cams-by a{color:#c9d6e6}
+/* webcams on the map and the timelapse player */
+.cam-pin{width:26px;height:26px;display:grid;place-items:center;border-radius:50%;background:rgba(10,21,36,.88);border:1.5px solid #9ec5ff;box-shadow:0 2px 8px rgba(0,0,0,.5);cursor:pointer}
+.cam-pin svg{width:15px;height:15px;fill:none;stroke:#cfe2ff;stroke-width:1.8;stroke-linejoin:round}
+.cam-pin:hover{background:#9ec5ff}.cam-pin:hover svg{stroke:#0a1524}
+.cam-dialog{width:min(920px,94vw);max-height:92vh;padding:18px;border:1px solid rgba(255,190,122,.35);border-radius:20px;background:#0a1524;color:#f2f6fb}
+.cam-dialog::backdrop{background:rgba(2,6,12,.75)}
+.cam-h{margin:0 40px 12px 0}.cam-h b{display:block;font:600 22px/1.15 'Cormorant Garamond',Georgia,serif}.cam-h small{color:#8a99ab;font-size:12.5px}
+.cam-frame{position:relative;width:100%;aspect-ratio:16/10;border-radius:12px;overflow:hidden;background:#000}
+.cam-frame iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.cam-dialog img{width:100%;border-radius:12px}
+.cam-by{margin:10px 0 0;font-size:12px;color:#8a99ab}.cam-by a{color:#ffbe7a}
+@media (max-width:600px){.cam-dialog{padding:12px}.cam-frame{aspect-ratio:4/5}}

@@ -801,7 +801,8 @@ const Spots = (() => {
           <option value="show"${alertMode === "show" ? " selected" : ""}>Show</option>
           <option value="hide"${alertMode === "hide" ? " selected" : ""}>Hide places with alerts</option>
           <option value="only"${alertMode === "only" ? " selected" : ""}>Only places with alerts</option></select></label>` : "")
-        + (commV ? `<button type="button" class="sx-item${onlyFavs ? " on" : ""}" id="onlyFavs" aria-pressed="${onlyFavs}" style="--c:#ff8fb1"><span class="sx-ico">♥</span><span class="sx-name">My spots</span><small>${favs.size}</small><span class="sx-check" aria-hidden="true"></span></button>` : "");
+        + (commV ? `<button type="button" class="sx-item${onlyFavs ? " on" : ""}" id="onlyFavs" aria-pressed="${onlyFavs}" style="--c:#ff8fb1"><span class="sx-ico">♥</span><span class="sx-name">My spots</span><small>${favs.size}</small><span class="sx-check" aria-hidden="true"></span></button>` : "")
+        + `<button type="button" class="sx-item${camsOn ? " on" : ""}" id="camsToggle" aria-pressed="${camsOn}" style="--c:#9ec5ff"><span class="sx-ico">📹</span><span class="sx-name">Live webcams</span><span class="sx-check" aria-hidden="true"></span></button>`;
       if (g.id === "pass") {
         const intro = `<p class="sx-pass-intro">Leaving and can't take it home? Sell it or give it away to the travellers arriving after you: chargers, adapters, tents, guidebooks…</p>`;
         if (guest || !commV) return intro + lockItem("Pass it on", "🎁");
@@ -1505,6 +1506,13 @@ const Spots = (() => {
     $("#alertMode")?.addEventListener("change", e => { alertMode = e.target.value; drawClusters(); renderNear(); });
     document.querySelectorAll("#onlySupport, [data-onlysupport]").forEach(b => b.addEventListener("click", () => { onlySupport = !onlySupport; renderApp(); }));
     $("#openConduct")?.addEventListener("click", () => showConduct());
+    $("#camsToggle")?.addEventListener("click", ev => {
+      camsOn = !camsOn; lsSet(CAMS_KEY, camsOn ? "1" : "0");
+      ev.currentTarget.classList.toggle("on", camsOn); ev.currentTarget.setAttribute("aria-pressed", camsOn);
+      if (camsOn && map && map.getZoom() < CAM_ZOOM) toast("Zoom in to a valley to see the live webcams.");
+      window.fcTrack?.(camsOn ? "Spots: webcams layer on" : "Spots: webcams layer off");
+      scheduleCams();
+    });
     $("#onlyFavs")?.addEventListener("click", () => {
       if (!favs.size && !onlyFavs) return toast("Tap ♡ Save on any place to add it to your spots.");
       onlyFavs = !onlyFavs; renderApp();
@@ -2061,6 +2069,8 @@ const Spots = (() => {
     originLayer = L.layerGroup().addTo(map);
     osmLayer = L.layerGroup().addTo(map);
     commLayer = L.layerGroup().addTo(map);
+    camLayer = L.layerGroup().addTo(map); camKey = "";
+    map.on("moveend", scheduleCams); setTimeout(scheduleCams, 400);
     map.on("popupclose", () => setTimeout(() => { if (commDirty) drawCommunity(); }, 0));
     tripLayer = L.layerGroup().addTo(map); drawTrips();
     if (tripEd) { wireTripMap(); setTimeout(renderTripEd, 0); }
@@ -2110,6 +2120,53 @@ const Spots = (() => {
   /* Place pulse: live webcams near the place (Windy, through the «webcams» function on Supabase that keeps the key) */
   let camsV = true;
   const camCache = new Map();
+  /* webcams on the map: a layer to switch on, from valley zoom, one request per stop of the map */
+  const CAMS_KEY = "sf-cams", CAM_ZOOM = 9;
+  let camsOn = lsGet(CAMS_KEY, "0") === "1", camLayer = null, camKey = "", camTimer = null;
+  const camArea = new Map();
+  const CAM_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="7" width="13" height="10" rx="2"/><path d="m16 11 5-3v8l-5-3z"/></svg>';
+  function scheduleCams() {
+    clearTimeout(camTimer);
+    if (!camLayer) return;
+    if (!camsOn || !camsV) { camLayer.clearLayers(); camKey = ""; return; }
+    camTimer = setTimeout(drawCams, 450);
+  }
+  async function drawCams() {
+    if (!map || !camLayer || !camsOn) return;
+    if (map.getZoom() < CAM_ZOOM) { camLayer.clearLayers(); camKey = ""; return; }
+    const b = map.getBounds(), r = x => Math.round(x * 10) / 10;
+    const n = Math.min(r(b.getNorth()) + .1, 90), so = Math.max(r(b.getSouth()) - .1, -90), e = r(b.getEast()) + .1, w = r(b.getWest()) - .1;
+    const key = [n, e, so, w].join(",");
+    if (key === camKey) return;
+    camKey = key;
+    let hit = camArea.get(key);
+    if (!hit || Date.now() - hit.at > 8 * 60e3) {
+      try {
+        const res = await fetch(`${SPOTS_CONFIG.url.replace(/\/$/, "")}/functions/v1/webcam?n=${n}&e=${e}&s=${so}&w=${w}`, { headers: { apikey: SPOTS_CONFIG.anonKey } });
+        if (res.status === 404) { camsV = false; return; }
+        if (!res.ok) return;
+        hit = { at: Date.now(), list: (await res.json()).cams || [] }; camArea.set(key, hit);
+      } catch { return; }
+    }
+    if (camKey !== key || !camsOn) return;
+    camLayer.clearLayers();
+    hit.list.filter(c => c.lat != null).forEach(c => {
+      L.marker([c.lat, c.lon], { zIndexOffset: -500, title: camName(c.title), icon: L.divIcon({ className: "", iconSize: [26, 26], iconAnchor: [13, 13], html: `<div class="cam-pin">${CAM_SVG}</div>` }) })
+        .on("click", () => openCamPlayer(c)).addTo(camLayer);
+    });
+  }
+  function openCamPlayer(c) {
+    let d = $("#camDialog");
+    if (!d) { d = document.createElement("dialog"); d.id = "camDialog"; d.className = "cam-dialog"; document.body.appendChild(d); d.addEventListener("click", e => { if (e.target === d) d.close(); }); d.addEventListener("close", () => { d.innerHTML = ""; }); }
+    d.innerHTML = `<button class="dialog-close" type="button" data-close aria-label="Close">${ICON.close}</button>
+      <p class="cam-h"><b>${esc(camName(c.title))}</b><small>${esc(c.city || "")}</small></p>
+      ${c.player ? `<div class="cam-frame"><iframe src="${esc(c.player)}" title="Webcam ${esc(camName(c.title))}" loading="lazy" allowfullscreen></iframe></div>` : `<img src="${esc(c.image)}" alt="">`}
+      <p class="cam-by">Live webcam and timelapse provided by <a href="https://www.windy.com/" target="_blank" rel="noopener">Windy.com</a> · <a href="${esc(c.url)}" target="_blank" rel="noopener">Open on Windy ↗</a></p>`;
+    d.querySelector("[data-close]").onclick = () => d.close();
+    if (!d.open) d.showModal();
+    window.fcTrack?.("Spots: webcam player opened");
+  }
+
   // Windy titles read «Town - Ort - Paese: Valley - View»: keep what the camera looks at
   const camName = t => { const x = String(t || "").split(/:\s|›/).pop().trim(); return x.split(" - ").slice(-2).join(" · ") || t; };
   async function loadCams(popup, s) {
@@ -2135,6 +2192,7 @@ const Spots = (() => {
       <p class="pc-cams-by">Webcams provided by <a href="https://www.windy.com/" target="_blank" rel="noopener">Windy.com</a></p>`;
     box.hidden = false;
     box.querySelectorAll("img").forEach(i => i.addEventListener("error", () => i.closest(".pc-cam")?.remove()));
+    box.querySelectorAll(".pc-cam").forEach((a, n) => a.addEventListener("click", ev => { const c = cams.list[n]; if (c?.player) { ev.preventDefault(); openCamPlayer(c); } }));
     popup.update();
     window.fcTrack?.("Spots: webcams shown");
   }
