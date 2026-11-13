@@ -2118,7 +2118,7 @@ const Spots = (() => {
     let cams = camCache.get(k);
     if (!cams || Date.now() - cams.at > 8 * 60e3) {
       try {
-        const r = await fetch(`${SPOTS_CONFIG.url.replace(/\/$/, "")}/functions/v1/webcams?lat=${s.lat.toFixed(4)}&lon=${s.lon.toFixed(4)}`, { headers: { apikey: SPOTS_CONFIG.anonKey } });
+        const r = await fetch(`${SPOTS_CONFIG.url.replace(/\/$/, "")}/functions/v1/webcam?lat=${s.lat.toFixed(4)}&lon=${s.lon.toFixed(4)}`, { headers: { apikey: SPOTS_CONFIG.anonKey } });
         if (r.status === 404) { camsV = false; return; }
         if (!r.ok) return;
         cams = { at: Date.now(), list: (await r.json()).cams || [] }; camCache.set(k, cams);
