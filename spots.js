@@ -2120,6 +2120,49 @@ const Spots = (() => {
   /* Place pulse: live webcams near the place (Windy, through the «webcams» function on Supabase that keeps the key) */
   let camsV = true;
   const camCache = new Map();
+  /* Place pulse: weather now and the next 7 days (Open-Meteo, free, CC BY 4.0) */
+  const wxCache = new Map();
+  const WX = { 0: ["☀️", "Clear"], 1: ["🌤️", "Mostly clear"], 2: ["⛅", "Partly cloudy"], 3: ["☁️", "Overcast"], 45: ["🌫️", "Fog"], 48: ["🌫️", "Freezing fog"],
+    51: ["🌦️", "Light drizzle"], 53: ["🌦️", "Drizzle"], 55: ["🌧️", "Heavy drizzle"], 56: ["🌧️", "Freezing drizzle"], 57: ["🌧️", "Freezing drizzle"],
+    61: ["🌦️", "Light rain"], 63: ["🌧️", "Rain"], 65: ["🌧️", "Heavy rain"], 66: ["🌧️", "Freezing rain"], 67: ["🌧️", "Freezing rain"],
+    71: ["🌨️", "Light snow"], 73: ["🌨️", "Snow"], 75: ["❄️", "Heavy snow"], 77: ["🌨️", "Snow grains"], 80: ["🌦️", "Showers"], 81: ["🌧️", "Showers"], 82: ["⛈️", "Violent showers"],
+    85: ["🌨️", "Snow showers"], 86: ["❄️", "Heavy snow showers"], 95: ["⛈️", "Thunderstorm"], 96: ["⛈️", "Thunderstorm, hail"], 99: ["⛈️", "Thunderstorm, hail"] };
+  const wxOf = c => WX[c] || ["🌡️", ""];
+  async function loadWeather(popup, s) {
+    const box = popup.getElement()?.querySelector("[data-wx]");
+    if (!box || box.dataset.done) return;
+    box.dataset.done = "1";
+    const k = `${s.lat.toFixed(2)},${s.lon.toFixed(2)}`;
+    let w = wxCache.get(k);
+    if (!w || Date.now() - w.at > 30 * 60e3) {
+      try {
+        const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${s.lat.toFixed(4)}&longitude=${s.lon.toFixed(4)}`
+          + "&current=temperature_2m,weather_code,wind_speed_10m,snow_depth,freezing_level_height,cloud_cover"
+          + "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,snowfall_sum,sunrise,sunset&timezone=auto&forecast_days=7");
+        if (!r.ok) return;
+        w = { at: Date.now(), d: await r.json() }; wxCache.set(k, w);
+      } catch { return; }
+    }
+    const c = w.d.current || {}, d = w.d.daily || {};
+    if (!d.time?.length) return;
+    const loc = window.I18N?.locale || "en-GB";
+    const hm = t => t ? t.slice(11, 16) : "";
+    const day = (t, i) => i === 0 ? "Today" : new Date(t + "T12:00:00").toLocaleDateString(loc, { weekday: "short" });
+    const [ico, label] = wxOf(c.weather_code);
+    const snow = c.snow_depth > 0.005 ? `<span>❄️ <b>${Math.round(c.snow_depth * 100)} cm</b> <i>snow on the ground</i></span>` : "";
+    const frz = Number.isFinite(c.freezing_level_height) ? `<span>🧊 <i>freezing level</i> <b>${Math.round(c.freezing_level_height / 50) * 50} m</b></span>` : "";
+    box.innerHTML = `<p class="pc-cams-h">🌡️ Weather now</p>
+      <div class="wx-now"><b>${ico}</b><div><strong>${Math.round(c.temperature_2m)}°</strong> <em>${esc(label)}</em>
+        <p>${snow}${frz}<span>💨 ${Math.round(c.wind_speed_10m)} km/h</span><span>🌅 ${hm(d.sunrise?.[0])} · 🌇 ${hm(d.sunset?.[0])}</span></p></div></div>
+      <div class="wx-days">${d.time.map((t, i) => `<div title="${esc(wxOf(d.weather_code[i])[1])}"><small>${esc(day(t, i))}</small><b>${wxOf(d.weather_code[i])[0]}</b>
+        <span>${Math.round(d.temperature_2m_max[i])}° <i>${Math.round(d.temperature_2m_min[i])}°</i></span>
+        ${d.snowfall_sum[i] >= 0.5 ? `<em>❄️ ${Math.round(d.snowfall_sum[i])} cm</em>` : d.precipitation_sum[i] >= 0.5 ? `<em>💧 ${Math.round(d.precipitation_sum[i])} mm</em>` : `<em>&nbsp;</em>`}</div>`).join("")}</div>
+      <p class="pc-cams-by">Weather data by <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo.com</a> (CC BY 4.0)</p>`;
+    box.hidden = false;
+    popup.update();
+    window.fcTrack?.("Spots: weather shown");
+  }
+
   /* webcams on the map: a layer to switch on, from valley zoom, one request per stop of the map */
   const CAMS_KEY = "sf-cams", CAM_ZOOM = 9;
   let camsOn = lsGet(CAMS_KEY, "0") === "1", camLayer = null, camKey = "", camTimer = null;
@@ -2518,7 +2561,7 @@ const Spots = (() => {
           <button type="submit" class="pop-btn primary">Publish your story</button>
         </form>` : ""}
         <div class="pop-reviews" data-reviews><p class="pc-empty">No stories yet.</p></div>`;
-    const pulseBody = `<div class="pc-cams" data-cams hidden></div><div data-pulse><p class="pc-empty">Quiet for now: the first signatures will make it move.</p></div>`;
+    const pulseBody = `<div class="pc-wx" data-wx hidden></div><div class="pc-cams" data-cams hidden></div><div data-pulse><p class="pc-empty">Quiet for now: the first signatures will make it move.</p></div>`;
     const travelBody = `
       ${s.fragile ? `<div class="pc-badge fragile"><p class="pc-bh"><span aria-hidden="true">🛡️</span><b>Fragile place</b></p>
         <ul><li>Stay on the paths and keep groups small.</li><li>No drones, no fires, nothing left behind.</li><li>No geotags on social media: the exact spot stays among the folk.</li></ul></div>` : ""}
@@ -2558,7 +2601,7 @@ const Spots = (() => {
       ${pcSec("folk", "The folk who know this place", "Real people, real experiences.", folkBody, true)}
       ${pcSec("cons", "Folk consensus", "The collective impression of the folk.", consBody)}
       ${pcSec("stories", "Folk stories", "Experiences, tips and real advice.", storiesBody)}
-      ${pcSec("pulse", "Place pulse", "Conditions now: live webcams and the folk.", pulseBody)}
+      ${pcSec("pulse", "Place pulse", "Conditions now: weather, live webcams and the folk.", pulseBody)}
       ${pcSec("travel", "Travel better", "Help keep this place special.", travelBody)}
       ${pcSec("details", "Place details", "Where, when, how.", detailsBody)}
       ${schemaV2 ? `<div class="pop-actions pc-acts">
@@ -2602,7 +2645,7 @@ const Spots = (() => {
     el.querySelector("[data-copy]")?.addEventListener("click", ev => copyText(ev.currentTarget, `${s.lat.toFixed(6)}, ${s.lon.toFixed(6)}`));
     el.querySelectorAll("[data-gotravel]").forEach(b => b.addEventListener("click", () => { const d = el.querySelector('[data-sec="travel"]'); if (d) { d.open = true; popup.update(); setTimeout(() => d.scrollIntoView({ behavior: "smooth", block: "nearest" }), 60); } }));
     el.querySelectorAll(".pc-sec").forEach(d => d.addEventListener("toggle", () => popup.update()));
-    el.querySelector('[data-sec="pulse"]')?.addEventListener("toggle", ev => { if (ev.currentTarget.open) loadCams(popup, s); });
+    el.querySelector('[data-sec="pulse"]')?.addEventListener("toggle", ev => { if (ev.currentTarget.open) { loadWeather(popup, s); loadCams(popup, s); } });
     el.querySelector("[data-editspot]")?.addEventListener("click", () => { map.closePopup(); openEditPlace(s); });
     el.querySelector("[data-authorp]")?.addEventListener("click", () => openMemberProfile(s.created_by));
     el.querySelector("[data-delete]")?.addEventListener("click", async ev => {
