@@ -113,6 +113,36 @@ function toast(msg, isError = false) {
 const mediaUrl = u => (u ? String(u).trim().replace(/^\/(?!\/)/, "") : "");
 const num = (v, fallback) => (Number.isFinite(parseFloat(v)) ? parseFloat(v) : fallback);
 
+/* AVVISI: a small note with what's new, for everyone online, for a couple of days from its date (content/avvisi.json, written from the panel).
+   It shows up now and then: at most once every 4 hours and 3 times in all for each note, never again once closed. Nothing is stored on a server. */
+async function showNotice() {
+  let list = [];
+  try { list = (await getJSON(SF ? "https://fabiocostaph.com/content/avvisi.json" : "content/avvisi.json")).avvisi || []; }
+  catch { try { list = (await getJSON("content/avvisi.json")).avvisi || []; } catch { return; } }
+  const now = Date.now(), it = window.I18N?.lang === "it";
+  const when = s => Date.parse(String(s || "").trim().replace(" ", "T"));
+  let seen = {}; try { seen = JSON.parse(localStorage.getItem("fcph-notices") || "{}") || {}; } catch {}
+  const a = list.find(x => x && x.attivo !== false && x.testo && x.dal && now >= when(x.dal) && now < when(x.dal) + (+x.giorni || 2) * 864e5
+    && !(seen[x.id || x.dal]?.closed) && (seen[x.id || x.dal]?.n || 0) < 3 && now - (seen[x.id || x.dal]?.last || 0) > 4 * 36e5);
+  if (!a) return;
+  const id = a.id || a.dal, save = patch => { seen[id] = { ...(seen[id] || {}), ...patch }; try { localStorage.setItem("fcph-notices", JSON.stringify(seen)); } catch {} };
+  setTimeout(() => {
+    if (document.querySelector(".fc-notice") || (a.link && location.hash === a.link)) return;   // already there: no need to say it
+    const text = (it && a.testo_it) || a.testo, btn = (it && a.pulsante_it) || a.pulsante || (it ? "Apri" : "Open");
+    const el = document.createElement("aside");
+    el.className = "fc-notice"; el.setAttribute("role", "status"); el.setAttribute("data-no-i18n", "");
+    el.innerHTML = `<span class="fc-notice-dot" aria-hidden="true"></span><p>${esc(text)}</p>${a.link ? `<a href="${esc(a.link)}"${/^https?:/.test(a.link) ? ' target="_blank" rel="noopener"' : ""}>${esc(btn)}</a>` : ""}<button type="button" aria-label="${it ? "Chiudi" : "Close"}">✕</button>`;
+    document.body.append(el);
+    requestAnimationFrame(() => el.classList.add("on"));
+    save({ n: (seen[id]?.n || 0) + 1, last: Date.now() });
+    const close = done => { el.classList.remove("on"); setTimeout(() => el.remove(), 400); if (done) save({ closed: true }); };
+    el.querySelector("button").addEventListener("click", () => { close(true); trackEvent("Notice: closed", { id }); });
+    el.querySelector("a")?.addEventListener("click", () => { close(true); trackEvent("Notice: opened", { id }); });
+    setTimeout(() => close(false), 15000);
+    trackEvent("Notice: shown", { id });
+  }, 6000);
+}
+
 async function getJSON(path) {
   const res = await fetch(path, { cache: "no-cache" });
   if (!res.ok) throw new Error(`${path}: HTTP ${res.status}`);
@@ -2505,6 +2535,7 @@ if (SF) {
 document.addEventListener("DOMContentLoaded", () => {
   $("#hdLogin")?.addEventListener("click", () => window.Spots?.login());
   $("#hdLogout")?.addEventListener("click", () => window.Spots?.logout());
+  showNotice();
 });
 
 function route() {

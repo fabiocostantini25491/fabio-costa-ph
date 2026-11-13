@@ -1,0 +1,15 @@
+{
+ "avvisi": [
+  {
+   "id": "folk-hub",
+   "dal": "2026-11-13 15:30",
+   "giorni": 2,
+   "testo": "New: The Folk Hub. See what the folk are bringing to the map, and follow the places you love.",
+   "testo_it": "Novità: The Folk Hub. Guarda cosa portano i folk sulla mappa e segui i posti che ami.",
+   "link": "#hub",
+   "pulsante": "Open the Hub",
+   "pulsante_it": "Apri l'Hub",
+   "attivo": true
+  }
+ ]
+}

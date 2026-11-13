@@ -551,6 +551,34 @@ content:
           - { name: obiettivo, label: Quante firme servono, type: number, required: true }
 
   # ---------------------------------------------------------------
+  # AVVISI: la piccola nota con le novità, per tutti, per qualche giorno
+  # ---------------------------------------------------------------
+  - name: avvisi
+    label: Avvisi (novità per chi è sul sito)
+    type: file
+    path: content/avvisi.json
+    format: json
+    fields:
+      - name: avvisi
+        label: Avvisi
+        type: object
+        list:
+          collapsible:
+            collapsed: true
+            summary: "{dal} · {testo_it}"
+        description: "Una nota piccola in basso, per chi è online (iscritti e no). Compare al massimo una volta ogni qualche ora e tre volte in tutto per persona; si chiude con la ✕. Resta attiva per i giorni indicati dalla data «dal»."
+        fields:
+          - { name: id, label: "Codice (breve, senza spazi, diverso per ogni avviso)", type: string, required: true }
+          - { name: dal, label: "Dal (anno-mese-giorno ora:minuti, es. 2026-11-20 09:00)", type: string, required: true }
+          - { name: giorni, label: Per quanti giorni, type: number, default: 2 }
+          - { name: testo, label: Testo in inglese, type: text, required: true }
+          - { name: testo_it, label: Testo in italiano, type: text }
+          - { name: link, label: "Dove porta (es. #hub, #spotfolk, #journal, o un indirizzo https://)", type: string }
+          - { name: pulsante, label: Testo del pulsante in inglese (es. Open), type: string }
+          - { name: pulsante_it, label: Testo del pulsante in italiano (es. Apri), type: string }
+          - { name: attivo, label: Attivo, type: boolean, default: true }
+
+  # ---------------------------------------------------------------
   # PAGINA CHI SONO
   # ---------------------------------------------------------------
   - name: chi-sono
