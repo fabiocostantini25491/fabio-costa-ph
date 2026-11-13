@@ -244,7 +244,7 @@ const Spots = (() => {
   const PRIVACY_VERSION = "2026-11-12", TERMS_VERSION = "2026-11-12";   // versions of the privacy notice and terms shown at sign-up
   async function signUp(first, last, email, password, styles = []) {
     const { data } = await api("/auth/v1/signup", { method: "POST", auth: false,
-      body: { email, password, data: { first_name: first, last_name: last, full_name: `${first} ${last}`.trim(), travel_style: styles, source: doorNow() || null,
+      body: { email, password, data: { first_name: first, last_name: last, full_name: `${first} ${last}`.trim(), travel_style: styles, source: doorNow() || null, invited_by: (() => { try { return localStorage.getItem("sf-via") || null; } catch { return null; } })(),
         privacy_notice_read: PRIVACY_VERSION, terms_accepted: TERMS_VERSION, consents_at: new Date().toISOString(), signup_site: location.hostname } } });
     if (data && data.access_token) {
       saveSession({ access_token: data.access_token, refresh_token: data.refresh_token, expires_at: Date.now() + data.expires_in * 1000 });
@@ -2078,7 +2078,37 @@ const Spots = (() => {
   }
 
   /* raggruppa gli spot vicini (griglia in pixel), solo quelli nell'area visibile */
+  /* links to one place (spotfolk.eu/?place=123): shared by the folk, they open that place's card.
+     ?via=<member> remembers who invited, and goes with the sign-up. */
+  let deepPlace = null;
+  try {
+    const q = new URLSearchParams(location.search);
+    deepPlace = +q.get("place") || null;
+    const via = q.get("via");
+    if (via && /^[0-9a-f-]{36}$/i.test(via)) localStorage.setItem("sf-via", via);
+    if (deepPlace || via) { q.delete("place"); q.delete("via"); const qs = q.toString(); history.replaceState(null, "", location.pathname + (qs ? "?" + qs : "") + location.hash); }
+  } catch {}
+  function openDeepPlace() {
+    if (!deepPlace || !map || !spots.length || (!loaded && !guestLoaded)) return;
+    const id = deepPlace, s = spots.find(x => x.id === id);
+    if (!s && guestLoading) return;
+    deepPlace = null;
+    if (s) { $("#spotsMap")?.scrollIntoView({ behavior: "smooth", block: "center" }); setTimeout(() => focusSpot(s), 400); window.fcTrack?.("Spots: shared place opened"); }
+    else if (guest && !session) { toast("This place is on the folk's map: join free to open it."); window.fcTrack?.("Spots: shared place needs joining"); }
+    else toast("That place isn't on the map anymore, or it's in a filter you've hidden.");
+  }
+  const placeLink = s => `https://spotfolk.eu/?place=${s.id}&utm_source=share${myUid() && !guest ? `&via=${myUid()}` : ""}`;
+  async function sharePlace(s, invite = false) {
+    const url = placeLink(s);
+    const text = invite ? `I signed ${s.name} on SpotFolk. You were there too: sign it with me.` : `${s.name}, signed by the folk on SpotFolk.`;
+    window.fcTrack?.(invite ? "Spots: invite sent" : "Spots: place shared");
+    try { if (navigator.share) return await navigator.share({ title: s.name, text, url }); } catch (err) { if (err?.name === "AbortError") return; }
+    try { await navigator.clipboard.writeText(`${text} ${url}`); toast("Link copied: paste it wherever you like."); } catch { prompt("Copy this link:", url); }
+  }
+  let justSigned = null;
+
   function drawClusters() {
+    setTimeout(openDeepPlace, 0);
     if (!map || !layer) return;
     // lo spot con la scheda aperta resta sulla mappa (altrimenti la scheda si chiuderebbe a ogni spostamento)
     const keep = openId != null ? markerById.get(openId) : null;
@@ -2444,6 +2474,7 @@ const Spots = (() => {
       ${schemaV2 ? `<div class="pop-actions pc-acts">
           ${commV ? `<button type="button" class="pop-btn fav-btn${favs.has(s.id) ? " on" : ""}" data-fav>${favs.has(s.id) ? "♥ Saved" : "♡ Save"}</button>` : ""}
           <button type="button" class="pop-btn" data-addphoto>${ICON.img}Add photo</button>
+          <button type="button" class="pop-btn" data-share>↗ Share</button>
           <input type="file" accept="image/*" multiple hidden data-photofile>
         </div>
         <p class="pop-rights">By adding a photo you confirm it's yours and accept the <a href="#photoRights" data-rights>photo terms</a>.</p>` : ""}
@@ -2494,6 +2525,7 @@ const Spots = (() => {
     if (!schemaV2) return;
     if (socialV) wireSocial(popup, s);
     el.querySelector("[data-fav]")?.addEventListener("click", ev => toggleFav(s, ev.currentTarget));
+    el.querySelector("[data-share]")?.addEventListener("click", () => sharePlace(s));
     wireCurate(popup, s);
     el.querySelector("[data-meethere]")?.addEventListener("click", () => { map.closePopup(); withConduct(() => openMeetup({ lat: s.lat, lon: s.lon, spot: s })); });
     el.querySelector("[data-flagspot]")?.addEventListener("click", () => openFlag("spot", String(s.id), s.name));
@@ -4224,6 +4256,8 @@ const Spots = (() => {
     const tips = signs.filter(g => g.tip).sort((a, b) => vCount(b.id) - vCount(a.id) || String(b.created_at).localeCompare(String(a.created_at))).slice(0, 6);
     const who = g => `<button type="button" class="sg-who" data-member="${esc(g.user_id)}">${esc(g.author_name || "Member")}</button> · ${g.cluster === "fabio" ? "★ Fabio's pick" : `${CLUSTERS[g.cluster]?.ico || ""} ${esc(folkOf(g.cluster))}`}${g.on_spot ? ` <span class="sg-spot" title="Signed on the spot">📍 on the spot</span>` : ""}`;
     el.innerHTML = `
+      ${justSigned === s.id ? `<div class="sg-after"><b>Signed ✍</b><span>Tell the folk you travel with:</span>
+        <button type="button" class="pop-btn" data-sgshare>↗ Share it</button><button type="button" class="pop-btn" data-sginvite>👥 Invite who was with you</button></div>` : ""}
       ${by.fabio ? `<p class="sg-pick">★ Fabio's pick</p>` : ""}
       ${CLUSTER_KEYS.some(k => by[k]) ? "" : `<p class="sg-none">No folk has signed it yet: be the first.</p>`}
       <div class="sg-acts">
@@ -4238,6 +4272,8 @@ const Spots = (() => {
         <button type="submit" class="pop-btn primary">Sign</button>
       </form>
       ${tips.length ? `<ul class="sg-tips">${tips.map(g => `<li><span style="--c:${(CLUSTERS[g.cluster] || { color: "#ffd27a" }).color}">${g.cluster === "fabio" ? "★" : CLUSTERS[g.cluster]?.ico || ""}</span><p>${esc(g.tip)}<small>${who(g)}${evoV ? ` <button type="button" class="sg-useful${vMine(g.id) ? " on" : ""}" data-useful="${g.id}"${g.user_id === uid ? " disabled" : ""} aria-pressed="${vMine(g.id)}">👍 Useful${vCount(g.id) ? ` ${vCount(g.id)}` : ""}</button>` : ""}${g.user_id !== uid ? ` <button type="button" class="rev-flag" data-flagsign="${g.id}" title="Flag this tip" aria-label="Flag this tip">⚑</button>` : ""}</small></p></li>`).join("")}</ul>` : ""}`;
+    el.querySelector("[data-sgshare]")?.addEventListener("click", () => sharePlace(s));
+    el.querySelector("[data-sginvite]")?.addEventListener("click", () => sharePlace(s, true));
     let pending = null;
     const form = el.querySelector("[data-signform]");
     el.querySelectorAll("[data-sign]").forEach(b => b.addEventListener("click", () => {
@@ -4258,6 +4294,7 @@ const Spots = (() => {
         if (pending !== "fabio" && mySignCount != null) { mySignCount++; paintOnboarding(); if (mySignCount === 3) setTimeout(() => toast("🎉 Welcome, you're folk now! Your passport is in My profile."), 600); }
         if (onSpot) toast("📍 Signed on the spot!");
         toast(pending === "fabio" ? "Marked as Fabio's pick." : `Signed as ${folkOf(pending).toLowerCase()}. Thanks!`); window.fcTrack?.("Spots: place signed", { cluster: pending });
+        if (pending !== "fabio") justSigned = s.id;
         loadSigns(popup, s);
       } catch (err) { toast(/daily limit/i.test(err.message) ? "You've signed 30 places today: come back tomorrow." : /row-level|policy|42501/i.test(err.message) ? "You can sign only with your own folk: choose them in My profile." : `Could not sign: ${err.message}`, true); btn.disabled = false; btn.textContent = "Sign"; }
     });
