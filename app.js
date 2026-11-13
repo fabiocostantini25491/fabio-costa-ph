@@ -2389,7 +2389,7 @@ function renderAbout() {
 /* =========================================================
    10. NAVIGAZIONE
    ========================================================= */
-const PAGES = ["home", "explore", "gallery", "journal", "tools", "spots", "about", "guide", "privacy", "terms", "cookies", "crew"];
+const PAGES = ["home", "explore", "gallery", "journal", "tools", "spots", "hub", "about", "guide", "privacy", "terms", "cookies", "crew"];
 
 /* =========================================================
    STATISTICHE (Umami, anonime e senza cookie)
@@ -2461,7 +2461,7 @@ document.addEventListener("change", e => { if (e.target.id === "shotFile" && e.t
 
 /* SpotFolk on its own (spotfolk.eu): only SpotFolk lives here; the rest of the site opens on fabiocostaph.com */
 const SF = document.documentElement.classList.contains("sf");
-const SF_PAGES = ["spots", "privacy", "terms", "cookies", "guide"];
+const SF_PAGES = ["spots", "hub", "privacy", "terms", "cookies", "guide"];
 const FCPH = "https://fabiocostaph.com/";
 function sfOutside(hash) {   // the page a hash leads to, if it isn't part of SpotFolk
   const h = hash.replace(/^#/, "");
@@ -2513,7 +2513,8 @@ function route() {
   if (writeMode) page = "journal";
   if (hash.startsWith("author-")) { page = "journal"; authorSlug = hash.slice(7); }
   // porte d'ingresso dei folk (link nei post): #wayfolk-hikers, #wayfolk-backpackers… (anche #spots-…)
-  if (hash === "spotfolk" || hash === "wayfolk") page = "spots";   // #spotfolk è l'indirizzo della sezione (#wayfolk e #spots continuano a funzionare)
+  if (hash === "spotfolk" || hash === "wayfolk") page = "spots";
+  if (hash === "folkhub" || hash === "folk-hub") page = "hub";   // #spotfolk è l'indirizzo della sezione (#wayfolk e #spots continuano a funzionare)
   const door = (hash.match(/^(?:spots|wayfolk|spotfolk)-(photographers|hikers|backpackers|roadtrips|nomads|foodies)$/) || [])[1];
   if (door) { page = "spots"; try { if (localStorage.getItem("fcph-door") !== door) { localStorage.setItem("fcph-door", door); trackEvent("Spots door", { door }); } } catch {} }
   const join = hash === "join";
@@ -2555,6 +2556,7 @@ function route() {
   if (page === "gallery") renderGallery();
   if (page === "crew") renderCrew();
   if (page === "spots") window.Spots?.show(join, meHash);
+  if (page === "hub") window.Spots?.showHub?.();
   if (page === "tools") window.Tools?.show();
   if (page === "journal") {
     if (writeMode) { $("#journalLayout").hidden = true; const r = $("#articleReader"); r.hidden = false; r.className = "full-article mag-article is-write"; window.Spots?.renderWrite?.(r); }

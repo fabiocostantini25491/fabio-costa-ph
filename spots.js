@@ -849,6 +849,7 @@ const Spots = (() => {
         <div class="sx-panel">
           ${guest && !session ? welcomeHtml() : ""}
           ${SF_LOOK ? `<div class="sf-quick${!guest && (schemaV2 || admin) ? " two" : ""}"><button type="button" class="sf-near" id="sfNear">${SX_ICON.near}<span>Places near me</span></button>${!guest && (schemaV2 || admin) ? `<button type="button" class="sf-near sf-addplace" id="sfAddPlace">${ICON_PLUS}<span>Add a place</span></button>` : ""}</div>` : ""}
+          <a class="sf-hubdoor" href="#hub"><span aria-hidden="true">👥</span><span><b>The Folk Hub</b><small>what the folk are bringing to the map</small></span><em aria-hidden="true">→</em></a>
           ${searchHtml}
           <div class="onb-folk" id="onbFolk" hidden></div>
           <div class="sx-groups">${groups}</div>
@@ -883,7 +884,6 @@ const Spots = (() => {
         <div class="sx-sheet" id="sxSheet"></div>
       </div>
     </div>
-    <section class="fh" id="folkHub" aria-label="The Folk Hub"></section>
     ${aboutHtml()}
     ${bannerHtml}
     ${tailHtml}`;
@@ -1280,7 +1280,6 @@ const Spots = (() => {
 
   function renderApp() {
     setTimeout(sfState, 0);
-    setTimeout(() => loadHub(), 0);
     document.documentElement.classList.remove("sf-on-me");
     const lists = [...new Set(spots.map(s => s.list))].sort((a, b) => a.localeCompare(b));
     if (!activeLists) activeLists = new Set(lists);
@@ -2653,6 +2652,29 @@ const Spots = (() => {
     return [...out.values()].sort((a, b2) => a.day - b2.day || order.indexOf(a.type) - order.indexOf(b2.type));
   }
 
+  let hubAlert = null;
+  async function showHub() {
+    const box = document.getElementById("folkHub"); if (!box) return;
+    if (!hubData) box.innerHTML = `<div class="fh-hero"><div class="fh-hero-in"><span class="fh-live">THE FOLK HUB</span><h2>Gathering <em>the folk…</em></h2></div></div>`;
+    loadHub();
+    if (!spots.length) {
+      try {
+        if (await ensureSession()) { const sp = await fetchSpots(); if (sp?.length && !spots.length) spots = sp; }
+        else if (!guestLoaded) { guest = true; await loadPublic(); }
+      } catch {}
+      if (hubData) hubForecast(box);
+    }
+  }
+  // from the Hub to the map: open a place, or light up the places of an alert
+  function hubToMap(fn) { location.hash = "spotfolk"; setTimeout(fn, 700); }
+  function applyHubAlert() {
+    if (!hubAlert || !map || !spots.length) return;
+    const a = hubAlert, pts = a.places.map(spotById).filter(Boolean); if (!pts.length) return;
+    hubAlert = null;
+    const go = () => { map.fitBounds(L.latLngBounds(pts.map(s => [s.lat, s.lon])).pad(0.3), { maxZoom: 11 }); pfOn = a.id; pfOpen = true; pfKey = ""; setTimeout(drawPf, 900); };
+    if (ui === "earth" && onGlobe) cinematic(pts[0].lat, pts[0].lon, go); else go();
+  }
+
   /* ======== The Folk Hub: right now on the map (photo forecast), from Fabio, the folk room, the founding folk ======== */
   let hubV = true, hubData = null, hubAt = 0, hubBusy = false, hubPf = null, hubPfAt = 0;
   const HUB_IMG = { snow: "photo", cloudsea: "photo", fog: "photo", fiery: "hike", clear_set: "hike", clear_rise: "hike", drama: "road", stars: "night", milky: "night", aurora: "night", moonrise: "night" };
@@ -2737,11 +2759,11 @@ const Spots = (() => {
     if (hubPf) paintHubForecast(box);
   }
   function wireHub(box) {
-    const goSpot = id => { const s = spotById(+id); if (!s) return toast("This place is in a filter you've hidden: show all categories to see it."); $("#spotsMap")?.scrollIntoView({ behavior: "smooth", block: "center" }); setTimeout(() => focusSpot(s), 450); };
+    const goSpot = id => { deepPlace = +id; hubToMap(() => openDeepPlace()); };
     box.querySelectorAll("[data-hubgo]").forEach(b => b.addEventListener("click", () => { window.fcTrack?.("Hub: place opened from feed"); goSpot(b.dataset.hubgo); }));
-    box.querySelectorAll("[data-hubjoin]").forEach(b => b.addEventListener("click", () => { window.fcTrack?.("Hub: join"); wantJoin = true; wantLogin = false; render(); setTimeout(() => root()?.scrollIntoView({ behavior: "smooth" }), 60); }));
+    box.querySelectorAll("[data-hubjoin]").forEach(b => b.addEventListener("click", () => { window.fcTrack?.("Hub: join"); location.hash = "join"; }));
     box.querySelectorAll("[data-hubtab]").forEach(b => b.addEventListener("click", () => { box._tab = b.dataset.hubtab; paintHub(box); }));
-    const member = () => { if (guest || !session) { wantJoin = true; render(); setTimeout(() => root()?.scrollIntoView({ behavior: "smooth" }), 60); return false; } return true; };
+    const member = () => { if (guest || !session) { location.hash = "join"; return false; } return true; };
     box.querySelectorAll("[data-hubcheck]").forEach(b => b.addEventListener("click", async () => {
       if (!member()) return; b.disabled = true;
       try { await api("/rest/v1/fact_checks", { method: "POST", headers: { Prefer: "return=minimal,resolution=ignore-duplicates" }, body: { fact_id: +b.dataset.hubcheck, author_name: displayName() } });
@@ -2758,7 +2780,7 @@ const Spots = (() => {
     if (typeof Astro === "undefined" || !spots.length) return;
     if (hubPf && Date.now() - hubPfAt < 30 * 60e3) return paintHubForecast(box);
     let area = DEFAULT_AREA, b;
-    if (map && map.getZoom?.() >= PF_ZOOM && !(ui === "earth" && onGlobe)) { const mb = map.getBounds(); area = { s: mb.getSouth(), w: mb.getWest(), n: mb.getNorth(), e: mb.getEast(), name: "the area on the map" }; }
+    if (map && map.getZoom?.() >= PF_ZOOM && !(ui === "earth" && onGlobe) && document.body.dataset.page === "spots") { const mb = map.getBounds(); area = { s: mb.getSouth(), w: mb.getWest(), n: mb.getNorth(), e: mb.getEast(), name: "the area on the map" }; }
     b = { getSouth: () => area.s, getWest: () => area.w, getNorth: () => area.n, getEast: () => area.e, contains: ([la, lo]) => la >= area.s && la <= area.n && lo >= area.w && lo <= area.e };
     try { hubPf = { area, alerts: await computePf(b) }; hubPfAt = Date.now(); } catch { return; }
     paintHubForecast(document.getElementById("folkHub") || box);
@@ -2786,10 +2808,7 @@ const Spots = (() => {
     box.querySelectorAll("[data-hubalert]").forEach(b => b.addEventListener("click", () => {
       const a = hubPf.alerts.find(x => x.id === b.dataset.hubalert); if (!a || !map) return;
       window.fcTrack?.("Hub: photo alert opened", { type: a.type });
-      const pts = a.places.map(spotById).filter(Boolean); if (!pts.length) return;
-      $("#spotsMap")?.scrollIntoView({ behavior: "smooth", block: "center" });
-      const go = () => { map.fitBounds(L.latLngBounds(pts.map(s => [s.lat, s.lon])).pad(0.3), { maxZoom: 11 }); pfOn = a.id; pfOpen = true; pfKey = ""; setTimeout(drawPf, 900); };
-      if (ui === "earth" && onGlobe && pts[0]) { cinematic(pts[0].lat, pts[0].lon, go); } else setTimeout(go, 300);
+      hubAlert = a; hubToMap(applyHubAlert);
     }));
   }
 
@@ -2924,6 +2943,7 @@ const Spots = (() => {
 
   function drawClusters() {
     setTimeout(openDeepPlace, 0);
+    if (hubAlert) setTimeout(applyHubAlert, 300);
     if (!map || !layer) return;
     // lo spot con la scheda aperta resta sulla mappa (altrimenti la scheda si chiuderebbe a ogni spostamento)
     const keep = openId != null ? markerById.get(openId) : null;
@@ -6902,7 +6922,7 @@ const Spots = (() => {
 
   const prefetch = () => { if (ui === "earth" && viewMode === "globe" && !globeFailed) loadMapLibre().catch(() => {}); };
   const login = () => { if (session && !guest) return; wantLogin = true; wantJoin = false; if (location.hash !== "#spotfolk" && document.body.dataset.page !== "spots") location.hash = "spotfolk"; render(); setTimeout(() => root()?.scrollIntoView({ behavior: "smooth" }), 60); };
-  return { show, prefetch, handleCallback, loadSession, renderWrite, goOther, login, logout: () => { meView = false; meCache = null; if (location.hash === "#me") location.hash = "spotfolk"; return logout(); }, parse: { fromCSV, fromKML, fromGeoJSON, coordsFromText } };
+  return { show, showHub, prefetch, handleCallback, loadSession, renderWrite, goOther, login, logout: () => { meView = false; meCache = null; if (location.hash === "#me") location.hash = "spotfolk"; return logout(); }, parse: { fromCSV, fromKML, fromGeoJSON, coordsFromText } };
 })();
 
 const LOCK_SVG = '<svg viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/><circle cx="12" cy="15.5" r="1.3"/></svg>';
