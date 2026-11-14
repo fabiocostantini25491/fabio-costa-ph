@@ -4094,3 +4094,11 @@ body[data-page="hub"] .sf-nav a.sf-map{background:none;color:#e6ecf3}
 .lp-add-btn.lp-meet{background:rgba(126,224,129,.16);border-color:rgba(126,224,129,.6);color:#c8f5ca}
 
 .lp-add-btn.lp-dest{background:rgba(127,200,255,.14);border-color:rgba(127,200,255,.55);color:#cfe7ff}
+
+/* full-screen map: search as an icon on the right, the search box over the map */
+.sx-ctrl .sx-searchbtn{display:none}
+.sx-stage.map-full .sx-ctrl .sx-searchbtn{display:grid}
+.sx-searchbtn svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
+.sx-searchbtn.on{background:#f28c1e;color:#1a1206}
+.sx-stage .spots-search.in-stage{position:absolute;z-index:1150;top:calc(12px + env(safe-area-inset-top, 0px));left:max(12px, env(safe-area-inset-left, 0px));right:calc(70px + env(safe-area-inset-right, 0px));margin:0;box-shadow:0 12px 34px rgba(0,0,0,.5)}
+@media (min-width:900px){.sx-stage .spots-search.in-stage{right:auto;width:min(460px,60%)}}

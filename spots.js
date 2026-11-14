@@ -872,6 +872,7 @@ const Spots = (() => {
         <div id="spotsMap" class="map map-spots" aria-label="Map of photo spots"></div>
         <div class="sx-globe-slot" id="sxGlobeSlot"></div>
         <div class="sx-ctrl">
+          <button type="button" class="sx-btn sx-searchbtn" id="sxSearch" title="Search" aria-label="Search a spot or a place"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 21 21"/></svg></button>
           <button type="button" class="sx-btn is-gold" id="sxNear" title="Spots near me" aria-label="Find spots near me">${SX_ICON.near}</button>
           <div class="sx-zoom"><button type="button" class="sx-btn" id="sxIn" aria-label="Zoom in">+</button><button type="button" class="sx-btn" id="sxOut" aria-label="Zoom out">−</button></div>
           <button type="button" class="sx-btn" id="sxHome" title="The whole Earth" aria-label="Back to the whole Earth">${SX_ICON.target}</button>
@@ -1169,6 +1170,17 @@ const Spots = (() => {
     $("#sxToClassic")?.addEventListener("click", () => { ui = "classic"; lsSet(UI_KEY, ui); onGlobe = false; renderApp(); });
     $("#sxExport")?.addEventListener("click", exportArea);
     $("#sxFull")?.addEventListener("click", () => document.querySelector(".sx-stage .map-full-ctrl a")?.click());
+    // full screen: the search comes onto the map (the same search box, moved over the map and back)
+    let searchHome = null;
+    const searchBack = () => { const box = $("#spotsSearch"); if (box && searchHome && box.classList.contains("in-stage")) { box.classList.remove("in-stage"); searchHome.parent.insertBefore(box, searchHome.next); } searchHome = null; $("#sxSearch")?.classList.remove("on"); };
+    $("#sxSearch")?.addEventListener("click", () => {
+      const box = $("#spotsSearch"), stg = stageEl(); if (!box || !stg) return;
+      if (box.classList.contains("in-stage")) return searchBack();
+      searchHome = { parent: box.parentNode, next: box.nextSibling };
+      box.classList.add("in-stage"); stg.appendChild(box); $("#sxSearch")?.classList.add("on");
+      setTimeout(() => $("#spotsQuery")?.focus(), 50);
+      window.fcTrack?.("Spots: search on the full map");
+    });
     const st = stageEl();
     let wasFull = st?.classList.contains("map-full");
     if (st) new MutationObserver(() => {
@@ -1176,6 +1188,7 @@ const Spots = (() => {
       if (full === wasFull) return;   // solo quando cambia lo schermo intero
       wasFull = full;
       if (b) { b.innerHTML = full ? SX_ICON.fullExit : SX_ICON.full; b.title = full ? "Exit full screen" : "Full screen"; b.setAttribute("aria-label", b.title); }
+      if (!full) searchBack();
       [60, 350].forEach(t => setTimeout(() => { globe?.resize(); drawGlobe(); }, t));
       setTimeout(() => { sheetPad(); if (globe && onGlobe && globe.getZoom() < earthZoom() + 0.3) globe.easeTo({ zoom: earthZoom(), duration: 500 }); }, 400);
     }).observe(st, { attributes: true, attributeFilter: ["class"] });
