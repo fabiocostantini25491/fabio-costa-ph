@@ -2703,7 +2703,7 @@ const Spots = (() => {
      Weather from Open-Meteo (one request for a 5×5 grid), sun, moon and Milky Way calculated here (Astro, tools.js),
      aurora from NOAA SWPC. Nothing is stored: only the browser asks and calculates. */
   const PF = {
-    clear_rise: ["🌅", "Clear sunrise", "#ffd27a"], clear_set: ["🌇", "Clear sunset", "#ffbe7a"], fiery: ["🔥", "Fiery sky possible", "#ff7a45"],
+    clear_rise: ["🌅", "Clear sunrise", "#ffd27a"], clear_set: ["🌇", "Clear sunset", "#ffbe7a"], fiery_rise: ["🔥", "Fiery sunrise possible", "#ff9a5c"], fiery: ["🔥", "Fiery sunset possible", "#ff7a45"],
     cloudsea: ["☁️", "Sea of clouds likely", "#cfe2ff"], fog: ["🌫️", "Fog in the valleys", "#b8c4d2"], snow: ["❄️", "Fresh snow", "#e8f4ff"],
     drama: ["⛈️", "Dramatic light possible", "#c9a7ff"], stars: ["✨", "Dark sky for stars", "#9ec5ff"], milky: ["🌌", "Milky Way core visible", "#b39dff"],
     moonrise: ["🌕", "Full moon rising at sunset", "#fff3c4"], aurora: ["🟢", "Aurora possible", "#7ee0a1"]
@@ -2817,7 +2817,8 @@ const Spots = (() => {
         const fieryAt = i => at("cloud_cover_low", i) < 30 && Math.max(at("cloud_cover_mid", i), at("cloud_cover_high", i)) >= 30 && Math.max(at("cloud_cover_mid", i), at("cloud_cover_high", i)) <= 80 && !(at("precipitation", i) > 0.2);
         if (sr >= 0 && clearAt(sr)) add("clear_rise", d, date, `sunrise ${riseT}`, g.places, d);
         if (ss >= 0 && clearAt(ss)) add("clear_set", d, date, `sunset ${setT}`, g.places, d);
-        if (ss >= 0 && fieryAt(ss)) add("fiery", d, date, `sunset ${setT}`, g.places, d); else if (sr >= 0 && fieryAt(sr)) add("fiery", d, date, `sunrise ${riseT}`, g.places, d);
+        if (ss >= 0 && fieryAt(ss)) add("fiery", d, date, `sunset ${setT}`, g.places, d);
+        if (sr >= 0 && fieryAt(sr)) add("fiery_rise", d, date, `sunrise ${riseT}`, g.places, d);
         if (sr >= 0 && [sr, sr + 1, sr + 2].some(i => at("cloud_cover_low", i) >= 75 && at("cloud_cover_mid", i) < 35 && at("cloud_cover_high", i) < 60)) { const hp = await highPlaces(g); add("cloudsea", d, date, `morning, above 1,400 m`, hp, d); }
         if (sr >= 0 && [sr, sr + 1, sr + 2].some(i => at("visibility", i) != null && at("visibility", i) < 1000)) add("fog", d, date, "early morning", g.places, d);
         if (d > 0 && D.snowfall_sum[d - 1] >= 3) add("snow", d, date, `${Math.round(D.snowfall_sum[d - 1])} cm the day before`, g.places, d - 1);
@@ -2932,7 +2933,7 @@ const Spots = (() => {
 
   /* ======== The Folk Hub: right now on the map (photo forecast), from Fabio, the folk room, the founding folk ======== */
   let hubV = true, hubData = null, hubAt = 0, hubBusy = false, hubPf = null, hubPfAt = 0;
-  const HUB_IMG = { snow: "photo", cloudsea: "photo", fog: "photo", fiery: "hike", clear_set: "hike", clear_rise: "hike", drama: "road", stars: "night", milky: "night", aurora: "night", moonrise: "night" };
+  const HUB_IMG = { snow: "photo", cloudsea: "photo", fog: "photo", fiery: "hike", fiery_rise: "hike", clear_set: "hike", clear_rise: "hike", drama: "road", stars: "night", milky: "night", aurora: "night", moonrise: "night" };
   const CAT_IMG = { spot: "photo", trekking: "hike", restaurant: "food", hotel: "slow", experience: "road", workshop: "photo" };
   const wfImg = k => `img/wf/${k || "photo"}.jpg`;
   const DEFAULT_AREA = { s: 46.25, w: 11.3, n: 46.85, e: 12.35, name: "the Dolomites" };
@@ -3042,12 +3043,12 @@ const Spots = (() => {
   }
   function paintHubForecast(box) {
     const hero = box.querySelector("[data-hubhero]"), mos = box.querySelector("[data-hubmosaic]"); if (!hero || !hubPf) return;
-    const prio = ["snow", "aurora", "milky", "cloudsea", "moonrise", "fiery", "drama", "fog", "stars", "clear_set", "clear_rise"];
+    const prio = ["snow", "aurora", "milky", "cloudsea", "moonrise", "fiery_rise", "fiery", "drama", "fog", "stars", "clear_set", "clear_rise"];
     const al = hubPf.alerts.slice().sort((a, b) => a.day - b.day || prio.indexOf(a.type) - prio.indexOf(b.type));
     const top = al.filter(a => a.day <= 2).sort((a, b) => prio.indexOf(a.type) - prio.indexOf(b.type) || a.day - b.day)[0] || al[0];
     const dayW = d => d === 0 ? "today" : d === 1 ? "tomorrow" : "in " + d + " days";
     const HERO_T = { snow: ["The first snow", "is here."], aurora: ["Aurora", "possible."], milky: ["The Milky Way", "is up."], cloudsea: ["A sea of clouds", "is coming."], moonrise: ["A full moon", "at sunset."],
-      fiery: ["The sky could", "catch fire."], drama: ["Dramatic light", "is coming."], fog: ["Fog in the valleys,", "light above."], stars: ["Dark skies", "for the stars."], clear_set: ["A clear sunset", "is coming."], clear_rise: ["A clear sunrise", "is coming."] };
+      fiery: ["The sunset could", "catch fire."], fiery_rise: ["The sunrise could", "catch fire."], drama: ["Dramatic light", "is coming."], fog: ["Fog in the valleys,", "light above."], stars: ["Dark skies", "for the stars."], clear_set: ["A clear sunset", "is coming."], clear_rise: ["A clear sunrise", "is coming."] };
     if (top) {
       const [ic, lb] = PF[top.type], [t1, t2] = HERO_T[top.type];
       hero.style.setProperty("--img", `url(${wfImg(HUB_IMG[top.type])})`);
