@@ -2524,6 +2524,7 @@ const Spots = (() => {
     const ico = (html, cls) => L.divIcon({ className: "", iconSize: [34, 34], iconAnchor: [17, 17], html: `<div class="mp-ico ${cls}">${html}</div>` });
     const subjM = L.marker([plan.subject.lat, plan.subject.lon], { icon: ico("🎯", "subj"), draggable: true, autoPan: true }).addTo(planLayer);
     subjM.on("drag", ev => { const ll = ev.target.getLatLng(); plan.subject = { ...plan.subject, lat: ll.lat, lon: ll.lng }; draw(); });
+    subjM.on("dragend", () => { if (plan.mode === "camera" && plan.spotId != null) try { const k = `pp2-subj-${plan.spotId}`, old = JSON.parse(localStorage.getItem(k) || "{}"); localStorage.setItem(k, JSON.stringify({ ...old, lat: plan.subject.lat, lon: plan.subject.lon, name: old.name || plan.subject.name })); } catch {} });
     (plan.cams || []).slice(1).forEach(c => L.marker([c.lat, c.lon], { icon: ico("📷", "alt"), interactive: false, opacity: .55 }).addTo(planLayer));
     const camM = L.marker([S.cam.lat, S.cam.lon], { icon: ico("📷", "cam"), draggable: true, autoPan: true }).addTo(planLayer);
     const sight = L.polyline([], { color: "#8fe0a6", weight: 3, opacity: .9 }).addTo(planLayer);
@@ -2556,13 +2557,37 @@ const Spots = (() => {
     setTimeout(() => { $("#spotsMap")?.scrollIntoView({ behavior: "smooth", block: "center" }); map.fitBounds(L.latLngBounds([[plan.subject.lat, plan.subject.lon], [S.cam.lat, S.cam.lon], ...(plan.cams || []).map(c => [c.lat, c.lon])]).pad(0.6), { maxZoom: 15 }); }, 300);
   }
 
+  /* 🎯 choose on the map the subject seen from a place (a peak, a lighthouse, a bell tower): one tap, then back to the place's Photo pulse */
+  function pickSubject(s, done) {
+    if (!map) return;
+    const it = IT_();
+    map.closePopup();
+    if (onGlobe) toFlat(null);
+    $("#spotsMap")?.scrollIntoView({ behavior: "smooth", block: "center" });
+    const host = map.getContainer().closest(".sx-stage") || map.getContainer();
+    const bar = L.DomUtil.create("div", "mp-pick", host); L.DomEvent.disableClickPropagation(bar);
+    bar.innerHTML = `<b>🎯 ${it ? "Tocca sulla mappa il soggetto" : "Tap the subject on the map"}</b><span>${it ? "una cima, un faro, un campanile che vedi da" : "a peak, a lighthouse, a bell tower you see from"} ${esc(s.name)}</span><button type="button">${it ? "Annulla" : "Cancel"}</button>`;
+    const camM = L.marker([s.lat, s.lon], { icon: L.divIcon({ className: "", iconSize: [34, 34], iconAnchor: [17, 17], html: `<div class="mp-ico cam">📷</div>` }), interactive: false }).addTo(map);
+    map.getContainer().classList.add("mp-picking");
+    const end = () => { map.off("click", onPick); bar.remove(); camM.remove(); map.getContainer().classList.remove("mp-picking"); };
+    const onPick = ev => {
+      const { lat, lng } = ev.latlng, near = spots.filter(x => x.id !== s.id && map.distance([x.lat, x.lon], [lat, lng]) < 400).sort((a, b) => map.distance([a.lat, a.lon], [lat, lng]) - map.distance([b.lat, b.lon], [lat, lng]))[0];
+      end(); done({ lat: near ? +near.lat : lat, lon: near ? +near.lon : lng, name: near ? near.name : (it ? "Il tuo soggetto" : "Your subject") });
+      window.fcTrack?.("Photo pulse: subject chosen");
+      setTimeout(() => { focusSpot(s); setTimeout(() => { const d = document.querySelector('.leaflet-popup [data-sec="photo"]'); if (d && !d.open) d.open = true; setTimeout(() => d?.scrollIntoView({ behavior: "smooth", block: "center" }), 400); }, 1200); }, 200);
+    };
+    bar.querySelector("button").addEventListener("click", () => { end(); focusSpot(s); });
+    map.fitBounds(L.latLng(s.lat, s.lon).toBounds(16000), { maxZoom: 13 });
+    setTimeout(() => map.on("click", onPick), 300);
+  }
+
   /* 📸 Photo pulse (photopulse.js, loaded the first time the section opens): where to stand, and when */
   let ppJs = null;
   function loadPhotoPulse(popup, s) {
     const box = popup.getElement()?.querySelector("[data-photopulse]"); if (!box || box.dataset.done) return;
     box.dataset.done = "1";
     if (!ppJs) ppJs = new Promise((res, rej) => { const v = (document.querySelector('script[src*="spots.js"]')?.getAttribute("src") || "").split("?v=")[1] || ""; const js = document.createElement("script"); js.src = `photopulse.js${v ? `?v=${v}` : ""}`; js.onload = res; js.onerror = rej; document.head.append(js); });
-    ppJs.then(() => { if (typeof Astro === "undefined") throw new Error("astro"); window.PhotoPulse.mount(box, { esc, track: ev => window.fcTrack?.(ev), update: () => popup.update(), mapPlan: plan => { map?.closePopup(); mapPlan(plan); }, ask: pre => openAskForm(pre, () => loadAsks(popup, s)) }, s); setTimeout(() => popup.update(), 50); })
+    ppJs.then(() => { if (typeof Astro === "undefined") throw new Error("astro"); window.PhotoPulse.mount(box, { esc, track: ev => window.fcTrack?.(ev), update: () => popup.update(), mapPlan: plan => { map?.closePopup(); mapPlan(plan); }, ask: pre => openAskForm(pre, () => loadAsks(popup, s)), pickSubject: done => pickSubject(s, done) }, s); setTimeout(() => popup.update(), 50); })
       .catch(() => { ppJs = null; box.dataset.done = ""; box.innerHTML = `<p class="pc-empty">The Photo pulse could not load. Check your connection.</p>`; });
   }
   let asksV = true;

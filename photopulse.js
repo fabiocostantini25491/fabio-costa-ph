@@ -15,7 +15,15 @@ window.PhotoPulse = (() => {
     "Sunrise": "Alba", "Sunset": "Tramonto", "Subject height": "Altezza del soggetto",
     "statue · 5 m": "statua · 5 m", "church · 20 m": "chiesa · 20 m", "castle · 40 m": "castello · 40 m", "cliff · 100 m": "rupe · 100 m", "mountain · 500 m": "montagna · 500 m",
     "Calculating…": "Calcolo…", "Stand {d} of the place": "Mettiti a {d} del posto", "at about {k}": "a circa {k}",
-    "Navigate to the spot": "Naviga al punto", "This place is": "Questo posto è", "the subject": "il soggetto", "where I shoot from": "il punto da cui scatto",
+    "Navigate to the spot": "Naviga al punto", "Tap on the map the subject in front of you: a peak, a lighthouse, a bell tower.": "Tocca sulla mappa il soggetto che hai davanti: una cima, un faro, un campanile.",
+    "Change": "Cambia", "Choose the subject on the map": "Scegli il soggetto sulla mappa", "peak or hill · height from the ground model": "cima o collina · quota dal terreno",
+    "The sun rises right behind {n}, from here": "Il sole sorge proprio dietro {n}, da qui", "The sun sets right behind {n}, from here": "Il sole tramonta proprio dietro {n}, da qui",
+    "{n} in front light, sun behind you": "{n} in luce frontale, sole alle spalle", "Grazing light on {n}": "Luce radente su {n}", "Three-quarter light on {n}": "Luce di tre quarti su {n}",
+    "The moon ({p}%) rises right behind {n}, {w}": "La luna ({p}%) sorge proprio dietro {n}, {w}", "The moon ({p}%) sets right behind {n}, {w}": "La luna ({p}%) tramonta proprio dietro {n}, {w}",
+    "at sunset": "al tramonto", "at sunrise": "all'alba", "in the blue hour": "nell'ora blu", "in the dark": "col buio",
+    "The Milky Way core over {n}": "Il nucleo della Via Lattea sopra {n}", "{c} over {n}": "{c} sopra {n}", "The arch of {a} over {n}": "L'arco di {a} sopra {n}",
+    "its top {a}° above your eye": "la cima a {a}° sopra il tuo occhio", "Lined up: off by {d}°": "Allineato: scarto {d}°", "{h}° high": "alta {h}°",
+    "Not from here in the coming months: move a little to the side (on the map, drag 📷) or choose another subject.": "Non da qui nei prossimi mesi: spostati un po' di lato (sulla mappa, trascina 📷) o scegli un altro soggetto.", "This place is": "Questo posto è", "the subject": "il soggetto", "where I shoot from": "il punto da cui scatto",
     "From here, point towards {d}": "Da qui inquadra verso {d}", "or {d}": "oppure {d}", "your subject": "il tuo soggetto",
     "A subject {h} m high about {k} away looks as big as {b}.": "Un soggetto alto {h} m a circa {k} appare grande quanto {b}.", "the sun": "il sole", "the moon": "la luna",
     "Want advice from someone who knows it?": "Vuoi un consiglio da chi lo conosce?", "Ask a photo folk who's been": "Chiedi a un photo folk che c'è stato", "Ask who's there now": "Chiedi a chi è lì adesso",
@@ -71,6 +79,9 @@ window.PhotoPulse = (() => {
     const l2 = l1 + Math.atan2(Math.sin(b) * Math.sin(d) * Math.cos(p1), Math.cos(d) - Math.sin(p1) * Math.sin(p2));
     return { lat: p2 / rad, lon: ((l2 / rad + 540) % 360) - 180 };
   }
+  const bearingTo = (a1, b1) => { const p1 = a1.lat * rad, p2 = b1.lat * rad, dl = (b1.lon - a1.lon) * rad; return norm(Math.atan2(Math.sin(dl) * Math.cos(p2), Math.cos(p1) * Math.sin(p2) - Math.sin(p1) * Math.cos(p2) * Math.cos(dl)) / rad); };
+  const kmTo = (a1, b1) => { const p1 = a1.lat * rad, p2 = b1.lat * rad, x = Math.sin((p2 - p1) / 2) ** 2 + Math.cos(p1) * Math.cos(p2) * Math.sin((b1.lon - a1.lon) * rad / 2) ** 2; return 12742 * Math.asin(Math.sqrt(x)); };
+  const adiff = (x, y) => ((x - y + 540) % 360) - 180;
   const kmTxt = km => km < 1 ? `${Math.round(km * 1000 / 10) * 10} m` : `${km < 10 ? km.toFixed(1).replace(".", it ? "," : ".") : Math.round(km)} km`;
 
   // the constellations of the planner, by their centre (RA, Dec in degrees)
@@ -101,6 +112,7 @@ window.PhotoPulse = (() => {
 .pp2-a .acts a{font-size:12px;font-weight:600;color:#ffbe7a;text-decoration:none;border:1px solid rgba(255,190,122,.45);border-radius:99px;padding:4px 9px}
 .pp2-note{margin:0;font-size:11.5px;color:#8a99ab}
 .pp2-ask{margin-top:4px;padding:10px;border-radius:14px;border:1px dashed rgba(255,190,122,.45)}.pp2-ask p{margin:0 0 7px;font-size:12.5px;color:#ffd27a;font-weight:600}
+.pp2-subj{padding:8px 10px;border-radius:12px;background:rgba(255,190,122,.08);border:1px solid rgba(255,190,122,.3);color:#f2f6fb}.pp2-pick{border:1px solid #f28c28;background:rgba(242,140,40,.15);color:#ffbe7a;border-radius:99px;padding:6px 11px;font-family:inherit;font-weight:700;font-size:12.5px;cursor:pointer}
 .pp2-good{font-size:12.5px;color:#8fe0a6;margin:0}.pp2-bad{font-size:12.5px;color:#ffbe7a;margin:0}
 @media(max-width:420px){.pp2-a{grid-template-columns:72px minmax(0,1fr);padding:8px}.pp2-a svg{width:72px;height:72px}}`;
     document.head.append(st);
@@ -168,6 +180,64 @@ window.PhotoPulse = (() => {
       ${ray}${lk}<circle cx="${C}" cy="${C}" r="7" fill="#2fbf71" stroke="#051b10" stroke-width="1.5"/><text x="${C}" y="${C + 3.5}" font-size="8" text-anchor="middle">📷</text>${body}</svg>`;
   }
 
+  /* ---------- the reverse search: from here, when does it pass right behind the subject you chose? ---------- */
+  async function alignedSearch(S, s, off, m, h) {
+    const sub = S.subj, look = bearingTo(s, sub), dist = kmTo(s, sub), q = S.q, rise = S.when === "rise";
+    const [eC, eS] = await elevations([s, sub]);
+    const theta = Math.atan2(eS + S.h - eC - 1.7, dist * 1000) / rad;   // the top of the subject, seen from your eye
+    const out = [], now = Date.now(), DAYMS = DAY;
+    const day0 = Date.parse(new Date(now + off).toISOString().slice(0, 10) + "T12:00:00Z") - off;
+    const sunAt2 = x => Astro.sunPos(x, s.lat, s.lon), moonAt2 = x => Astro.moonPos(x, s.lat, s.lon);
+    const crossAt = (pos, from, span, rising) => { const step = 4 * MIN; let prev = pos(from).alt - theta;
+      for (let x = from + step; x <= from + span; x += step) { const cur = pos(x).alt - theta;
+        if (rising ? prev < 0 && cur >= 0 : prev > 0 && cur <= 0) { let lo = x - step, hi = x; for (let i = 0; i < 12; i++) { const mm = (lo + hi) / 2, v = pos(mm).alt - theta; if (rising ? v < 0 : v > 0) lo = mm; else hi = mm; } return (lo + hi) / 2; }
+        prev = cur; } return null; };
+    const push = (ms, p, title, icon, body, extra = "") => out.push({ ms, p, title, icon, body, extra, d: adiff(p.az, look) });
+    if (q === "sunback" || q === "graze" || q === "front" || q === "side") {
+      for (let k = 0; k < 370 && out.length < 4; k++) {
+        const noon = day0 + k * DAYMS, ev = Astro.sunTimes(noon, s.lat, s.lon, [-0.833])[-0.833], base = rise ? ev.rise : ev.set; if (!base) continue;
+        if (q === "sunback") { const x = crossAt(sunAt2, base - 2 * HOUR, 5 * HOUR, rise); if (!x || x < now) continue; const p = sunAt2(x);
+          if (Math.abs(adiff(p.az, look)) <= 0.6) push(x, p, t(rise ? "The sun rises right behind {n}, from here" : "The sun sets right behind {n}, from here", { n: sub.name || t("your subject") }), "☀️", "sun"); continue; }
+        // light on the subject: the sun low (1–8°) at the right angle to where you look
+        const want = q === "front" ? [180] : q === "graze" ? [90, -90] : [135, -135];
+        for (let x = rise ? base : base - 75 * MIN; x <= (rise ? base + 75 * MIN : base); x += 5 * MIN) {
+          if (x < now) continue; const p = sunAt2(x); if (p.alt < 1 || p.alt > 8) continue;
+          if (want.some(w => Math.abs(adiff(p.az, look + w)) <= 4)) { push(x, p, t(q === "front" ? "{n} in front light, sun behind you" : q === "graze" ? "Grazing light on {n}" : "Three-quarter light on {n}", { n: sub.name || t("your subject") }), "☀️", "sun"); break; }
+        }
+      }
+    } else if (q === "fullmoon" || q === "moon") {
+      const minIl = q === "fullmoon" ? 0.9 : 0.4, days = q === "fullmoon" ? 400 : 150;
+      for (let k = 0; k < days && out.length < 4; k++) {
+        const noon = day0 + k * DAYMS; if (q === "fullmoon" && Astro.moonIllum(noon).fraction < 0.85) continue;
+        for (const rising of [true, false]) {
+          const x = crossAt(moonAt2, noon - 12 * HOUR, 24 * HOUR, rising); if (!x || x < now) continue;
+          const il = Astro.moonIllum(x).fraction, p = moonAt2(x); if (il < minIl || Math.abs(adiff(p.az, look)) > 0.6) continue;
+          const sa = sunAt2(x).alt; if (q === "moon" && (sa < -10 || sa > 10)) continue;   // only in the good light
+          const when = sa > -1 && sa < 10 ? t(rising ? "at sunset" : "at sunrise") : sa <= -1 && sa > -10 ? t("in the blue hour") : t("in the dark");
+          push(x, p, t(rising ? "The moon ({p}%) rises right behind {n}, {w}" : "The moon ({p}%) sets right behind {n}, {w}", { p: Math.round(il * 100), n: sub.name || t("your subject"), w: when }), il > 0.9 ? "🌕" : "🌙", "moon");
+        }
+      }
+    } else {
+      // the night sky: the core, the arch or a constellation passing over the subject (a little above its top), dark and moonless
+      const c = CONS.find(x => x[0] === S.con) || CONS[0];
+      const posFor = q === "core" ? (x => Astro.corePos(x, s.lat, s.lon)) : q === "cons" ? (x => Astro.radecPos(x, s.lat, s.lon, c[1], c[2])) : null;
+      for (let k = 0; k < 370 && out.length < 4; k++) {
+        const noon = day0 + k * DAYMS, a1 = Astro.sunTimes(noon, s.lat, s.lon, [-18])[-18]?.set, b1 = Astro.sunTimes(noon + DAYMS, s.lat, s.lon, [-18])[-18]?.rise; if (!a1 || !b1 || b1 < now) continue;
+        let hit = null;
+        for (let x = Math.max(a1, now); x < b1 && !hit; x += 5 * MIN) {
+          const cands = posFor ? [[posFor(x), null]] : ARCH.map(([l, n]) => { const [ra, dec] = Astro.galToRaDec(l, 0); return [Astro.radecPos(x, s.lat, s.lon, ra, dec), n]; });
+          for (const [p, n] of cands) {
+            if (Math.abs(adiff(p.az, look)) > 1.5 || p.alt < theta + 1 || p.alt > theta + 30) continue;
+            if (moonAt2(x).alt > 0 && Astro.moonIllum(x).fraction > 0.15) continue;
+            hit = [x, p, n]; break;
+          }
+        }
+        if (hit) { const [x, p, n] = hit; push(x, p, q === "core" ? t("The Milky Way core over {n}", { n: sub.name || t("your subject") }) : q === "cons" ? t("{c} over {n}", { c: t(c[0]), n: sub.name || t("your subject") }) : t("The arch of {a} over {n}", { a: t(n).trim(), n: sub.name || t("your subject") }), q === "core" ? "🌌" : q === "cons" ? "✨" : "🌠", q === "core" ? "core" : q === "cons" ? ["radec", c[1], c[2]] : ["gal", ARCH.find(z => z[1] === n)[0]]); }
+      }
+    }
+    return { out, look, dist, theta };
+  }
+
   /* ---------- mount ---------- */
   async function mount(el, K, s) {
     addCss();
@@ -175,7 +245,9 @@ window.PhotoPulse = (() => {
     const esc = K.esc;
     const S = { q: null, when: "rise", h: 20, con: "Orion", mode: s.sub === "viewpoint" ? "camera" : "subject" };
     try { const md = localStorage.getItem(`pp2-mode-${s.id}`); if (md === "camera" || md === "subject") S.mode = md; } catch {}
+    try { const sj = JSON.parse(localStorage.getItem(`pp2-subj-${s.id}`) || "null"); if (sj && Number.isFinite(sj.lat)) { S.subj = sj; S.h = sj.h ?? 0; } } catch {}
     try { const sv = JSON.parse(sessionStorage.getItem("pp2") || "{}"); Object.assign(S, { when: sv.when || "rise", h: sv.h || 20, con: sv.con || "Orion" }); } catch {}
+    if (S.subj && S.subj.h != null) S.h = S.subj.h;
     el.innerHTML = `<div class="pp2"><p class="pp2-h">📸 <b>${esc(t("Where do I stand, and when?"))}</b></p>
       <div class="pp2-row"><span>${esc(t("This place is"))}</span><div class="pp2-seg" data-ppmode>${[["subject", "🎯 " + t("the subject")], ["camera", "📷 " + t("where I shoot from")]].map(([k, l]) => `<button type="button" data-ppm="${k}" class="${S.mode === k ? "on" : ""}">${esc(l)}</button>`).join("")}</div></div>
       <div class="pp2-qs" role="group">${[["graze", "🌅 " + t("Grazing light")], ["front", "☀️ " + t("Front light")], ["side", "↗️ " + t("Side light (3/4)")], ["sunback", "🎯 " + t("Sun behind it")],
@@ -193,17 +265,23 @@ window.PhotoPulse = (() => {
       K.track?.(`Photo pulse: ask ${b.dataset.ppask}`); K.ask({ lat: s.lat, lon: s.lon, name: nm, spot_id: s.id, target: photo ? "photo" : "now", note });
     }));
     const wx = meteo(s.lat, s.lon);   // timezone and clouds, in the meantime
+    let qBack = ""; try { qBack = sessionStorage.getItem(`pp2-q-${s.id}`) || ""; sessionStorage.removeItem(`pp2-q-${s.id}`); } catch {}
+    if (qBack) setTimeout(() => el.querySelector(`[data-ppq="${qBack}"]`)?.click(), 0);
     el.querySelectorAll("[data-ppq]").forEach(b => b.addEventListener("click", () => { S.q = b.dataset.ppq; el.querySelectorAll("[data-ppq]").forEach(x => x.classList.toggle("on", x === b)); K.track?.(`Photo pulse: ${S.q}`); run(); }));
 
     async function run() {
       const opts = el.querySelector("[data-ppopts]"), res = el.querySelector("[data-ppres]");
       const sunQ = ["graze", "front", "side", "sunback"].includes(S.q), sizeQ = ["sunback", "fullmoon", "moon"].includes(S.q);
-      opts.innerHTML = `<div class="pp2-row">${sunQ ? `<div class="pp2-seg">${[["rise", "🌅 " + t("Sunrise")], ["set", "🌇 " + t("Sunset")]].map(([k, l]) => `<button type="button" data-ppw="${k}" class="${S.when === k ? "on" : ""}">${esc(l)}</button>`).join("")}</div>` : ""}
-        ${sizeQ ? `<label>${esc(t("Subject height"))} <select class="pp2-sel" data-pph>${[[5, "statue · 5 m"], [20, "church · 20 m"], [40, "castle · 40 m"], [100, "cliff · 100 m"], [500, "mountain · 500 m"]].map(([v, l]) => `<option value="${v}"${+S.h === v ? " selected" : ""}>${esc(t(l))}</option>`).join("")}</select></label>` : ""}
+      const camSub = S.mode === "camera";
+      const subjRow = camSub ? `<div class="pp2-row pp2-subj">${S.subj ? `🎯 <b>${esc(S.subj.name || t("your subject"))}</b> · ${esc(kmTxt(kmTo(s, S.subj)))} ${esc(dir8(bearingTo(s, S.subj)))} (${Math.round(bearingTo(s, S.subj))}°)` : `<span>${esc(t("Tap on the map the subject in front of you: a peak, a lighthouse, a bell tower."))}</span>`}
+        ${K.pickSubject ? `<button type="button" class="pp2-pick" data-pppick>🎯 ${esc(S.subj ? t("Change") : t("Choose the subject on the map"))}</button>` : ""}</div>` : "";
+      opts.innerHTML = subjRow + `<div class="pp2-row">${sunQ ? `<div class="pp2-seg">${[["rise", "🌅 " + t("Sunrise")], ["set", "🌇 " + t("Sunset")]].map(([k, l]) => `<button type="button" data-ppw="${k}" class="${S.when === k ? "on" : ""}">${esc(l)}</button>`).join("")}</div>` : ""}
+        ${sizeQ || (camSub && S.subj) ? `<label>${esc(t("Subject height"))} <select class="pp2-sel" data-pph>${[...(camSub ? [[0, "peak or hill · height from the ground model"]] : []), [5, "statue · 5 m"], [20, "church · 20 m"], [40, "castle · 40 m"], [100, "cliff · 100 m"], [500, "mountain · 500 m"]].map(([v, l]) => `<option value="${v}"${+S.h === v ? " selected" : ""}>${esc(t(l))}</option>`).join("")}</select></label>` : ""}
         ${S.q === "cons" ? `<label>${esc(t("Constellation"))} <select class="pp2-sel" data-ppc>${CONS.map(c => `<option value="${c[0]}"${S.con === c[0] ? " selected" : ""}>${esc(t(c[0]))}</option>`).join("")}</select></label>` : ""}</div>`;
       const save = () => { try { sessionStorage.setItem("pp2", JSON.stringify({ when: S.when, h: S.h, con: S.con })); } catch {} };
+      opts.querySelector("[data-pppick]")?.addEventListener("click", () => { try { sessionStorage.setItem(`pp2-q-${s.id}`, S.q || ""); } catch {} K.pickSubject(pt => { S.subj = { ...pt, h: S.h }; try { localStorage.setItem(`pp2-subj-${s.id}`, JSON.stringify(S.subj)); } catch {} }); });
       opts.querySelectorAll("[data-ppw]").forEach(b => b.addEventListener("click", () => { S.when = b.dataset.ppw; save(); run(); }));
-      opts.querySelector("[data-pph]")?.addEventListener("change", e => { S.h = +e.target.value; save(); run(); });
+      opts.querySelector("[data-pph]")?.addEventListener("change", e => { S.h = +e.target.value; if (S.subj) { S.subj.h = S.h; try { localStorage.setItem(`pp2-subj-${s.id}`, JSON.stringify(S.subj)); } catch {} } save(); run(); });
       opts.querySelector("[data-ppc]")?.addEventListener("change", e => { S.con = e.target.value; save(); run(); });
       res.innerHTML = `<p class="pp2-note">${esc(t("Calculating…"))}</p>`;
       const m = await wx, off = (m?.utc_offset_seconds ?? Math.round(s.lon / 15) * 3600) * 1000;
@@ -230,6 +308,17 @@ window.PhotoPulse = (() => {
       if (i < 0) return ms - Date.now() < 7 * DAY ? "" : `<small>☁️ ${esc(t("No forecast yet for that day: check it a few days before."))}</small>`;
       return `<small>☁️ ${esc(t("Low clouds {l}% · mid {m}% · high {h}%", { l: Math.round(H.cloud_cover_low[i]), m: Math.round(H.cloud_cover_mid[i]), h: Math.round(H.cloud_cover_high[i]) }))}</small>`;
     };
+    async function aligned(S, s, off, m) {
+      const r = await alignedSearch(S, s, off, m);
+      const head = `<p class="pp2-note">🎯 ${esc(S.subj.name || t("your subject"))} · ${esc(kmTxt(r.dist))} · ${Math.round(r.look)}° ${esc(dir16(r.look))} · ${esc(t("its top {a}° above your eye", { a: (Math.round(r.theta * 10) / 10).toString().replace(".", it ? "," : ".") }))}</p>`;
+      if (!r.out.length) return [{ html: head + `<p class="pp2-bad">${esc(t("Not from here in the coming months: move a little to the side (on the map, drag 📷) or choose another subject."))}</p>` }];
+      return [{ html: head }, ...r.out.map(o => {
+        const plan = { mode: "camera", spotId: s.id, subject: { lat: S.subj.lat, lon: S.subj.lon, name: S.subj.name }, cam: { lat: s.lat, lon: s.lon }, cams: [], body: o.body, ms: o.ms, off, icon: o.icon, title: o.title, h: S.h, aligned: true };
+        return { html: `<div class="pp2-a">${diagramCam([r.look], o.p.az, o.icon)}<div><b>${esc(o.title)}</b><span class="w">🕒 ${esc(dayName(o.ms, off))} · ${esc(hm(o.ms, off))}</span>
+          <p>✓ ${esc(t("Lined up: off by {d}°", { d: Math.abs(o.d).toFixed(1).replace(".", it ? "," : ".") }))} · ${o.icon} ${Math.round(o.p.az)}° · ${esc(t("{h}° high", { h: (Math.round(o.p.alt * 10) / 10).toString().replace(".", it ? "," : ".") }))}</p>
+          ${clouds(o.ms, m)}${links({ lat: s.lat, lon: s.lon }, o.ms, off, plan)}</div></div>` };
+      })];
+    }
     const plans = [];
     const links = (cam, ms, off, plan) => {
       const i = plan ? plans.push(plan) - 1 : -1;
@@ -242,7 +331,7 @@ window.PhotoPulse = (() => {
         // the place is where you shoot from: the same geometry seen from here — where to point, and what the subject should be
         const looks = (cams || [camAz]).map(x => norm(x + 180)), look = looks[0], far = km || 1;
         const subj = dest(s.lat, s.lon, look, far);
-        const plan = body ? { mode: "camera", subject: { lat: subj.lat, lon: subj.lon, name: t("your subject") }, cam: { lat: s.lat, lon: s.lon }, cams: [], body, ms, off, icon, title, h: S.h, aligned: !side && !cams } : null;
+        const plan = body ? { mode: "camera", spotId: s.id, subject: { lat: subj.lat, lon: subj.lon, name: t("your subject") }, cam: { lat: s.lat, lon: s.lon }, cams: [], body, ms, off, icon, title, h: S.h, aligned: !side && !cams } : null;
         const sz = size ? `<p>${esc(t("A subject {h} m high about {k} away looks as big as {b}.", { h: S.h, k: kmTxt(far), b: t(size === "sun" ? "the sun" : "the moon") }))}</p>` : "";
         return { html: `<div class="pp2-a">${diagramCam(looks, bodyAz, icon, side)}<div><b>${esc(title)}</b><span class="w">🕒 ${esc(dayName(ms, off))} · ${esc(hm(ms, off))}</span>
           <p>🎯 ${esc(t("From here, point towards {d}", { d: dir8(look) }))} (${Math.round(look)}° ${esc(dir16(look))})${looks.length > 1 ? ` ${esc(t("or {d}", { d: `${dir8(looks[1])} (${Math.round(looks[1])}°)` }))}` : ""}${text ? ` · ${esc(text)}` : ""}</p>
@@ -258,6 +347,7 @@ window.PhotoPulse = (() => {
     const noons = (off, n, from = 0) => { const d0 = local(Date.now(), off).toISOString().slice(0, 10), b = Date.parse(d0 + "T12:00:00Z") - off; return Array.from({ length: n }, (_, i) => b + (from + i) * DAY); };
 
     async function answer(S, s, off, m) {
+      if (S.mode === "camera" && S.subj) return aligned(S, s, off, m);
       const q = S.q, rise = S.when === "rise";
       // --- sun at sunrise or sunset: grazing, front, side ---
       if (q === "graze" || q === "front" || q === "side") {
