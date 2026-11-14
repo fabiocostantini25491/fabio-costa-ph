@@ -33,7 +33,7 @@ window.FolkAtlas = (() => {
     "No dreams yet. Save places on the map or add a dream: it turns green when you sign there.": "Ancora nessun sogno. Salva posti sulla mappa o aggiungi un sogno: diventa verde quando firmi lì.",
     "＋ Add a dream": "＋ Aggiungi un sogno", "A place or a country: Roccascalegna, Lofoten, Japan…": "Un posto o un Paese: Roccascalegna, Lofoten, Giappone…",
     "Where do you dream of going?": "Dove sogni di andare?", "Been somewhere before SpotFolk?": "Sei stato da qualche parte prima di SpotFolk?",
-    "The whole country": "Tutto il Paese", "A region": "Una regione", "Already in your dreams.": "È già tra i tuoi sogni.",
+    "The whole country": "Tutto il Paese", "A region": "Una regione", "Searching…": "Cerco…", "Nothing found: try another name, e.g. «Cascata delle Marmore».": "Nessun risultato: prova con un altro nome, es. «Cascata delle Marmore».", "Already in your dreams.": "È già tra i tuoi sogni.",
     "Your dreams are private: only you see them. The countries you declare show in your passport to the folk. A dream comes true when you sign there: for a place, within 15 km.": "I tuoi sogni sono privati: li vedi solo tu. I Paesi che dichiari si vedono nel tuo passaporto, solo dai folk. Un sogno si realizza quando firmi lì: per un posto, entro 15 km.", "In your dreams": "Nei tuoi sogni", "Done.": "Fatto."
   };
   const t = (s, v = {}) => (it ? IT[s] || s : s).replace(/\{(\w+)\}/g, (_, k) => v[k] ?? "");
@@ -116,7 +116,7 @@ window.FolkAtlas = (() => {
 .fa-map .dot{fill:#fff8e6;opacity:.8;pointer-events:none}
 .fa-map .pin{fill:#f28c28;stroke:#fff8e6;stroke-width:1.2;vector-effect:non-scaling-stroke;cursor:pointer}.fa-map .pin.ok{fill:#2fbf71}
 .fa-legend i.pinkey{border-radius:50%;background:#f28c28;box-shadow:0 0 0 1.5px #fff8e6 inset}
-.fa-found{list-style:none;margin:0;padding:0;display:grid;gap:4px}.fa-found:empty{display:none}
+.fa-found{list-style:none;margin:0;padding:0;display:grid;gap:4px}.fa-found:empty{display:none}.fa-none{font-size:12.5px;color:rgba(243,234,216,.65);padding:4px 2px}
 .fa-found button{width:100%;text-align:left;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04);color:#f3ead8;border-radius:12px;padding:9px 12px;cursor:pointer;font-family:inherit}
 .fa-found button:hover{border-color:#f28c28}.fa-found b{display:block;font-size:14px;font-weight:600}.fa-found small{font-size:12px;color:rgba(243,234,216,.65)}
 .fa-h2{margin:12px 0 2px}.fa-been{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center}
@@ -385,6 +385,7 @@ window.FolkAtlas = (() => {
       q?.addEventListener("input", () => {
         clearTimeout(timer); const v = q.value.trim();
         if (v.length < 2) { S.found = []; show(); return; }
+        list.innerHTML = `<li class="fa-none">${esc(t("Searching…"))}</li>`;
         timer = setTimeout(async () => {
           const my = ++seq, low = v.toLocaleLowerCase(lang);
           // a country typed by name comes first, then places (SpotFolk's search)
@@ -393,6 +394,7 @@ window.FolkAtlas = (() => {
           try { ps = (await K.findPlace(v)).filter(p => !p.isCountry).map(p => ({ ...p, country: countryAt(p.lat, p.lon) })).filter(p => p.country); } catch {}
           if (my !== seq) return;
           S.found = [...cs, ...ps].slice(0, 6); show();
+          if (!S.found.length) list.innerHTML = `<li class="fa-none">${esc(t("Nothing found: try another name, e.g. «Cascata delle Marmore»."))}</li>`;
         }, 350);
       });
       host.querySelector("[data-fabeenadd]")?.addEventListener("click", () => { const sel = host.querySelector("[data-fabeensel]"); if (!sel.value) return sel.focus(); setBeen(sel.value, true); });

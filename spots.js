@@ -6254,12 +6254,23 @@ const Spots = (() => {
       allSpots: () => spots,
       openPlace: id => go(spotById(id)),
       askFolk: pre => { close?.(); openDestForm(pre); },
-      findPlace: async q => {   // the map's search (Photon), on its own: it doesn't touch the search box
-        const r = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=6&lang=${window.I18N?.lang === "it" ? "it" : "en"}`);
-        if (!r.ok) throw new Error(r.status);
-        return ((await r.json()).features || []).map(f => { const p = f.properties || {}, [lon, lat] = f.geometry.coordinates;
-          return { lat, lon, name: p.name || p.city || q, context: [...new Set([p.city !== p.name ? p.city : "", p.state, p.country].filter(Boolean))].join(", "), isCountry: p.type === "country" || p.osm_value === "country",
-            big: ["state", "region", "county"].includes(p.type) || !!(p.extent && (Math.abs(p.extent[2] - p.extent[0]) > 0.6 || Math.abs(p.extent[1] - p.extent[3]) > 0.6)) }; });   // a region: no single point
+      findPlace: async q => {   // SpotFolk's own places first, then the map's search (Photon, then Nominatim): it doesn't touch the search box
+        const nq = norm(q), own = spots.filter(s => s.lat != null && norm(s.name).includes(nq)).slice(0, 3)
+          .map(s => ({ lat: +s.lat, lon: +s.lon, name: s.name, context: `SpotFolk${s.list ? ` · ${s.list}` : ""}` }));
+        let out = [];
+        try {
+          const r = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=6`);
+          if (r.ok) out = ((await r.json()).features || []).map(f => { const p = f.properties || {}, [lon, lat] = f.geometry.coordinates;
+            return { lat, lon, name: p.name || p.city || q, context: [...new Set([p.city !== p.name ? p.city : "", p.state, p.country].filter(Boolean))].join(", "), isCountry: p.type === "country" || p.osm_value === "country",
+              big: ["state", "region", "county"].includes(p.type) || !!(p.extent && (Math.abs(p.extent[2] - p.extent[0]) > 0.6 || Math.abs(p.extent[1] - p.extent[3]) > 0.6)) }; });   // a region: no single point
+        } catch {}
+        if (!out.length) try {
+          const r = await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=6&q=${encodeURIComponent(q)}`, { headers: { "Accept-Language": window.I18N?.lang === "it" ? "it" : "en" } });
+          if (r.ok) out = (await r.json()).map(p => { const b = (p.boundingbox || []).map(Number);
+            return { lat: +p.lat, lon: +p.lon, name: p.name || p.display_name.split(",")[0], context: p.display_name.split(",").slice(1, 4).join(",").trim(), isCountry: p.addresstype === "country",
+              big: ["state", "region", "county", "province"].includes(p.addresstype) || (b.length === 4 && (Math.abs(b[1] - b[0]) > 0.6 || Math.abs(b[3] - b[2]) > 0.6)) }; });
+        } catch {}
+        return [...own, ...out];
       },
       showOnMap: pts => { close?.(); meView = false; hubKit().toMap(pts); }
     };
