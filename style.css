@@ -4167,3 +4167,9 @@ body[data-page="hub"] .sf-nav a.sf-map{background:none;color:#e6ecf3}
 .wx-hours>.wx-sun{min-width:40px;justify-content:center;background:linear-gradient(180deg,rgba(255,190,122,.18),rgba(255,190,122,.04));border:1px solid rgba(255,190,122,.35)}
 .wx-hours>.wx-sun small{color:#ffd27a;font-weight:600}
 .wx-hours>.wx-day{min-width:30px;justify-content:center;background:none;padding:0}.wx-hours>.wx-day small{writing-mode:vertical-rl;transform:rotate(180deg);color:#ffbe7a;font-weight:700;text-transform:uppercase;letter-spacing:.1em}
+
+/* Place pulse: lunar calendar (next 30 days) */
+.moon-cal>div{min-width:58px}.moon-cal svg{display:block;margin:2px 0}
+.moon-cal>div.full{background:rgba(255,243,196,.1);border:1px solid rgba(255,243,196,.4)}
+.moon-cal>div.new,.moon-cal>div.dark{background:rgba(120,110,220,.12)}.moon-cal>div.new{border:1px solid rgba(158,197,255,.4)}
+.moon-cal em{color:#ffd27a}.moon-cal>div.dark em,.moon-cal>div.new em{color:#b39dff}

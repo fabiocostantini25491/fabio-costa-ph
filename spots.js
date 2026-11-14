@@ -2309,6 +2309,44 @@ const Spots = (() => {
     71: ["🌨️", "Light snow"], 73: ["🌨️", "Snow"], 75: ["❄️", "Heavy snow"], 77: ["🌨️", "Snow grains"], 80: ["🌦️", "Showers"], 81: ["🌧️", "Showers"], 82: ["⛈️", "Violent showers"],
     85: ["🌨️", "Snow showers"], 86: ["❄️", "Heavy snow showers"], 95: ["⛈️", "Thunderstorm"], 96: ["⛈️", "Thunderstorm, hail"], 99: ["⛈️", "Thunderstorm, hail"] };
   const wxOf = c => WX[c] || ["🌡️", ""];
+  // 🌙 lunar calendar of the place: the next 30 days, phase, light, moonrise and moonset at the place's own time (Astro, tools.js)
+  function moonCal(off, lat, lon) {
+    if (typeof Astro === "undefined") return "";
+    const disc = (p, size) => {   // the moon as it looks: lit part in light, the rest in shadow
+      const r = size / 2 - 1, c = size / 2, k = Math.cos(2 * Math.PI * p), rx = Math.abs(r * k).toFixed(2);
+      const waxing = p < 0.5, outer = waxing ? 1 : 0, inner = waxing ? (k > 0 ? 0 : 1) : (k > 0 ? 1 : 0);
+      const lit = Math.abs(p - 0.5) < 0.01 ? `<circle cx="${c}" cy="${c}" r="${r}" fill="#fff3c4"/>` : (p < 0.01 || p > 0.99) ? ""
+        : `<path fill="#fff3c4" d="M${c} ${c - r}A${r} ${r} 0 0 ${outer} ${c} ${c + r}A${rx} ${r} 0 0 ${inner} ${c} ${c - r}Z"/>`;
+      return `<svg viewBox="0 0 ${size} ${size}" width="${size}" height="${size}" aria-hidden="true"><circle cx="${c}" cy="${c}" r="${r}" fill="#26324a"/>${lit}</svg>`;
+    };
+    const name = p => p < 0.03 || p > 0.97 ? "New Moon" : p < 0.22 ? "Waxing Crescent" : p < 0.28 ? "First Quarter" : p < 0.47 ? "Waxing Gibbous" : p < 0.53 ? "Full Moon" : p < 0.72 ? "Waning Gibbous" : p < 0.78 ? "Last Quarter" : "Waning Crescent";
+    const hm = t => t == null ? "—" : new Date(t + off).toISOString().slice(11, 16), loc = window.I18N?.locale || "en-GB";
+    const today = new Date(Date.now() + off).toISOString().slice(0, 10), STEP = 10 * 6e4, h0 = 0.133;
+    let prevPhase = null, out = [];
+    for (let k = 0; k < 30; k++) {
+      const date = new Date(Date.parse(today + "T00:00:00Z") + k * 864e5).toISOString().slice(0, 10);
+      const from = Date.parse(date + "T00:00:00Z") - off, il = Astro.moonIllum(from + 22 * 36e5);
+      let rise = null, set = null, prev = Astro.moonAlt(from, lat, lon) - h0;
+      for (let t = from + STEP; t <= from + 864e5; t += STEP) {
+        const cur = Astro.moonAlt(t, lat, lon) - h0;
+        if ((prev <= 0) !== (cur <= 0)) { const x = t - STEP + STEP * (prev / (prev - cur)); if (cur > 0 && rise == null) rise = x; if (cur <= 0 && set == null) set = x; }
+        prev = cur;
+      }
+      // the exact day of new and full moon: the phase crosses 0 or 0.5 during this day
+      const p0 = Astro.moonIllum(from).phase, p1 = Astro.moonIllum(from + 864e5).phase;
+      const full = p0 < 0.5 && p1 >= 0.5, nw = p1 < p0 - 0.5;
+      const dark = il.fraction < 0.25 || nw;
+      const d = new Date(date + "T12:00:00");
+      out.push(`<div class="${full ? "full" : nw ? "new" : dark ? "dark" : ""}${k === 0 ? " now" : ""}" title="${esc(trS(name(il.phase)))} · ${Math.round(il.fraction * 100)}%">
+        <small>${k === 0 ? esc(trS("Today")) : esc(d.toLocaleDateString(loc, { weekday: "short" }))} ${d.getDate()}</small>${disc(il.phase, 26)}
+        <span>${Math.round(il.fraction * 100)}%</span>${full ? `<em>${esc(trS("Full Moon"))}</em>` : nw ? `<em>${esc(trS("New Moon"))}</em>` : dark ? `<em>🌌 ${esc(trS("dark"))}</em>` : `<em>&nbsp;</em>`}
+        <i>↑ ${hm(rise)}</i><i>↓ ${hm(set)}</i></div>`);
+      prevPhase = il.phase;
+    }
+    const il0 = Astro.moonIllum(Date.now());
+    return `<p class="wx-hh">🌙 ${esc(trS("Lunar calendar"))} <small>${esc(trS(name(il0.phase)))} · ${Math.round(il0.fraction * 100)}% · ${esc(trS("next 30 days, moonrise ↑ and moonset ↓ here"))}</small></p>
+      <div class="wx-hours moon-cal" tabindex="0">${out.join("")}</div>`;
+  }
   // hour by hour, the next 48 hours from now (the place's own time), with sunrise and sunset in their place; scrolls sideways
   function wxHours(j) {
     const H = j.hourly; if (!H?.time?.length) return "";
@@ -2358,6 +2396,7 @@ const Spots = (() => {
       <div class="wx-days">${d.time.map((t, i) => `<div title="${esc(wxOf(d.weather_code[i])[1])}"><small>${esc(day(t, i))}</small><b>${wxOf(d.weather_code[i])[0]}</b>
         <span>${Math.round(d.temperature_2m_max[i])}° <i>${Math.round(d.temperature_2m_min[i])}°</i></span>
         ${d.snowfall_sum[i] >= 0.5 ? `<em>❄️ ${Math.round(d.snowfall_sum[i])} cm</em>` : d.precipitation_sum[i] >= 0.5 ? `<em>💧 ${Math.round(d.precipitation_sum[i])} mm</em>` : `<em>&nbsp;</em>`}</div>`).join("")}</div>
+      ${moonCal((w.d.utc_offset_seconds || 0) * 1000, s.lat, s.lon)}
       <p class="pc-cams-by">Weather data by <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo.com</a> (CC BY 4.0)</p>`;
     box.hidden = false;
     popup.update();
