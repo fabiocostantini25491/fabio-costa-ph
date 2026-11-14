@@ -6252,8 +6252,18 @@ const Spots = (() => {
       api, esc, toast, fmtWhen, track: ev => window.fcTrack?.(ev),
       saved: () => [...favs].map(id => spotById(id)).filter(s => s && s.lat != null),
       allSpots: () => spots,
-      openPlace: id => go(spotById(id)),
+      openPlace: (id, sec) => {
+        go(spotById(id));
+        if (sec) setTimeout(() => { const d = document.querySelector(`.leaflet-popup [data-sec="${sec}"]`); if (d && !d.open) d.open = true; d?.scrollIntoView({ block: "nearest", behavior: "smooth" }); }, 1400);   // e.g. straight to Place pulse
+      },
       askFolk: pre => { close?.(); openDestForm(pre); },
+      COND, signPhotos,
+      // the Place pulse of any point (weather, sea, webcams), drawn into el with the place card's own loaders
+      pulse: (el, pt) => {
+        el.innerHTML = `<div class="pc-wx" data-wx hidden></div><div class="pc-wx pc-sea" data-sea hidden></div><div class="pc-cams" data-cams hidden></div>`;
+        const pop = { getElement: () => el, update() {} }, s = { lat: +pt.lat, lon: +pt.lon };
+        loadWeather(pop, s); loadSea(pop, s); loadCams(pop, s);
+      },
       findPlace: async q => {   // SpotFolk's own places first, then the map's search (Photon, then Nominatim): it doesn't touch the search box
         const nq = norm(q), own = spots.filter(s => s.lat != null && norm(s.name).includes(nq)).slice(0, 3)
           .map(s => ({ lat: +s.lat, lon: +s.lon, name: s.name, region: s.list || null, context: `SpotFolk${s.list ? ` · ${s.list}` : ""}` }));

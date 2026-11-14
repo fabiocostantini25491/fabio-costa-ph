@@ -33,7 +33,9 @@ window.FolkAtlas = (() => {
     "No dreams yet. Save places on the map or add a dream: it turns green when you sign there.": "Ancora nessun sogno. Salva posti sulla mappa o aggiungi un sogno: diventa verde quando firmi lì.",
     "＋ Add a dream": "＋ Aggiungi un sogno", "A place or a country: Roccascalegna, Lofoten, Japan…": "Un posto o un Paese: Roccascalegna, Lofoten, Giappone…",
     "Where do you dream of going?": "Dove sogni di andare?", "Been somewhere before SpotFolk?": "Sei stato da qualche parte prima di SpotFolk?",
-    "The whole country": "Tutto il Paese", "A region": "Una regione", "Group by": "Raggruppa", "All": "Tutti", "Country": "Paese", "Region": "Regione", "My lists": "Le mie liste",
+    "The whole country": "Tutto il Paese", "A region": "Una regione", "{n} min ago": "{n} min fa", "{n} h ago": "{n} h fa", "yesterday": "ieri", "{n} days ago": "{n} giorni fa",
+    "now": "adesso", "last report": "ultima notizia", "How it is now, from the folk": "Com'è adesso, dai folk", "No folk has said how it is here yet.": "Nessun folk ha ancora detto com'è qui.",
+    "📣 Tell the folk how it is now": "📣 Racconta ai folk com'è adesso", "Group by": "Raggruppa", "All": "Tutti", "Country": "Paese", "Region": "Regione", "My lists": "Le mie liste",
     "Not in a list": "Senza lista", "Add to a list": "Metti in una lista", "List": "Lista", "e.g. Summer 2027, Weekends": "es. Estate 2027, Weekend", "Searching…": "Cerco…", "Nothing found: try another name, e.g. «Cascata delle Marmore».": "Nessun risultato: prova con un altro nome, es. «Cascata delle Marmore».", "Already in your dreams.": "È già tra i tuoi sogni.",
     "Your dreams are private: only you see them. The countries you declare show in your passport to the folk. A dream comes true when you sign there: for a place, within 15 km.": "I tuoi sogni sono privati: li vedi solo tu. I Paesi che dichiari si vedono nel tuo passaporto, solo dai folk. Un sogno si realizza quando firmi lì: per un posto, entro 15 km.", "In your dreams": "Nei tuoi sogni", "Done.": "Fatto."
   };
@@ -118,6 +120,16 @@ window.FolkAtlas = (() => {
 .fa-map .pin{fill:#f28c28;stroke:#fff8e6;stroke-width:1.2;vector-effect:non-scaling-stroke;cursor:pointer}.fa-map .pin.ok{fill:#2fbf71}
 .fa-legend i.pinkey{border-radius:50%;background:#f28c28;box-shadow:0 0 0 1.5px #fff8e6 inset}
 .fa-found{list-style:none;margin:0;padding:0;display:grid;gap:4px}.fa-found:empty{display:none}
+.fa-nowrow{grid-column:2/4}
+.fa-now{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center;padding:8px 10px;border-radius:12px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);text-align:left}
+.fa-now.live{border-color:rgba(47,191,113,.55);background:rgba(47,191,113,.08)}
+.fa-now .i{font-size:20px;line-height:1}.fa-now b{display:block;font-size:13.5px}.fa-now small{display:block;font-size:11.5px;color:rgba(243,234,216,.66)}
+.fa-now em{display:block;margin-top:3px;font-size:12.5px;color:rgba(243,234,216,.88)}
+.fa-now img{width:52px;height:52px;object-fit:cover;border-radius:9px}
+.fa-pulse{grid-column:1/4;margin-top:8px;padding:12px;border-radius:14px;background:rgba(5,11,20,.55);border:1px solid rgba(255,255,255,.1);display:grid;gap:8px;min-width:0}
+.fa-ph{margin:0;font-weight:700;font-size:13.5px;color:#ffd27a}.fa-ph2{margin:4px 0 0;font-size:11.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:rgba(243,234,216,.6)}
+.fa-nowb{display:block;width:100%;padding:0;border:0;background:none;color:inherit;font:inherit;cursor:pointer}
+.fa-wx{min-width:0}.fa-wx .pc-wx,.fa-wx .pc-cams{margin:0}
 .fa-group{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:0 0 6px;font-size:12.5px;color:rgba(243,234,216,.7)}
 .fa-group button{border:1px solid rgba(255,255,255,.14);background:none;color:#f3ead8;border-radius:99px;padding:6px 11px;font-family:inherit;font-size:12.5px;font-weight:600;cursor:pointer}
 .fa-group button.on{background:#f28c28;border-color:#f28c28;color:#1a1206}
@@ -181,7 +193,7 @@ window.FolkAtlas = (() => {
       catch (err) { dbOk = false; }
     }
     been = been || [];
-    const S = { sel: null, view: "world", folk: {}, confirm: null, found: [], editList: null, group: "none" };
+    const S = { sel: null, view: "world", folk: {}, confirm: null, found: [], editList: null, group: "none", pulse: new Set(), now: {}, nowPh: {} };
     try { const gm = localStorage.getItem("fa-group"); if (["none", "country", "region", "list"].includes(gm)) S.group = gm; } catch {}
     const isPlace = w => w.lat != null && w.lon != null;
 
@@ -197,7 +209,7 @@ window.FolkAtlas = (() => {
     // when a dream comes true: a signature after the dream, near the place (precise dream) or in the country
     const doneAt = w => {
       const t0 = ms(w.at), hits = stamps.filter(s => ms(s.at) >= t0 && (isPlace(w) ? s.lat != null && kmBetween(+s.lat, +s.lon, +w.lat, +w.lon) <= RADIUS : s.cc === w.country));
-      return hits.length ? hits.map(s => s.at).sort((a, b) => ms(a) - ms(b))[0] : null;
+      return hits.length ? hits.slice().sort((a, b) => ms(a.at) - ms(b.at))[0] : null;
     };
     const status = id => {
       const s = byC.get(id); if (s) return s.on ? "onspot" : "signed";
@@ -207,7 +219,7 @@ window.FolkAtlas = (() => {
     };
     // the dreams: each one you added (a country or a place) + the countries of your saved places you haven't been to
     const wishes = () => {
-      const out = wish.map(w => { const d = doneAt(w); return { key: "w" + w.id, id: w.country, w, sv: isPlace(w) ? [] : savedBy.get(w.country) || [], done: !!d, doneAt: d }; });
+      const out = wish.map(w => { const d = doneAt(w); return { key: "w" + w.id, id: w.country, w, sv: isPlace(w) ? [] : savedBy.get(w.country) || [], done: !!d, doneAt: d?.at || null, doneSpot: d?.id ?? null }; });
       [...savedBy.keys()].forEach(id => { if (!wish.some(w => w.country === id && !isPlace(w)) && !byC.has(id) && !been.includes(id)) out.push({ key: "c" + id, id, w: null, sv: savedBy.get(id), done: false, doneAt: null }); });
       return out.sort((a, b) => (a.done - b.done) || (ms(a.w?.at) || 9e15) - (ms(b.w?.at) || 9e15));
     };
@@ -223,7 +235,14 @@ window.FolkAtlas = (() => {
         if (ids.length) groups[x.key] = ids.slice(0, 2000); else S.folk[x.key] = 0;
       });
       if (!Object.keys(groups).length) { draw(); return; }
-      try { const r = (await K.api("/rest/v1/rpc/atlas_folk", { method: "POST", body: { p_groups: groups } })).data || {}; Object.keys(groups).forEach(k => { S.folk[k] = +r[k] || 0; }); draw(); } catch {}
+      const [fk, nw] = await Promise.all([
+        K.api("/rest/v1/rpc/atlas_folk", { method: "POST", body: { p_groups: groups } }).then(r => r.data || {}).catch(() => null),
+        K.api("/rest/v1/rpc/atlas_now", { method: "POST", body: { p_groups: groups } }).then(r => r.data || {}).catch(() => ({}))]);
+      if (fk) Object.keys(groups).forEach(k => { S.folk[k] = +fk[k] || 0; });
+      S.now = nw || {};
+      const paths = Object.values(S.now).flat().map(c => c.photo_path).filter(Boolean);
+      if (paths.length && K.signPhotos) try { S.nowPh = await K.signPhotos(paths, true); } catch {}
+      draw();
     }
 
     // dreams added before: find their position (only a name) and their region, once
@@ -290,15 +309,28 @@ window.FolkAtlas = (() => {
           <button type="button" class="fa-btn${cw ? " on" : ""}" data-fawish>${esc(conf("wish", !!cw, t("♥ In your dreams"), (sc || dec) ? t("♡ I want to go back") : t("♡ I want to go")))}</button></div>` : ""}</div>`;
     }
 
+    const ago = v => { const m = Math.round((Date.now() - ms(v)) / 60e3); return m < 60 ? t("{n} min ago", { n: Math.max(m, 1) }) : m < 1440 ? t("{n} h ago", { n: Math.round(m / 60) }) : m < 2880 ? t("yesterday") : t("{n} days ago", { n: Math.round(m / 1440) }); };
+    const condLine = (c, full) => { const k = (K.COND || {})[c.kind] || ["📣", c.kind], live = ms(c.expires_at) > Date.now(), ph = c.photo_path && S.nowPh?.[c.photo_path];
+      return `<div class="fa-now${live ? " live" : ""}"><span class="i">${k[0]}</span><span><b>${esc(k[1])}</b><small>${esc([live ? t("now") : t("last report"), ago(c.at), c.on_spot ? "📍 " + t("on the spot") : "", c.name].filter(Boolean).join(" · "))}</small>${c.note && full ? `<em>«${K.ugc ? K.ugc(c.note) : esc(c.note)}»</em>` : ""}</span>${ph ? `<img src="${esc(ph)}" alt="" loading="lazy">` : ""}</div>`; };
+    const pulsePoint = x => x.w && isPlace(x.w) ? { lat: +x.w.lat, lon: +x.w.lon } : x.sv[0] ? { lat: +x.sv[0].lat, lon: +x.sv[0].lon } : null;
+    function pulseHtml(x) {
+      const now = S.now?.[x.key] || [];
+      return `<div class="fa-pulse"><p class="fa-ph">📡 Place pulse · ${esc(x.w?.label || nameOf(x.id))}</p>
+        ${now.length ? `<p class="fa-ph2">${esc(t("How it is now, from the folk"))}</p>${now.map(c => `<button type="button" class="fa-nowb" data-fastamp="${c.spot_id}">${condLine(c, true)}</button>`).join("")}`
+          : `<p class="fa-note">${esc(t("No folk has said how it is here yet."))}</p>`}
+        ${pulsePoint(x) ? `<div class="fa-wx" data-fawx="${x.key}"></div>` : ""}</div>`;
+    }
     function itemHtml(x) {
       const pl = x.w && isPlace(x.w), title = x.w?.label || nameOf(x.id);
       const sub = [x.w?.label ? [x.w.region, nameOf(x.id)].filter(Boolean).join(" · ") : "", x.sv.length ? (x.sv.length === 1 ? t("1 saved place") : t("{n} saved places", { n: x.sv.length })) : "", !x.w ? t("From your saved places") : ""].filter(Boolean).join(" · ");
       const f = S.folk[x.key], n = x.done ? `✓ ${esc(t("Dream come true"))}` : f ? esc(f === 1 ? t(pl ? "1 folk has been nearby" : "1 folk has been") : t(pl ? "{n} folk have been nearby" : "{n} folk have been", { n: f })) : "";
+      const now = !x.done ? (S.now?.[x.key] || [])[0] : null;
       const listBtn = x.w ? (S.editList === String(x.w.id)
         ? `<input class="fa-listin" data-falistin="${x.w.id}" list="faLists" maxlength="40" value="${esc(x.w.list || "")}" placeholder="${esc(t("e.g. Summer 2027, Weekends"))}" aria-label="${esc(t("List"))}">`
         : `<button type="button" class="fa-x" data-falist="${x.w.id}">🏷 ${esc(x.w.list || t("Add to a list"))}</button>`) : "";
       return `<li class="${x.done ? "done" : ""}"><span class="f">${pl ? "📍" : flag(x.id)}</span><span><b>${esc(title)}</b>${sub ? `<small>${esc(sub)}</small>` : ""}${x.done && x.doneAt ? `<small>${esc(t("Dream come true: {w}", { w: K.fmtWhen ? K.fmtWhen(x.doneAt) : String(x.doneAt).slice(0, 10) }))}</small>` : !x.done && f === 0 ? `<small>${esc(t("No folk there yet: you could be the first"))}</small>` : ""}</span><span class="n">${n}</span>
-        <div class="fa-acts">${!x.done ? `<button type="button" class="fa-btn" data-faask="${x.key}">${esc(t("🧭 Ask the folk"))}</button>${pl || x.sv.length ? `<button type="button" class="fa-btn" data-fashow="${x.key}">${esc(t("Show on the map"))}</button>` : ""}` : ""}${listBtn}${x.w ? `<button type="button" class="fa-x" data-faunwish="${x.w.id}">${esc(S.confirm === "un" + x.w.id ? t("Tap again to remove") : t("Remove"))}</button>` : ""}</div></li>`;
+        ${now ? `<div class="fa-nowrow">${condLine(now, false)}</div>` : ""}
+        <div class="fa-acts">${!x.done ? `<button type="button" class="fa-btn${S.pulse.has(x.key) ? " on" : ""}" data-fapulse="${x.key}">📡 Place pulse</button><button type="button" class="fa-btn" data-faask="${x.key}">${esc(t("🧭 Ask the folk"))}</button>${pl || x.sv.length ? `<button type="button" class="fa-btn" data-fashow="${x.key}">${esc(t("Show on the map"))}</button>` : ""}` : x.doneSpot != null ? `<button type="button" class="fa-btn on" data-fatell="${x.doneSpot}">${esc(t("📣 Tell the folk how it is now"))}</button>` : ""}${listBtn}${x.w ? `<button type="button" class="fa-x" data-faunwish="${x.w.id}">${esc(S.confirm === "un" + x.w.id ? t("Tap again to remove") : t("Remove"))}</button>` : ""}</div>${S.pulse.has(x.key) && !x.done ? pulseHtml(x) : ""}</li>`;
     }
     // groups: none · country · region · your own lists
     const groupOf = x => {
@@ -403,6 +435,10 @@ window.FolkAtlas = (() => {
         K.showOnMap(x.w && isPlace(x.w) ? [{ lat: +x.w.lat, lon: +x.w.lon }] : x.sv.map(s => ({ lat: +s.lat, lon: +s.lon })));
       }));
       host.querySelectorAll("[data-faunwish]").forEach(b => b.addEventListener("click", () => { const id = b.dataset.faunwish; if (S.confirm !== "un" + id) { S.confirm = "un" + id; b.textContent = t("Tap again to remove"); return; } removeWish(id); }));
+      host.querySelectorAll("[data-fapulse]").forEach(b => b.addEventListener("click", () => { const k = b.dataset.fapulse; S.pulse.has(k) ? S.pulse.delete(k) : S.pulse.add(k); if (S.pulse.has(k)) K.track?.("Atlas: dream pulse"); draw(); }));
+      host.querySelectorAll("[data-fawx]").forEach(el => { const x = wishes().find(i => i.key === el.dataset.fawx), p = x && pulsePoint(x); if (p && K.pulse) K.pulse(el, p); });
+      host.querySelectorAll(".fa-wish [data-fastamp]").forEach(b => b.addEventListener("click", () => K.openPlace(+b.dataset.fastamp)));
+      host.querySelectorAll("[data-fatell]").forEach(b => b.addEventListener("click", () => { K.track?.("Atlas: tell after dream"); K.openPlace(+b.dataset.fatell, "pulse"); }));
       host.querySelectorAll("[data-fagroup]").forEach(b => b.addEventListener("click", () => { S.group = b.dataset.fagroup; try { localStorage.setItem("fa-group", S.group); } catch {} draw(); }));
       host.querySelectorAll("[data-falist]").forEach(b => b.addEventListener("click", () => { S.editList = b.dataset.falist; draw(); const i = host.querySelector(`[data-falistin="${S.editList}"]`); i?.focus(); }));
       host.querySelectorAll("[data-falistin]").forEach(inp => {
