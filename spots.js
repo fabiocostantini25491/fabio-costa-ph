@@ -2309,6 +2309,24 @@ const Spots = (() => {
     71: ["🌨️", "Light snow"], 73: ["🌨️", "Snow"], 75: ["❄️", "Heavy snow"], 77: ["🌨️", "Snow grains"], 80: ["🌦️", "Showers"], 81: ["🌧️", "Showers"], 82: ["⛈️", "Violent showers"],
     85: ["🌨️", "Snow showers"], 86: ["❄️", "Heavy snow showers"], 95: ["⛈️", "Thunderstorm"], 96: ["⛈️", "Thunderstorm, hail"], 99: ["⛈️", "Thunderstorm, hail"] };
   const wxOf = c => WX[c] || ["🌡️", ""];
+  // hour by hour, the next 48 hours from now (the place's own time), with sunrise and sunset in their place; scrolls sideways
+  function wxHours(j) {
+    const H = j.hourly; if (!H?.time?.length) return "";
+    const nowLocal = new Date(Date.now() + (j.utc_offset_seconds || 0) * 1000).toISOString().slice(0, 13);
+    let i0 = H.time.findIndex(t => t.slice(0, 13) >= nowLocal); if (i0 < 0) return "";
+    const marks = [...(j.daily?.sunrise || []).map(t => [t, "🌅"]), ...(j.daily?.sunset || []).map(t => [t, "🌇"])];
+    const cells = [];
+    for (let i = i0; i < Math.min(H.time.length, i0 + 48); i++) {
+      const t = H.time[i], night = H.is_day && H.is_day[i] === 0, code = H.weather_code[i];
+      let [ico, lab] = wxOf(code); if (night && code <= 1) ico = "🌙"; else if (night && code === 2) ico = "☁️";
+      const p = H.precipitation_probability?.[i], hh = t.slice(11, 13);
+      if (hh === "00" && i > i0) cells.push(`<div class="wx-day"><small>${esc(new Date(t.slice(0, 10) + "T12:00:00").toLocaleDateString(window.I18N?.locale || "en-GB", { weekday: "short" }))}</small></div>`);
+      cells.push(`<div class="${night ? "n" : ""}${i === i0 ? " now" : ""}" title="${esc(lab)}"><small>${i === i0 ? esc(trS("Now")) : hh}</small><b>${ico}</b><span>${Math.round(H.temperature_2m[i])}°</span>
+        <em>${p != null && p >= 10 ? `💧${p}%` : H.precipitation?.[i] >= 0.2 ? `💧${(+H.precipitation[i]).toFixed(1)}` : "&nbsp;"}</em><i>☁${Math.round(H.cloud_cover?.[i] ?? 0)}%</i><i>💨${Math.round(H.wind_speed_10m?.[i] ?? 0)}</i></div>`);
+      marks.filter(([m]) => m.slice(0, 13) === t.slice(0, 13)).forEach(([m, e]) => cells.push(`<div class="wx-sun"><b>${e}</b><small>${m.slice(11, 16)}</small></div>`));
+    }
+    return `<p class="wx-hh">${esc(trS("Hour by hour"))} <small>${esc(trS("next 48 hours · rain chance, clouds, wind km/h"))}</small></p><div class="wx-hours" tabindex="0">${cells.join("")}</div>`;
+  }
   async function loadWeather(popup, s) {
     const box = popup.getElement()?.querySelector("[data-wx]");
     if (!box || box.dataset.done) return;
@@ -2319,6 +2337,7 @@ const Spots = (() => {
       try {
         const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${s.lat.toFixed(4)}&longitude=${s.lon.toFixed(4)}`
           + "&current=temperature_2m,weather_code,wind_speed_10m,snow_depth,freezing_level_height,cloud_cover"
+          + "&hourly=temperature_2m,weather_code,precipitation_probability,precipitation,cloud_cover,wind_speed_10m,is_day"
           + "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,snowfall_sum,sunrise,sunset&timezone=auto&forecast_days=7");
         if (!r.ok) return;
         w = { at: Date.now(), d: await r.json() }; wxCache.set(k, w);
@@ -2335,6 +2354,7 @@ const Spots = (() => {
     box.innerHTML = `<p class="pc-cams-h">🌡️ Weather now</p>
       <div class="wx-now"><b>${ico}</b><div><strong>${Math.round(c.temperature_2m)}°</strong> <em>${esc(label)}</em>
         <p>${snow}${frz}<span>💨 ${Math.round(c.wind_speed_10m)} km/h</span><span>🌅 ${hm(d.sunrise?.[0])} · 🌇 ${hm(d.sunset?.[0])}</span></p></div></div>
+      ${wxHours(w.d)}
       <div class="wx-days">${d.time.map((t, i) => `<div title="${esc(wxOf(d.weather_code[i])[1])}"><small>${esc(day(t, i))}</small><b>${wxOf(d.weather_code[i])[0]}</b>
         <span>${Math.round(d.temperature_2m_max[i])}° <i>${Math.round(d.temperature_2m_min[i])}°</i></span>
         ${d.snowfall_sum[i] >= 0.5 ? `<em>❄️ ${Math.round(d.snowfall_sum[i])} cm</em>` : d.precipitation_sum[i] >= 0.5 ? `<em>💧 ${Math.round(d.precipitation_sum[i])} mm</em>` : `<em>&nbsp;</em>`}</div>`).join("")}</div>

@@ -4155,3 +4155,15 @@ body[data-page="hub"] .sf-nav a.sf-map{background:none;color:#e6ecf3}
 .pc-sshare{display:inline-grid;place-items:center;width:36px;height:36px;border-radius:12px;border:1px solid rgba(255,190,122,.45);background:rgba(242,140,30,.10);color:#ffbe7a;font:700 16px var(--sans);cursor:pointer}
 .pc-sshare:hover{background:rgba(242,140,30,.2)}
 .pop-rev.pc-hl{box-shadow:0 0 0 2px #ffbe7a,0 0 28px rgba(255,190,122,.35);transition:box-shadow .6s}
+
+/* Place pulse: hour by hour (next 48 h), scrolls sideways */
+.wx-hh{margin:10px 0 4px;font-size:12.5px;font-weight:700;color:#f2f6fb}.wx-hh small{font-weight:400;color:#8a99ab;margin-left:4px}
+.wx-hours{display:flex;gap:4px;overflow-x:auto;padding-bottom:6px;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch;scrollbar-width:thin}
+.wx-hours>div{flex:0 0 auto;min-width:50px;display:flex;flex-direction:column;align-items:center;gap:1px;padding:6px 4px;border-radius:10px;background:rgba(255,255,255,.03);text-align:center;scroll-snap-align:start}
+.wx-hours>div.n{background:rgba(20,30,70,.45)}.wx-hours>div.now{outline:1px solid rgba(255,190,122,.6)}
+.wx-hours small{font-size:10.5px;color:#8a99ab;white-space:nowrap}.wx-hours b{font-size:17px;line-height:1.2}
+.wx-hours span{font-size:12px;color:#f2f6fb}.wx-hours em{font-style:normal;font-size:10px;color:#9ec5ff;white-space:nowrap}
+.wx-hours i{font-style:normal;font-size:9.5px;color:#8a99ab;white-space:nowrap}
+.wx-hours>.wx-sun{min-width:40px;justify-content:center;background:linear-gradient(180deg,rgba(255,190,122,.18),rgba(255,190,122,.04));border:1px solid rgba(255,190,122,.35)}
+.wx-hours>.wx-sun small{color:#ffd27a;font-weight:600}
+.wx-hours>.wx-day{min-width:30px;justify-content:center;background:none;padding:0}.wx-hours>.wx-day small{writing-mode:vertical-rl;transform:rotate(180deg);color:#ffbe7a;font-weight:700;text-transform:uppercase;letter-spacing:.1em}

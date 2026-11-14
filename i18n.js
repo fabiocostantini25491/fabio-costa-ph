@@ -1046,6 +1046,8 @@ const I18N = (() => {
     "Log in to see the whole map, sign the places you know, plan trips and open your passport.": ["Accedi per vedere tutta la mappa, firmare i posti che conosci, pianificare viaggi e aprire il tuo passaporto."],
     "Which hour, which bench, which trattoria the locals actually use. One line each, from people who stood there. Open a place on the map to read who signed it; become folk to add your own.": ["Quale ora, quale panchina, quale trattoria frequentano davvero i locali. Una riga ciascuno, da chi c'è stato. Apri un luogo sulla mappa per leggere chi l'ha firmato; diventa folk per aggiungere il tuo."],
     "Become folk to add yours": ["Diventa folk per aggiungere il tuo"],
+    "Hour by hour": ["Ora per ora"],
+    "next 48 hours · rain chance, clouds, wind km/h": ["prossime 48 ore · probabilità di pioggia, nuvole, vento km/h"],
     "↗ Share this story": ["↗ Condividi questo racconto"], "📲 Instagram story": ["📲 Storia Instagram"], "Share this story": ["Condividi questo racconto"],
     "Add photos": ["Aggiungi foto"], "📸 Add a photo of this place": ["📸 Aggiungi una foto di questo posto"],
     "Add a photo": ["Aggiungi una foto"], "That file isn't a photo.": ["Quel file non è una foto."],
