@@ -2185,8 +2185,8 @@ const Spots = (() => {
     if (r.kind === "passport") openSharedPassport(r);
   }
   function openSharedPassport(r) {
-    const it = IT_(), pp = { ...(r.passport || {}) };
-    pp.stamps = (pp.stamps || []).filter(t => t.id != null && t.lat != null && t.lon != null);   // places that can't be shown count, but stay off the map
+    const it = IT_(), pp = { ...(r.passport || {}) }, all = pp.stamps || [];
+    pp.stamps = all.filter(t => t.id != null && t.lat != null && t.lon != null);   // places that can't be shown count, but stay off the map
     const face = r.avatar ? `<img src="${esc(avatarUrl(r.avatar))}" alt="">` : `<span>${esc(initials(r.author || "Folk"))}</span>`;
     const d = dlg("sharedPassDialog", `<div class="import-body">
       <div class="sp-head"><span class="me-avatar" style="--s:64px">${face}</span><div><span class="eyebrow">${it ? "Il passaporto di" : "The passport of"}</span><h2>${esc(r.author || "a folk")}</h2></div></div>
@@ -2194,6 +2194,7 @@ const Spots = (() => {
       ${guest || !session ? `<div class="pop-actions"><a class="pop-btn primary" href="#join">${it ? "Fai il tuo passaporto — diventa folk" : "Start your passport — become folk"}</a></div>` : ""}
     </div>`);
     wireStamps(d, () => d.close());
+    mountAtlas(d, { ...pp, stamps: all }, null, { name: r.author || "", been: pp.been || [], close: () => d.close() });   // the country of the hidden stamps comes from their rounded area
   }
   function openSharedList(r) {
     const items = r.items || [], open = items.filter(i => i.open && i.lat != null), shut = items.length - open.length;
@@ -4724,7 +4725,7 @@ const Spots = (() => {
     const d = dlg("destDialog", `<form class="import-body gate-form" novalidate>
       <span class="eyebrow">Folk only</span><h2>🧭 My next destination</h2>
       <p class="gate-help left">The folk who know the area see it in the Folk Hub and can leave you tips. Only members see it.</p>
-      <label for="dsName">Where</label><input id="dsName" maxlength="80" required value="${esc(near?.list || "")}" placeholder="e.g. Faroe Islands, Val Gardena">
+      <label for="dsName">Where</label><input id="dsName" maxlength="80" required value="${esc(pre.name || near?.list || "")}" placeholder="e.g. Faroe Islands, Val Gardena">
       <div class="pf-row"><label>From<input type="date" id="dsFrom" min="${today}"></label><label>To<input type="date" id="dsTo" min="${today}"></label></div>
       <label for="dsNote">What are you looking for? <small>(optional)</small></label>
       <textarea id="dsNote" maxlength="300" rows="3" placeholder="e.g. Quiet sunrises, a hike that isn't crowded, where locals eat"></textarea>
@@ -6027,6 +6028,7 @@ const Spots = (() => {
       box.innerHTML = `<div class="pp-sharebar"><button type="button" class="pc-sh main" data-sharepass>↗ Share your passport</button></div>` + passportHtml(pp, uid) + chH + (sec.length ? `<section class="pp"><p class="pp-kick">Seconded</p><p class="gate-help left">Places you signed that other folk signed after you: your signature is guiding travellers.</p>
         <ul class="me-list">${sec.map(x => `<li class="me-row" data-open="${x.spot_id}"><span class="me-ico" style="--c:#ffd27a">✍</span><span class="me-txt"><b>${esc(x.name)}</b><small>${x.n} folk signed after you · ${esc(fmtWhen(x.last_at))}</small></span></li>`).join("")}</ul></section>` : "");
       wireStamps(box);
+      mountAtlas(box, pp, uid, { own: true, name: me.display_name || displayName() });
       box.querySelector("[data-sharepass]")?.addEventListener("click", () => shareDialog("passport", null, me.display_name || displayName()));
       box.querySelectorAll("[data-open]").forEach(li => li.addEventListener("click", () => { const sp = spotById(+li.dataset.open); if (sp) openOnMap(sp); }));
       return;
@@ -6230,10 +6232,32 @@ const Spots = (() => {
         ${xp ? `<span class="pp-folk" style="--c:#ffd9a0">🧭 Local expert<b>${esc(xp.area_name)}</b></span>` : ""}
         ${pp.rank && pp.rank <= 100 ? `<span class="pp-folk founder" style="--c:#ffd27a">🏅 Founding folk<b>#${pp.rank}</b></span>` : ""}</div>
       <dl class="me-stats pp-stats">${[["Signatures", tot], ["Places added", pp.places], ["First to sign", pp.firsts], ["On the spot", onSpot], ["Seconded", pp.seconded], ["Useful tips", pp.useful]].map(([a, b]) => `<div><dt>${a}</dt><dd>${fmtN(+b || 0)}</dd></div>`).join("")}</dl>
-      ${mapSvg}
+      <div class="fa-host" data-atlas>${mapSvg}</div>
       ${stamps.length ? `<p class="pp-h">Latest stamps</p><ul class="pp-stamps">${stamps.slice(0, 18).map(t => `<li><button type="button" data-stamp="${t.id}" style="--c:${(CLUSTERS[t.folk] || {}).color || "#ffd27a"}"><span>${CLUSTERS[t.folk]?.ico || "★"}</span>${esc(t.name)}<small>${esc(fmtWhen(t.at))}${t.on_spot ? " · 📍" : ""}</small></button></li>`).join("")}</ul>` : `<p class="muted">No stamps yet: sign the places you've been to.</p>`}
       <p class="gate-help left">Levels in each folk: <b>Wanderer</b> from the first signature · <b>Pathfinder</b> 10 signatures and a tip · <b>Trusted</b> 25 signatures in at least 3 areas. 50 places in your area (within 50 km) can make you a <b>Local expert</b>.</p>
     </section>`;
+  }
+  /* Folk Atlas: the passport's world map (atlas.js + atlas-world.js, loaded with the first passport; data: supabase-folk-atlas.sql) */
+  let atlasJs = null;
+  function mountAtlas(box, pp, uid, { own = false, name = "", been, close } = {}) {
+    const host = box.querySelector("[data-atlas]"); if (!host || !pp) return;
+    if (!atlasJs) atlasJs = new Promise((res, rej) => {
+      const v = (document.querySelector('script[src*="spots.js"]')?.getAttribute("src") || "").split("?v=")[1] || "", q = v ? `?v=${v}` : "";
+      const w = document.createElement("script"); w.src = `atlas-world.js${q}`; w.onerror = rej;
+      w.onload = () => { const a = document.createElement("script"); a.src = `atlas.js${q}`; a.onload = res; a.onerror = rej; document.head.append(a); };
+      document.head.append(w);
+    });
+    const go = sp => { if (!sp) return toast("This place is not on your map right now.", true); close?.(); if (meView) openOnMap(sp); else focusSpot(sp); };
+    const kit = {
+      api, esc, toast, fmtWhen, track: ev => window.fcTrack?.(ev),
+      saved: () => [...favs].map(id => spotById(id)).filter(s => s && s.lat != null),
+      allSpots: () => spots,
+      openPlace: id => go(spotById(id)),
+      askFolk: pre => { close?.(); openDestForm(pre); },
+      showOnMap: pts => { close?.(); meView = false; hubKit().toMap(pts); }
+    };
+    atlasJs.then(() => { if (host.isConnected) window.FolkAtlas.mount(host, kit, { own, uid, name, been, stamps: pp.stamps || [] }); })
+      .catch(() => { atlasJs = null; });
   }
   function wireStamps(box, close) {
     box.querySelectorAll("[data-stamp]").forEach(b => b.addEventListener("click", () => { const sp = spotById(+b.dataset.stamp); if (!sp) return toast("This place is not on your map right now.", true); close?.(); if (meView) openOnMap(sp); else focusSpot(sp); }));
@@ -6258,6 +6282,7 @@ const Spots = (() => {
       ${places.length ? `<h3 class="me-h">Places added <small>${places.length}</small></h3><ul class="me-list">${places.slice(0, 20).map(s => spotRow(s)).join("")}</ul>` : ""}`;
     loadPassport(uid).then(pp => {
       const box = body.querySelector("[data-pp]"); if (!box) return; box.innerHTML = pp ? passportHtml(pp, uid) : ""; wireStamps(box, () => d.close());
+      mountAtlas(box, pp, uid, { own: uid === myUid(), name: pp?.name || p.display_name, close: () => d.close() });
       const h = body.querySelector(".me-id h2"); if (pp?.name && h && h.textContent === "Member") h.textContent = pp.name;   // nome e cognome dal passaporto
     });
     body.querySelectorAll("[data-open]").forEach(li => li.addEventListener("click", () => { const s = spotById(+li.dataset.open); if (!s) return; d.close(); if (meView) openOnMap(s); else focusSpot(s); }));
