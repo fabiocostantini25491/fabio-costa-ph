@@ -2110,14 +2110,15 @@ const Spots = (() => {
   /* raggruppa gli spot vicini (griglia in pixel), solo quelli nell'area visibile */
   /* links to one place (spotfolk.eu/?place=123): shared by the folk, they open that place's card.
      ?via=<member> remembers who invited, and goes with the sign-up. */
-  let deepPlace = null, deepShare = null;
+  let deepPlace = null, deepShare = null, deepStory = null;
   try {
     const q = new URLSearchParams(location.search);
     deepPlace = +q.get("place") || null;
+    deepStory = deepPlace && +q.get("story") ? String(+q.get("story")) : null;
     const via = q.get("via");
     if (via && /^[0-9a-f-]{36}$/i.test(via)) localStorage.setItem("sf-via", via);
     for (const k of ["trip", "list", "passport"]) { const v = q.get(k); if (v && /^[0-9a-f-]{36}$/i.test(v)) deepShare = { kind: k, token: v }; }
-    if (deepPlace || via || deepShare) { q.delete("place"); q.delete("via"); q.delete("trip"); q.delete("list"); q.delete("passport"); const qs = q.toString(); history.replaceState(null, "", location.pathname + (qs ? "?" + qs : "") + (location.hash || "#spotfolk")); }
+    if (deepPlace || via || deepShare) { q.delete("place"); q.delete("via"); q.delete("trip"); q.delete("list"); q.delete("passport"); q.delete("story"); const qs = q.toString(); history.replaceState(null, "", location.pathname + (qs ? "?" + qs : "") + (location.hash || "#spotfolk")); }
   } catch {}
   function openDeepPlace() {
     if (!deepPlace || !map || !spots.length || (!loaded && !guestLoaded)) return;
@@ -5576,7 +5577,7 @@ const Spots = (() => {
       const folkOfR = r => CLUSTERS[r.folk] ? r.folk : ((el._signs || []).find(g => g.user_id === r.user_id && CLUSTERS[g.cluster]) || {}).cluster || pFolks(faceOf(r))[0] || null;
       const stories = reviews.filter(r => r.body || r.r_title);
       el.querySelector("[data-reviews]").innerHTML = stories.length ? stories.map(r => { const sc = revScore(r), ph = photosOf(r), c = CLUSTERS[folkOfR(r)], mineR = r.user_id === uid, canDel = mineR || admin || canCurate(s);
-        return `<article class="pop-rev pc-story${experts.has(r.user_id) ? " by-expert" : ""}${ph.length ? " has-photo" : ""}"${r.user_id && r.user_id === myUid() ? " data-mine" : ""} style="--c:${c?.color || "#ffbe7a"}">
+        return `<article class="pop-rev pc-story${experts.has(r.user_id) ? " by-expert" : ""}${ph.length ? " has-photo" : ""}"${r.user_id && r.user_id === myUid() ? " data-mine" : ""} data-rid="${r.id}" style="--c:${c?.color || "#ffbe7a"}">
         ${ph.length ? `<button type="button" class="pc-cover" data-sphoto="${photos.indexOf(ph[0])}" aria-label="Photo by ${esc(r.author_name || "")}"><img src="${esc(urls[ph[0].path])}" alt="" loading="lazy"></button>` : ""}
         <div class="pc-sbody">
           <header class="pc-shead">
@@ -5591,8 +5592,9 @@ const Spots = (() => {
           <footer class="pc-sfoot">${sc ? `<span class="pc-score" title="Their impression">${sc.toFixed(1)}<small>/5</small></span>` : ""}
             ${rvV && !mineR ? `<button type="button" class="pc-useful${vMine(r.id) ? " on" : ""}" data-ruseful="${r.id}" aria-pressed="${vMine(r.id)}">👍 ${vCount(r.id) ? `${vCount(r.id)} ` : ""}Useful</button>` : rvV && vCount(r.id) ? `<span class="pc-useful">👍 ${vCount(r.id)} Useful</span>` : ""}
             ${commV ? `<button type="button" class="pc-mark${favs.has(s.id) ? " on" : ""}" data-favstory title="Save this place" aria-label="Save this place">${favs.has(s.id) ? "♥" : "♡"}</button>` : ""}
+            <button type="button" class="pc-sshare" data-sshare="${r.id}" title="Share this story" aria-label="Share this story">↗</button>
             ${canDel || commV ? `<span class="pc-more-menu"><button type="button" class="pc-dots3" data-smore aria-label="More" aria-expanded="false">•••</button>
-              <span class="pc-menu" hidden>${canDel ? `<button type="button" data-delrev="${r.id}">Delete story</button>` : `<button type="button" data-flagrev="${r.id}">⚑ Flag this story</button>`}</span></span>` : ""}
+              <span class="pc-menu" hidden><button type="button" data-sshare="${r.id}">↗ Share this story</button>${mineR && !s.fragile ? `<button type="button" data-sstory>📲 Instagram story</button>` : ""}${canDel ? `<button type="button" data-delrev="${r.id}">Delete story</button>` : `<button type="button" data-flagrev="${r.id}">⚑ Flag this story</button>`}</span></span>` : ""}
           </footer>
         </div></article>`; }).join("") : `<p class="pc-empty">No stories yet: be the first to tell this place.</p>`;
       el.querySelectorAll("[data-sphoto]").forEach(b => b.addEventListener("click", () => openPhotos(photos, urls, +b.dataset.sphoto, s)));
@@ -5607,6 +5609,21 @@ const Spots = (() => {
         } catch (err) { toast(`Could not vote: ${err.message}`, true); b.disabled = false; }
       }));
       el.querySelectorAll("[data-flagrev]").forEach(b => b.addEventListener("click", () => openFlag("review", b.dataset.flagrev, `Review on «${s.name}»`)));
+      // share a story: the link opens this place with the story in view (its words stay inside SpotFolk); your own can also become an Instagram story
+      el.querySelectorAll("[data-sshare]").forEach(b => b.addEventListener("click", async () => {
+        const rid = b.dataset.sshare, mineS = !!b.closest("[data-mine]");
+        const url = `${placeLink(s)}&story=${rid}`, text = IT_() ? (mineS ? `Il mio racconto di ${s.name} su SpotFolk` : `Un racconto di ${s.name}, da chi c'è stato — SpotFolk`) : (mineS ? `My story of ${s.name} on SpotFolk` : `A story of ${s.name}, from someone who's been — SpotFolk`);
+        b.closest(".pc-menu")?.setAttribute("hidden", "");
+        window.fcTrack?.("Spots: story shared");
+        try { if (navigator.share) { await navigator.share({ title: s.name, text, url }); return; } } catch (err) { if (err?.name === "AbortError") return; }
+        try { await navigator.clipboard.writeText(`${text} ${url}`); toast("Link copied: paste it wherever you like."); } catch { prompt("Copy this link:", url); }
+      }));
+      el.querySelectorAll("[data-sstory]").forEach(b => b.addEventListener("click", () => { b.closest(".pc-menu")?.setAttribute("hidden", ""); shareStory(s, el, b); }));
+      // arrived from a shared story: open the stories and show it
+      if (deepStory) {
+        const a = el.querySelector(`[data-rid="${deepStory}"]`);
+        if (a) { deepStory = null; const sec = el.querySelector('[data-sec="stories"]'); if (sec && "open" in sec) sec.open = true; a.classList.add("pc-hl"); setTimeout(() => { a.scrollIntoView({ behavior: "smooth", block: "center" }); popup.update?.(); }, 250); }
+      }
       el.querySelectorAll("[data-reviews] [data-member]").forEach(b => b.addEventListener("click", () => b.dataset.member && openMemberProfile(b.dataset.member)));
       el.querySelectorAll("[data-flagphoto]").forEach(b => b.addEventListener("click", () => openFlag("photo", b.dataset.flagphoto, `Photo on «${s.name}»`)));
       el.querySelectorAll("[data-delrev]").forEach(b => b.addEventListener("click", async () => {

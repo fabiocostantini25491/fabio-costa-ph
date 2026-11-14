@@ -4146,3 +4146,12 @@ body[data-page="hub"] .sf-nav a.sf-map{background:none;color:#e6ecf3}
   .pc-condtop button::before,.fc-notice-dot{animation:none}
   .fc-cele i{display:none}
 }
+
+/* story footer: the menu opens inside the card (it was cut off on the left), share in evidence */
+.pc-sfoot{position:relative;flex-wrap:wrap}
+.pc-sfoot .pc-more-menu{position:static}
+.pc-sfoot .pc-menu{right:0;left:auto;bottom:calc(100% + 6px);max-width:calc(100% - 4px)}
+.pc-menu button{white-space:nowrap}
+.pc-sshare{display:inline-grid;place-items:center;width:36px;height:36px;border-radius:12px;border:1px solid rgba(255,190,122,.45);background:rgba(242,140,30,.10);color:#ffbe7a;font:700 16px var(--sans);cursor:pointer}
+.pc-sshare:hover{background:rgba(242,140,30,.2)}
+.pop-rev.pc-hl{box-shadow:0 0 0 2px #ffbe7a,0 0 28px rgba(255,190,122,.35);transition:box-shadow .6s}
