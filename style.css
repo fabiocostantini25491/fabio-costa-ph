@@ -4087,3 +4087,6 @@ body[data-page="hub"] .sf-nav a.sf-map{background:none;color:#e6ecf3}
 .pc-sh.main{flex:1.6;background:#f28c1e;border-color:#f28c1e;color:#1a1206}
 .pc-sh:hover{filter:brightness(1.08)}.pc-sh:disabled{opacity:.6}
 .pc-sh:focus-visible{outline:2px solid #ffbe7a;outline-offset:2px}
+
+.pp-sharebar{display:flex;margin:0 0 14px}.pp-sharebar .pc-sh{flex:0 1 auto;padding:0 22px}
+.sp-head{display:flex;align-items:center;gap:14px;margin-bottom:6px}.sp-head h2{margin:2px 0 0}

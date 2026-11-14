@@ -2101,8 +2101,8 @@ const Spots = (() => {
     deepPlace = +q.get("place") || null;
     const via = q.get("via");
     if (via && /^[0-9a-f-]{36}$/i.test(via)) localStorage.setItem("sf-via", via);
-    for (const k of ["trip", "list"]) { const v = q.get(k); if (v && /^[0-9a-f-]{36}$/i.test(v)) deepShare = { kind: k, token: v }; }
-    if (deepPlace || via || deepShare) { q.delete("place"); q.delete("via"); q.delete("trip"); q.delete("list"); const qs = q.toString(); history.replaceState(null, "", location.pathname + (qs ? "?" + qs : "") + (location.hash || "#spotfolk")); }
+    for (const k of ["trip", "list", "passport"]) { const v = q.get(k); if (v && /^[0-9a-f-]{36}$/i.test(v)) deepShare = { kind: k, token: v }; }
+    if (deepPlace || via || deepShare) { q.delete("place"); q.delete("via"); q.delete("trip"); q.delete("list"); q.delete("passport"); const qs = q.toString(); history.replaceState(null, "", location.pathname + (qs ? "?" + qs : "") + (location.hash || "#spotfolk")); }
   } catch {}
   function openDeepPlace() {
     if (!deepPlace || !map || !spots.length || (!loaded && !guestLoaded)) return;
@@ -2127,19 +2127,20 @@ const Spots = (() => {
   const IT_ = () => window.I18N?.lang === "it";
   const shareUrl = (kind, token) => `https://spotfolk.eu/?${kind}=${token}#spotfolk`;
   async function shareDialog(kind, ref, label) {
-    const d = dlg("shareDialog", `<div class="import-body"><span class="eyebrow">${kind === "trip" ? "Share your trip" : "Share your list"}</span><h2>${esc(label)}</h2><p class="gate-note">Making the link…</p></div>`);
+    const EB = kind === "trip" ? "Share your trip" : kind === "passport" ? "Share your passport" : "Share your list";
+    const d = dlg("shareDialog", `<div class="import-body"><span class="eyebrow">${EB}</span><h2>${esc(label)}</h2><p class="gate-note">Making the link…</p></div>`);
     let token;
     try { ({ data: token } = await api("/rest/v1/rpc/share_create", { method: "POST", body: { p_kind: kind, p_trip: kind === "trip" ? ref : null, p_list: kind === "list" ? ref : "" } })); }
     catch (err) { d.querySelector(".gate-note").textContent = /function|schema cache/i.test(err.message) ? "Sharing arrives once the database is updated (supabase-condivisioni.sql)." : `Could not make the link: ${err.message}`; return; }
     const url = shareUrl(kind, token);
-    d.querySelector(".import-body").innerHTML = `<span class="eyebrow">${kind === "trip" ? "Share your trip" : "Share your list"}</span><h2>${esc(label)}</h2>
-      <p class="gate-help left">${kind === "trip" ? "Anyone with the link sees this trip on the map, stop by stop, with your name." : "Anyone with the link sees this list with your name: the places of the public map in full, the others only by area (members see them all). Fragile places stay hidden."}</p>
+    d.querySelector(".import-body").innerHTML = `<span class="eyebrow">${EB}</span><h2>${esc(label)}</h2>
+      <p class="gate-help left">${kind === "trip" ? "Anyone with the link sees this trip on the map, stop by stop, with your name." : kind === "passport" ? "Anyone with the link sees your passport: your name, your folk, your signatures and stamps. Places outside the public map show only for members; fragile places stay hidden." : "Anyone with the link sees this list with your name: the places of the public map in full, the others only by area (members see them all). Fragile places stay hidden."}</p>
       <input class="share-url" id="shareUrl" readonly value="${esc(url)}" aria-label="Link">
       <div class="pop-actions"><button type="button" class="pop-btn primary" data-sharego>↗ Share</button><button type="button" class="pop-btn" data-sharecopy>Copy link</button></div>
       <button type="button" class="text-link" data-shareoff>Stop sharing: the link stops working</button>`;
     const inp = d.querySelector("#shareUrl"); inp.addEventListener("focus", () => inp.select());
     d.querySelector("[data-sharego]").addEventListener("click", async () => {
-      try { if (navigator.share) { await navigator.share({ title: label, text: kind === "trip" ? `${label}: my trip on SpotFolk` : `${label}: my places on SpotFolk`, url }); return; } } catch (err) { if (err?.name === "AbortError") return; }
+      try { if (navigator.share) { await navigator.share({ title: label, text: kind === "trip" ? `${label}: my trip on SpotFolk` : kind === "passport" ? "My SpotFolk passport: the places I signed" : `${label}: my places on SpotFolk`, url }); return; } } catch (err) { if (err?.name === "AbortError") return; }
       try { await navigator.clipboard.writeText(url); toast("Link copied: paste it wherever you like."); } catch { inp.focus(); }
     });
     d.querySelector("[data-sharecopy]").addEventListener("click", async () => { try { await navigator.clipboard.writeText(url); toast("Link copied: paste it wherever you like."); } catch { inp.focus(); } });
@@ -2165,6 +2166,18 @@ const Spots = (() => {
       return;
     }
     if (r.kind === "list") openSharedList(r);
+    if (r.kind === "passport") openSharedPassport(r);
+  }
+  function openSharedPassport(r) {
+    const it = IT_(), pp = { ...(r.passport || {}) };
+    pp.stamps = (pp.stamps || []).filter(t => t.id != null && t.lat != null && t.lon != null);   // places that can't be shown count, but stay off the map
+    const face = r.avatar ? `<img src="${esc(avatarUrl(r.avatar))}" alt="">` : `<span>${esc(initials(r.author || "Folk"))}</span>`;
+    const d = dlg("sharedPassDialog", `<div class="import-body">
+      <div class="sp-head"><span class="me-avatar" style="--s:64px">${face}</span><div><span class="eyebrow">${it ? "Il passaporto di" : "The passport of"}</span><h2>${esc(r.author || "a folk")}</h2></div></div>
+      ${passportHtml(pp, null)}
+      ${guest || !session ? `<div class="pop-actions"><a class="pop-btn primary" href="#join">${it ? "Fai il tuo passaporto — diventa folk" : "Start your passport — become folk"}</a></div>` : ""}
+    </div>`);
+    wireStamps(d, () => d.close());
   }
   function openSharedList(r) {
     const items = r.items || [], open = items.filter(i => i.open && i.lat != null), shut = items.length - open.length;
@@ -2823,7 +2836,8 @@ const Spots = (() => {
         }
         const s = spotById(id); if (s) markerById.get(id)?.setIcon(pinIcon(s));
       },
-      openProfile: uid => openMemberProfile(uid)
+      openProfile: uid => openMemberProfile(uid),
+      placeLink: s => placeLink(s)
     };
   }
   function showHub() {
@@ -3467,7 +3481,6 @@ const Spots = (() => {
     const storiesBody = `${schemaV2 ? `<button type="button" class="pc-share" data-review>Share your story <span aria-hidden="true">＋</span></button>
         <form class="pop-review pc-form" data-reviewform hidden>
           <label class="rev-folk" data-revfolk hidden>Telling it as <select name="folk"></select></label>
-          <input type="text" name="title" maxlength="120" placeholder="A title, e.g. A magical morning at the lake" aria-label="Title of your story">
           <textarea rows="4" maxlength="2000" placeholder="Your story: what it was like, when to go, what to know…" aria-label="Your story"></textarea>
           ${PRICED[s.category] ? `<fieldset class="pay">
             <legend>What did you pay? <small>(optional, helps others)</small></legend>
@@ -5499,8 +5512,7 @@ const Spots = (() => {
               <small><time>${fmtDay(r.created_at.slice(0, 10))}</time></small></span>
             ${onSpotOf(r) ? `<span class="pc-onspot">📍 On the spot</span>` : ""}
           </header>
-          ${r.r_title ? `<h4 class="pc-title">${ugc(r.r_title)}</h4>` : ""}
-          ${r.body ? `<p class="pc-text">${ugc(r.body)}</p>` : ""}
+          ${r.body || r.r_title ? `<p class="pc-text">${ugc(r.body || r.r_title)}</p>` : ""}
           ${ph.length > 1 ? `<div class="pc-sphotos">${ph.slice(1).map(p => `<button type="button" data-sphoto="${photos.indexOf(p)}" aria-label="Photo by ${esc(p.author_name || "")}"><img src="${esc(thumbUrl(urls, p))}" alt="" loading="lazy"></button>`).join("")}</div>` : ""}
           ${r.paid != null ? `<p class="rev-paid">💶 Paid ${fmtMoney(r.paid, r.currency)}${r.people ? ` for ${r.people} ${r.people > 1 ? "people" : "person"}` : ""}${r.nights ? `, ${r.nights} night${r.nights > 1 ? "s" : ""}` : ""}${r.stay_type ? ` · ${esc(r.stay_type)}` : ""}</p>` : ""}
           <footer class="pc-sfoot">${sc ? `<span class="pc-score" title="Their impression">${sc.toFixed(1)}<small>/5</small></span>` : ""}
@@ -5901,9 +5913,10 @@ const Spots = (() => {
       const [pp, sec] = await Promise.all([loadPassport(uid), evoV ? api("/rest/v1/rpc/my_seconded", { method: "POST", body: {} }).then(r => r.data || []).catch(() => []) : []]);
       if (!pp) { box.innerHTML = `<p class="gate-help left">The passport arrives once the database is updated.</p>`; return; }
       const chH = await challengesHtml(false);
-      box.innerHTML = passportHtml(pp, uid) + chH + (sec.length ? `<section class="pp"><p class="pp-kick">Seconded</p><p class="gate-help left">Places you signed that other folk signed after you: your signature is guiding travellers.</p>
+      box.innerHTML = `<div class="pp-sharebar"><button type="button" class="pc-sh main" data-sharepass>↗ Share your passport</button></div>` + passportHtml(pp, uid) + chH + (sec.length ? `<section class="pp"><p class="pp-kick">Seconded</p><p class="gate-help left">Places you signed that other folk signed after you: your signature is guiding travellers.</p>
         <ul class="me-list">${sec.map(x => `<li class="me-row" data-open="${x.spot_id}"><span class="me-ico" style="--c:#ffd27a">✍</span><span class="me-txt"><b>${esc(x.name)}</b><small>${x.n} folk signed after you · ${esc(fmtWhen(x.last_at))}</small></span></li>`).join("")}</ul></section>` : "");
       wireStamps(box);
+      box.querySelector("[data-sharepass]")?.addEventListener("click", () => shareDialog("passport", null, me.display_name || displayName()));
       box.querySelectorAll("[data-open]").forEach(li => li.addEventListener("click", () => { const sp = spotById(+li.dataset.open); if (sp) openOnMap(sp); }));
       return;
     }

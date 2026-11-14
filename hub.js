@@ -80,7 +80,7 @@ window.FolkHub = (() => {
     "just now": "adesso", "{n} min ago": "{n} min fa", "{n} h ago": "{n} h fa", "yesterday": "ieri", "{n} days ago": "{n} giorni fa", "in {n} h": "tra {n} h", "in {n} days": "tra {n} giorni",
     "Your passport and reputation": "Il tuo passaporto e la reputazione", "Become folk — free": "Diventa folk — è gratis",
     "description": "la descrizione", "useful info": "le info utili", "best months": "i mesi migliori", "position": "la posizione", "type": "il tipo", "link": "il link", "name": "il nome", "category": "la categoria", "trail info": "le info del sentiero", "workshop info": "le info del workshop", "dates": "le date", "Support local": "Support local",
-    "Wrong or outdated?": "Sbagliato o superato?", "Back to the map": "Torna alla mappa",
+    "Wrong or outdated?": "Sbagliato o superato?", "Share": "Condividi", "Link copied: paste it wherever you like.": "Link copiato: incollalo dove vuoi.", "Back to the map": "Torna alla mappa",
     "Finding and following other folk is for members. Join free to meet the people behind the places.": "Trovare e seguire gli altri folk è per gli iscritti. Iscriviti gratis per conoscere le persone dietro i posti.",
     "Your passport collects the places you've signed, your stamps and your folk. It's free.": "Il passaporto raccoglie i posti che hai firmato, i tuoi timbri e i tuoi folk. È gratis.",
     "Find your folk": "Trova i tuoi folk", "Follow the folk who travel like you and the places you love: their news comes to you.": "Segui i folk che viaggiano come te e i posti che ami: le loro novità arrivano a te.",
@@ -167,7 +167,7 @@ window.FolkHub = (() => {
         const conf = nn.checks ? tx("Confirmed by {n} folk", { n: nn.checks }) : tx("Not confirmed yet");
         body = open ? `<div class="hb-fact"><i>${t[0]}</i><div><b>${e(t[1])}</b>${val}<small>${e(conf)}</small></div>${nn.checks ? `<span class="hb-st">✓ ${e(tx("Checked"))}</span>` : ""}</div>` : ""; break; }
       case "story": what = tx("told a story about {p}", { p: place }); big = !!open;
-        body = `${i.extra?.title ? `<h3 class="hb-title">${u(i.extra.title)}</h3>` : ""}${i.txt ? `<p class="hb-txt">${u(i.txt)}${i.txt.length >= 280 ? "…" : ""}</p>` : ""}`; break;
+        body = `${i.txt || i.extra?.title ? `<p class="hb-txt">${u(i.txt || i.extra.title)}${(i.txt || "").length >= 280 ? "…" : ""}</p>` : ""}`; break;
       case "impression": { what = tx("gave impressions of {p}", { p: place }); const b = K.BASIS[i.extra?.on_spot ? "onspot" : i.extra?.basis];
         body = i.extra?.score != null ? `<div class="hb-conds"><span>⛰ ${e(i.extra.score)}/5</span>${b ? `<small>${b[0]} ${e(b[1])}</small>` : ""}</div>` : ""; break; }
       case "photo": what = tx("added a photo of {p}", { p: place }); big = open && !!i.extra?.path; break;
@@ -188,6 +188,7 @@ window.FolkHub = (() => {
     if (open && (i.kind === "fact" || i.kind === "check") && !me.own) acts.push(me.checked ? `<button type="button" class="on" disabled>${e(tx("✓ You confirmed"))}</button>` : `<button type="button" data-check>${e(tx("✓ Still correct"))}</button>`);
     if (open && ["sign", "story", "photo", "place"].includes(i.kind)) acts.push(`<button type="button" class="${me.been ? "on" : ""}" data-been>📍 ${n(nn.been)} <span class="hb-l">${e(tx(me.been ? "You've been" : "Been there!"))}</span></button>`);
     if (open) acts.push(`<button type="button" class="hb-sp ${me.saved || savedLocal(i.spot_id) ? "on" : ""}" data-save aria-pressed="${!!(me.saved || savedLocal(i.spot_id))}">${me.saved || savedLocal(i.spot_id) ? "♥" : "♡"} <span class="hb-l">${e(tx(me.saved || savedLocal(i.spot_id) ? "Saved" : "Save"))}</span></button>`);
+    if (open) acts.push(`<button type="button" data-sharehub title="${e(tx("Share"))}" aria-label="${e(tx("Share"))}">↗<span class="hb-l"> ${e(tx("Share"))}</span></button>`);
     if (open) acts.push(`<button type="button" data-go title="${e(tx("Open the place →"))}">↗<span class="hb-l"> ${e(tx("Open the place →").replace(" →", ""))}</span></button>`);
     if (i.open && isMember() && !me.own) acts.push(`<button type="button" class="hb-flag" data-flag title="${e(tx("Report"))}" aria-label="${e(tx("Report"))}">⚑</button>`);
     return `<article class="hb-card" data-id="${e(i.id)}">${head}${img}<div class="hb-body"><p class="hb-what">${what}</p>${body}${lock}</div>${acts.length ? `<div class="hb-acts">${acts.join("")}</div>` : ""}</article>`;
@@ -588,6 +589,7 @@ window.FolkHub = (() => {
     if (ds.flag !== undefined && i) return flag(t, i);
     if (ds.been !== undefined && i) { if (i.me?.been) return K.goPlace(i.spot_id); K.toast(tx("Sign it from its card on the map: tap ✍ Sign.")); K.track("Hub: been there"); return K.goPlace(i.spot_id); }
     if (ds.go !== undefined && i) { K.track("Hub: place opened"); return K.goPlace(i.spot_id); }
+    if (ds.sharehub !== undefined && i) return shareItem(i);
     if (ds.gospot) { t.closest("dialog")?.close?.(); openFull(false); K.track("Hub: place opened"); return K.goPlace(+ds.gospot); }
     if (ds.tomap !== undefined) { openFull(false); return K.toMap(S.mapPts || []); }
     if (ds.full !== undefined) return openFull(!S.mapFull);
@@ -598,6 +600,15 @@ window.FolkHub = (() => {
       t.classList.toggle("on", !p.muted); t.setAttribute("aria-pressed", !p.muted); t.textContent = `${p.muted ? "🔕" : "🔔"} ${tx(p.muted ? "Muted" : "Notify me")}`; return; }
     if (ds.close !== undefined) return t.closest("dialog")?.close();
     if (ds.fullprof) { t.closest("dialog")?.close(); return K.openProfile(ds.fullprof); }
+  }
+  // share an activity of the Hub: the link to the place, with what happened there (never someone else's words)
+  async function shareItem(i) {
+    const c = K.COND[i.extra?.cond], t = K.TOPIC[i.extra?.topic];
+    const what = i.kind === "cond" && c ? `${c[0]} ${c[1]}` : (i.kind === "fact" || i.kind === "check") && t ? `${t[0]} ${t[1]} ${tx("Checked").toLowerCase()}` : i.kind === "story" ? tx("Folk story") : i.kind === "place" ? tx("New spot") : i.kind === "sign" ? `✍ ${tx("Signed")}` : tx(KIND[i.kind]?.[1] || "");
+    const url = K.placeLink({ id: i.spot_id }), text = `${what} · ${i.spot} — SpotFolk`;
+    K.track("Hub: shared");
+    try { if (navigator.share) { await navigator.share({ title: i.spot, text, url }); return; } } catch (err) { if (err?.name === "AbortError") return; }
+    try { await navigator.clipboard.writeText(`${text} ${url}`); K.toast(tx("Link copied: paste it wherever you like.")); } catch { K.toast(url); }
   }
   function onChange(ev) {
     const p = ev.target.closest("[data-pref]"); if (!p) return;

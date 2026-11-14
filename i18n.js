@@ -1046,6 +1046,8 @@ const I18N = (() => {
     "Log in to see the whole map, sign the places you know, plan trips and open your passport.": ["Accedi per vedere tutta la mappa, firmare i posti che conosci, pianificare viaggi e aprire il tuo passaporto."],
     "Which hour, which bench, which trattoria the locals actually use. One line each, from people who stood there. Open a place on the map to read who signed it; become folk to add your own.": ["Quale ora, quale panchina, quale trattoria frequentano davvero i locali. Una riga ciascuno, da chi c'è stato. Apri un luogo sulla mappa per leggere chi l'ha firmato; diventa folk per aggiungere il tuo."],
     "Become folk to add yours": ["Diventa folk per aggiungere il tuo"],
+    "↗ Share your passport": ["↗ Condividi il tuo passaporto"], "Share your passport": ["Condividi il tuo passaporto"],
+    "Anyone with the link sees your passport: your name, your folk, your signatures and stamps. Places outside the public map show only for members; fragile places stay hidden.": ["Chi ha il link vede il tuo passaporto: il tuo nome, i tuoi folk, le firme e i timbri. I posti fuori dalla mappa pubblica li vedono solo gli iscritti; i luoghi fragili restano nascosti."],
     "↗ Share this place": ["↗ Condividi il posto"],
     "📲 Story": ["📲 Storia"], "🔗 Share link": ["🔗 Condividi link"], "🔗 Share": ["🔗 Condividi"],
     "Share your trip": ["Condividi il tuo itinerario"], "Share your list": ["Condividi la tua lista"], "Making the link…": ["Creo il link…"],
