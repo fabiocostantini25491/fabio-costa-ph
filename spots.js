@@ -2095,13 +2095,14 @@ const Spots = (() => {
   /* raggruppa gli spot vicini (griglia in pixel), solo quelli nell'area visibile */
   /* links to one place (spotfolk.eu/?place=123): shared by the folk, they open that place's card.
      ?via=<member> remembers who invited, and goes with the sign-up. */
-  let deepPlace = null;
+  let deepPlace = null, deepShare = null;
   try {
     const q = new URLSearchParams(location.search);
     deepPlace = +q.get("place") || null;
     const via = q.get("via");
     if (via && /^[0-9a-f-]{36}$/i.test(via)) localStorage.setItem("sf-via", via);
-    if (deepPlace || via) { q.delete("place"); q.delete("via"); const qs = q.toString(); history.replaceState(null, "", location.pathname + (qs ? "?" + qs : "") + location.hash); }
+    for (const k of ["trip", "list"]) { const v = q.get(k); if (v && /^[0-9a-f-]{36}$/i.test(v)) deepShare = { kind: k, token: v }; }
+    if (deepPlace || via || deepShare) { q.delete("place"); q.delete("via"); q.delete("trip"); q.delete("list"); const qs = q.toString(); history.replaceState(null, "", location.pathname + (qs ? "?" + qs : "") + (location.hash || "#spotfolk")); }
   } catch {}
   function openDeepPlace() {
     if (!deepPlace || !map || !spots.length || (!loaded && !guestLoaded)) return;
@@ -2119,6 +2120,127 @@ const Spots = (() => {
     window.fcTrack?.(invite ? "Spots: invite sent" : "Spots: place shared");
     try { if (navigator.share) return await navigator.share({ title: s.name, text, url }); } catch (err) { if (err?.name === "AbortError") return; }
     try { await navigator.clipboard.writeText(`${text} ${url}`); toast("Link copied: paste it wherever you like."); } catch { prompt("Copy this link:", url); }
+  }
+  /* ---------- links to a trip or to a list of saved places (supabase-condivisioni.sql) ----------
+     The author makes the link and can withdraw it. Visitors see the whole trip; of a list, the places of the public selection
+     in full and only the area of the others. */
+  const IT_ = () => window.I18N?.lang === "it";
+  const shareUrl = (kind, token) => `https://spotfolk.eu/?${kind}=${token}#spotfolk`;
+  async function shareDialog(kind, ref, label) {
+    const d = dlg("shareDialog", `<div class="import-body"><span class="eyebrow">${kind === "trip" ? "Share your trip" : "Share your list"}</span><h2>${esc(label)}</h2><p class="gate-note">Making the link…</p></div>`);
+    let token;
+    try { ({ data: token } = await api("/rest/v1/rpc/share_create", { method: "POST", body: { p_kind: kind, p_trip: kind === "trip" ? ref : null, p_list: kind === "list" ? ref : "" } })); }
+    catch (err) { d.querySelector(".gate-note").textContent = /function|schema cache/i.test(err.message) ? "Sharing arrives once the database is updated (supabase-condivisioni.sql)." : `Could not make the link: ${err.message}`; return; }
+    const url = shareUrl(kind, token);
+    d.querySelector(".import-body").innerHTML = `<span class="eyebrow">${kind === "trip" ? "Share your trip" : "Share your list"}</span><h2>${esc(label)}</h2>
+      <p class="gate-help left">${kind === "trip" ? "Anyone with the link sees this trip on the map, stop by stop, with your name." : "Anyone with the link sees this list with your name: the places of the public map in full, the others only by area (members see them all). Fragile places stay hidden."}</p>
+      <input class="share-url" id="shareUrl" readonly value="${esc(url)}" aria-label="Link">
+      <div class="pop-actions"><button type="button" class="pop-btn primary" data-sharego>↗ Share</button><button type="button" class="pop-btn" data-sharecopy>Copy link</button></div>
+      <button type="button" class="text-link" data-shareoff>Stop sharing: the link stops working</button>`;
+    const inp = d.querySelector("#shareUrl"); inp.addEventListener("focus", () => inp.select());
+    d.querySelector("[data-sharego]").addEventListener("click", async () => {
+      try { if (navigator.share) { await navigator.share({ title: label, text: kind === "trip" ? `${label}: my trip on SpotFolk` : `${label}: my places on SpotFolk`, url }); return; } } catch (err) { if (err?.name === "AbortError") return; }
+      try { await navigator.clipboard.writeText(url); toast("Link copied: paste it wherever you like."); } catch { inp.focus(); }
+    });
+    d.querySelector("[data-sharecopy]").addEventListener("click", async () => { try { await navigator.clipboard.writeText(url); toast("Link copied: paste it wherever you like."); } catch { inp.focus(); } });
+    d.querySelector("[data-shareoff]").addEventListener("click", async ev => {
+      const b = ev.currentTarget; if (b.dataset.confirm !== "1") { b.dataset.confirm = "1"; b.textContent = "Tap again to stop sharing"; return; }
+      try { await api(`/rest/v1/shared_links?token=eq.${token}`, { method: "DELETE" }); d.close(); toast("Link withdrawn: it doesn't open anything anymore."); window.fcTrack?.(`Share: ${kind} withdrawn`); }
+      catch (err) { toast(`Could not withdraw it: ${err.message}`, true); }
+    });
+    window.fcTrack?.(`Share: ${kind} link made`);
+  }
+  async function openDeepShare() {
+    if (!deepShare || !map || (!loaded && !guestLoaded)) return;
+    const ds = deepShare; deepShare = null;
+    let r = null; try { ({ data: r } = await api("/rest/v1/rpc/shared_get", { method: "POST", body: { p_token: ds.token } })); } catch {}
+    if (!r) { toast("This link isn't shared anymore."); return; }
+    window.fcTrack?.(`Share: ${r.kind} opened`);
+    if (r.kind === "trip" && r.trip?.stops?.length >= 2) {
+      if (session && !guest) await loadTrips();
+      const t = { ...r.trip, _shared: true };
+      if (!Array.isArray(trips)) trips = [];
+      if (!trips.some(x => x.id === t.id)) trips.unshift(t);
+      showTrips = true; drawTrips(); focusTrip(t);
+      return;
+    }
+    if (r.kind === "list") openSharedList(r);
+  }
+  function openSharedList(r) {
+    const items = r.items || [], open = items.filter(i => i.open && i.lat != null), shut = items.length - open.length;
+    const title = r.title || (IT_() ? "Posti salvati" : "Saved places");
+    const d = dlg("sharedListDialog", `<div class="import-body">
+      <span class="eyebrow">📍 ${esc(IT_() ? "Una lista di" : "A list by")} ${esc(r.author || "a folk")}</span><h2>${esc(title)}</h2>
+      <p class="gate-help left">${items.length} ${IT_() ? (items.length === 1 ? "posto" : "posti") : items.length === 1 ? "place" : "places"}</p>
+      <ul class="req-list">${items.map(i => i.open ? `<li class="req-row"><div><b>${esc(i.name)}</b><span>${esc((CATS[i.category] || CATS.spot).label)}${i.zone ? ` · ${esc(i.zone)}` : ""}</span></div><button type="button" class="pop-btn" data-goto="${i.spot_id}">${ICON.pin}${IT_() ? "Apri" : "Open"}</button></li>`
+        : `<li class="req-row"><div><b>🔒 ${esc(IT_() ? "Un posto dei folk" : "A folk place")}</b><span>${esc(i.zone || "")}</span></div></li>`).join("")}</ul>
+      ${shut && (guest || !session) ? `<p class="gate-help left">${esc(IT_() ? `${shut} ${shut === 1 ? "posto è" : "posti sono"} sulla mappa dei folk: iscriviti gratis per vederli.` : `${shut} ${shut === 1 ? "place is" : "places are"} on the folk's map: join free to see ${shut === 1 ? "it" : "them"}.`)}</p>` : ""}
+      <div class="pop-actions">
+        ${open.length > 1 ? `<button type="button" class="pop-btn" data-showall>${ICON.pin}${IT_() ? "Mostra sulla mappa" : "Show on the map"}</button>` : ""}
+        ${session && !guest ? `<button type="button" class="pop-btn primary" data-saveall>♡ ${IT_() ? "Salva nei miei posti" : "Save to my places"}</button>` : `<a class="pop-btn primary" href="#join">${IT_() ? "Diventa folk — è gratis" : "Become folk — free"}</a>`}
+      </div></div>`);
+    d.querySelectorAll("[data-goto]").forEach(b => b.addEventListener("click", () => { d.close(); deepPlace = +b.dataset.goto; openDeepPlace(); }));
+    d.querySelector("[data-showall]")?.addEventListener("click", () => { d.close(); $("#spotsMap")?.scrollIntoView({ behavior: "smooth", block: "center" }); const go = () => map.flyToBounds(L.latLngBounds(open.map(i => [i.lat, i.lon])).pad(0.2), { maxZoom: 13, duration: .9 }); if (onGlobe) toFlat(null); go(); });
+    d.querySelector("[data-saveall]")?.addEventListener("click", async ev => {
+      const b = ev.currentTarget; b.disabled = true;
+      try { await api("/rest/v1/spot_favorites", { method: "POST", headers: { Prefer: "return=minimal,resolution=ignore-duplicates" }, body: open.map(i => ({ spot_id: i.spot_id, ...(profV ? { list_name: title.slice(0, 60) } : {}) })) });
+        open.forEach(i => favs.add(i.spot_id)); b.textContent = `♥ ${IT_() ? "Salvati" : "Saved"}`; window.fcTrack?.("Share: list saved"); }
+      catch (err) { b.disabled = false; toast(`Could not save: ${err.message}`, true); }
+    });
+  }
+
+  /* ---------- «Share to your story»: a 1080×1920 picture of the place for Instagram stories, drawn on the phone (no photos, only the site) ---------- */
+  async function storyImage(s, card) {
+    const it = IT_(), W = 1080, H = 1920, c = document.createElement("canvas"); c.width = W; c.height = H;
+    const g = c.getContext("2d");
+    try { await document.fonts.ready; await Promise.all([document.fonts.load("600 120px 'Cormorant Garamond'"), document.fonts.load("italic 500 60px 'Cormorant Garamond'"), document.fonts.load("500 40px 'DM Sans'"), document.fonts.load("700 30px 'DM Sans'")]); } catch {}
+    const SERIF = "'Cormorant Garamond', Georgia, serif", SANS = "'DM Sans', system-ui, sans-serif";
+    let bg = g.createLinearGradient(0, 0, 0, H); bg.addColorStop(0, "#0b1626"); bg.addColorStop(1, "#050b14"); g.fillStyle = bg; g.fillRect(0, 0, W, H);
+    let rg = g.createRadialGradient(W * .85, 0, 0, W * .85, 0, 1000); rg.addColorStop(0, "rgba(242,140,30,.30)"); rg.addColorStop(1, "rgba(242,140,30,0)"); g.fillStyle = rg; g.fillRect(0, 0, W, H);
+    rg = g.createRadialGradient(0, H, 0, 0, H, 900); rg.addColorStop(0, "rgba(90,140,255,.18)"); rg.addColorStop(1, "rgba(90,140,255,0)"); g.fillStyle = rg; g.fillRect(0, 0, W, H);
+    let seed = s.id * 9301 + 49297; const rnd = () => ((seed = (seed * 9301 + 49297) % 233280) / 233280);
+    for (let i = 0; i < 90; i++) { g.fillStyle = `rgba(255,255,255,${.15 + rnd() * .45})`; g.beginPath(); g.arc(rnd() * W, rnd() * H * .7, rnd() * 2 + .6, 0, 7); g.fill(); }
+    const wrap = (text, x, y, maxW, lh, maxLines = 4) => { const words = String(text).split(/\s+/); let line = "", n = 0; for (const w of words) { const t = line ? `${line} ${w}` : w; if (g.measureText(t).width > maxW && line) { g.fillText(line, x, y); y += lh; line = w; if (++n >= maxLines - 1) { line = words.slice(words.indexOf(w)).join(" "); while (g.measureText(line + "…").width > maxW && line.length) line = line.slice(0, -1); if (line !== words.slice(words.indexOf(w)).join(" ")) line += "…"; break; } } else line = t; } if (line) { g.fillText(line, x, y); y += lh; } return y; };
+    const logo = await new Promise(res => { const im = new Image(); im.onload = () => res(im); im.onerror = () => res(null); im.src = "img/spotfolk-logo.png"; });
+    if (logo) g.drawImage(logo, 90, 130, 230, 230 * logo.height / logo.width);
+    const cat = CATS[s.category] || CATS.spot;
+    g.fillStyle = "#ffbe7a"; g.font = `700 30px ${SANS}`; g.letterSpacing = "6px"; g.fillText(`${cat.label}${s.list ? ` · ${s.list}` : ""}`.toUpperCase().slice(0, 48), 90, 520); g.letterSpacing = "0px";
+    g.fillStyle = "#f2f6fb"; g.font = `600 128px ${SERIF}`; let y = wrap(s.name, 90, 660, W - 180, 130, 3);
+    // what the folk know: the conditions and the checked info shown on the card right now
+    const cond = card?.querySelector("[data-condtop]:not([hidden])")?.textContent.trim(), fact = card?.querySelector("[data-facttop]:not([hidden])")?.textContent.trim();
+    const signs = signMap.get(s.id)?.total || 0;
+    y += 40;
+    const box = (title, text, color) => { g.font = `500 40px ${SANS}`; const lines = []; let line = ""; for (const w of String(text).split(/\s+/)) { const t = line ? `${line} ${w}` : w; if (g.measureText(t).width > W - 300 && line) { lines.push(line); line = w; } else line = t; } if (line) lines.push(line); const L3 = lines.slice(0, 3);
+      const h = 110 + L3.length * 54; g.fillStyle = "rgba(255,255,255,.05)"; g.strokeStyle = color; g.lineWidth = 3; g.beginPath(); g.roundRect(90, y, W - 180, h, 36); g.fill(); g.stroke();
+      g.fillStyle = color; g.font = `700 28px ${SANS}`; g.letterSpacing = "4px"; g.fillText(title.toUpperCase(), 140, y + 66); g.letterSpacing = "0px";
+      g.fillStyle = "#f2f6fb"; g.font = `500 40px ${SANS}`; L3.forEach((l, i) => g.fillText(l, 140, y + 130 + i * 54)); y += h + 34; };
+    if (cond) box(it ? "Com'è adesso" : "How it is now", cond, "#ff7a45");
+    if (fact) box("Before you go", fact, "#9fe3c8");
+    if (!cond && !fact) box(it ? "Sei stato qui?" : "Been here?", it ? "Racconta ai folk com'è adesso: tariffe, neve, mare, folla." : "Tell the folk how it is now: fees, snow, sea, crowds.", "#ffbe7a");
+    g.font = `500 40px ${SANS}`; g.fillStyle = "#c9d6e6";
+    if (s.best_months) { g.fillText(`📅 ${it ? "Periodo migliore" : "Best period"}: ${s.best_months}`.slice(0, 60), 90, y + 20); y += 74; }
+    if (signs) { g.fillText(`✍ ${it ? `Firmato da ${signs} folk` : `Signed by ${signs} folk`}`, 90, y + 20); y += 74; }
+    if (y + 90 < H - 300) { g.fillStyle = "#f2f6fb"; g.font = `italic 500 64px ${SERIF}`; g.fillText(it ? "La mappa, firmata dai folk." : "The map, signed by the folk.", 90, Math.max(y + 90, H - 400)); }
+    g.fillStyle = "#f28c1e"; g.beginPath(); g.roundRect(90, H - 270, 560, 110, 55); g.fill();
+    g.fillStyle = "#1a1206"; g.font = `800 46px ${SANS}`; g.fillText("spotfolk.eu", 150, H - 198);
+    g.fillStyle = "#8a99ab"; g.font = `500 30px ${SANS}`; g.fillText(it ? "Apri il posto dal link nella storia" : "Open the place from the link in the story", 90, H - 110);
+    return new Promise(res => c.toBlob(b => res(b), "image/png"));
+  }
+  async function shareStory(s, card, btn) {
+    btn.disabled = true; const old = btn.innerHTML; btn.textContent = "…";
+    try {
+      const blob = await storyImage(s, card), name = `spotfolk-${(s.name || "place").toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 40)}.png`;
+      const file = new File([blob], name, { type: "image/png" }), url = placeLink(s);
+      if (navigator.canShare?.({ files: [file] })) {
+        try { await navigator.share({ files: [file], title: s.name, text: url }); window.fcTrack?.("Spots: story shared"); } catch (err) { if (err?.name !== "AbortError") throw err; }
+      } else {
+        const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name; document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+        try { await navigator.clipboard.writeText(url); } catch {}
+        toast(IT_() ? "Immagine scaricata e link del posto copiato: aggiungilo come sticker link nella storia." : "Picture downloaded and the place's link copied: add it as a link sticker in your story.");
+        window.fcTrack?.("Spots: story downloaded");
+      }
+    } catch (err) { toast(`Could not make the picture: ${err.message}`, true); }
+    btn.disabled = false; btn.innerHTML = old;
   }
   let justSigned = null;
 
@@ -2989,6 +3111,7 @@ const Spots = (() => {
 
   function drawClusters() {
     setTimeout(openDeepPlace, 0);
+    if (deepShare) setTimeout(openDeepShare, 0);
     if (hubAlert) setTimeout(applyHubAlert, 300);
     if (!map || !layer) return;
     // lo spot con la scheda aperta resta sulla mappa (altrimenti la scheda si chiuderebbe a ogni spostamento)
@@ -3394,6 +3517,7 @@ const Spots = (() => {
           ${commV ? `<button type="button" class="pop-btn fav-btn${favs.has(s.id) ? " on" : ""}" data-fav>${favs.has(s.id) ? "♥ Saved" : "♡ Save"}</button>` : ""}
           <button type="button" class="pop-btn" data-addphoto>${ICON.img}Add photo</button>
           <button type="button" class="pop-btn" data-share>↗ Share</button>
+          ${s.fragile ? "" : `<button type="button" class="pop-btn" data-story>📲 Story</button>`}
           <input type="file" accept="image/*" multiple hidden data-photofile>
         </div>
         <p class="pop-rights">By adding a photo you confirm it's yours and accept the <a href="#photoRights" data-rights>photo terms</a>.</p>` : ""}
@@ -3445,6 +3569,7 @@ const Spots = (() => {
     if (socialV) wireSocial(popup, s);
     el.querySelector("[data-fav]")?.addEventListener("click", ev => toggleFav(s, ev.currentTarget));
     el.querySelector("[data-share]")?.addEventListener("click", () => sharePlace(s));
+    el.querySelector("[data-story]")?.addEventListener("click", ev => shareStory(s, el, ev.currentTarget));
     wireCurate(popup, s);
     el.querySelector("[data-meethere]")?.addEventListener("click", () => { map.closePopup(); withConduct(() => openMeetup({ lat: s.lat, lon: s.lon, spot: s })); });
     el.querySelector("[data-meetgo]")?.addEventListener("click", () => {
@@ -4200,7 +4325,8 @@ const Spots = (() => {
       <p class="pop-author">By ${esc(t.author_name || "a member")}${xpBadge(t.created_by)}</p>
       <div class="pop-actions">
         <a class="pop-btn primary" href="${gm}" target="_blank" rel="noopener">${ICON.ext}Open in Google Maps</a>
-        ${own || admin ? `<button type="button" class="pop-btn" data-deltrip>Delete</button>` : `<button type="button" class="text-link pop-flag" data-flagtrip>⚑ Flag</button>`}
+        ${own ? `<button type="button" class="pop-btn" data-sharetrip>🔗 Share link</button>` : ""}
+        ${own || admin ? `<button type="button" class="pop-btn" data-deltrip>Delete</button>` : t._shared && (guest || !session) ? `<a class="pop-btn" href="#join">Make yours: become folk</a>` : `<button type="button" class="text-link pop-flag" data-flagtrip>⚑ Flag</button>`}
       </div>
     </div>`;
   }
@@ -4218,6 +4344,7 @@ const Spots = (() => {
       catch (err) { toast(`Could not delete: ${err.message}`, true); }
     });
     el?.querySelector("[data-flagtrip]")?.addEventListener("click", () => openFlag("trip", String(t.id), t.title));
+    el?.querySelector("[data-sharetrip]")?.addEventListener("click", () => shareDialog("trip", t.id, t.title));
   }
   function focusTrip(t) {
     if (!showTrips) { showTrips = true; drawTrips(); }
@@ -5892,7 +6019,7 @@ const Spots = (() => {
       box.innerHTML = `<div class="me-bar"><label class="me-search">${ICON.pin}<input type="search" id="meSavedQ" value="${esc(savedQuery)}" placeholder="Search your saved places"></label>
           <button type="button" class="outline-link" data-mesavedmap>Show them on the map</button></div>
         <datalist id="meLists">${lists.map(l => `<option value="${esc(l)}">`).join("")}</datalist>
-        ${rows.length ? groups.map(g => `<h3 class="me-h">${esc(g || "Saved")} <small>${rows.filter(v => (v.list_name || "") === g).length}</small></h3>
+        ${rows.length ? groups.map(g => `<h3 class="me-h">${esc(g || "Saved")} <small>${rows.filter(v => (v.list_name || "") === g).length}</small> <button type="button" class="text-link me-sharelist" data-sharelist="${esc(g)}">🔗 Share</button></h3>
           <ul class="me-list">${rows.filter(v => (v.list_name || "") === g).map(v => spotRow(v.s, `<span class="me-ops">
             ${profV ? `<input class="me-listin" list="meLists" maxlength="60" value="${esc(v.list_name || "")}" placeholder="List, e.g. Dolomites 2027" data-melist="${v.spot_id}" aria-label="List">` : ""}
             <button type="button" class="text-link me-del" data-meunsave="${v.spot_id}">Remove</button></span>`)).join("")}</ul>`).join("")
@@ -5900,6 +6027,7 @@ const Spots = (() => {
       const qi = box.querySelector("#meSavedQ");
       qi.addEventListener("input", () => { savedQuery = qi.value; const pos = qi.selectionStart; drawMeTab().then(() => { const n = $("#meSavedQ"); n?.focus(); n?.setSelectionRange(pos, pos); }); });
       box.querySelector("[data-mesavedmap]").addEventListener("click", () => { onlyFavs = true; meView = false; location.hash = "spotfolk"; });
+      box.querySelectorAll("[data-sharelist]").forEach(b => b.addEventListener("click", () => shareDialog("list", b.dataset.sharelist, b.dataset.sharelist || "Saved")));
       box.querySelectorAll("[data-melist]").forEach(inp => inp.addEventListener("change", async () => {
         const id = +inp.dataset.melist, name = inp.value.trim() || null;
         try { await api(`/rest/v1/spot_favorites?spot_id=eq.${id}&user_id=eq.${encodeURIComponent(uid)}`, { method: "PATCH", body: { list_name: name }, headers: { Prefer: "return=minimal" } });

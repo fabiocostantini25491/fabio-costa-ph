@@ -4076,3 +4076,7 @@ body[data-page="hub"] .sf-nav a.sf-map{background:none;color:#e6ecf3}
 .pc-meet-btn{flex:none;border:0;border-radius:999px;padding:8px 14px;background:#7ee081;color:#0b1a0c;font:700 13px var(--sans);cursor:pointer;white-space:nowrap}
 .pc-meet-btn.line{background:none;border:1px solid rgba(126,224,129,.6);color:#bff0c0}
 .pc-meet-btn:focus-visible{outline:2px solid #ffbe7a;outline-offset:2px}
+
+/* sharing a trip or a list with a link */
+.share-url{width:100%;margin:10px 0 4px;padding:12px 14px;border-radius:12px;border:1px solid rgba(156,200,255,.3);background:rgba(255,255,255,.04);color:#e6ecf3;font:14px var(--sans)}
+.me-sharelist{margin-left:10px;font-size:13px;font-weight:600;letter-spacing:0;text-transform:none}
