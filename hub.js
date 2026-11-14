@@ -11,7 +11,7 @@ window.FolkHub = (() => {
   /* ---------- words (the rest of the site is translated by i18n.js; the Hub translates itself) ---------- */
   const IT = {
     "The Folk": "The Folk", "Hub": "Hub", "People, places and shared knowledge.": "Persone, luoghi e conoscenza condivisa.",
-    "Feed": "Feed", "{n} asks how it is now at {p}: you know the area": "{n} chiede com'è adesso a {p}: conosci la zona",
+    "Feed": "Feed", "{n} asks the photo folk about {p}: you've been around there": "{n} chiede ai photo folk di {p}: tu sei stato da quelle parti", "{n} answered your question about {p}": "{n} ha risposto alla tua domanda su {p}", "{n} asks how it is now at {p}: you know the area": "{n} chiede com'è adesso a {p}: conosci la zona",
     "{n} answered your question about {p}: {c}": "{n} ha risposto alla tua domanda su {p}: {c}", "News from your dream {p}: {c}": "Novità dal tuo sogno {p}: {c}",
     "{i} {l} at {p}, {d} at {t}": "{i} {l} a {p}, {d} alle {t}", "today": "oggi", "tomorrow": "domani", "the day after tomorrow": "dopodomani",
     "your dreams": "i tuoi sogni", "forecast": "previsione", "How is it now?": "Com'è adesso?", "Clear sunrise": "Alba limpida", "Clear sunset": "Tramonto limpido",
@@ -430,7 +430,8 @@ window.FolkHub = (() => {
     const w = tx(WHAT[u.extra?.target_kind || u.txt] || "your info");
     const map = { follow: ["{n} started following you"], react_appreciate: ["{n} appreciated {w}"], react_useful: ["{n} found {w} useful"], checked_yours: ["{n} checked your info at {p}"], signed_yours: ["{n} signed {p}, a place you added"],
       sign: ["{n} signed {p}"], cond: ["{n} shared how it is now at {p}"], fact: ["{n} added info at {p}"], check: ["{n} checked info at {p}"], story: ["{n} told a story about {p}"], impression: ["{n} gave impressions of {p}"], photo: ["{n} added a photo of {p}"], update: ["{n} updated {p}"], place: ["{n} added {p}"] };
-    if (u.kind === "ask_near") return tx("{n} asks how it is now at {p}: you know the area", { n: nm, p: `<b>${e(u.place)}</b>` }) + (u.note ? `<br><i>«${e(u.note)}»</i>` : "");
+    if (u.kind === "ask_near") return tx(u.target === "photo" ? "{n} asks the photo folk about {p}: you've been around there" : "{n} asks how it is now at {p}: you know the area", { n: nm, p: `<b>${e(u.place)}</b>` }) + (u.note ? `<br><i>«${e(u.note)}»</i>` : "");
+    if (u.kind === "ask_reply") return tx("{n} answered your question about {p}", { n: nm, p: `<b>${e(u.place)}</b>` }) + (u.note ? `<br><i>«${e(u.note)}»</i>` : "");
     const cl = u.cond ? (K.COND?.[u.cond] || ["📣", u.cond]) : null, cs = cl ? `${cl[0]} <b>${e(tx(cl[1]))}</b>` : "";
     if (u.kind === "ask_answer") return tx("{n} answered your question about {p}: {c}", { n: nm, p: `<b>${e(u.place)}</b>`, c: `${cs} · ${e(u.spot || "")}` }) + (u.note ? `<br><i>«${e(u.note)}»</i>` : "");
     if (u.kind === "dream_now") return tx("News from your dream {p}: {c}", { p: `<b>${e(u.place)}</b>`, c: `${cs} · ${e(u.spot || "")}` }) + (u.note ? `<br><i>«${e(u.note)}»</i>` : "");

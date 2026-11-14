@@ -15,8 +15,15 @@ window.PhotoPulse = (() => {
     "Sunrise": "Alba", "Sunset": "Tramonto", "Subject height": "Altezza del soggetto",
     "statue · 5 m": "statua · 5 m", "church · 20 m": "chiesa · 20 m", "castle · 40 m": "castello · 40 m", "cliff · 100 m": "rupe · 100 m", "mountain · 500 m": "montagna · 500 m",
     "Calculating…": "Calcolo…", "Stand {d} of the place": "Mettiti a {d} del posto", "at about {k}": "a circa {k}",
-    "Navigate to the spot": "Naviga al punto", "On the map": "Sulla mappa", "Open in the planner": "Apri nel planner",
-    "sun": "sole", "moon": "luna", "core": "nucleo", "Low clouds {l}% · mid {m}% · high {h}%": "Nuvole basse {l}% · medie {m}% · alte {h}%",
+    "Navigate to the spot": "Naviga al punto", "This place is": "Questo posto è", "the subject": "il soggetto", "where I shoot from": "il punto da cui scatto",
+    "From here, point towards {d}": "Da qui inquadra verso {d}", "or {d}": "oppure {d}", "your subject": "il tuo soggetto",
+    "A subject {h} m high about {k} away looks as big as {b}.": "Un soggetto alto {h} m a circa {k} appare grande quanto {b}.", "the sun": "il sole", "the moon": "la luna",
+    "Want advice from someone who knows it?": "Vuoi un consiglio da chi lo conosce?", "Ask a photo folk who's been": "Chiedi a un photo folk che c'è stato", "Ask who's there now": "Chiedi a chi è lì adesso",
+    "How is it now at {p}? Sky, fog, access?": "Com'è adesso a {p}? Cielo, nebbia, accesso?",
+    "Have you shot the sun or the moon with {p}? From which spot? Is it reachable?": "Hai fotografato il sole o la luna con {p}? Da quale punto? È raggiungibile?",
+    "How dark is it at {p} at night? Light pollution, access in the dark?": "Quanto è buio di notte a {p}? Inquinamento luminoso, accesso al buio?",
+    "Where did you shoot {p} from, and in which light? Anything in the way?": "Da dove hai fotografato {p}, e con che luce? Ci sono ostacoli?", "On the map": "Sulla mappa", "Open in the planner": "Apri nel planner",
+    "sun": "sole", "moon": "luna", "moon ": "luna", "core": "nucleo", "Low clouds {l}% · mid {m}% · high {h}%": "Nuvole basse {l}% · medie {m}% · alte {h}%",
     "No forecast yet for that day: check it a few days before.": "Ancora nessuna previsione per quel giorno: guardala qualche giorno prima.",
     "today": "oggi", "tomorrow": "domani",
     "Grazing light from the left": "Luce radente da sinistra", "Grazing light from the right": "Luce radente da destra",
@@ -93,6 +100,7 @@ window.PhotoPulse = (() => {
 .pp2-a .acts{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px}
 .pp2-a .acts a{font-size:12px;font-weight:600;color:#ffbe7a;text-decoration:none;border:1px solid rgba(255,190,122,.45);border-radius:99px;padding:4px 9px}
 .pp2-note{margin:0;font-size:11.5px;color:#8a99ab}
+.pp2-ask{margin-top:4px;padding:10px;border-radius:14px;border:1px dashed rgba(255,190,122,.45)}.pp2-ask p{margin:0 0 7px;font-size:12.5px;color:#ffd27a;font-weight:600}
 .pp2-good{font-size:12.5px;color:#8fe0a6;margin:0}.pp2-bad{font-size:12.5px;color:#ffbe7a;margin:0}
 @media(max-width:420px){.pp2-a{grid-template-columns:72px minmax(0,1fr);padding:8px}.pp2-a svg{width:72px;height:72px}}`;
     document.head.append(st);
@@ -148,18 +156,42 @@ window.PhotoPulse = (() => {
       ${rays}${cam}<rect x="${C - 4}" y="${C - 4}" width="8" height="8" rx="2" fill="#ffbe7a"/>${body}</svg>`;
   }
 
+  function diagramCam(looks, bodyAz, icon, side) {
+    const C = 59, R = 44, P = (a, r = R) => [C + r * Math.sin(a * rad), C - r * Math.cos(a * rad)];
+    const body = `<text x="${(C + (R + 9) * Math.sin(bodyAz * rad)).toFixed(1)}" y="${(C - (R + 9) * Math.cos(bodyAz * rad) + 4).toFixed(1)}" font-size="13" text-anchor="middle">${icon}</text>`;
+    const [bx, by] = P(bodyAz);
+    const ray = `<line x1="${C}" y1="${C}" x2="${bx.toFixed(1)}" y2="${by.toFixed(1)}" stroke="#ffd27a" stroke-width="1.4" stroke-dasharray="3 3"/>`;
+    const lk = looks.map((a, i) => { const [x, y] = P(a, R * .78); return `<line x1="${C}" y1="${C}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" stroke="#8fe0a6" stroke-width="${i ? 1.2 : 1.8}" opacity="${i ? .6 : 1}"/><rect x="${(x - 4).toFixed(1)}" y="${(y - 4).toFixed(1)}" width="8" height="8" rx="2" fill="#ffbe7a" opacity="${i ? .6 : 1}"/>`; }).join("");
+    return `<svg viewBox="0 0 118 118" role="img" aria-hidden="true"><circle cx="${C}" cy="${C}" r="${R}" fill="rgba(16,35,58,.8)" stroke="rgba(255,255,255,.15)"/>
+      <text x="${C}" y="11" font-size="9" fill="#9fb0c4" text-anchor="middle">N</text><text x="${C}" y="114" font-size="9" fill="#5f7085" text-anchor="middle">S</text>
+      <text x="113" y="${C + 3}" font-size="9" fill="#5f7085" text-anchor="middle">E</text><text x="5" y="${C + 3}" font-size="9" fill="#5f7085" text-anchor="middle">${it ? "O" : "W"}</text>
+      ${ray}${lk}<circle cx="${C}" cy="${C}" r="7" fill="#2fbf71" stroke="#051b10" stroke-width="1.5"/><text x="${C}" y="${C + 3.5}" font-size="8" text-anchor="middle">📷</text>${body}</svg>`;
+  }
+
   /* ---------- mount ---------- */
   async function mount(el, K, s) {
     addCss();
-    s = { lat: +s.lat, lon: +s.lon, name: s.name, id: s.id };
+    s = { lat: +s.lat, lon: +s.lon, name: s.name, id: s.id, sub: s.subcategory };
     const esc = K.esc;
-    const S = { q: null, when: "rise", h: 20, con: "Orion" };
+    const S = { q: null, when: "rise", h: 20, con: "Orion", mode: s.sub === "viewpoint" ? "camera" : "subject" };
+    try { const md = localStorage.getItem(`pp2-mode-${s.id}`); if (md === "camera" || md === "subject") S.mode = md; } catch {}
     try { const sv = JSON.parse(sessionStorage.getItem("pp2") || "{}"); Object.assign(S, { when: sv.when || "rise", h: sv.h || 20, con: sv.con || "Orion" }); } catch {}
-    el.innerHTML = `<div class="pp2"><p class="pp2-h">📸 <b>${esc(t("Where do I stand, and when?"))}</b> ${esc(t("The place is your subject."))}</p>
+    el.innerHTML = `<div class="pp2"><p class="pp2-h">📸 <b>${esc(t("Where do I stand, and when?"))}</b></p>
+      <div class="pp2-row"><span>${esc(t("This place is"))}</span><div class="pp2-seg" data-ppmode>${[["subject", "🎯 " + t("the subject")], ["camera", "📷 " + t("where I shoot from")]].map(([k, l]) => `<button type="button" data-ppm="${k}" class="${S.mode === k ? "on" : ""}">${esc(l)}</button>`).join("")}</div></div>
       <div class="pp2-qs" role="group">${[["graze", "🌅 " + t("Grazing light")], ["front", "☀️ " + t("Front light")], ["side", "↗️ " + t("Side light (3/4)")], ["sunback", "🎯 " + t("Sun behind it")],
         ["fullmoon", "🌕 " + t("Full moon behind it")], ["moon", "🌙 " + t("Moon in front or to the side")], ["core", "🌌 " + t("Milky Way core")], ["arch", "🌠 " + t("Milky Way arch")], ["cons", "✨ " + t("Constellation over it")]]
         .map(([k, l]) => `<button type="button" data-ppq="${k}">${esc(l)}</button>`).join("")}</div>
-      <div class="pp2-opts" data-ppopts></div><div class="pp2-res" data-ppres></div></div>`;
+      <div class="pp2-opts" data-ppopts></div><div class="pp2-res" data-ppres></div>
+      ${K.ask ? `<div class="pp2-ask"><p>${esc(t("Want advice from someone who knows it?"))}</p><div class="pp2-qs"><button type="button" data-ppask="photo">📷 ${esc(t("Ask a photo folk who's been"))}</button><button type="button" data-ppask="now">📍 ${esc(t("Ask who's there now"))}</button></div></div>` : ""}</div>`;
+    el.querySelectorAll("[data-ppm]").forEach(b => b.addEventListener("click", () => { S.mode = b.dataset.ppm; try { localStorage.setItem(`pp2-mode-${s.id}`, S.mode); } catch {} el.querySelectorAll("[data-ppm]").forEach(x => x.classList.toggle("on", x === b)); K.track?.(`Photo pulse: mode ${S.mode}`); if (S.q) run(); }));
+    el.querySelectorAll("[data-ppask]").forEach(b => b.addEventListener("click", () => {
+      const q = S.q, nm = s.name || "", photo = b.dataset.ppask === "photo";
+      const note = !photo ? t("How is it now at {p}? Sky, fog, access?", { p: nm })
+        : ["sunback", "fullmoon", "moon"].includes(q) ? t("Have you shot the sun or the moon with {p}? From which spot? Is it reachable?", { p: nm })
+        : ["core", "arch", "cons"].includes(q) ? t("How dark is it at {p} at night? Light pollution, access in the dark?", { p: nm })
+        : t("Where did you shoot {p} from, and in which light? Anything in the way?", { p: nm });
+      K.track?.(`Photo pulse: ask ${b.dataset.ppask}`); K.ask({ lat: s.lat, lon: s.lon, name: nm, spot_id: s.id, target: photo ? "photo" : "now", note });
+    }));
     const wx = meteo(s.lat, s.lon);   // timezone and clouds, in the meantime
     el.querySelectorAll("[data-ppq]").forEach(b => b.addEventListener("click", () => { S.q = b.dataset.ppq; el.querySelectorAll("[data-ppq]").forEach(x => x.classList.toggle("on", x === b)); K.track?.(`Photo pulse: ${S.q}`); run(); }));
 
@@ -205,7 +237,17 @@ window.PhotoPulse = (() => {
       const pl = `https://fabiocostaph.com/?tp=${cam.lat.toFixed(5)},${cam.lon.toFixed(5)}&tn=${encodeURIComponent((it ? "Da dove scattare: " : "Where to shoot: ") + (s.name || ""))}&td=${day}&tt=planner#tools`;
       return `<div class="acts">${i >= 0 && K.mapPlan ? `<a href="#spotfolk" data-ppmap="${i}">📍 ${esc(t("On the map"))}</a>` : ""}<a href="https://www.google.com/maps/dir/?api=1&destination=${cam.lat.toFixed(5)},${cam.lon.toFixed(5)}" target="_blank" rel="noopener">🗺️ ${esc(t("Navigate to the spot"))}</a><a href="${pl}" target="_blank" rel="noopener">🔭 ${esc(t("Open in the planner"))}</a></div>`;
     };
-    const card = ({ title, ms, off, camAz, km, bodyAz, icon, text, extra = "", m, side, cams, body }) => {
+    const card = ({ title, ms, off, camAz, km, bodyAz, icon, text, extra = "", m, side, cams, body, size }) => {
+      if (S.mode === "camera") {
+        // the place is where you shoot from: the same geometry seen from here — where to point, and what the subject should be
+        const looks = (cams || [camAz]).map(x => norm(x + 180)), look = looks[0], far = km || 1;
+        const subj = dest(s.lat, s.lon, look, far);
+        const plan = body ? { mode: "camera", subject: { lat: subj.lat, lon: subj.lon, name: t("your subject") }, cam: { lat: s.lat, lon: s.lon }, cams: [], body, ms, off, icon, title, h: S.h, aligned: !side && !cams } : null;
+        const sz = size ? `<p>${esc(t("A subject {h} m high about {k} away looks as big as {b}.", { h: S.h, k: kmTxt(far), b: t(size === "sun" ? "the sun" : "the moon") }))}</p>` : "";
+        return { html: `<div class="pp2-a">${diagramCam(looks, bodyAz, icon, side)}<div><b>${esc(title)}</b><span class="w">🕒 ${esc(dayName(ms, off))} · ${esc(hm(ms, off))}</span>
+          <p>🎯 ${esc(t("From here, point towards {d}", { d: dir8(look) }))} (${Math.round(look)}° ${esc(dir16(look))})${looks.length > 1 ? ` ${esc(t("or {d}", { d: `${dir8(looks[1])} (${Math.round(looks[1])}°)` }))}` : ""}${text ? ` · ${esc(text)}` : ""}</p>
+          ${sz}${size ? "" : extra}${clouds(ms, m)}${links({ lat: s.lat, lon: s.lon }, ms, off, plan)}</div></div>` };
+      }
       const cam = dest(s.lat, s.lon, camAz, km);
       const plan = body ? { subject: { lat: s.lat, lon: s.lon, name: s.name }, cam, cams: (cams || [camAz]).map(a => dest(s.lat, s.lon, a, km)), body, ms, off, icon, title, h: S.h, aligned: !side && !cams } : null;
       return { html: `<div class="pp2-a">${diagram(cams || [camAz], bodyAz, icon, side)}<div><b>${esc(title)}</b><span class="w">🕒 ${esc(dayName(ms, off))} · ${esc(hm(ms, off))}</span>
@@ -235,6 +277,7 @@ window.PhotoPulse = (() => {
       }
       // --- the sun or the moon right behind the top of the subject (distance from the size) ---
       const behind = async (pos, ms0, rising, diam) => {
+        if (S.mode === "camera") { const km = Math.max(0.15, (S.h / Math.tan(diam * rad)) / 1000), x = crossing(pos, s, ms0 - 3 * HOUR, 7 * HOUR, 0.3, rising) || ms0; return { ms: x, p: pos(x, s), km }; }
         // first guess: the body at the astronomical horizon; then the ground heights give the true angle to the top
         const km = Math.max(0.15, (S.h / Math.tan(diam * rad)) / 1000);
         let p = pos(ms0, s), cam = dest(s.lat, s.lon, p.az + 180, km), ms = ms0;
@@ -251,7 +294,7 @@ window.PhotoPulse = (() => {
         for (const noon of noons(off, 4)) {
           const ev = sunEvents(noon, s)[-0.833], base = rise ? ev.rise : ev.set; if (!base || base < Date.now()) continue;
           const r = await behind((x, ss) => sunAt(x, ss), base, rise, SUN_D);
-          out.push(card({ title: t(rise ? "The sun rises right behind the top of the subject." : "The sun sets right behind the top of the subject."), ms: r.ms, off, camAz: r.p.az + 180, km: r.km, bodyAz: r.p.az, icon: "☀️", body: "sun", m,
+          out.push(card({ title: t(rise ? "The sun rises right behind the top of the subject." : "The sun sets right behind the top of the subject."), ms: r.ms, off, camAz: r.p.az + 180, km: r.km, bodyAz: r.p.az, icon: "☀️", body: "sun", size: "sun", m,
             text: t("sun {a}° · {h}° high", { a: Math.round(r.p.az), h: String(Math.round(r.p.alt * 10) / 10).replace(".", it ? "," : ".") }), extra: `<p>${esc(t("From here the sun looks as big as the subject. Further away it gets bigger."))}</p>` }));
           if (out.length >= 3) break;
         }
@@ -274,7 +317,7 @@ window.PhotoPulse = (() => {
         const out = [];
         for (const f of found.slice(0, 4)) {
           const r = await behind((x, ss) => moonAt(x, ss), f.ms, f.rising, MOON_D);
-          out.push(card({ title: `${t(f.rising ? "Full moon rising behind it" : "Full moon setting behind it")} · ${Math.round(f.il * 100)}%`, ms: r.ms, off, camAz: r.p.az + 180, km: r.km, bodyAz: r.p.az, icon: "🌕", body: "moon", m,
+          out.push(card({ title: `${t(f.rising ? "Full moon rising behind it" : "Full moon setting behind it")} · ${Math.round(f.il * 100)}%`, ms: r.ms, off, camAz: r.p.az + 180, km: r.km, bodyAz: r.p.az, icon: "🌕", body: "moon", size: "moon", m,
             text: t("moon {a}° · {h}° high", { a: Math.round(r.p.az), h: String(Math.round(r.p.alt * 10) / 10).replace(".", it ? "," : ".") }), extra: `<p>${esc(t("From here the moon looks as big as the subject. Further away it gets bigger."))}</p>` }));
         }
         return out;

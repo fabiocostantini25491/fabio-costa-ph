@@ -2522,7 +2522,8 @@ const Spots = (() => {
     planLayer = L.layerGroup().addTo(map);
     const S = { cam: { lat: plan.cam.lat, lon: plan.cam.lon }, dt: 0 };
     const ico = (html, cls) => L.divIcon({ className: "", iconSize: [34, 34], iconAnchor: [17, 17], html: `<div class="mp-ico ${cls}">${html}</div>` });
-    L.marker([plan.subject.lat, plan.subject.lon], { icon: ico("🎯", "subj"), interactive: false }).addTo(planLayer);
+    const subjM = L.marker([plan.subject.lat, plan.subject.lon], { icon: ico("🎯", "subj"), draggable: true, autoPan: true }).addTo(planLayer);
+    subjM.on("drag", ev => { const ll = ev.target.getLatLng(); plan.subject = { ...plan.subject, lat: ll.lat, lon: ll.lng }; draw(); });
     (plan.cams || []).slice(1).forEach(c => L.marker([c.lat, c.lon], { icon: ico("📷", "alt"), interactive: false, opacity: .55 }).addTo(planLayer));
     const camM = L.marker([S.cam.lat, S.cam.lon], { icon: ico("📷", "cam"), draggable: true, autoPan: true }).addTo(planLayer);
     const sight = L.polyline([], { color: "#8fe0a6", weight: 3, opacity: .9 }).addTo(planLayer);
@@ -2531,7 +2532,8 @@ const Spots = (() => {
     planBox?.remove(); planBox = L.DomUtil.create("div", "mp-panel", host); L.DomEvent.disableClickPropagation(planBox); L.DomEvent.disableScrollPropagation(planBox);
     planBox.innerHTML = `<div class="mp-h"><b>${esc(plan.icon)} ${esc(plan.title)}</b><button type="button" data-mpclose aria-label="Close">×</button></div>
       <p class="mp-t" data-mpt></p><input type="range" min="-120" max="120" step="2" value="0" data-mpr aria-label="${it ? "Ora" : "Time"}">
-      <p class="mp-r" data-mpinfo></p><p class="mp-n">${it ? "Trascina 📷 per cambiare punto. La linea verde è dove guardi, quella tratteggiata la direzione" : "Drag 📷 to move. The green line is where you look, the dashed one the direction of"} ${plan.body === "sun" ? (it ? "del sole" : "the sun") : plan.body === "moon" ? (it ? "della luna" : "the moon") : (it ? "del cielo" : "the sky")}.</p>
+      <p class="mp-r" data-mpinfo></p><p class="mp-n">${plan.mode === "camera" ? (it ? "Sei nel 📷: trascina il 🎯 sul soggetto che hai davanti (una cima, un faro, un campanile). La linea verde è dove guardi, quella tratteggiata la direzione" : "You're at 📷: drag 🎯 onto the subject in front of you (a peak, a lighthouse, a bell tower). The green line is where you look, the dashed one the direction of")
+        : (it ? "Trascina 📷 per cambiare punto (anche 🎯 si sposta). La linea verde è dove guardi, quella tratteggiata la direzione" : "Drag 📷 to move (🎯 moves too). The green line is where you look, the dashed one the direction of")} ${plan.body === "sun" ? (it ? "del sole" : "the sun") : plan.body === "moon" ? (it ? "della luna" : "the moon") : (it ? "del cielo" : "the sky")}.</p>
       <div class="mp-acts"><a href="#" data-mpnav target="_blank" rel="noopener">🗺️ ${it ? "Naviga al punto" : "Navigate there"}</a><a href="#" data-mp3d target="_blank" rel="noopener">🔭 ${it ? "Orizzonte in 3D" : "Horizon in 3D"}</a></div>`;
     const draw = () => {
       const ms = plan.ms + S.dt * 6e4, p = posOf(ms, S.cam), km = Math.max(1.5, map.distance([S.cam.lat, S.cam.lon], [plan.subject.lat, plan.subject.lon]) / 1000 * 2.2);
@@ -2560,7 +2562,7 @@ const Spots = (() => {
     const box = popup.getElement()?.querySelector("[data-photopulse]"); if (!box || box.dataset.done) return;
     box.dataset.done = "1";
     if (!ppJs) ppJs = new Promise((res, rej) => { const v = (document.querySelector('script[src*="spots.js"]')?.getAttribute("src") || "").split("?v=")[1] || ""; const js = document.createElement("script"); js.src = `photopulse.js${v ? `?v=${v}` : ""}`; js.onload = res; js.onerror = rej; document.head.append(js); });
-    ppJs.then(() => { if (typeof Astro === "undefined") throw new Error("astro"); window.PhotoPulse.mount(box, { esc, track: ev => window.fcTrack?.(ev), update: () => popup.update(), mapPlan: plan => { map?.closePopup(); mapPlan(plan); } }, s); setTimeout(() => popup.update(), 50); })
+    ppJs.then(() => { if (typeof Astro === "undefined") throw new Error("astro"); window.PhotoPulse.mount(box, { esc, track: ev => window.fcTrack?.(ev), update: () => popup.update(), mapPlan: plan => { map?.closePopup(); mapPlan(plan); }, ask: pre => openAskForm(pre, () => loadAsks(popup, s)) }, s); setTimeout(() => popup.update(), 50); })
       .catch(() => { ppJs = null; box.dataset.done = ""; box.innerHTML = `<p class="pc-empty">The Photo pulse could not load. Check your connection.</p>`; });
   }
   let asksV = true;
@@ -2572,16 +2574,28 @@ const Spots = (() => {
     try { list = (await api("/rest/v1/rpc/pulse_asks_near", { method: "POST", body: { p_lat: +s.lat, p_lon: +s.lon } })).data || []; }
     catch (err) { if ([400, 404].includes(err.status)) asksV = false; return; }
     const it = IT_(), mine = list.find(a => a.mine);
-    box.innerHTML = `${list.length ? `<p class="pc-cams-h">❓ ${it ? "Chiedono com'è adesso" : "Folk are asking how it is now"}</p>
-      <ul class="ask-list">${list.map(a => `<li class="${a.mine ? "mine" : ""}"><b>${a.mine ? (it ? "La tua domanda" : "Your question") : esc(a.name || (it ? "Un folk" : "A folk"))}</b> · ${esc(a.place)}<small>${agoL(a.at)} ·${a.answers ? (it ? `${a.answers} ${a.answers === 1 ? "risposta" : "risposte"}` : `${a.answers} ${a.answers === 1 ? "answer" : "answers"}`) : (it ? "ancora nessuna risposta" : "no answer yet")}</small>
+    box.innerHTML = `${list.length ? `<p class="pc-cams-h">❓ ${it ? "Domande dei folk su questa zona" : "Folk questions about this area"}</p>
+      <ul class="ask-list">${list.map(a => { const n = (a.answers || 0) + (a.replies || []).length, ph = a.target === "photo";
+        return `<li class="${a.mine ? "mine" : ""}${ph ? " photo" : ""}"><b>${a.mine ? (it ? "La tua domanda" : "Your question") : esc(a.name || (it ? "Un folk" : "A folk"))}</b> · ${esc(a.place)}${ph ? ` · <i class="ask-to">📷 ${it ? "ai photo folk" : "to photo folk"}</i>` : ""}<small>${agoL(a.at)} · ${n ? (it ? `${n} ${n === 1 ? "risposta" : "risposte"}` : `${n} ${n === 1 ? "answer" : "answers"}`) : (it ? "ancora nessuna risposta" : "no answer yet")}</small>
         ${a.note ? `<q>${ugc(a.note)}</q>` : ""}
-        ${a.mine ? `<button type="button" class="text-link" data-askoff="${a.id}">${it ? "Ritira la domanda" : "Withdraw the question"}</button>` : `<button type="button" class="pop-btn" data-askreply>${it ? "Sei qui? Rispondi" : "Here now? Answer"}</button>`}</li>`).join("")}</ul>` : ""}
+        ${(a.replies || []).length ? `<ul class="ask-replies">${a.replies.map(r => `<li><b>${r.mine ? (it ? "Tu" : "You") : esc(r.name || "Folk")}</b> <small>${agoL(r.at)}</small><p>${ugc(r.body)}</p></li>`).join("")}</ul>` : ""}
+        ${a.mine ? `<button type="button" class="text-link" data-askoff="${a.id}">${it ? "Ritira la domanda" : "Withdraw the question"}</button>`
+          : `<div class="ask-acts">${ph ? "" : `<button type="button" class="pop-btn" data-askreply>${it ? "Sei qui? Com'è adesso" : "Here now? How is it"}</button>`}<button type="button" class="pop-btn${ph ? " primary" : ""}" data-askwrite="${a.id}">✍ ${it ? "Rispondi" : "Answer"}</button></div>
+            <form class="ask-wform" data-askform="${a.id}" hidden><textarea maxlength="400" rows="3" placeholder="${ph ? (it ? "es. Dal belvedere a nord, 200 m dopo la croce. Meglio un 70-200." : "e.g. From the viewpoint to the north, 200 m past the cross. A 70-200 works best.") : (it ? "es. Strada aperta, nebbia fino alle 9." : "e.g. Road open, fog until 9.")}"></textarea><button type="submit" class="pop-btn primary">${it ? "Invia" : "Send"}</button></form>`}</li>`; }).join("")}</ul>` : ""}
       ${mine ? "" : `<button type="button" class="pc-share ask-open" data-askopen>❓ ${it ? "Chiedi ai folk com'è adesso" : "Ask the folk how it is now"}</button>`}`;
     box.hidden = false;
     box.querySelector("[data-askopen]")?.addEventListener("click", () => openAskForm({ lat: +s.lat, lon: +s.lon, name: s.name, spot_id: s.id }, () => { box.querySelector("[data-askopen]")?.remove(); loadAsks(popup, s); }));
     box.querySelectorAll("[data-askreply]").forEach(b => b.addEventListener("click", () => {
       const f = el.querySelector("[data-condform]"); if (f?.hidden) el.querySelector("[data-condreport]")?.click();
       setTimeout(() => (f || el.querySelector("[data-cond]"))?.scrollIntoView({ behavior: "smooth", block: "center" }), 60);
+    }));
+    box.querySelectorAll("[data-askwrite]").forEach(b => b.addEventListener("click", () => { const f = box.querySelector(`[data-askform="${b.dataset.askwrite}"]`); f.hidden = !f.hidden; if (!f.hidden) f.querySelector("textarea").focus(); popup.update(); }));
+    box.querySelectorAll("[data-askform]").forEach(f => f.addEventListener("submit", async ev => {
+      ev.preventDefault(); const body = f.querySelector("textarea").value.trim(), btn = f.querySelector("[type=submit]"); if (body.length < 2) return;
+      btn.disabled = true;
+      try { await api("/rest/v1/pulse_ask_replies", { method: "POST", headers: { Prefer: "return=minimal" }, body: { ask_id: +f.dataset.askform, author_name: displayName(), body: body.slice(0, 400) } });
+        toast(it ? "Grazie: la risposta arriva a chi ha chiesto." : "Thanks: your answer reaches who asked."); window.fcTrack?.("Spots: question answered"); loadAsks(popup, s); }
+      catch (err) { btn.disabled = false; toast(/relation|schema cache/i.test(err.message) ? (it ? "Arriva quando il database è aggiornato." : "This arrives once the database is updated.") : `Could not send it: ${err.message}`, true); }
     }));
     box.querySelectorAll("[data-askoff]").forEach(b => b.addEventListener("click", async () => {
       if (b.dataset.confirm !== "1") { b.dataset.confirm = "1"; b.textContent = it ? "Tocca di nuovo per ritirarla" : "Tap again to withdraw"; return; }
@@ -2592,11 +2606,13 @@ const Spots = (() => {
   function openAskForm(pre, done) {
     const it = IT_();
     if (!session || guest) { location.hash = "join"; return; }
+    const photo = pre.target === "photo";
     const d = dlg("askDialog", `<form class="import-body gate-form" novalidate>
-      <span class="eyebrow">Folk only</span><h2>❓ ${it ? "Com'è adesso a" : "How is it now at"} ${esc(pre.name)}?</h2>
-      <p class="gate-help left">${it ? "La domanda arriva ai folk che conoscono la zona: chi ha firmato o salvato posti entro 15 km, o vive vicino. Rispondono con un «com'è adesso» che resta sulla mappa per tutti. Vale 48 ore." : "The question reaches the folk who know the area: who signed or saved places within 15 km, or lives nearby. They answer with a «how is it now» that stays on the map for everyone. It lasts 48 hours."}</p>
+      <span class="eyebrow">Folk only</span><h2>${photo ? `📷 ${it ? "Chiedi a un photo folk: " : "Ask a photo folk: "}${esc(pre.name)}` : `❓ ${it ? "Com'è adesso a" : "How is it now at"} ${esc(pre.name)}?`}</h2>
+      <p class="gate-help left">${photo ? (it ? "La domanda arriva ai photo folk che hanno firmato o salvato posti entro 15 km, o vivono vicino. Rispondono per iscritto: la risposta arriva nelle tue notifiche e resta nella scheda del posto. Vale 48 ore." : "The question reaches the photo folk who signed or saved places within 15 km, or live nearby. They answer in writing: the answer arrives in your notifications and stays in the place card. It lasts 48 hours.")
+        : (it ? "La domanda arriva ai folk che conoscono la zona: chi ha firmato o salvato posti entro 15 km, o vive vicino. Rispondono con un «com'è adesso» che resta sulla mappa per tutti, o per iscritto. Vale 48 ore." : "The question reaches the folk who know the area: who signed or saved places within 15 km, or lives nearby. They answer with a «how is it now» that stays on the map for everyone, or in writing. It lasts 48 hours.")}</p>
       <label for="askNote">${it ? "Cosa vuoi sapere?" : "What do you want to know?"} <small>(${it ? "facoltativo" : "optional"})</small></label>
-      <textarea id="askNote" maxlength="200" rows="3" placeholder="${it ? "es. C'è neve sul sentiero? La cascata ha acqua? C'è tanta gente?" : "e.g. Snow on the trail? Is the waterfall flowing? Crowded?"}"></textarea>
+      <textarea id="askNote" maxlength="200" rows="3" placeholder="${it ? "es. C'è neve sul sentiero? La cascata ha acqua? C'è tanta gente?" : "e.g. Snow on the trail? Is the waterfall flowing? Crowded?"}">${esc(pre.note || "")}</textarea>
       <p class="gate-note" data-askmsg hidden></p>
       <button type="submit" class="outline-link">${it ? "Chiedi ai folk" : "Ask the folk"}</button>
     </form>`);
@@ -2604,7 +2620,7 @@ const Spots = (() => {
       ev.preventDefault();
       const btn = d.querySelector("[type=submit]"), msg = d.querySelector("[data-askmsg]"); btn.disabled = true;
       try {
-        await api("/rest/v1/pulse_asks", { method: "POST", headers: { Prefer: "return=minimal" }, body: { author_name: displayName(), spot_id: pre.spot_id || null, lat: +(+pre.lat).toFixed(4), lon: +(+pre.lon).toFixed(4), place_name: String(pre.name || "").slice(0, 80) || "?", note: d.querySelector("#askNote").value.trim() || null } });
+        await api("/rest/v1/pulse_asks", { method: "POST", headers: { Prefer: "return=minimal" }, body: { author_name: displayName(), spot_id: pre.spot_id || null, lat: +(+pre.lat).toFixed(4), lon: +(+pre.lon).toFixed(4), place_name: String(pre.name || "").slice(0, 80) || "?", note: d.querySelector("#askNote").value.trim().slice(0, 200) || null, ...(photo ? { target: "photo" } : {}) } });
         d.close(); toast(it ? "Chiesto: i folk della zona lo vedono nell'Hub. Le risposte arrivano nelle tue notifiche." : "Asked: the folk of the area see it in the Hub. Answers arrive in your notifications.");
         window.fcTrack?.("Spots: asked how it is now"); done?.();
       } catch (err) {
@@ -3536,8 +3552,11 @@ const Spots = (() => {
   const highlighted = s => wsPlane(s) || wsOffer(s) || wsNew(s) || localNew(s) || freshPlace(s);   // sempre visibili, anche da lontano
   const ICON_PLANE = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 19h19"/><path d="M3.8 13.6 6 15.4l12.3-3.3c1.2-.3 2-1.6 1.6-2.7-.3-.9-1.3-1.3-2.2-1.1l-3.6 1-5.4-4.6-2 .5 3 5.3-3.5 1-1.8-1.4-1.6.4z"/></svg>';
   const ICON_LOCAL = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21v-8"/><path d="M12 13c0-4 2.6-7 7.5-7.2C19.4 10.6 16.6 13 12 13z"/><path d="M12 15.5c0-3-2-5.3-6.5-5.5.1 3.7 2.3 5.5 6.5 5.5z"/></svg>';
+  // points of interest (churches, towers, castles, bridges, squares…) get their own pin, apart from photo spots
+  const ICON_POI = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 9.5 12 4l8.5 5.5z"/><path d="M5 20.5h14M6.5 11.5v6.5M10 11.5v6.5M14 11.5v6.5M17.5 11.5v6.5M4.5 18.5h15"/></svg>', POI_COLOR = "#e9d8a6";
   function pinIcon(s) {
-    const cat = CATS[s.category] || CATS.spot;
+    const poi = s.category === "spot" && spotSub(s) === "poi";
+    const cat = poi ? { ...(CATS.spot), icon: ICON_POI, color: POI_COLOR } : CATS[s.category] || CATS.spot;
     const plane = wsPlane(s), offer = wsOffer(s) && !plane, shineLocal = localNew(s) && !isWs(s), shineWs = (wsNew(s) || freshPlace(s)) && !plane && !offer && !shineLocal;
     const sg = signMap.get(s.id), tier = signTier(s);
     const cls = ["spot-pin", tier ? `signed t${tier}` : "", sg?.fabio ? "pick" : "", s.outdated ? "outdated" : "", s.support_local ? "local" : "", s.fragile ? "fragile" : "", plane ? "plane" : "", offer ? "offer" : "", shineWs ? "shine" : "", shineLocal ? "shine-local" : ""].filter(Boolean).join(" ");
