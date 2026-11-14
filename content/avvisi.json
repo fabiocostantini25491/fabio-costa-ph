@@ -1,6 +1,17 @@
 {
  "avvisi": [
   {
+   "id": "folk-atlas",
+   "dal": "2026-11-14 21:00",
+   "giorni": 2,
+   "testo": "New: your Folk Atlas — the world you signed and the places you dream of — and «How is it now?»: ask the folk who are there.",
+   "testo_it": "Novità: il tuo Folk Atlas — il mondo che hai firmato e i posti che sogni — e «Com'è adesso?»: chiedilo ai folk che sono lì.",
+   "link": "#me",
+   "pulsante": "Open your atlas",
+   "pulsante_it": "Apri il tuo atlante",
+   "attivo": true
+  },
+  {
    "id": "folk-hub",
    "dal": "2026-11-13 15:30",
    "giorni": 2,

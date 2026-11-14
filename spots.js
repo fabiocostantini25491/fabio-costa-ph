@@ -471,6 +471,7 @@ const Spots = (() => {
         memberStatus = admin ? "approved" : await fetchMemberStatus();
         if (admin) { try { await fetchMemberStatus(); } catch {} }   // anche tu hai i tuoi cluster
         if (memberStatus === "approved" || memberStatus === "pending") maybeAskStyles();
+        if (memberStatus === "approved") refreshHubDot(5000);
         pendingMode = false;
         if (memberStatus === "pending") {
           // ingresso immediato: chi è in attesa vede già tutta la mappa (se il database lo consente)
@@ -1295,8 +1296,27 @@ const Spots = (() => {
     setTimeout(() => { step2(); setTimeout(finish, dur2 + 80); }, spin + 80);
   }
 
+  /* 🔴 Right now on the map: the latest «how is it now» on the public map (supabase-com-e-adesso.sql), above the map, for everyone */
+  let liveAt = 0, liveV = true;
+  async function loadLive() {
+    const box = $("#sfLive"); if (!box || !liveV || Date.now() - liveAt < 5 * 60e3) return;
+    liveAt = Date.now();
+    let d = null;
+    try { d = (await api("/rest/v1/rpc/live_now", { method: "POST", body: {}, auth: !!session })).data; }
+    catch (err) { if ([400, 404].includes(err.status)) liveV = false; return; }
+    if (!d?.items?.length) { box.hidden = true; return; }
+    const it = IT_(), ago = agoL;
+    d.items = d.items.filter(c => COND[c.kind]);
+    if (!d.items.length) { box.hidden = true; return; }
+    box.innerHTML = `<p class="sfl-h"><span class="sfl-dot" aria-hidden="true"></span>${it ? "Adesso sulla mappa" : "Right now on the map"}<small>${d.today ? (it ? `${d.today} notizie dai folk nelle ultime 24 ore` : `${d.today} updates from the folk in the last 24 hours`) : (it ? "le ultime notizie dai folk" : "the latest from the folk")}</small></p>
+      <div class="sfl-row">${d.items.map(c => { const k = COND[c.kind] || ["📣", c.kind]; return `<button type="button" class="sfl-c" data-live="${c.spot_id}"><b>${k[0]}</b><span><strong>${esc(trS(k[1]))}</strong><small>${esc(c.name)} · ${esc(ago(c.at))}${c.on_spot ? " · 📍" : ""}</small></span></button>`; }).join("")}
+        <a class="sfl-c sfl-ask" href="${session && !guest ? "#hub" : "#join"}"><b>❓</b><span><strong>${it ? "Sei stato fuori oggi?" : "Out today?"}</strong><small>${it ? "Racconta com'è adesso" : "Tell the folk how it is"}</small></span></a></div>`;
+    box.hidden = false;
+    box.querySelectorAll("[data-live]").forEach(b => b.addEventListener("click", () => { window.fcTrack?.("Spots: live strip opened"); deepPlace = +b.dataset.live; openDeepPlace(); }));
+  }
   function renderApp() {
     setTimeout(sfState, 0);
+    setTimeout(loadLive, 1200);
     document.documentElement.classList.remove("sf-on-me");
     const lists = [...new Set(spots.map(s => s.list))].sort((a, b) => a.localeCompare(b));
     if (!activeLists) activeLists = new Set(lists);
@@ -2481,6 +2501,60 @@ const Spots = (() => {
     popup.update();
   }
 
+  /* «How is it now?» asked to the folk (supabase-com-e-adesso.sql): the open questions around a place, answered with a «how is it now»
+     on any place within 15 km; the folk who know the area (signed or saved nearby, or living within 25 km) see them in the Folk Hub. */
+  let asksV = true;
+  const agoL = t => IT_() ? condAgo(t).replace(/ min ago/, " min fa").replace(/ h ago/, " h fa").replace("yesterday", "ieri").replace(/ days ago/, " giorni fa") : condAgo(t);
+  async function loadAsks(popup, s) {
+    const el = popup.getElement(), box = el?.querySelector("[data-asks]");
+    if (!box || !asksV || guest || !session) return;
+    let list = [];
+    try { list = (await api("/rest/v1/rpc/pulse_asks_near", { method: "POST", body: { p_lat: +s.lat, p_lon: +s.lon } })).data || []; }
+    catch (err) { if ([400, 404].includes(err.status)) asksV = false; return; }
+    const it = IT_(), mine = list.find(a => a.mine);
+    box.innerHTML = `${list.length ? `<p class="pc-cams-h">❓ ${it ? "Chiedono com'è adesso" : "Folk are asking how it is now"}</p>
+      <ul class="ask-list">${list.map(a => `<li class="${a.mine ? "mine" : ""}"><b>${a.mine ? (it ? "La tua domanda" : "Your question") : esc(a.name || (it ? "Un folk" : "A folk"))}</b> · ${esc(a.place)}<small>${agoL(a.at)} ·${a.answers ? (it ? `${a.answers} ${a.answers === 1 ? "risposta" : "risposte"}` : `${a.answers} ${a.answers === 1 ? "answer" : "answers"}`) : (it ? "ancora nessuna risposta" : "no answer yet")}</small>
+        ${a.note ? `<q>${ugc(a.note)}</q>` : ""}
+        ${a.mine ? `<button type="button" class="text-link" data-askoff="${a.id}">${it ? "Ritira la domanda" : "Withdraw the question"}</button>` : `<button type="button" class="pop-btn" data-askreply>${it ? "Sei qui? Rispondi" : "Here now? Answer"}</button>`}</li>`).join("")}</ul>` : ""}
+      ${mine ? "" : `<button type="button" class="pc-share ask-open" data-askopen>❓ ${it ? "Chiedi ai folk com'è adesso" : "Ask the folk how it is now"}</button>`}`;
+    box.hidden = false;
+    box.querySelector("[data-askopen]")?.addEventListener("click", () => openAskForm({ lat: +s.lat, lon: +s.lon, name: s.name, spot_id: s.id }, () => { box.querySelector("[data-askopen]")?.remove(); loadAsks(popup, s); }));
+    box.querySelectorAll("[data-askreply]").forEach(b => b.addEventListener("click", () => {
+      const f = el.querySelector("[data-condform]"); if (f?.hidden) el.querySelector("[data-condreport]")?.click();
+      setTimeout(() => (f || el.querySelector("[data-cond]"))?.scrollIntoView({ behavior: "smooth", block: "center" }), 60);
+    }));
+    box.querySelectorAll("[data-askoff]").forEach(b => b.addEventListener("click", async () => {
+      if (b.dataset.confirm !== "1") { b.dataset.confirm = "1"; b.textContent = it ? "Tocca di nuovo per ritirarla" : "Tap again to withdraw"; return; }
+      try { await api(`/rest/v1/pulse_asks?id=eq.${b.dataset.askoff}`, { method: "DELETE" }); loadAsks(popup, s); } catch (err) { toast(`Could not withdraw it: ${err.message}`, true); }
+    }));
+    popup.update();
+  }
+  function openAskForm(pre, done) {
+    const it = IT_();
+    if (!session || guest) { location.hash = "join"; return; }
+    const d = dlg("askDialog", `<form class="import-body gate-form" novalidate>
+      <span class="eyebrow">Folk only</span><h2>❓ ${it ? "Com'è adesso a" : "How is it now at"} ${esc(pre.name)}?</h2>
+      <p class="gate-help left">${it ? "La domanda arriva ai folk che conoscono la zona: chi ha firmato o salvato posti entro 15 km, o vive vicino. Rispondono con un «com'è adesso» che resta sulla mappa per tutti. Vale 48 ore." : "The question reaches the folk who know the area: who signed or saved places within 15 km, or lives nearby. They answer with a «how is it now» that stays on the map for everyone. It lasts 48 hours."}</p>
+      <label for="askNote">${it ? "Cosa vuoi sapere?" : "What do you want to know?"} <small>(${it ? "facoltativo" : "optional"})</small></label>
+      <textarea id="askNote" maxlength="200" rows="3" placeholder="${it ? "es. C'è neve sul sentiero? La cascata ha acqua? C'è tanta gente?" : "e.g. Snow on the trail? Is the waterfall flowing? Crowded?"}"></textarea>
+      <p class="gate-note" data-askmsg hidden></p>
+      <button type="submit" class="outline-link">${it ? "Chiedi ai folk" : "Ask the folk"}</button>
+    </form>`);
+    d.querySelector("form").addEventListener("submit", async ev => {
+      ev.preventDefault();
+      const btn = d.querySelector("[type=submit]"), msg = d.querySelector("[data-askmsg]"); btn.disabled = true;
+      try {
+        await api("/rest/v1/pulse_asks", { method: "POST", headers: { Prefer: "return=minimal" }, body: { author_name: displayName(), spot_id: pre.spot_id || null, lat: +(+pre.lat).toFixed(4), lon: +(+pre.lon).toFixed(4), place_name: String(pre.name || "").slice(0, 80) || "?", note: d.querySelector("#askNote").value.trim() || null } });
+        d.close(); toast(it ? "Chiesto: i folk della zona lo vedono nell'Hub. Le risposte arrivano nelle tue notifiche." : "Asked: the folk of the area see it in the Hub. Answers arrive in your notifications.");
+        window.fcTrack?.("Spots: asked how it is now"); done?.();
+      } catch (err) {
+        btn.disabled = false; msg.hidden = false;
+        msg.textContent = /relation|function|schema cache/i.test(err.message) ? (it ? "Arriva quando il database è aggiornato (supabase-com-e-adesso.sql)." : "This arrives once the database is updated (supabase-com-e-adesso.sql).")
+          : /row-level|policy/i.test(err.message) ? (it ? "Hai già fatto 5 domande oggi: riprova domani." : "You've asked 5 questions today: try again tomorrow.") : `Could not send it: ${err.message}`;
+      }
+    });
+  }
+
   /* «Before you go» and «Go gently»: what to know about a place, written and checked by the folk.
      Each topic keeps its versions; ✓ Still correct confirms the latest one, ✎ It changed writes a new one.
      Status: Checked (confirmed by another folk, recently) · Unverified (no one else yet) · Needs update (too old) · Disputed (a change no one confirmed yet). */
@@ -2933,8 +3007,67 @@ const Spots = (() => {
         const s = spotById(id); if (s) markerById.get(id)?.setIcon(pinIcon(s));
       },
       openProfile: uid => openMemberProfile(uid),
-      placeLink: s => placeLink(s)
+      placeLink: s => placeLink(s),
+      dreamSky: () => dreamSky(), dreamSkySeen: items => dreamSkySeen(items), COND, refreshDot: () => refreshHubDot(),
+      goPoint: (lat, lon) => { location.hash = "spotfolk"; setTimeout(() => fitTo([{ lat: +lat, lon: +lon }]), 700); }
     };
+  }
+
+  /* ✨ The sky over your dream places (Photo forecast rules, today to the day after tomorrow): a clear or fiery sunrise or sunset.
+     Calculated in the browser from Open-Meteo, at most once an hour; what you've seen is remembered on this device. */
+  let skyMemo = null;
+  async function dreamSky() {
+    if (!session || guest) return [];
+    if (skyMemo && Date.now() - skyMemo.at < 36e5) return skyMemo.items;
+    let wish = [];
+    try { wish = ((await api("/rest/v1/rpc/atlas_get", { method: "POST", body: { p_user: myUid() } })).data?.wish || []).filter(w => w.lat != null && w.label).slice(0, 8); } catch { return []; }
+    if (!wish.length) { skyMemo = { at: Date.now(), items: [] }; return []; }
+    let list;
+    try {
+      const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${wish.map(w => (+w.lat).toFixed(3)).join(",")}&longitude=${wish.map(w => (+w.lon).toFixed(3)).join(",")}`
+        + "&hourly=cloud_cover_low,cloud_cover_mid,cloud_cover_high,precipitation&daily=sunrise,sunset&timezone=auto&forecast_days=3");
+      if (!r.ok) return []; list = await r.json(); if (!Array.isArray(list)) list = [list];
+    } catch { return []; }
+    const items = [];
+    wish.forEach((w, n) => {
+      const j = list[n]; if (!j?.hourly) return;
+      const H = j.hourly, D = j.daily, off = (j.utc_offset_seconds || 0) * 1000, nowL = new Date(Date.now() + off).toISOString().slice(0, 16);
+      const hi = t => H.time.indexOf(String(t).slice(0, 13) + ":00"), at = (k, i) => i >= 0 ? H[k][i] : null;
+      const clear = i => at("cloud_cover_low", i) < 20 && at("cloud_cover_mid", i) < 25 && at("cloud_cover_high", i) < 30 && !(at("precipitation", i) > 0);
+      const fiery = i => at("cloud_cover_low", i) < 30 && Math.max(at("cloud_cover_mid", i), at("cloud_cover_high", i)) >= 30 && Math.max(at("cloud_cover_mid", i), at("cloud_cover_high", i)) <= 80 && !(at("precipitation", i) > 0.2);
+      D.time.forEach((date, d) => d <= 2 && [["rise", D.sunrise[d]], ["set", D.sunset[d]]].forEach(([k, t]) => {
+        if (!t || t < nowL) return;
+        const i = hi(t); if (i < 0) return;
+        const type = fiery(i) ? (k === "rise" ? "fiery_rise" : "fiery") : clear(i) ? (k === "rise" ? "clear_rise" : "clear_set") : null;
+        if (type) items.push({ kind: "dream_sky", why: "dream", id: `${w.id}:${type}:${date}`, type, day: d, date, time: t.slice(11, 16), place: w.label, lat: +w.lat, lon: +w.lon, at: new Date(Date.parse(t + ":00Z") - off).toISOString() });
+      }));
+    });
+    let seen = []; try { seen = JSON.parse(localStorage.getItem("sf-dreamsky-seen") || "[]"); } catch {}
+    items.forEach(x => { x.new = !seen.includes(x.id); x.ico = PF[x.type][0]; x.label = PF[x.type][1]; });
+    skyMemo = { at: Date.now(), items: items.slice(0, 12) };
+    return skyMemo.items;
+  }
+  function dreamSkySeen(items) {
+    try { const seen = JSON.parse(localStorage.getItem("sf-dreamsky-seen") || "[]"); localStorage.setItem("sf-dreamsky-seen", JSON.stringify([...new Set([...seen, ...items.map(x => x.id)])].slice(-200))); } catch {}
+    items.forEach(x => { x.new = false; }); refreshHubDot();
+  }
+
+  /* a small dot on «The Folk Hub» when something new is waiting (notifications, questions, the sky over your dreams) */
+  let dotBusy = false;
+  async function refreshHubDot(delay = 0) {
+    if (delay) return setTimeout(() => refreshHubDot(), delay);
+    if (dotBusy) return; dotBusy = true;
+    let n = 0;
+    try {
+      if (session && !guest && memberStatus === "approved") {
+        const call = (fn, body) => api(`/rest/v1/rpc/${fn}`, { method: "POST", body }).then(r => r.data).catch(() => null);
+        const u = await call("my_updates", { p_limit: 1 });
+        const [du, au] = await Promise.all([call("dest_updates", { p_since: u?.seen || null }), call("atlas_updates", { p_since: u?.seen || null })]);
+        n = (u?.unread || 0) + (du?.unread || 0) + (au?.unread || 0) + Math.min(4, (await dreamSky()).filter(x => x.new).length);
+      }
+    } catch {}
+    dotBusy = false;
+    document.querySelectorAll(".sf-hubnav").forEach(a => { a.classList.toggle("has-new", n > 0); a.dataset.n = n > 9 ? "9+" : n || ""; });
   }
   function showHub() {
     const box = document.getElementById("folkHub"); if (!box) return;
@@ -3592,7 +3725,7 @@ const Spots = (() => {
           <button type="submit" class="pop-btn primary">Publish your story</button>
         </form>` : ""}
         <div class="pop-reviews" data-reviews><p class="pc-empty">No stories yet.</p></div>`;
-    const pulseBody = `<div class="pc-cond" data-cond></div><div class="pc-wx" data-wx hidden></div><div class="pc-wx pc-sea" data-sea hidden></div><div class="pc-cams" data-cams hidden></div><div data-pulse><p class="pc-empty">Quiet for now: the first signatures will make it move.</p></div>`;
+    const pulseBody = `<div class="pc-cond" data-cond></div><div class="pc-asks" data-asks hidden></div><div class="pc-wx" data-wx hidden></div><div class="pc-wx pc-sea" data-sea hidden></div><div class="pc-cams" data-cams hidden></div><div data-pulse><p class="pc-empty">Quiet for now: the first signatures will make it move.</p></div>`;
     const travelBody = `
       ${s.fragile ? `<div class="pc-badge fragile"><p class="pc-bh"><span aria-hidden="true">🛡️</span><b>Fragile place</b></p>
         <ul><li>Stay on the paths and keep groups small.</li><li>No drones, no fires, nothing left behind.</li><li>No geotags on social media: the exact spot stays among the folk.</li></ul></div>` : ""}
@@ -3680,7 +3813,7 @@ const Spots = (() => {
     el.querySelector("[data-copy]")?.addEventListener("click", ev => copyText(ev.currentTarget, `${s.lat.toFixed(6)}, ${s.lon.toFixed(6)}`));
     el.querySelectorAll("[data-gotravel]").forEach(b => b.addEventListener("click", () => { const d = el.querySelector('[data-sec="travel"]'); if (d) { d.open = true; popup.update(); setTimeout(() => d.scrollIntoView({ behavior: "smooth", block: "nearest" }), 60); } }));
     el.querySelectorAll(".pc-sec").forEach(d => d.addEventListener("toggle", () => popup.update()));
-    el.querySelector('[data-sec="pulse"]')?.addEventListener("toggle", ev => { if (ev.currentTarget.open) { loadWeather(popup, s); loadSea(popup, s); loadCams(popup, s); } });
+    el.querySelector('[data-sec="pulse"]')?.addEventListener("toggle", ev => { if (ev.currentTarget.open) { loadAsks(popup, s); loadWeather(popup, s); loadSea(popup, s); loadCams(popup, s); } });
     el.querySelector("[data-editspot]")?.addEventListener("click", () => { map.closePopup(); openEditPlace(s); });
     el.querySelector("[data-authorp]")?.addEventListener("click", () => openMemberProfile(s.created_by));
     el.querySelector("[data-delete]")?.addEventListener("click", async ev => {
@@ -6318,6 +6451,8 @@ const Spots = (() => {
       },
       askFolk: pre => { close?.(); openDestForm(pre); },
       COND, signPhotos, TOPIC, CLUSTERS, factValue: f => factValue(f),
+      askNow: pre => { close?.(); openAskForm(pre); },
+      passportLink: async () => { const { data: token } = await api("/rest/v1/rpc/share_create", { method: "POST", body: { p_kind: "passport", p_trip: null, p_list: "" } }); return `https://spotfolk.eu/?passport=${token}&utm_source=instagram&utm_medium=story#spotfolk`; },
       // the Place pulse of any point (weather, sea, webcams), drawn into el with the place card's own loaders
       pulse: (el, pt) => {
         el.innerHTML = `<div class="pc-wx" data-wx hidden></div><div class="pc-wx pc-sea" data-sea hidden></div><div class="pc-cams" data-cams hidden></div>`;

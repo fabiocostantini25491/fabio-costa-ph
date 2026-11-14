@@ -33,7 +33,11 @@ window.FolkAtlas = (() => {
     "No dreams yet. Save places on the map or add a dream: it turns green when you sign there.": "Ancora nessun sogno. Salva posti sulla mappa o aggiungi un sogno: diventa verde quando firmi lì.",
     "＋ Add a dream": "＋ Aggiungi un sogno", "A place or a country: Roccascalegna, Lofoten, Japan…": "Un posto o un Paese: Roccascalegna, Lofoten, Giappone…",
     "Where do you dream of going?": "Dove sogni di andare?", "Been somewhere before SpotFolk?": "Sei stato da qualche parte prima di SpotFolk?",
-    "The whole country": "Tutto il Paese", "A region": "Una regione", "{a} added a photo": "{a} ha aggiunto una foto", "{a} told a story": "{a} ha raccontato", "{a} signed": "{a} ha firmato",
+    "The whole country": "Tutto il Paese", "A region": "Una regione", "Ask the folk how it is now": "Chiedi ai folk com'è adesso", "No place on the map within 15 km yet: the folk can't answer from here.": "Ancora nessun posto sulla mappa entro 15 km: i folk non possono rispondere da qui.",
+    "Instagram story": "Storia Instagram", "MY WORLD ON SPOTFOLK": "IL MIO MONDO SU SPOTFOLK", "The world I signed.": "Il mondo che ho firmato.", "Countries on the spot": "Paesi sul posto",
+    "Make your atlas: the link is in the story": "Fai il tuo atlante: il link è nella storia", "My world on SpotFolk": "Il mio mondo su SpotFolk",
+    "Picture downloaded and the link to your passport copied: add it as a link sticker in your story.": "Immagine scaricata e link al tuo passaporto copiato: aggiungilo come sticker link nella storia.",
+    "Could not make the picture: {e}": "Immagine non creata: {e}", "{a} added a photo": "{a} ha aggiunto una foto", "{a} told a story": "{a} ha raccontato", "{a} signed": "{a} ha firmato",
     "The places within 15 km": "I posti entro 15 km", "The places in {c}": "I posti in {c}", "Loading…": "Caricamento…", "signatures": "firme", "photos": "foto", "stories": "storie", "tips": "consigli", "checks": "verifiche",
     "Alive in the community: last 30 days": "Viva nella community: ultimi 30 giorni", "Quiet for now around here.": "Tranquillo per ora, da queste parti.", "Before you go": "Before you go", "Latest from the folk": "Ultimi contributi dei folk", "{n} min ago": "{n} min fa", "{n} h ago": "{n} h fa", "yesterday": "ieri", "{n} days ago": "{n} giorni fa",
     "now": "adesso", "last report": "ultima notizia", "How it is now, from the folk": "Com'è adesso, dai folk", "No folk has said how it is here yet.": "Nessun folk ha ancora detto com'è qui.",
@@ -122,7 +126,7 @@ window.FolkAtlas = (() => {
 .fa-map .pin{fill:#f28c28;stroke:#fff8e6;stroke-width:1.2;vector-effect:non-scaling-stroke;cursor:pointer}.fa-map .pin.ok{fill:#2fbf71}
 .fa-legend i.pinkey{border-radius:50%;background:#f28c28;box-shadow:0 0 0 1.5px #fff8e6 inset}
 .fa-found{list-style:none;margin:0;padding:0;display:grid;gap:4px}.fa-found:empty{display:none}
-.fa-nowrow{grid-column:2/4}
+.fa-nowrow{grid-column:2/4}.fa-story{margin-left:auto}.fa-asknow{justify-self:start}
 .fa-area{margin:-4px 0 0}.fa-alive{margin:2px 0 0;font-size:13px;font-weight:600;color:#8fe0a6}
 .fa-cnt{display:flex;flex-wrap:wrap;gap:6px}.fa-cnt span{white-space:nowrap;padding:5px 10px;border-radius:99px;background:rgba(47,191,113,.1);border:1px solid rgba(47,191,113,.35);font-size:12.5px}
 .fa-it{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;align-items:start;width:100%;text-align:left;padding:8px 10px;border-radius:12px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.07);color:inherit;font-family:inherit;cursor:pointer}
@@ -357,6 +361,7 @@ window.FolkAtlas = (() => {
         ${sec(t("How it is now, from the folk"), (d.conds || []).length ? d.conds.map(cn => `<button type="button" class="fa-nowb" data-fastamp="${cn.spot_id}">${condLine(cn, true)}</button>`).join("") : `<p class="fa-note">${esc(t("No folk has said how it is here yet."))}</p>`)}
         ${(d.facts || []).length ? sec(t("Before you go"), d.facts.map(factLine).join("")) : ""}
         ${(d.items || []).length ? sec(t("Latest from the folk"), d.items.map(itemLine).join("")) : ""}
+        ${pulsePoint(x) && (S.ids[x.key] || []).length ? `<button type="button" class="fa-btn on fa-asknow" data-faasknow="${x.key}">❓ ${esc(t("Ask the folk how it is now"))}</button>` : pulsePoint(x) ? `<p class="fa-note">${esc(t("No place on the map within 15 km yet: the folk can't answer from here."))}</p>` : ""}
         ${wx}</div>`;
     }
     function itemHtml(x) {
@@ -408,7 +413,7 @@ window.FolkAtlas = (() => {
       const cnt = k => g.feats.filter(f => status(f.id) === k).length + Object.keys(g.small).filter(id => status(id) === k).length;
       const v = views();
       host.innerHTML = `<section class="fa">
-        <div class="fa-head"><h3>Folk <em>Atlas</em></h3><p>${esc(own ? t("The world you signed. And the one you dream of.") : t("The world {n} signed.", { n: opts.name || "this folk" }))}</p></div>
+        <div class="fa-head"><h3>Folk <em>Atlas</em></h3><p>${esc(own ? t("The world you signed. And the one you dream of.") : t("The world {n} signed.", { n: opts.name || "this folk" }))}</p>${own && (byC.size || been.length) ? `<button type="button" class="fa-btn on fa-story" data-fastory>📲 ${esc(t("Instagram story"))}</button>` : ""}</div>
         <div class="fa-mapbox">${mapSvg()}
           <div class="fa-zoom" role="group">${[["world", t("World")], ["europe", t("Europe")], ...(v.mine ? [["mine", t("Close-up")]] : [])].map(([k, l]) => `<button type="button" data-faview="${k}" class="${S.view === k ? "on" : ""}">${esc(l)}</button>`).join("")}</div></div>
         <div class="fa-legend">${[["onspot", t("Signed on the spot")], ["signed", t("Signed")], ["declared", t("Declared")], ...(own ? [["wish", t("I want to go")]] : [])].map(([k, l]) => `<span><i style="background:${COL[k]}"></i>${esc(l)} (${cnt(k)})</span>`).join("")}${own && declW.some(x => isPlace(x.w)) ? `<span><i class="pinkey"></i>${esc(t("A dream place"))}</span>` : ""}</div>
@@ -425,6 +430,66 @@ window.FolkAtlas = (() => {
             : `<p class="fa-note">${esc(t("The atlas arrives once the database is updated (supabase-folk-atlas.sql)."))}</p>`}` : ""}
       </section>`;
       wire();
+    }
+
+    // 📲 «My world» as a 1080×1920 story: the map of what you signed and declared (never your dreams: they're private), the numbers, the link to your passport
+    async function storyBlob() {
+      const Wd = 1080, Ht = 1920, c = document.createElement("canvas"); c.width = Wd; c.height = Ht; const g2 = c.getContext("2d");
+      try { await document.fonts.ready; await Promise.all([document.fonts.load("600 120px 'Cormorant Garamond'"), document.fonts.load("italic 500 60px 'Cormorant Garamond'"), document.fonts.load("500 40px 'DM Sans'"), document.fonts.load("700 30px 'DM Sans'")]); } catch {}
+      const SERIF = "'Cormorant Garamond', Georgia, serif", SANS = "'DM Sans', system-ui, sans-serif";
+      let bg = g2.createLinearGradient(0, 0, 0, Ht); bg.addColorStop(0, "#0b1626"); bg.addColorStop(1, "#050b14"); g2.fillStyle = bg; g2.fillRect(0, 0, Wd, Ht);
+      let rg = g2.createRadialGradient(Wd * .85, 0, 0, Wd * .85, 0, 1000); rg.addColorStop(0, "rgba(242,140,30,.28)"); rg.addColorStop(1, "rgba(242,140,30,0)"); g2.fillStyle = rg; g2.fillRect(0, 0, Wd, Ht);
+      rg = g2.createRadialGradient(0, Ht * .55, 0, 0, Ht * .55, 900); rg.addColorStop(0, "rgba(47,191,113,.16)"); rg.addColorStop(1, "rgba(47,191,113,0)"); g2.fillStyle = rg; g2.fillRect(0, 0, Wd, Ht);
+      const logo = await new Promise(res => { const im = new Image(); im.onload = () => res(im); im.onerror = () => res(null); im.src = "img/spotfolk-logo.png"; });
+      if (logo) g2.drawImage(logo, 90, 110, 200, 200 * logo.height / logo.width);
+      g2.fillStyle = "#ffbe7a"; g2.font = `700 30px ${SANS}`; g2.letterSpacing = "6px"; g2.fillText(t("MY WORLD ON SPOTFOLK"), 90, 400); g2.letterSpacing = "0px";
+      g2.fillStyle = "#f2f6fb"; g2.font = `600 ${String(opts.name || "").length > 18 ? 96 : 120}px ${SERIF}`; g2.fillText(String(opts.name || "Folk").slice(0, 26), 90, 520);
+      g2.fillStyle = "#f3e6d6"; g2.font = `italic 500 54px ${SERIF}`; g2.fillText(t("The world I signed."), 90, 600);
+      // the map, cropped close to the coloured countries when they are few
+      const shareSt = id => { const s = byC.get(id); return s ? (s.on ? "onspot" : "signed") : been.includes(id) ? "declared" : "none"; };
+      const ids = g.feats.filter(f => shareSt(f.id) !== "none").map(f => f.big || f.b);
+      Object.keys(g.small).forEach(id => { if (shareSt(id) !== "none") { const [la, lo] = g.small[id]; ids.push([lo - 1, la - 1, lo + 1, la + 1]); } });
+      let vb = [0, 0, W, H];
+      if (ids.length) {
+        const [a1, b1, c1, d1] = ids.reduce((m, x) => [Math.min(m[0], x[0]), Math.min(m[1], x[1]), Math.max(m[2], x[2]), Math.max(m[3], x[3])], [180, 90, -180, -90]);
+        let x0 = X(a1), x1 = X(c1), y0 = Y(d1), y1 = Y(b1); const pad = Math.max(30, (x1 - x0) * .12); x0 -= pad; x1 += pad; y0 -= pad; y1 += pad;
+        let w = x1 - x0, h = y1 - y0; const r = 900 / 560;
+        if (w / h > r) { const nh = w / r; y0 -= (nh - h) / 2; h = nh; } else { const nw = h * r; x0 -= (nw - w) / 2; w = nw; }
+        if (w < W * .9) vb = [x0, y0, w, h];
+      }
+      const mx = 90, my = 660, mw = 900, mh = Math.min(560, mw * vb[3] / vb[2]);
+      g2.save(); g2.beginPath(); g2.roundRect(mx, my, mw, mh, 36); g2.fillStyle = "rgba(16,35,58,.9)"; g2.fill(); g2.clip();
+      const k = mw / vb[2]; g2.translate(mx - vb[0] * k, my - vb[1] * k); g2.scale(k, k);
+      g2.lineWidth = .6 / k * 1.6; g2.strokeStyle = "#060d18";
+      g.feats.forEach(f => { const p = new Path2D(f.d); g2.fillStyle = COL[shareSt(f.id)]; g2.fill(p); g2.stroke(p); });
+      Object.keys(g.small).forEach(id => { const st = shareSt(id); if (st === "none") return; const [la, lo] = g.small[id]; g2.fillStyle = COL[st]; g2.beginPath(); g2.arc(X(lo), Y(la), 3 / Math.sqrt(k) * 1.4, 0, 7); g2.fill(); });
+      g2.restore();
+      let y = my + mh + 64;
+      g2.font = `500 30px ${SANS}`; let lx = 90;
+      [["onspot", t("Signed on the spot")], ["signed", t("Signed")], ["declared", t("Declared")]].forEach(([kk, l]) => { g2.fillStyle = COL[kk]; g2.beginPath(); g2.roundRect(lx, y - 24, 26, 26, 6); g2.fill(); g2.fillStyle = "#c9d6e6"; g2.fillText(l, lx + 38, y); lx += 38 + g2.measureText(l).width + 40; });
+      y = Math.max(y + 50, 1300);
+      const doneW = wishes().filter(x => x.w && x.done).length, cells = [[new Set([...byC.keys(), ...been]).size, t("Countries")], [stamps.length, t("Signatures")], [[...byC.values()].filter(x => x.on).length, t("Countries on the spot")], [doneW, t("Dreams come true")]];
+      cells.forEach(([n, l], i) => { const cx = 90 + (i % 2) * 460, cy = y + Math.floor(i / 2) * 170; g2.fillStyle = "rgba(255,255,255,.05)"; g2.strokeStyle = "rgba(255,210,122,.35)"; g2.lineWidth = 2; g2.beginPath(); g2.roundRect(cx, cy, 440, 150, 30); g2.fill(); g2.stroke();
+        g2.fillStyle = "#ffd27a"; g2.font = `600 80px ${SERIF}`; g2.fillText(String(n), cx + 36, cy + 85); g2.fillStyle = "#c9d6e6"; g2.font = `500 30px ${SANS}`; g2.fillText(l, cx + 36, cy + 128); });
+      g2.fillStyle = "#f28c1e"; g2.beginPath(); g2.roundRect(90, Ht - 220, 560, 104, 52); g2.fill();
+      g2.fillStyle = "#1a1206"; g2.font = `800 46px ${SANS}`; g2.fillText("spotfolk.eu", 150, Ht - 152);
+      g2.fillStyle = "#8a99ab"; g2.font = `500 30px ${SANS}`; g2.fillText(t("Make your atlas: the link is in the story"), 90, Ht - 60);
+      return new Promise(res => c.toBlob(b => res(b), "image/png"));
+    }
+    async function shareStory(btn) {
+      btn.disabled = true; const old = btn.innerHTML; btn.textContent = "…";
+      try {
+        const [blob, url] = await Promise.all([storyBlob(), K.passportLink ? K.passportLink().catch(() => "https://spotfolk.eu/?utm_source=instagram&utm_medium=story") : "https://spotfolk.eu/"]);
+        const file = new File([blob], "spotfolk-my-world.png", { type: "image/png" });
+        if (navigator.canShare?.({ files: [file] })) {
+          try { await navigator.share({ files: [file], title: t("My world on SpotFolk"), text: url }); K.track?.("Atlas: story shared"); } catch (err) { if (err?.name !== "AbortError") throw err; }
+        } else {
+          const a2 = document.createElement("a"); a2.href = URL.createObjectURL(blob); a2.download = file.name; document.body.append(a2); a2.click(); a2.remove(); setTimeout(() => URL.revokeObjectURL(a2.href), 4000);
+          try { await navigator.clipboard.writeText(url); } catch {}
+          K.toast(t("Picture downloaded and the link to your passport copied: add it as a link sticker in your story.")); K.track?.("Atlas: story downloaded");
+        }
+      } catch (err) { K.toast(t("Could not make the picture: {e}", { e: err.message }), true); }
+      btn.disabled = false; btn.innerHTML = old;
     }
 
     const fail = err => K.toast(t("Could not save it: {e}", { e: err.message }), true);
@@ -477,6 +542,11 @@ window.FolkAtlas = (() => {
       host.querySelectorAll("[data-fapulse]").forEach(b => b.addEventListener("click", () => { const k = b.dataset.fapulse; S.pulse.has(k) ? S.pulse.delete(k) : S.pulse.add(k); if (S.pulse.has(k)) { K.track?.("Atlas: dream pulse"); loadPulse(k); } draw(); }));
       host.querySelectorAll("[data-fawx]").forEach(el => { const x = wishes().find(i => i.key === el.dataset.fawx), p = x && pulsePoint(x); if (p && K.pulse) K.pulse(el, p); });
       host.querySelectorAll(".fa-wish [data-fastamp]").forEach(b => b.addEventListener("click", () => K.openPlace(+b.dataset.fastamp)));
+      host.querySelectorAll("[data-faasknow]").forEach(b => b.addEventListener("click", () => {
+        const x = wishes().find(i => i.key === b.dataset.faasknow), p = x && pulsePoint(x); if (!p) return;
+        K.askNow?.({ lat: p.lat, lon: p.lon, name: x.w?.label || x.sv[0]?.name || nameOf(x.id), spot_id: x.w && isPlace(x.w) ? null : x.sv[0]?.id || null });
+      }));
+      host.querySelector("[data-fastory]")?.addEventListener("click", ev => shareStory(ev.currentTarget));
       host.querySelectorAll("[data-fatell]").forEach(b => b.addEventListener("click", () => { K.track?.("Atlas: tell after dream"); K.openPlace(+b.dataset.fatell, "pulse"); }));
       host.querySelectorAll("[data-fagroup]").forEach(b => b.addEventListener("click", () => { S.group = b.dataset.fagroup; try { localStorage.setItem("fa-group", S.group); } catch {} draw(); }));
       host.querySelectorAll("[data-falist]").forEach(b => b.addEventListener("click", () => { S.editList = b.dataset.falist; draw(); const i = host.querySelector(`[data-falistin="${S.editList}"]`); i?.focus(); }));

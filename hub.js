@@ -11,7 +11,11 @@ window.FolkHub = (() => {
   /* ---------- words (the rest of the site is translated by i18n.js; the Hub translates itself) ---------- */
   const IT = {
     "The Folk": "The Folk", "Hub": "Hub", "People, places and shared knowledge.": "Persone, luoghi e conoscenza condivisa.",
-    "Feed": "Feed", "Following": "Seguiti", "Discover folk": "Scopri i folk", "Your places": "I tuoi posti", "Notifications": "Notifiche", "Your passport": "Il tuo passaporto",
+    "Feed": "Feed", "{n} asks how it is now at {p}: you know the area": "{n} chiede com'è adesso a {p}: conosci la zona",
+    "{n} answered your question about {p}: {c}": "{n} ha risposto alla tua domanda su {p}: {c}", "News from your dream {p}: {c}": "Novità dal tuo sogno {p}: {c}",
+    "{i} {l} at {p}, {d} at {t}": "{i} {l} a {p}, {d} alle {t}", "today": "oggi", "tomorrow": "domani", "the day after tomorrow": "dopodomani",
+    "your dreams": "i tuoi sogni", "forecast": "previsione", "How is it now?": "Com'è adesso?", "Clear sunrise": "Alba limpida", "Clear sunset": "Tramonto limpido",
+    "Fiery sunrise possible": "Alba infuocata possibile", "Fiery sunset possible": "Tramonto infuocato possibile", "Following": "Seguiti", "Discover folk": "Scopri i folk", "Your places": "I tuoi posti", "Notifications": "Notifiche", "Your passport": "Il tuo passaporto",
     "Discover": "Scopri", "Places": "Posti", "Alerts": "Avvisi", "Me": "Io", "Map": "Mappa",
     "Places you follow": "Posti che segui", "No news": "Nessuna novità", "Save a place on the map to follow it here.": "Salva un posto sulla mappa per seguirlo qui.",
     "What's": "Cosa", "happening": "succede", "From the folk and the places on the map.": "Dai folk e dai posti della mappa.", "From folk you follow and places you saved.": "Dai folk che segui e dai posti che hai salvato.",
@@ -99,6 +103,7 @@ window.FolkHub = (() => {
   const u = s => `<span class="ugc">${e(s)}</span>`;   // what the folk wrote: app.js offers «Translate» when it is in another language
   const ago = t => {
     const m = Math.round((Date.now() - new Date(t)) / 60e3);
+    if (m < -1) return tx("forecast");
     if (m < 1) return tx("just now"); if (m < 60) return tx("{n} min ago", { n: m }); if (m < 1440) return tx("{n} h ago", { n: Math.round(m / 60) });
     if (m < 2880) return tx("yesterday"); if (m < 60 * 24 * 30) return tx("{n} days ago", { n: Math.round(m / 1440) });
     return new Date(t).toLocaleDateString(window.I18N?.locale || "en-GB", { day: "numeric", month: "short", year: "numeric" });
@@ -425,6 +430,11 @@ window.FolkHub = (() => {
     const w = tx(WHAT[u.extra?.target_kind || u.txt] || "your info");
     const map = { follow: ["{n} started following you"], react_appreciate: ["{n} appreciated {w}"], react_useful: ["{n} found {w} useful"], checked_yours: ["{n} checked your info at {p}"], signed_yours: ["{n} signed {p}, a place you added"],
       sign: ["{n} signed {p}"], cond: ["{n} shared how it is now at {p}"], fact: ["{n} added info at {p}"], check: ["{n} checked info at {p}"], story: ["{n} told a story about {p}"], impression: ["{n} gave impressions of {p}"], photo: ["{n} added a photo of {p}"], update: ["{n} updated {p}"], place: ["{n} added {p}"] };
+    if (u.kind === "ask_near") return tx("{n} asks how it is now at {p}: you know the area", { n: nm, p: `<b>${e(u.place)}</b>` }) + (u.note ? `<br><i>«${e(u.note)}»</i>` : "");
+    const cl = u.cond ? (K.COND?.[u.cond] || ["📣", u.cond]) : null, cs = cl ? `${cl[0]} <b>${e(tx(cl[1]))}</b>` : "";
+    if (u.kind === "ask_answer") return tx("{n} answered your question about {p}: {c}", { n: nm, p: `<b>${e(u.place)}</b>`, c: `${cs} · ${e(u.spot || "")}` }) + (u.note ? `<br><i>«${e(u.note)}»</i>` : "");
+    if (u.kind === "dream_now") return tx("News from your dream {p}: {c}", { p: `<b>${e(u.place)}</b>`, c: `${cs} · ${e(u.spot || "")}` }) + (u.note ? `<br><i>«${e(u.note)}»</i>` : "");
+    if (u.kind === "dream_sky") return tx("{i} {l} at {p}, {d} at {t}", { i: u.ico, l: `<b>${e(tx(u.label))}</b>`, p: `<b>${e(u.place)}</b>`, d: e(tx(u.day === 0 ? "today" : u.day === 1 ? "tomorrow" : "the day after tomorrow")), t: e(u.time) });
     if (u.kind === "dest_tip" || u.kind === "dest_near") return tx(u.kind === "dest_tip" ? "{n} left you a tip for {p}" : "{n} is going to {p}: an area you know", { n: nm, p: `<b>${e(u.place)}</b>` });
     let s = tx((map[u.kind] || ["{n} updated {p}"])[0], { n: nm, p, w: e(w) });
     return s;
@@ -434,6 +444,12 @@ window.FolkHub = (() => {
     try { S.upd = await rpc("my_updates", { p_limit: 40 }); } catch (err) { S.upd = { err }; badges(); return S.upd; }
     try { const du = await rpc("dest_updates", { p_since: S.upd.seen || null });
       if (du?.items?.length) { const seen = S.upd.seen || ""; S.upd.items = [...(S.upd.items || []), ...du.items.map(x => ({ ...x, why: "dest", new: x.at > seen }))].sort((a, b) => String(b.at).localeCompare(String(a.at))); S.upd.unread = (S.upd.unread || 0) + (du.unread || 0); } } catch {}
+    // questions near you, answers to yours, news near your dream places (supabase-com-e-adesso.sql)
+    try { const au = await rpc("atlas_updates", { p_since: S.upd.seen || null });
+      if (au?.items?.length) { const seen = S.upd.seen || ""; S.upd.items = [...(S.upd.items || []), ...au.items.map(x => ({ ...x, why: x.kind === "dream_now" ? "dream" : "ask", new: x.at > seen }))].sort((a, b) => String(b.at).localeCompare(String(a.at))); S.upd.unread = (S.upd.unread || 0) + (au.unread || 0); } } catch {}
+    // the sky over your dream places: first, as they are about the days ahead
+    try { const all = await (K.dreamSky?.() || []), sky = all.slice().sort((x, y) => String(x.at).localeCompare(String(y.at))).slice(0, 4); S.sky = sky; S.skyAll = all;
+      if (sky.length) { S.upd.items = [...sky, ...(S.upd.items || []).filter(x => x.kind !== "dream_sky")]; S.upd.unread = (S.upd.unread || 0) + sky.filter(x => x.new).length; } } catch {}
     badges(); return S.upd;
   }
   async function paintAlerts(m) {
@@ -445,10 +461,11 @@ window.FolkHub = (() => {
     if (d?.err) { el.innerHTML = errorHtml(d.err); return; }
     const off = d?.prefs?.off || [];
     el.innerHTML = `
-      ${(d.items || []).length ? `<ul class="hb-ulist">${d.items.map(u => `<li class="${u.new ? "new" : ""}">${face(u, 40)}<div><p>${updText(u)}</p><small>${ago(u.at)}${u.why === "place" ? ` · ${e(tx("on your places"))}` : u.why === "folk" ? ` · ${e(tx("from folk you follow"))}` : ""}</small></div>${u.spot_id ? `<button type="button" class="hb-link" data-gospot="${u.spot_id}">↗</button>` : u.dest ? `<button type="button" class="hb-link" data-view="dests">↗</button>` : ""}</li>`).join("")}</ul>`
+      ${(d.items || []).length ? `<ul class="hb-ulist">${d.items.map(u => `<li class="${u.new ? "new" : ""}">${u.kind === "dream_sky" ? `<span class="hb-av" style="--s:40px;--c:#ff9a5c"><span>${u.ico}</span></span>` : face(u, 40)}<div><p>${updText(u)}</p><small>${ago(u.at)}${u.why === "place" ? ` · ${e(tx("on your places"))}` : u.why === "folk" ? ` · ${e(tx("from folk you follow"))}` : u.why === "dream" ? ` · ${e(tx("your dreams"))}` : u.why === "ask" ? ` · ${e(tx("How is it now?"))}` : ""}</small></div>${u.spot_id ? `<button type="button" class="hb-link" data-gospot="${u.spot_id}">↗</button>` : u.lat != null ? `<button type="button" class="hb-link" data-gopoint="${u.lat},${u.lon}">↗</button>` : u.dest ? `<button type="button" class="hb-link" data-view="dests">↗</button>` : ""}</li>`).join("")}</ul>`
         : `<div class="hb-empty"><p>${e(tx("Nothing new. When something happens on your places, to your folk or to your contributions, it shows up here."))}</p></div>`}
       <div class="hb-box hb-prefs"><p class="hb-kick">${e(tx("Notify me about"))}</p>${[["places", "My places"], ["folk", "Folk I follow "], ["you", "My contributions"]].map(([k, l]) => `<label><input type="checkbox" id="hbPref-${k}" data-pref="${k}" ${off.includes(k) ? "" : "checked"}> ${e(tx(l))}</label>`).join("")}</div>`;
     if (d.unread) { try { await rpc("hub_seen"); } catch {} d.unread = 0; badges(); }
+    if (S.skyAll?.length) K.dreamSkySeen?.(S.skyAll); else K.refreshDot?.();
   }
   async function savePrefs(patch) {
     const uid = who().uid; S.prefs = { ...(S.prefs || S.upd?.prefs || {}), ...patch };
@@ -642,6 +659,7 @@ window.FolkHub = (() => {
     if (ds.sharehub !== undefined && i) return shareItem(i);
     if (t.closest("[data-dest]") && (ds.tipopen !== undefined || ds.tipsee !== undefined || ds.destmap !== undefined || ds.destdel !== undefined)) return destAction(t, ds);
     if (ds.gospot) { t.closest("dialog")?.close?.(); openFull(false); K.track("Hub: place opened"); return K.goPlace(+ds.gospot); }
+    if (ds.gopoint) { const [la, lo] = ds.gopoint.split(",").map(Number); openFull(false); K.track("Hub: point opened"); return K.goPoint(la, lo); }
     if (ds.tomap !== undefined) { openFull(false); return K.toMap(S.mapPts || []); }
     if (ds.full !== undefined) return openFull(!S.mapFull);
     if (ds.days) { S.mapDays = +ds.days; return loadMap(); }
