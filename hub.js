@@ -80,7 +80,14 @@ window.FolkHub = (() => {
     "just now": "adesso", "{n} min ago": "{n} min fa", "{n} h ago": "{n} h fa", "yesterday": "ieri", "{n} days ago": "{n} giorni fa", "in {n} h": "tra {n} h", "in {n} days": "tra {n} giorni",
     "Your passport and reputation": "Il tuo passaporto e la reputazione", "Become folk — free": "Diventa folk — è gratis",
     "description": "la descrizione", "useful info": "le info utili", "best months": "i mesi migliori", "position": "la posizione", "type": "il tipo", "link": "il link", "name": "il nome", "category": "la categoria", "trail info": "le info del sentiero", "workshop info": "le info del workshop", "dates": "le date", "Support local": "Support local",
-    "Wrong or outdated?": "Sbagliato o superato?", "Share": "Condividi", "Link copied: paste it wherever you like.": "Link copiato: incollalo dove vuoi.", "Back to the map": "Torna alla mappa",
+    "Wrong or outdated?": "Sbagliato o superato?",
+    "Folk on the way": "Folk in viaggio", "Where the folk are going next. Know the area? Leave a tip.": "Dove stanno andando i folk. Conosci la zona? Lascia un consiglio.",
+    "is going to {p}": "va a {p}", "You're going to {p}": "Vai a {p}", "You know this area: {n} places signed": "Conosci questa zona: {n} posti firmati",
+    "💬 Leave a tip": "💬 Lascia un consiglio", "Tips ({n})": "Consigli ({n})", "No tips yet.": "Ancora nessun consiglio.", "Send": "Invia", "Your tip: what to see, when, what to avoid…": "Il tuo consiglio: cosa vedere, quando, cosa evitare…",
+    "🗺️ On the map": "🗺️ Sulla mappa", "Remove": "Togli", "Tap again to remove": "Tocca di nuovo per togliere",
+    "Nobody is on the way right now. Mark yours: long press on the map → «My next destination».": "Nessuno è in viaggio adesso. Segna la tua meta: tieni premuto sulla mappa → «La mia prossima meta».",
+    "Mark your next destination": "Segna la tua prossima meta", "Destinations are for members: tell the folk where you're going and get tips from who knows the area.": "Le mete sono per gli iscritti: di' ai folk dove vai e ricevi consigli da chi conosce la zona.",
+    "{n} left you a tip for {p}": "{n} ti ha lasciato un consiglio per {p}", "{n} is going to {p}: an area you know": "{n} va a {p}: una zona che conosci", "Thanks: your tip arrived.": "Grazie: il tuo consiglio è arrivato.", "Share": "Condividi", "Link copied: paste it wherever you like.": "Link copiato: incollalo dove vuoi.", "Back to the map": "Torna alla mappa",
     "Finding and following other folk is for members. Join free to meet the people behind the places.": "Trovare e seguire gli altri folk è per gli iscritti. Iscriviti gratis per conoscere le persone dietro i posti.",
     "Your passport collects the places you've signed, your stamps and your folk. It's free.": "Il passaporto raccoglie i posti che hai firmato, i tuoi timbri e i tuoi folk. È gratis.",
     "Find your folk": "Trova i tuoi folk", "Follow the folk who travel like you and the places you love: their news comes to you.": "Segui i folk che viaggiano come te e i posti che ami: le loro novità arrivano a te.",
@@ -200,7 +207,7 @@ window.FolkHub = (() => {
   }
 
   /* ---------- the shell ---------- */
-  const VIEWS = [["feed", "🏠", "Feed"], ["following", "👥", "Following"], ["discover", "🧭", "Discover folk"], ["places", "♡", "Your places"], ["alerts", "🔔", "Notifications"], ["me", "🪪", "Your passport"]];
+  const VIEWS = [["feed", "🏠", "Feed"], ["following", "👥", "Following"], ["discover", "🧭", "Discover folk"], ["dests", "✈️", "Folk on the way"], ["places", "♡", "Your places"], ["alerts", "🔔", "Notifications"], ["me", "🪪", "Your passport"]];
   function shell() {
     box.innerHTML = `
       <div class="hb">
@@ -242,6 +249,7 @@ window.FolkHub = (() => {
     const m = box.querySelector("[data-main]"); if (!m) return;
     if (S.view === "feed") return paintFeed(m);
     if (S.view === "discover") return paintDiscover(m);
+    if (S.view === "dests") return paintDests(m);
     if (S.view === "places") return paintPlaces(m);
     if (S.view === "alerts") return paintAlerts(m);
     if (S.view === "me") return paintMe(m);
@@ -340,6 +348,39 @@ window.FolkHub = (() => {
     </article>`;
   }
 
+  /* ---------- folk on the way: next destinations and tips (supabase-prossime-mete.sql) ---------- */
+  const dateRange = (a, b) => { const f = d => new Date(d + "T12:00:00").toLocaleDateString(window.I18N?.locale || "en-GB", { day: "numeric", month: "short" }); return a && b ? `${f(a)} – ${f(b)}` : a ? f(a) : b ? f(b) : ""; };
+  function destCard(d) {
+    return `<article class="hb-card hb-dest" data-dest="${d.id}">
+      <header class="hb-ch">${face({ user_id: d.user_id, name: d.name, avatar: d.avatar, folk: d.folk }, 44)}<div class="hb-who"><p><b>${e(d.mine ? tx("You're going to {p}", { p: d.place_name }) : `${d.name || tx("A folk")} ${tx("is going to {p}", { p: d.place_name })}`)}</b>${folkChip(d.folk)}</p><small>${e(dateRange(d.starts_on, d.ends_on) || ago(d.created_at))}</small></div><span class="hb-kind k-pulse">✈️</span></header>
+      <div class="hb-body">${d.note ? `<p class="hb-txt">${u(d.note)}</p>` : ""}${d.knows ? `<span class="hb-tag gold">${e(tx("You know this area: {n} places signed", { n: d.knows }))}</span>` : ""}<div class="hb-tips" data-tips hidden></div>
+        <form class="hb-tipform" data-tipform hidden><textarea id="hbTip${d.id}" maxlength="600" rows="3" placeholder="${e(tx("Your tip: what to see, when, what to avoid…"))}"></textarea><button type="submit" class="hb-btn">${e(tx("Send"))}</button></form></div>
+      <div class="hb-acts">${d.mine ? "" : `<button type="button" data-tipopen>${e(tx("💬 Leave a tip"))}</button>`}<button type="button" data-tipsee>💬 ${e(tx("Tips ({n})", { n: d.tips }))}</button><button type="button" data-destmap>${e(tx("🗺️ On the map"))}</button>${d.mine ? `<button type="button" class="hb-sp" data-destdel>${e(tx("Remove"))}</button>` : ""}</div>
+    </article>`;
+  }
+  async function paintDests(m) {
+    if (!isMember()) return invite(m, "Folk on the way", "Destinations are for members: tell the folk where you're going and get tips from who knows the area.");
+    m.innerHTML = `<div class="hb-head"><h2>${e(tx("Folk on the way"))}</h2><p>${e(tx("Where the folk are going next. Know the area? Leave a tip."))}</p></div><div class="hb-feed" data-dlist>${skeleton(2)}</div>`;
+    try { S.dests = await rpc("dest_list", { p_limit: 40 }) || []; } catch (err) { m.querySelector("[data-dlist]").innerHTML = errorHtml(err); return; }
+    const l = m.querySelector("[data-dlist]"); if (!l) return;
+    l.innerHTML = S.dests.length ? S.dests.map(destCard).join("") : `<div class="hb-empty"><p>${e(tx("Nobody is on the way right now. Mark yours: long press on the map → «My next destination»."))}</p><div class="hb-row"><button type="button" class="hb-btn" data-tomap>${e(tx("Open the map"))}</button></div></div>`;
+  }
+  async function destAction(t, ds) {
+    const card = t.closest("[data-dest]"), id = +card.dataset.dest, d = (S.dests || []).find(x => x.id === id); if (!d) return;
+    if (ds.tipopen !== undefined) { const f = card.querySelector("[data-tipform]"); f.hidden = !f.hidden; if (!f.hidden) f.querySelector("textarea").focus(); return; }
+    if (ds.tipsee !== undefined) {
+      const box = card.querySelector("[data-tips]"); if (!box.hidden) { box.hidden = true; return; }
+      box.hidden = false; box.innerHTML = `<p class="hb-mute">${e(tx("Loading…"))}</p>`;
+      let tips = []; try { tips = await rpc("dest_tips", { p_dest: id }) || []; } catch {}
+      box.innerHTML = tips.length ? tips.map(x => `<div class="hb-tip">${face(x, 32)}<div><b>${e(x.name || tx("A folk"))}</b> <small>${ago(x.created_at)}</small><p>${u(x.body)}</p></div></div>`).join("") : `<p class="hb-mute">${e(tx("No tips yet."))}</p>`;
+      return;
+    }
+    if (ds.destmap !== undefined) return K.toMap([{ lat: d.lat, lon: d.lon }]);
+    if (ds.destdel !== undefined) {
+      if (t.dataset.confirm !== "1") { t.dataset.confirm = "1"; t.textContent = tx("Tap again to remove"); return; }
+      try { await K.api(`/rest/v1/next_destinations?id=eq.${id}`, { method: "DELETE" }); S.dests = S.dests.filter(x => x.id !== id); card.remove(); K.track("Hub: destination removed"); } catch (err) { K.toast(tx("Could not save it: {e}", { e: err.message }), true); }
+    }
+  }
   /* ---------- your places ---------- */
   async function loadPlaces() {
     if (isMember()) {
@@ -383,10 +424,17 @@ window.FolkHub = (() => {
     const w = tx(WHAT[u.extra?.target_kind || u.txt] || "your info");
     const map = { follow: ["{n} started following you"], react_appreciate: ["{n} appreciated {w}"], react_useful: ["{n} found {w} useful"], checked_yours: ["{n} checked your info at {p}"], signed_yours: ["{n} signed {p}, a place you added"],
       sign: ["{n} signed {p}"], cond: ["{n} shared how it is now at {p}"], fact: ["{n} added info at {p}"], check: ["{n} checked info at {p}"], story: ["{n} told a story about {p}"], impression: ["{n} gave impressions of {p}"], photo: ["{n} added a photo of {p}"], update: ["{n} updated {p}"], place: ["{n} added {p}"] };
+    if (u.kind === "dest_tip" || u.kind === "dest_near") return tx(u.kind === "dest_tip" ? "{n} left you a tip for {p}" : "{n} is going to {p}: an area you know", { n: nm, p: `<b>${e(u.place)}</b>` });
     let s = tx((map[u.kind] || ["{n} updated {p}"])[0], { n: nm, p, w: e(w) });
     return s;
   }
-  async function loadUpdates() { if (!isMember()) return null; try { S.upd = await rpc("my_updates", { p_limit: 40 }); } catch (err) { S.upd = { err }; } badges(); return S.upd; }
+  async function loadUpdates() {
+    if (!isMember()) return null;
+    try { S.upd = await rpc("my_updates", { p_limit: 40 }); } catch (err) { S.upd = { err }; badges(); return S.upd; }
+    try { const du = await rpc("dest_updates", { p_since: S.upd.seen || null });
+      if (du?.items?.length) { const seen = S.upd.seen || ""; S.upd.items = [...(S.upd.items || []), ...du.items.map(x => ({ ...x, why: "dest", new: x.at > seen }))].sort((a, b) => String(b.at).localeCompare(String(a.at))); S.upd.unread = (S.upd.unread || 0) + (du.unread || 0); } } catch {}
+    badges(); return S.upd;
+  }
   async function paintAlerts(m) {
     if (!isMember()) {
       m.innerHTML = `<div class="hb-head"><h2>${e(tx("Notifications"))}</h2></div><div class="hb-empty"><p>${e(tx("Notifications are for folk. As a visitor you can follow places: their news is in Your places."))}</p><div class="hb-row"><button type="button" class="hb-btn" data-view="places">${e(tx("Your places"))}</button><a class="hb-btn line" href="#join">${e(tx("Become folk — free"))}</a></div></div>`; return;
@@ -396,7 +444,7 @@ window.FolkHub = (() => {
     if (d?.err) { el.innerHTML = errorHtml(d.err); return; }
     const off = d?.prefs?.off || [];
     el.innerHTML = `
-      ${(d.items || []).length ? `<ul class="hb-ulist">${d.items.map(u => `<li class="${u.new ? "new" : ""}">${face(u, 40)}<div><p>${updText(u)}</p><small>${ago(u.at)}${u.why === "place" ? ` · ${e(tx("on your places"))}` : u.why === "folk" ? ` · ${e(tx("from folk you follow"))}` : ""}</small></div>${u.spot_id ? `<button type="button" class="hb-link" data-gospot="${u.spot_id}">↗</button>` : ""}</li>`).join("")}</ul>`
+      ${(d.items || []).length ? `<ul class="hb-ulist">${d.items.map(u => `<li class="${u.new ? "new" : ""}">${face(u, 40)}<div><p>${updText(u)}</p><small>${ago(u.at)}${u.why === "place" ? ` · ${e(tx("on your places"))}` : u.why === "folk" ? ` · ${e(tx("from folk you follow"))}` : ""}</small></div>${u.spot_id ? `<button type="button" class="hb-link" data-gospot="${u.spot_id}">↗</button>` : u.dest ? `<button type="button" class="hb-link" data-view="dests">↗</button>` : ""}</li>`).join("")}</ul>`
         : `<div class="hb-empty"><p>${e(tx("Nothing new. When something happens on your places, to your folk or to your contributions, it shows up here."))}</p></div>`}
       <div class="hb-box hb-prefs"><p class="hb-kick">${e(tx("Notify me about"))}</p>${[["places", "My places"], ["folk", "Folk I follow "], ["you", "My contributions"]].map(([k, l]) => `<label><input type="checkbox" id="hbPref-${k}" data-pref="${k}" ${off.includes(k) ? "" : "checked"}> ${e(tx(l))}</label>`).join("")}</div>`;
     if (d.unread) { try { await rpc("hub_seen"); } catch {} d.unread = 0; badges(); }
@@ -590,6 +638,7 @@ window.FolkHub = (() => {
     if (ds.been !== undefined && i) { if (i.me?.been) return K.goPlace(i.spot_id); K.toast(tx("Sign it from its card on the map: tap ✍ Sign.")); K.track("Hub: been there"); return K.goPlace(i.spot_id); }
     if (ds.go !== undefined && i) { K.track("Hub: place opened"); return K.goPlace(i.spot_id); }
     if (ds.sharehub !== undefined && i) return shareItem(i);
+    if (t.closest("[data-dest]") && (ds.tipopen !== undefined || ds.tipsee !== undefined || ds.destmap !== undefined || ds.destdel !== undefined)) return destAction(t, ds);
     if (ds.gospot) { t.closest("dialog")?.close?.(); openFull(false); K.track("Hub: place opened"); return K.goPlace(+ds.gospot); }
     if (ds.tomap !== undefined) { openFull(false); return K.toMap(S.mapPts || []); }
     if (ds.full !== undefined) return openFull(!S.mapFull);
@@ -609,6 +658,16 @@ window.FolkHub = (() => {
     K.track("Hub: shared");
     try { if (navigator.share) { await navigator.share({ title: i.spot, text, url }); return; } } catch (err) { if (err?.name === "AbortError") return; }
     try { await navigator.clipboard.writeText(`${text} ${url}`); K.toast(tx("Link copied: paste it wherever you like.")); } catch { K.toast(url); }
+  }
+  async function onSubmit(ev) {
+    const f = ev.target.closest("[data-tipform]"); if (!f) return; ev.preventDefault();
+    const card = f.closest("[data-dest]"), id = +card.dataset.dest, ta = f.querySelector("textarea"), body = ta.value.trim(); if (body.length < 2) return ta.focus();
+    const b = f.querySelector("button"); b.disabled = true;
+    try { await K.api("/rest/v1/destination_tips", { method: "POST", headers: { Prefer: "return=minimal" }, body: { dest_id: id, body, author_name: K.displayName() } });
+      const d = (S.dests || []).find(x => x.id === id); if (d) d.tips++; ta.value = ""; f.hidden = true; K.toast(tx("Thanks: your tip arrived.")); K.track("Hub: destination tip");
+      const see = card.querySelector("[data-tipsee]"); if (see && d) see.textContent = `💬 ${tx("Tips ({n})", { n: d.tips })}`;
+    } catch (err) { K.toast(tx("Could not save it: {e}", { e: err.message }), true); }
+    b.disabled = false;
   }
   function onChange(ev) {
     const p = ev.target.closest("[data-pref]"); if (!p) return;
@@ -632,16 +691,19 @@ window.FolkHub = (() => {
     try { await K.ensureSession(); } catch {}
     const sig = `${who().uid}|${who().member}`;
     if (box === el && mounted === sig && el.querySelector(".hb")) {   // coming back: refresh what may have changed
-      paintMain(); if (isMember()) loadUpdates(); setTimeout(() => S.map?.invalidateSize(), 60); return;
+      let v = ""; try { v = sessionStorage.getItem("hub-view") || ""; sessionStorage.removeItem("hub-view"); } catch {}
+      if (v && VIEWS.some(x => x[0] === v)) setView(v); else paintMain();
+      if (isMember()) loadUpdates(); setTimeout(() => S.map?.invalidateSize(), 60); return;
     }
     box = el; mounted = sig;
     Object.assign(S, { _ready: false, items: [], next: null, end: false, err: "", rep: null, upd: null, places: null, placeFeed: null, sugg: null, mapPts: null, follow: new Map() });
     if (S.map) { try { S.map.remove(); } catch {} S.map = null; }
     shell();
-    if (!el._hb) { el._hb = true; el.addEventListener("click", onClick); el.addEventListener("change", onChange); }
+    if (!el._hb) { el._hb = true; el.addEventListener("click", onClick); el.addEventListener("change", onChange); el.addEventListener("submit", onSubmit); }
     const d = box.querySelector("[data-dlg]"); d?.addEventListener("click", ev => { if (ev.target === d) d.close(); });
     if (!mount._esc) { mount._esc = true; document.addEventListener("keydown", ev => { if (ev.key === "Escape" && S.mapFull) openFull(false); }); }
-    setView("feed");
+    let first = "feed"; try { first = sessionStorage.getItem("hub-view") || "feed"; sessionStorage.removeItem("hub-view"); } catch {}
+    setView(VIEWS.some(v => v[0] === first) ? first : "feed");
     loadMap(); paintSugg();
     loadPlaces().then(p => { S.places = p; paintMyPlaces();
       if (who().guest && p.length) rpc("hub_feed", { p_filter: "all", p_limit: 20, p_spots: p.map(x => x.id) }).then(f => { S.placeFeed = f; badges(); }).catch(() => {}); }).catch(() => paintMyPlaces());

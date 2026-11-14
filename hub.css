@@ -190,3 +190,9 @@ html.hb-noscroll,html.hb-noscroll body{overflow:hidden}
 .hb-back:hover{background:rgba(242,140,30,.1)}
 .hb-actmap{display:none;margin-left:auto;padding:7px 12px;border-radius:999px;border:1px solid var(--hb-line);background:var(--hb-panel);color:#dbe4ee;font-size:13px}
 @media (max-width:1100px){.hb-actmap{display:inline-flex}.hb-left{gap:10px}}
+
+.hb-tipform{display:flex;flex-direction:column;gap:8px;margin:8px 0 4px}
+.hb-tipform textarea{width:100%;padding:10px 12px;border-radius:12px;border:1px solid var(--hb-line);background:var(--hb-panel2);color:#f2f6fb;font:14px/1.45 var(--sans)}
+.hb-tipform .hb-btn{align-self:flex-end}
+.hb-tips{display:flex;flex-direction:column;gap:10px;margin:8px 0 4px;padding:10px 12px;border-radius:14px;background:var(--hb-panel2)}
+.hb-tip{display:flex;gap:10px;align-items:flex-start}.hb-tip p{margin:2px 0 0;font-size:14px;color:#dfe7f0}.hb-tip small{color:var(--hb-mute);font-size:12px}

@@ -1021,9 +1021,11 @@ const Spots = (() => {
       box.className = "lp-add";
       box.innerHTML = guest
         ? `<button type="button" class="lp-add-btn">Log in to add a spot here</button><small>${lat.toFixed(5)}, ${lon.toFixed(5)}</small>`
-        : `<button type="button" class="lp-add-btn">＋ Add a spot here</button>${passV && commV ? `<button type="button" class="lp-add-btn lp-pass" data-lppass>🎁 Pass it on here</button>` : ""}<small>${lat.toFixed(5)}, ${lon.toFixed(5)}${m.getZoom() < 12 ? " · zoom in for a precise point" : ""}</small>`;
+        : `<button type="button" class="lp-add-btn">＋ Add a spot here</button>${passV && commV ? `<button type="button" class="lp-add-btn lp-pass" data-lppass>🎁 Pass it on here</button>` : ""}${commV ? `<button type="button" class="lp-add-btn lp-meet" data-lpmeet>👥 Meet up here</button>` : ""}<button type="button" class="lp-add-btn lp-dest" data-lpdest>🧭 My next destination</button><small>${lat.toFixed(5)}, ${lon.toFixed(5)}${m.getZoom() < 12 ? " · zoom in for a precise point" : ""}</small>`;
       pop = L.popup({ closeButton: true, autoPan: true, closeOnClick: false, className: "lp-pop", offset: [0, -6] }).setLatLng([lat, lon]).setContent(box).openOn(m);
       box.querySelector("[data-lppass]")?.addEventListener("click", () => { m.closePopup(pop); withConduct(() => openPassOn({ lat, lon, exact: true })); });
+      box.querySelector("[data-lpdest]")?.addEventListener("click", () => { m.closePopup(pop); openDestForm({ lat, lon }); });
+      box.querySelector("[data-lpmeet]")?.addEventListener("click", () => { m.closePopup(pop); withConduct(() => openMeetup({ lat, lon })); window.fcTrack?.("Spots: meetup from the map"); });
       box.querySelector("button").addEventListener("click", () => {
         m.closePopup(pop);
         if (guest) { wantLogin = true; wantJoin = false; render(); root()?.scrollIntoView({ behavior: "smooth" }); return; }
@@ -4676,6 +4678,39 @@ const Spots = (() => {
         d.close(); renderApp(); map.flyTo([c.lat, c.lon], Math.max(map.getZoom(), 12), { duration: .8 });
         toast("Meetup created: members can now join."); window.fcTrack?.("Spots: created a meetup");
       } catch (err) { warn(`Could not save: ${err.message}`); }
+    });
+  }
+  /* «My next destination»: mark where you're going and when; the folk who know the area leave you tips (supabase-prossime-mete.sql) */
+  function openDestForm(pre) {
+    const near = spots.filter(x => x.list && Math.abs(x.lat - pre.lat) < 0.4 && Math.abs(x.lon - pre.lon) < 0.6).sort((a, b) => kmBetween(a.lat, a.lon, pre.lat, pre.lon) - kmBetween(b.lat, b.lon, pre.lat, pre.lon))[0];
+    const today = new Date().toISOString().slice(0, 10);
+    const d = dlg("destDialog", `<form class="import-body gate-form" novalidate>
+      <span class="eyebrow">Folk only</span><h2>🧭 My next destination</h2>
+      <p class="gate-help left">The folk who know the area see it in the Folk Hub and can leave you tips. Only members see it.</p>
+      <label for="dsName">Where</label><input id="dsName" maxlength="80" required value="${esc(near?.list || "")}" placeholder="e.g. Faroe Islands, Val Gardena">
+      <div class="pf-row"><label>From<input type="date" id="dsFrom" min="${today}"></label><label>To<input type="date" id="dsTo" min="${today}"></label></div>
+      <label for="dsNote">What are you looking for? <small>(optional)</small></label>
+      <textarea id="dsNote" maxlength="300" rows="3" placeholder="e.g. Quiet sunrises, a hike that isn't crowded, where locals eat"></textarea>
+      ${myStyles.length > 1 ? `<label for="dsFolk">Travelling as</label><select id="dsFolk">${myStyles.map(k => `<option value="${k}">${CLUSTERS[k].ico} ${esc(folkOf(k))}</option>`).join("")}</select>` : ""}
+      <p class="gate-note" data-dsmsg hidden></p>
+      <button type="submit" class="outline-link">Ask the folk</button>
+    </form>`);
+    d.querySelector("form").addEventListener("submit", async ev => {
+      ev.preventDefault();
+      const name = d.querySelector("#dsName").value.trim(), from = d.querySelector("#dsFrom").value || null, to = d.querySelector("#dsTo").value || null, msg = d.querySelector("[data-dsmsg]");
+      if (name.length < 2) return d.querySelector("#dsName").focus();
+      if (from && to && to < from) { msg.hidden = false; msg.textContent = "The end comes before the start."; return; }
+      const btn = d.querySelector("[type=submit]"); btn.disabled = true;
+      try {
+        await api("/rest/v1/next_destinations", { method: "POST", headers: { Prefer: "return=minimal" }, body: { place_name: name, lat: +pre.lat.toFixed(4), lon: +pre.lon.toFixed(4), starts_on: from, ends_on: to,
+          note: d.querySelector("#dsNote").value.trim() || null, folk: d.querySelector("#dsFolk")?.value || myStyles[0] || null, author_name: displayName() } });
+        d.close(); toast("Done: the folk who know the area will see it in the Folk Hub."); window.fcTrack?.("Spots: next destination");
+        try { sessionStorage.setItem("hub-view", "dests"); } catch {}
+        setTimeout(() => { location.hash = "hub"; }, 900);
+      } catch (err) {
+        btn.disabled = false; msg.hidden = false;
+        msg.textContent = /function|relation|schema cache/i.test(err.message) ? "This arrives once the database is updated (supabase-prossime-mete.sql)." : /row-level|policy/i.test(err.message) ? "You can have up to 5 destinations at a time: remove one in the Folk Hub." : `Could not save it: ${err.message}`;
+      }
     });
   }
   function openMeetupList() {
