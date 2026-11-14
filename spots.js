@@ -2365,12 +2365,13 @@ const Spots = (() => {
     let list = [];
     try {
       list = guest ? ((await pubPlace(s.id))?.conditions || [])
-        : (await api(`/rest/v1/place_conditions?select=id,kind,note,on_spot,user_id,author_name,created_at,expires_at&spot_id=eq.${s.id}&expires_at=gt.${encodeURIComponent(new Date().toISOString())}&order=created_at.desc&limit=100`)).data || [];
+        : await (async () => { const q = cols => api(`/rest/v1/place_conditions?select=${cols}&spot_id=eq.${s.id}&expires_at=gt.${encodeURIComponent(new Date().toISOString())}&order=created_at.desc&limit=100`).then(r => r.data || []);
+            try { return await q("id,kind,note,on_spot,user_id,author_name,created_at,expires_at,photo_path"); } catch (err) { if (err.status === 400) return q("id,kind,note,on_spot,user_id,author_name,created_at,expires_at"); throw err; } })();
     } catch (err) { if ([400, 404].includes(err.status)) { condV = false; box.remove(); } return; }
     list = list.filter(c => COND[c.kind] && new Date(c.expires_at) > new Date());
     // group by condition: how many folk, the latest one
     const by = new Map();
-    list.forEach(c => { const g = by.get(c.kind) || by.set(c.kind, { kind: c.kind, n: new Set(), last: c, notes: [] }).get(c.kind); g.n.add(c.user_id); if (c.note) g.notes.push(c); });
+    list.forEach(c => { const g = by.get(c.kind) || by.set(c.kind, { kind: c.kind, n: new Set(), last: c, notes: [], photo: null }).get(c.kind); g.n.add(c.user_id); if (c.note) g.notes.push(c); if (c.photo_path && !g.photo) g.photo = c.photo_path; });
     const groups = [...by.values()].sort((a, b) => b.n.size - a.n.size || String(b.last.created_at).localeCompare(String(a.last.created_at)));
     const top = el.querySelector("[data-condtop]");
     if (top) { if (groups.length) { const g = groups[0], [ic, lb] = COND[g.kind]; top.innerHTML = `<button type="button" data-gopulse>${ic} <b>${esc(lb)}</b> · ${condAgo(g.last.created_at)}${g.n.size > 1 ? ` · ${g.n.size} folk` : ""}</button>`; top.hidden = false; top.querySelector("[data-gopulse]").onclick = () => { const d = el.querySelector('[data-sec="pulse"]'); if (d) { d.open = true; popup.update(); setTimeout(() => d.scrollIntoView({ behavior: "smooth", block: "nearest" }), 60); } }; } else top.hidden = true; }
@@ -2379,29 +2380,35 @@ const Spots = (() => {
       ${groups.length ? `<ul class="cond-list">${groups.map(g => { const [ic, lb] = COND[g.kind]; return `<li><span class="cond-chip">${ic} ${esc(lb)}</span>
           <small>${g.n.size > 1 ? `${g.n.size} folk · ` : `${esc(g.last.author_name || "Folk")} · `}${condAgo(g.last.created_at)}${g.last.on_spot ? " · 📍 on the spot" : ""}</small>
           <button type="button" class="cond-same" data-condsame="${g.kind}" title="Still like this">✓ Still so</button>
+          ${g.photo ? `<img class="att-img" data-attph="${esc(g.photo)}" alt="Photo of the condition" hidden>` : ""}
           ${g.notes.slice(0, 2).map(c => `<q>${ugc(c.note)}<cite>— ${esc(c.author_name || "Folk")}</cite></q>`).join("")}</li>`; }).join("")}</ul>` : ""}
       <button type="button" class="pc-share cond-open" data-condreport>${groups.length ? "Update the conditions" : "Been here today? Tell the folk how it is"} <span aria-hidden="true">＋</span></button>
       <form class="cond-form" data-condform hidden>
         <div class="cond-pick">${kinds.map(k => `<button type="button" data-condk="${k}">${COND[k][0]} ${esc(COND[k][1])}</button>`).join("")}</div>
         <textarea maxlength="200" rows="2" placeholder="A comment, if you like (optional)"></textarea>
+        ${photoPickHtml(`condPh${s.id}`)}
         <button type="submit" class="pop-btn primary" disabled>Send</button>
       </form>`;
     const form = box.querySelector("[data-condform]"); let pick = null;
     box.querySelector("[data-condreport]")?.addEventListener("click", () => { form.hidden = !form.hidden; popup.update(); });
     form.querySelectorAll("[data-condk]").forEach(b => b.addEventListener("click", () => { pick = b.dataset.condk; form.querySelectorAll("[data-condk]").forEach(x => x.classList.toggle("on", x === b)); form.querySelector("[type=submit]").disabled = false; }));
-    const send = async (kind, note, btn) => {
+    wirePhotoPick(form);
+    fillAttPhotos(box);
+    const send = async (kind, note, btn, withPhoto) => {
       if (btn) { btn.disabled = true; }
+      const photo = withPhoto ? await attachedPhoto(form, s) : null;
       let onSpot = false;
       if (navigator.geolocation) onSpot = await new Promise(res => navigator.geolocation.getCurrentPosition(p => res(kmBetween(p.coords.latitude, p.coords.longitude, s.lat, s.lon) <= 0.5), () => res(false), { timeout: 5000, maximumAge: 300000 }));
       try {
-        await api("/rest/v1/place_conditions", { method: "POST", headers: { Prefer: "return=minimal" },
-          body: { spot_id: s.id, kind, note: note || null, on_spot: onSpot, author_name: displayName(), expires_at: new Date(Date.now() + COND[kind][2] * 36e5).toISOString() } });
+        const body = { spot_id: s.id, kind, note: note || null, on_spot: onSpot, author_name: displayName(), expires_at: new Date(Date.now() + COND[kind][2] * 36e5).toISOString(), ...(photo ? { photo_path: photo } : {}) };
+        try { await api("/rest/v1/place_conditions", { method: "POST", headers: { Prefer: "return=minimal" }, body }); }
+        catch (err) { if (!(photo && err.status === 400)) throw err; delete body.photo_path; await api("/rest/v1/place_conditions", { method: "POST", headers: { Prefer: "return=minimal" }, body }); }   // before the database update the photo still lands among the place's photos
         toast(`${COND[kind][0]} Thanks! The folk will see it${onSpot ? " — 📍 on the spot" : ""}.`);
         window.fcTrack?.("Spots: condition reported", { kind });
         loadConditions(popup, s);
       } catch (err) { toast(/row-level|policy|42501/i.test(err.message) ? "You've sent a lot of updates today: thank you, try again tomorrow." : `Could not send it: ${err.message}`, true); if (btn) btn.disabled = false; }
     };
-    form.addEventListener("submit", ev => { ev.preventDefault(); if (pick) send(pick, form.querySelector("textarea").value.trim(), form.querySelector("[type=submit]")); });
+    form.addEventListener("submit", ev => { ev.preventDefault(); if (pick) send(pick, form.querySelector("textarea").value.trim(), form.querySelector("[type=submit]"), true); });
     box.querySelectorAll("[data-condsame]").forEach(b => b.addEventListener("click", () => send(b.dataset.condsame, "", b)));
     popup.update();
   }
@@ -2535,6 +2542,7 @@ const Spots = (() => {
       return `<div class="byg-item ${sec === "gently" ? "gg" : ""}" data-topic="${it.topic}">
         <div class="byg-h"><b>${ic} ${esc(lb)}</b><span class="byg-st ${it.state}">${STATE_LABEL[it.state]}</span></div>
         ${factValue(f)}
+        ${f.photo_path ? `<img class="att-img" data-attph="${esc(f.photo_path)}" alt="Photo" hidden>` : ""}
         <p class="byg-by">${who}</p>
         ${it.state === "update" ? `<p class="byg-prompt">Been here recently? Check it in one tap.</p>` : ""}
         ${it.prev ? `<div class="byg-prev"><small>${it.state === "disputed" ? "Before:" : "Suggested change, not confirmed:"}</small>${factValue(it.prev)}<p class="byg-by">${esc(it.prev.author_name || "Folk")} · ${ageText(it.prev.created_at)}</p></div>` : ""}
@@ -2567,6 +2575,7 @@ const Spots = (() => {
       top.innerHTML = chips.join(""); top.hidden = !chips.length;
       top.querySelectorAll(".byg-chip").forEach(c => c.addEventListener("click", () => { const d = el.querySelector('[data-sec="before"]'); if (d) { d.open = true; popup.update(); } }));
     }
+    fillAttPhotos(box);
     setCnt(el, "before", items.length ? String(items.length) : "");
     // actions
     box.querySelectorAll("[data-gospot]").forEach(b => b.addEventListener("click", () => { const a = spotById(+b.dataset.gospot); if (a) { map.closePopup(); focusSpot(a); } }));
@@ -2623,6 +2632,7 @@ const Spots = (() => {
       <form data-fform class="${sec === "gently" ? "g" : ""}">${fields}
         <label>${type === "text" ? "What should the next folk know?" : "Anything else? (optional)"}</label>
         <textarea name="note" maxlength="300" rows="2" placeholder="${esc(ex || "")}">${esc(base?.note || "")}</textarea>
+        ${photoPickHtml(`factPh${s?.id || 0}${topic}`)}
         <button type="submit" class="pop-btn primary">${base ? "Update" : "Add"}</button>
         <p class="byg-hint">Shown with your name, your folk and today's date. If your phone is here, it says 📍 on the spot.</p>
       </form>`;
@@ -2630,6 +2640,7 @@ const Spots = (() => {
   const stripTags = h => { const x = document.createElement("div"); x.innerHTML = h; return [...x.children].map(c => c.textContent.trim()).filter(Boolean).join(" · ") || x.textContent.trim(); };
   function wireFactForm(box, topic, base, popup, s) {
     const form = box.querySelector("[data-fform]"); if (!form) return;
+    wirePhotoPick(form);
     form.querySelectorAll(".byg-pick").forEach(g => g.querySelectorAll("[data-v]").forEach(b => b.addEventListener("click", () => {
       if (g.classList.contains("multi")) b.classList.toggle("on"); else g.querySelectorAll("[data-v]").forEach(x => x.classList.toggle("on", x === b));
     })));
@@ -2647,10 +2658,11 @@ const Spots = (() => {
       const note = v("note");
       if (type === "text" && !note) return toast("Write a line for the next folk.", true);
       const btn = form.querySelector("[type=submit]"); btn.disabled = true;
-      const onSpot = await nearHere(s);
+      const onSpot = await nearHere(s), photo = await attachedPhoto(form, s);
       try {
-        await api("/rest/v1/place_facts", { method: "POST", headers: { Prefer: "return=minimal" },
-          body: { spot_id: s.id, topic, data, note: note || null, replaces: base?.id || null, author_name: displayName(), folk: myStyles[0] || null, on_spot: onSpot } });
+        const body = { spot_id: s.id, topic, data, note: note || null, replaces: base?.id || null, author_name: displayName(), folk: myStyles[0] || null, on_spot: onSpot, ...(photo ? { photo_path: photo } : {}) };
+        try { await api("/rest/v1/place_facts", { method: "POST", headers: { Prefer: "return=minimal" }, body }); }
+        catch (err) { if (!(photo && err.status === 400)) throw err; delete body.photo_path; await api("/rest/v1/place_facts", { method: "POST", headers: { Prefer: "return=minimal" }, body }); }
         toast(base ? "Updated: the folk will check it. Thanks!" : `Added${onSpot ? " — 📍 on the spot" : ""}. Thanks, the next folk will travel better!`);
         window.fcTrack?.(base ? "Spots: fact changed" : "Spots: fact added", { topic });
         loadFacts(popup, s);
@@ -5747,6 +5759,25 @@ const Spots = (() => {
         headers: { apikey: SPOTS_CONFIG.anonKey, Authorization: `Bearer ${session.access_token}`, "Content-Type": "image/jpeg", "x-upsert": "false" } });
     } catch {}
     await api("/rest/v1/spot_photos", { method: "POST", body: { spot_id: spotId, path, author_name: displayName() }, headers: { Prefer: "return=minimal" } });
+    return path;
+  }
+  /* a photo with a condition or a piece of «Before you go»: it goes into the place's photos too, and is linked to what it shows */
+  const photoPickHtml = id => `<label class="att-photo" for="${id}">📸 <span data-attname>Add a photo</span><input type="file" id="${id}" accept="image/*" capture="environment" hidden data-attfile></label>`;
+  function wirePhotoPick(form) {
+    const inp = form.querySelector("[data-attfile]"); if (!inp) return;
+    inp.addEventListener("change", () => { const f = inp.files?.[0], n = form.querySelector("[data-attname]"); if (n) n.textContent = f ? `✓ ${f.name.slice(0, 28)}` : "Add a photo"; form.querySelector(".att-photo")?.classList.toggle("on", !!f); });
+  }
+  async function attachedPhoto(form, s) {
+    const f = form.querySelector("[data-attfile]")?.files?.[0]; if (!f) return null;
+    if (!/^image\//.test(f.type)) { toast("That file isn't a photo.", true); return null; }
+    try { return await uploadPhoto(s.id, f); } catch (err) { toast(`The photo could not be uploaded: ${err.message}`, true); return null; }
+  }
+  // photos linked to conditions and facts: signed links, then put in their place
+  async function fillAttPhotos(box) {
+    const els = [...box.querySelectorAll("[data-attph]")]; if (!els.length) return;
+    let urls = {}; try { urls = await signPhotos([...new Set(els.map(x => x.dataset.attph))], true); } catch { return; }
+    els.forEach(img => { const p = img.dataset.attph, u = urls[thumbPath(p)] || urls[p]; if (!u) { img.remove(); return; } img.src = u; img.hidden = false;
+      img.addEventListener("click", ev => { ev.stopPropagation(); window.open(urls[p] || u, "_blank", "noopener"); }); });
   }
   function openPhotos(photos, urls, start, s) {
     let i = start, d = $("#photoDialog");

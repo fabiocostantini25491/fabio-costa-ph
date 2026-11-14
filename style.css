@@ -4102,3 +4102,9 @@ body[data-page="hub"] .sf-nav a.sf-map{background:none;color:#e6ecf3}
 .sx-searchbtn.on{background:#f28c1e;color:#1a1206}
 .sx-stage .spots-search.in-stage{position:absolute;z-index:1150;top:calc(12px + env(safe-area-inset-top, 0px));left:max(12px, env(safe-area-inset-left, 0px));right:calc(70px + env(safe-area-inset-right, 0px));margin:0;box-shadow:0 12px 34px rgba(0,0,0,.5)}
 @media (min-width:900px){.sx-stage .spots-search.in-stage{right:auto;width:min(460px,60%)}}
+
+/* a photo with a condition or a «Before you go» info */
+.att-photo{display:inline-flex;align-items:center;gap:6px;align-self:flex-start;margin:4px 0;padding:7px 12px;border-radius:999px;border:1px dashed rgba(156,200,255,.4);color:#cfe7ff;font:600 13px var(--sans);cursor:pointer}
+.att-photo.on{border-style:solid;border-color:#9fe3c8;color:#c8f5e3}
+.att-img{display:block;width:100%;max-width:260px;max-height:180px;object-fit:cover;margin:6px 0 4px;border-radius:12px;border:1px solid rgba(156,200,255,.18);cursor:zoom-in}
+.cond-list li .att-img{max-width:200px}
