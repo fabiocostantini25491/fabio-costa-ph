@@ -22,6 +22,8 @@ const Spots = (() => {
   const PAGE_SIZE = 1000;
   const COMMUNITY = "Community";
   const OWNER = "Fabio Costantini";   // autore degli spot importati da Google Maps   // lista per i posti aggiunti dai membri
+  // a place of interest (worth the visit, not a photo subject): a place pin with a star, apart from the camera of photo spots
+  const ICON_POI = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21.5s-7-6.3-7-11.6a7 7 0 0 1 14 0c0 5.3-7 11.6-7 11.6z"/><path d="m12 6.2 1.1 2.3 2.5.35-1.8 1.75.42 2.5L12 11.9l-2.22 1.2.42-2.5-1.8-1.75 2.5-.35z"/></svg>', POI_COLOR = "#e9d8a6";
   const CATS = {
     spot:       { label: "Photo spots", color: "#9cc8ff",
       icon: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8.5h3.2l1.8-2.5h6l1.8 2.5H20V19H4z"/><circle cx="12" cy="13" r="3.4"/></svg>' },
@@ -792,8 +794,8 @@ const Spots = (() => {
     const item = (k, label = CATS[k].label) => `<button type="button" class="sx-item${activeCats.has(k) ? " on" : ""}" data-sxcat="${k}" style="--c:${CATS[k].color}" aria-pressed="${activeCats.has(k)}">
         <span class="sx-ico">${CATS[k].icon}</span><span class="sx-name">${label}</span><small data-sxcount="${k}">${fmtN(n(k))}</small><span class="sx-check" aria-hidden="true"></span></button>`;
     const subOn = k => activeCats.has("spot") && activeSubs.has(k);
-    const subItems = () => `<div class="sx-subs">${SUB_KEYS.map(k => `<button type="button" class="sx-item sx-sub${subOn(k) ? " on" : ""}" data-sxsub="${k}" style="--c:${CATS.spot.color}" aria-pressed="${subOn(k)}">
-        <span class="sx-name">${SUBS[k].label}</span><small data-sxsubcount="${k}">${fmtN(base.filter(s => s.category === "spot" && spotSub(s) === k).length)}</small><span class="sx-check" aria-hidden="true"></span></button>`).join("")}</div>`;
+    const subItems = () => `<div class="sx-subs">${SUB_KEYS.map(k => `<button type="button" class="sx-item sx-sub${subOn(k) ? " on" : ""}" data-sxsub="${k}" style="--c:${k === "poi" ? POI_COLOR : CATS.spot.color}" aria-pressed="${subOn(k)}">
+        <span class="sx-ico">${k === "poi" ? ICON_POI : CATS.spot.icon}</span><span class="sx-name">${SUBS[k].label}</span><small data-sxsubcount="${k}">${fmtN(base.filter(s => s.category === "spot" && spotSub(s) === k).length)}</small><span class="sx-check" aria-hidden="true"></span></button>`).join("")}</div>`;
     const lockItem = (label, ico) => `<button type="button" class="sx-item is-locked" data-sxjoin><span class="sx-ico">${ico}</span><span class="sx-name">${label}</span><span class="sx-lock">${SX_ICON.lock}Members</span></button>`;
     // Support local vale per Places ed Essentials: stesso interruttore, conteggio della sezione
     const supportItem = cats => `<button type="button" class="sx-item${onlySupport ? " on" : ""}" data-onlysupport aria-pressed="${onlySupport}" style="--c:#9fe3c8"><span class="sx-ico">🌱</span><span class="sx-name">Support local</span><small>${spots.filter(x => x.support_local && cats.includes(x.category)).length}</small><span class="sx-check" aria-hidden="true"></span></button>`;
@@ -3578,7 +3580,6 @@ const Spots = (() => {
   const ICON_PLANE = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 19h19"/><path d="M3.8 13.6 6 15.4l12.3-3.3c1.2-.3 2-1.6 1.6-2.7-.3-.9-1.3-1.3-2.2-1.1l-3.6 1-5.4-4.6-2 .5 3 5.3-3.5 1-1.8-1.4-1.6.4z"/></svg>';
   const ICON_LOCAL = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21v-8"/><path d="M12 13c0-4 2.6-7 7.5-7.2C19.4 10.6 16.6 13 12 13z"/><path d="M12 15.5c0-3-2-5.3-6.5-5.5.1 3.7 2.3 5.5 6.5 5.5z"/></svg>';
   // points of interest (churches, towers, castles, bridges, squares…) get their own pin, apart from photo spots
-  const ICON_POI = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 9.5 12 4l8.5 5.5z"/><path d="M5 20.5h14M6.5 11.5v6.5M10 11.5v6.5M14 11.5v6.5M17.5 11.5v6.5M4.5 18.5h15"/></svg>', POI_COLOR = "#e9d8a6";
   function pinIcon(s) {
     const poi = s.category === "spot" && spotSub(s) === "poi";
     const cat = poi ? { ...(CATS.spot), icon: ICON_POI, color: POI_COLOR } : CATS[s.category] || CATS.spot;
@@ -6683,7 +6684,7 @@ const Spots = (() => {
     hours: "Hours", parking: "Parking", price_level: "Price range", closed: "Closed on", duration: "Duration", link: "Booking" };
   // Places in tre scelte: Photo spot e Point of interest sono entrambi «spot» (sottocategoria viewpoint / urban), più Trekking
   const PLACE_KINDS = [["spot", "photo", "Photo spot", CATS.spot.icon],
-    ["spot", "poi", "Point of interest", '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h16M6 20V10M18 20V10M10 20v-6h4v6M3 10l9-6 9 6z"/></svg>'],
+    ["spot", "poi", "Point of interest", ICON_POI],
     ["trekking", "trek", "Trekking", CATS.trekking.icon]];
   const placeKind = () => wz.cat === "trekking" ? "trek" : wz.cat !== "spot" ? "" : wz.sub === "urban" ? "poi" : wz.sub ? "photo" : wz.edit && spotSub(wz.edit) === "poi" ? "poi" : "photo";
   const SOCIAL_CATS = ["spot", "hotel", "restaurant"];   // Support local e Fragile: Places (spot) ed Essentials
@@ -6947,7 +6948,7 @@ const Spots = (() => {
           <button type="button" class="outline-link" data-wzph>📷🎒 Join the community map</button>
           ${passV ? `<button type="button" class="outline-link" data-wzpass>🎁 Pass it on: sell or give away something here</button>` : ""}
         </div>` : `
-      ${g === "places" ? `<div class="wz-cats" role="group" aria-label="Category">${PLACE_KINDS.map(([c, sb, label, ico]) => `<button type="button" class="wz-cat${placeKind() === sb ? " on" : ""}" data-wzcat="${c}" data-wzkind="${sb}" style="--c:${CATS[c].color}">${ico}<span>${label}</span></button>`).join("")}</div>`
+      ${g === "places" ? `<div class="wz-cats" role="group" aria-label="Category">${PLACE_KINDS.map(([c, sb, label, ico]) => `<button type="button" class="wz-cat${placeKind() === sb ? " on" : ""}" data-wzcat="${c}" data-wzkind="${sb}" style="--c:${sb === "poi" ? POI_COLOR : CATS[c].color}">${ico}<span>${label}</span></button>`).join("")}</div>`
         : cats.length > 1 ? `<div class="wz-cats" role="group" aria-label="Category">${cats.map(k => `<button type="button" class="wz-cat${k === wz.cat ? " on" : ""}" data-wzcat="${k}" style="--c:${CATS[k].color}">${CATS[k].icon}<span>${CATS[k].label}</span></button>`).join("")}</div>` : ""}
       ${subs.length && profV && g !== "places" ? `<div class="wz-subs" role="group" aria-label="Type">${subs.map(([k, l]) => `<button type="button" class="wz-sub${k === wz.sub ? " on" : ""}" data-wzsub="${k}">${esc(l)}</button>`).join("")}</div>` : ""}
       <label>Description <small>(optional)</small><textarea id="wzNote" rows="3" maxlength="2000" placeholder="What makes it worth it? Best time, what to shoot, tips…">${esc(wz.note)}</textarea></label>
