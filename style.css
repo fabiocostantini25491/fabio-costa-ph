@@ -4108,3 +4108,7 @@ body[data-page="hub"] .sf-nav a.sf-map{background:none;color:#e6ecf3}
 .att-photo.on{border-style:solid;border-color:#9fe3c8;color:#c8f5e3}
 .att-img{display:block;width:100%;max-width:260px;max-height:180px;object-fit:cover;margin:6px 0 4px;border-radius:12px;border:1px solid rgba(156,200,255,.18);cursor:zoom-in}
 .cond-list li .att-img{max-width:200px}
+
+/* «Add a photo of this place» at the bottom of the card: easy to see */
+.pop-btn.pc-addph{flex:1 1 100%;order:-1;justify-content:center;min-height:46px;border:1px dashed rgba(255,190,122,.7);background:rgba(242,140,30,.10);color:#ffbe7a;font-weight:700;font-size:14px}
+.pop-btn.pc-addph:hover{background:rgba(242,140,30,.18)}

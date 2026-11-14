@@ -3509,6 +3509,7 @@ const Spots = (() => {
         <form class="pop-review pc-form" data-reviewform hidden>
           <label class="rev-folk" data-revfolk hidden>Telling it as <select name="folk"></select></label>
           <textarea rows="4" maxlength="2000" placeholder="Your story: what it was like, when to go, what to know…" aria-label="Your story"></textarea>
+          <label class="att-photo" for="storyPh${s.id}">📸 <span data-attname>Add photos</span><input type="file" id="storyPh${s.id}" accept="image/*" multiple hidden data-attfile></label>
           ${PRICED[s.category] ? `<fieldset class="pay">
             <legend>What did you pay? <small>(optional, helps others)</small></legend>
             <div class="pay-row">
@@ -3573,7 +3574,7 @@ const Spots = (() => {
       ${pcSec("details", "Place details", "Where, when, how.", detailsBody)}
       ${schemaV2 ? `<div class="pop-actions pc-acts">
           ${commV ? `<button type="button" class="pop-btn fav-btn${favs.has(s.id) ? " on" : ""}" data-fav>${favs.has(s.id) ? "♥ Saved" : "♡ Save"}</button>` : ""}
-          <button type="button" class="pop-btn" data-addphoto>${ICON.img}Add photo</button>
+          <button type="button" class="pop-btn pc-addph" data-addphoto>📸 Add a photo of this place</button>
           <input type="file" accept="image/*" multiple hidden data-photofile>
         </div>
         <p class="pop-rights">By adding a photo you confirm it's yours and accept the <a href="#photoRights" data-rights>photo terms</a>.</p>` : ""}
@@ -3685,6 +3686,7 @@ const Spots = (() => {
       loadExtras(popup, s);
     });
     const form = el.querySelector("[data-reviewform]");
+    wirePhotoPick(form);
     el.querySelector("[data-review]").addEventListener("click", () => withConduct(() => { form.hidden = !form.hidden; popup.update(); if (!form.hidden) (form.querySelector("[name=title]") || form.querySelector("textarea")).focus(); }));
     let rating = 0;
     const paint = () => form.querySelectorAll("[data-star]").forEach(b => { const on = +b.dataset.star <= rating; b.classList.toggle("on", on); b.setAttribute("aria-checked", +b.dataset.star === rating ? "true" : "false"); });
@@ -3749,13 +3751,15 @@ const Spots = (() => {
         await api("/rest/v1/spot_reviews?on_conflict=spot_id,user_id", { method: "POST",
           body: { spot_id: s.id, body: body || null, author_name: displayName(), ...extra, ...subBody, ...(folkV && clusterV ? { folk: fv("folk") || null } : {}) },
           headers: { Prefer: "resolution=merge-duplicates,return=minimal" } });
+        const files = [...(form.querySelector("[data-attfile]")?.files || [])].filter(f => /^image\//.test(f.type)).slice(0, 3);
+        if (files.length) { toast(`Uploading ${files.length} photo${files.length > 1 ? "s" : ""}…`); try { for (const f of files) await uploadPhoto(s.id, f); } catch (err) { toast(`A photo could not be uploaded: ${err.message}`, true); } const fi = form.querySelector("[data-attfile]"); if (fi) { fi.value = ""; fi.dispatchEvent(new Event("change")); } }
         form.hidden = true; toast("Thanks for your story!");
         loadExtras(popup, s);
       } catch (err) { toast(`Could not post: ${err.message}`, true); }
       btn.disabled = false;
     });
     form._setMine = r => {
-      rating = r?.rating || 0; form.querySelector("textarea").value = r?.body || ""; paint();
+      rating = r?.rating || 0; form.querySelector("textarea").value = r?.body || r?.r_title || ""; paint();   // stories have no title now: an old title-only story comes back as its text
       const ti = form.querySelector("[name=title]"); if (ti) ti.value = r?.r_title || "";
       const set = (n, v) => { const x = form.querySelector(`[name=${n}]`); if (x && v != null) x.value = v; };
       set("paid", r?.paid); set("currency", r?.currency); set("people", r?.people); set("nights", r?.nights); set("stay", r?.stay_type);
@@ -5765,7 +5769,9 @@ const Spots = (() => {
   const photoPickHtml = id => `<label class="att-photo" for="${id}">📸 <span data-attname>Add a photo</span><input type="file" id="${id}" accept="image/*" capture="environment" hidden data-attfile></label>`;
   function wirePhotoPick(form) {
     const inp = form.querySelector("[data-attfile]"); if (!inp) return;
-    inp.addEventListener("change", () => { const f = inp.files?.[0], n = form.querySelector("[data-attname]"); if (n) n.textContent = f ? `✓ ${f.name.slice(0, 28)}` : "Add a photo"; form.querySelector(".att-photo")?.classList.toggle("on", !!f); });
+    const empty = form.querySelector("[data-attname]")?.textContent || "Add a photo";
+    inp.addEventListener("change", () => { const k = inp.files?.length || 0, n = form.querySelector("[data-attname]");
+      if (n) n.textContent = k > 1 ? `✓ ${k} ${IT_() ? "foto" : "photos"}` : k ? `✓ ${inp.files[0].name.slice(0, 28)}` : empty; form.querySelector(".att-photo")?.classList.toggle("on", !!k); });
   }
   async function attachedPhoto(form, s) {
     const f = form.querySelector("[data-attfile]")?.files?.[0]; if (!f) return null;
