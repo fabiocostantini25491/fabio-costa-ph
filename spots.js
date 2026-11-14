@@ -2503,6 +2503,15 @@ const Spots = (() => {
 
   /* «How is it now?» asked to the folk (supabase-com-e-adesso.sql): the open questions around a place, answered with a «how is it now»
      on any place within 15 km; the folk who know the area (signed or saved nearby, or living within 25 km) see them in the Folk Hub. */
+  /* 📸 Photo pulse (photopulse.js, loaded the first time the section opens): where to stand, and when */
+  let ppJs = null;
+  function loadPhotoPulse(popup, s) {
+    const box = popup.getElement()?.querySelector("[data-photopulse]"); if (!box || box.dataset.done) return;
+    box.dataset.done = "1";
+    if (!ppJs) ppJs = new Promise((res, rej) => { const v = (document.querySelector('script[src*="spots.js"]')?.getAttribute("src") || "").split("?v=")[1] || ""; const js = document.createElement("script"); js.src = `photopulse.js${v ? `?v=${v}` : ""}`; js.onload = res; js.onerror = rej; document.head.append(js); });
+    ppJs.then(() => { if (typeof Astro === "undefined") throw new Error("astro"); window.PhotoPulse.mount(box, { esc, track: ev => window.fcTrack?.(ev), update: () => popup.update() }, s); setTimeout(() => popup.update(), 50); })
+      .catch(() => { ppJs = null; box.dataset.done = ""; box.innerHTML = `<p class="pc-empty">The Photo pulse could not load. Check your connection.</p>`; });
+  }
   let asksV = true;
   const agoL = t => IT_() ? condAgo(t).replace(/ min ago/, " min fa").replace(/ h ago/, " h fa").replace("yesterday", "ieri").replace(/ days ago/, " giorni fa") : condAgo(t);
   async function loadAsks(popup, s) {
@@ -2819,7 +2828,7 @@ const Spots = (() => {
     clear_rise: ["🌅", "Clear sunrise", "#ffd27a"], clear_set: ["🌇", "Clear sunset", "#ffbe7a"], fiery_rise: ["🔥", "Fiery sunrise possible", "#ff9a5c"], fiery: ["🔥", "Fiery sunset possible", "#ff7a45"],
     cloudsea: ["☁️", "Sea of clouds likely", "#cfe2ff"], fog: ["🌫️", "Fog in the valleys", "#b8c4d2"], snow: ["❄️", "Fresh snow", "#e8f4ff"],
     drama: ["⛈️", "Dramatic light possible", "#c9a7ff"], stars: ["✨", "Dark sky for stars", "#9ec5ff"], milky: ["🌌", "Milky Way core visible", "#b39dff"],
-    moonrise: ["🌕", "Full moon rising at sunset", "#fff3c4"], aurora: ["🟢", "Aurora possible", "#7ee0a1"]
+    moonrise: ["🌕", "Full moon rising at sunset", "#fff3c4"], moonset: ["🌕", "Full moon setting at sunrise", "#fff3c4"], moonlow: ["🌙", "Moon low in the golden hour", "#e8dcb0"], aurora: ["🟢", "Aurora possible", "#7ee0a1"]
   };
   let pfLayer = null, pfOpen = false, pfAlerts = [], pfOn = null, pfKey = "", pfBusy = false, pfKp = null;
   const pfCache = new Map(), elevCache = new Map();
@@ -2958,6 +2967,23 @@ const Spots = (() => {
             const cloudy = cloudsN.length ? cloudsN.reduce((a, x) => a + x, 0) / cloudsN.length : 100;
             if (maxKp >= need && cloudy < 50) add("aurora", d, date, `Kp ${maxKp.toFixed(0)} · needs ${need.toFixed(0)} here`, g.places, d === 0 ? 2 : 4);
           }
+        }
+        // full moon setting within an hour of sunrise (the mirror of the moonrise at sunset); a moon over half lit low in the golden hour
+        const sunrise = st[-0.833]?.rise;
+        if (sunrise && Astro.moonIllum(sunrise).fraction > 0.93) {
+          for (let t = sunrise - 75 * 6e4; t < sunrise + 45 * 6e4; t += 5 * 6e4) {
+            if (Astro.moonAlt(t, g.lat, g.lon) > 0 && Astro.moonAlt(t + 5 * 6e4, g.lat, g.lon) <= 0) {
+              const li = hi(new Date(t + off).toISOString());
+              if (!(at("cloud_cover_low", li) > 60)) add("moonset", d, date, `moonset ${new Date(t + 5 * 6e4 + off).toISOString().slice(11, 16)} · sunrise ${riseT}`, g.places, d);
+              break;
+            }
+          }
+        }
+        for (const [tg, w] of [[sunrise, "sunrise"], [st[-0.833]?.set, "sunset"]]) {
+          if (!tg) continue;
+          const tm = w === "sunrise" ? tg + 20 * 6e4 : tg - 20 * 6e4, il = Astro.moonIllum(tm).fraction, ma = Astro.moonAlt(tm, g.lat, g.lon);
+          if (il >= 0.5 && il <= 0.93 && ma >= 1 && ma <= 12 && !(at("cloud_cover_low", hi(new Date(tm + off).toISOString())) > 60))
+            add("moonlow", d, date, `${w} · ${Math.round(il * 100)}%`, g.places, d);
         }
         // full moon rising within an hour of sunset
         const sunset = st[-0.833]?.set;
@@ -3105,7 +3131,7 @@ const Spots = (() => {
 
   /* ======== The Folk Hub: right now on the map (photo forecast), from Fabio, the folk room, the founding folk ======== */
   let hubV = true, hubData = null, hubAt = 0, hubBusy = false, hubPf = null, hubPfAt = 0;
-  const HUB_IMG = { snow: "photo", cloudsea: "photo", fog: "photo", fiery: "hike", fiery_rise: "hike", clear_set: "hike", clear_rise: "hike", drama: "road", stars: "night", milky: "night", aurora: "night", moonrise: "night" };
+  const HUB_IMG = { snow: "photo", cloudsea: "photo", fog: "photo", fiery: "hike", fiery_rise: "hike", clear_set: "hike", clear_rise: "hike", drama: "road", stars: "night", milky: "night", aurora: "night", moonrise: "night", moonset: "night", moonlow: "night" };
   const CAT_IMG = { spot: "photo", trekking: "hike", restaurant: "food", hotel: "slow", experience: "road", workshop: "photo" };
   const wfImg = k => `img/wf/${k || "photo"}.jpg`;
   const DEFAULT_AREA = { s: 46.25, w: 11.3, n: 46.85, e: 12.35, name: "the Dolomites" };
@@ -3215,11 +3241,11 @@ const Spots = (() => {
   }
   function paintHubForecast(box) {
     const hero = box.querySelector("[data-hubhero]"), mos = box.querySelector("[data-hubmosaic]"); if (!hero || !hubPf) return;
-    const prio = ["snow", "aurora", "milky", "cloudsea", "moonrise", "fiery_rise", "fiery", "drama", "fog", "stars", "clear_set", "clear_rise"];
+    const prio = ["snow", "aurora", "milky", "cloudsea", "moonrise", "moonset", "fiery_rise", "fiery", "drama", "fog", "stars", "clear_set", "clear_rise", "moonlow"];
     const al = hubPf.alerts.slice().sort((a, b) => a.day - b.day || prio.indexOf(a.type) - prio.indexOf(b.type));
     const top = al.filter(a => a.day <= 2).sort((a, b) => prio.indexOf(a.type) - prio.indexOf(b.type) || a.day - b.day)[0] || al[0];
     const dayW = d => d === 0 ? "today" : d === 1 ? "tomorrow" : "in " + d + " days";
-    const HERO_T = { snow: ["The first snow", "is here."], aurora: ["Aurora", "possible."], milky: ["The Milky Way", "is up."], cloudsea: ["A sea of clouds", "is coming."], moonrise: ["A full moon", "at sunset."],
+    const HERO_T = { snow: ["The first snow", "is here."], aurora: ["Aurora", "possible."], milky: ["The Milky Way", "is up."], cloudsea: ["A sea of clouds", "is coming."], moonrise: ["A full moon", "at sunset."], moonset: ["A full moon", "at sunrise."], moonlow: ["The moon, low", "in the golden light."],
       fiery: ["The sunset could", "catch fire."], fiery_rise: ["The sunrise could", "catch fire."], drama: ["Dramatic light", "is coming."], fog: ["Fog in the valleys,", "light above."], stars: ["Dark skies", "for the stars."], clear_set: ["A clear sunset", "is coming."], clear_rise: ["A clear sunrise", "is coming."] };
     if (top) {
       const [ic, lb] = PF[top.type], [t1, t2] = HERO_T[top.type];
@@ -3652,6 +3678,7 @@ const Spots = (() => {
     cons: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 20c-2-1.5-3.5-4-3.5-7.5M17 20c2-1.5 3.5-4 3.5-7.5M4.5 9c0 1.5 1 2.5 2 3M19.5 9c0 1.5-1 2.5-2 3M6 5.5c0 1.6.8 2.6 2 3.2M18 5.5c0 1.6-.8 2.6-2 3.2"/><path d="m12 7 1.4 2.8 3.1.5-2.2 2.2.5 3.1-2.8-1.5-2.8 1.5.5-3.1-2.2-2.2 3.1-.5z"/></svg>',
     stories: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 10.5h.01M12 10.5h.01M16 10.5h.01"/></svg>',
     pulse: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12h4l2-5 3.5 11 3-8 1.5 2h5"/></svg>',
+    photo: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8.5h3.2l1.8-2.5h6l1.8 2.5H20V19H4z"/><circle cx="12" cy="13" r="3.4"/><path d="M18 3.5v3M16.5 5h3"/></svg>',
     travel: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19c0-8 5-14 14-14 0 9-6 14-14 14z"/><path d="M5 19 13 11"/></svg>',
     details: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5.5M12 7.5h.01"/></svg>'
   };
@@ -3772,6 +3799,7 @@ const Spots = (() => {
       ${pcSec("cons", "Folk consensus", "The collective impression of the folk.", consBody)}
       ${pcSec("stories", "Folk stories", "Experiences, tips and real advice.", storiesBody)}
       ${pcSec("pulse", "Place pulse", "Conditions now: weather, live webcams and the folk.", pulseBody)}
+      ${pcSec("photo", "Photo pulse", "Where to stand, and when: light, moon, Milky Way.", `<div data-photopulse><p class="pc-empty">Loading…</p></div>`)}
       ${pcSec("travel", "Travel better", "Help keep this place special.", travelBody)}
       ${pcSec("details", "Place details", "Where, when, how.", detailsBody)}
       ${schemaV2 ? `<div class="pop-actions pc-acts">
@@ -3814,6 +3842,7 @@ const Spots = (() => {
     el.querySelectorAll("[data-gotravel]").forEach(b => b.addEventListener("click", () => { const d = el.querySelector('[data-sec="travel"]'); if (d) { d.open = true; popup.update(); setTimeout(() => d.scrollIntoView({ behavior: "smooth", block: "nearest" }), 60); } }));
     el.querySelectorAll(".pc-sec").forEach(d => d.addEventListener("toggle", () => popup.update()));
     el.querySelector('[data-sec="pulse"]')?.addEventListener("toggle", ev => { if (ev.currentTarget.open) { loadAsks(popup, s); loadWeather(popup, s); loadSea(popup, s); loadCams(popup, s); } });
+    el.querySelector('[data-sec="photo"]')?.addEventListener("toggle", ev => { if (ev.currentTarget.open) loadPhotoPulse(popup, s); });
     el.querySelector("[data-editspot]")?.addEventListener("click", () => { map.closePopup(); openEditPlace(s); });
     el.querySelector("[data-authorp]")?.addEventListener("click", () => openMemberProfile(s.created_by));
     el.querySelector("[data-delete]")?.addEventListener("click", async ev => {

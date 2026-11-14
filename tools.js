@@ -276,14 +276,20 @@ const Tools = (() => {
   async function show() {
     const el = root();
     if (!el) return;
+    // a link from the Photo pulse: ?tp=lat,lon&tn=name&td=YYYY-MM-DD&tt=planner opens that point, that day, that tab
+    const qs = new URLSearchParams(location.search), tp = (qs.get("tp") || "").split(",").map(Number);
+    const linked = tp.length === 2 && tp.every(Number.isFinite) ? { lat: tp[0], lon: tp[1], name: (qs.get("tn") || "Pinned point").slice(0, 80), context: "" } : null;
+    const linkedDay = /^\d{4}-\d{2}-\d{2}$/.test(qs.get("td") || "") ? qs.get("td") : null;
+    if (linked) { if (TABS.some(x => x.id === qs.get("tt"))) tab = qs.get("tt"); try { history.replaceState(null, "", location.pathname + location.hash); } catch {} }
     if (!wired) {
       wired = true;
       el.innerHTML = shellHtml();
       wire();
       setTab(tab);
-      place = store.get() || DEFAULT_PLACE;
-      await setPlace(place, { keepDay: false, save: false });
-    }
+      place = linked || store.get() || DEFAULT_PLACE;
+      await setPlace(place, { keepDay: false, save: !!linked });
+    } else if (linked) { setTab(tab); await setPlace(linked, { keepDay: true }); }
+    if (linked && linkedDay) { const [y, m, d] = linkedDay.split("-").map(Number); ctx.setDay({ y, m: m - 1, d }); }
   }
 
   const TABS = [
