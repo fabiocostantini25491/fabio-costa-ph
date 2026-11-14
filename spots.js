@@ -6254,6 +6254,13 @@ const Spots = (() => {
       allSpots: () => spots,
       openPlace: id => go(spotById(id)),
       askFolk: pre => { close?.(); openDestForm(pre); },
+      findPlace: async q => {   // the map's search (Photon), on its own: it doesn't touch the search box
+        const r = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=6&lang=${window.I18N?.lang === "it" ? "it" : "en"}`);
+        if (!r.ok) throw new Error(r.status);
+        return ((await r.json()).features || []).map(f => { const p = f.properties || {}, [lon, lat] = f.geometry.coordinates;
+          return { lat, lon, name: p.name || p.city || q, context: [...new Set([p.city !== p.name ? p.city : "", p.state, p.country].filter(Boolean))].join(", "), isCountry: p.type === "country" || p.osm_value === "country",
+            big: ["state", "region", "county"].includes(p.type) || !!(p.extent && (Math.abs(p.extent[2] - p.extent[0]) > 0.6 || Math.abs(p.extent[1] - p.extent[3]) > 0.6)) }; });   // a region: no single point
+      },
       showOnMap: pts => { close?.(); meView = false; hubKit().toMap(pts); }
     };
     atlasJs.then(() => { if (host.isConnected) window.FolkAtlas.mount(host, kit, { own, uid, name, been, stamps: pp.stamps || [] }); })

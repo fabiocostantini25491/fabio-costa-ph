@@ -28,7 +28,13 @@ window.FolkAtlas = (() => {
     "Tap a country to see it.": "Tocca un Paese per vederlo.",
     "No dreams yet. Save places on the map or add a country: your dreams turn green when you sign there.": "Ancora nessun sogno. Salva posti sulla mappa o aggiungi un Paese: i sogni diventano verdi quando firmi lì.",
     "Could not save it: {e}": "Non salvato: {e}", "The atlas arrives once the database is updated (supabase-folk-atlas.sql).": "L'atlante arriva quando il database è aggiornato (supabase-folk-atlas.sql).",
-    "Signed here": "Firmati qui", "In your dreams": "Nei tuoi sogni", "Done.": "Fatto."
+    "Signed here": "Firmati qui", "♡ I want to go back": "♡ Voglio tornarci", "Your dreams here": "I tuoi sogni qui", "A dream place": "Posto sognato",
+    "1 folk has been nearby": "1 folk c'è stato vicino", "{n} folk have been nearby": "{n} folk ci sono stati vicino",
+    "No dreams yet. Save places on the map or add a dream: it turns green when you sign there.": "Ancora nessun sogno. Salva posti sulla mappa o aggiungi un sogno: diventa verde quando firmi lì.",
+    "＋ Add a dream": "＋ Aggiungi un sogno", "A place or a country: Roccascalegna, Lofoten, Japan…": "Un posto o un Paese: Roccascalegna, Lofoten, Giappone…",
+    "Where do you dream of going?": "Dove sogni di andare?", "Been somewhere before SpotFolk?": "Sei stato da qualche parte prima di SpotFolk?",
+    "The whole country": "Tutto il Paese", "A region": "Una regione", "Already in your dreams.": "È già tra i tuoi sogni.",
+    "Your dreams are private: only you see them. The countries you declare show in your passport to the folk. A dream comes true when you sign there: for a place, within 15 km.": "I tuoi sogni sono privati: li vedi solo tu. I Paesi che dichiari si vedono nel tuo passaporto, solo dai folk. Un sogno si realizza quando firmi lì: per un posto, entro 15 km.", "In your dreams": "Nei tuoi sogni", "Done.": "Fatto."
   };
   const t = (s, v = {}) => (it ? IT[s] || s : s).replace(/\{(\w+)\}/g, (_, k) => v[k] ?? "");
 
@@ -108,6 +114,12 @@ window.FolkAtlas = (() => {
 .fa-map path:hover{filter:brightness(1.25)}
 .fa-map path.sel{stroke:#ffd27a;stroke-width:1.6}
 .fa-map .dot{fill:#fff8e6;opacity:.8;pointer-events:none}
+.fa-map .pin{fill:#f28c28;stroke:#fff8e6;stroke-width:1.2;vector-effect:non-scaling-stroke;cursor:pointer}.fa-map .pin.ok{fill:#2fbf71}
+.fa-legend i.pinkey{border-radius:50%;background:#f28c28;box-shadow:0 0 0 1.5px #fff8e6 inset}
+.fa-found{list-style:none;margin:0;padding:0;display:grid;gap:4px}.fa-found:empty{display:none}
+.fa-found button{width:100%;text-align:left;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04);color:#f3ead8;border-radius:12px;padding:9px 12px;cursor:pointer;font-family:inherit}
+.fa-found button:hover{border-color:#f28c28}.fa-found b{display:block;font-size:14px;font-weight:600}.fa-found small{font-size:12px;color:rgba(243,234,216,.65)}
+.fa-h2{margin:12px 0 2px}.fa-been{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center}
 .fa-map .sm{stroke:#060d18;stroke-width:.6;vector-effect:non-scaling-stroke;cursor:pointer}
 .fa-zoom{position:absolute;top:10px;right:10px;display:flex;gap:3px;padding:3px;border-radius:99px;background:rgba(5,11,20,.82);border:1px solid rgba(255,255,255,.12)}
 .fa-zoom button{border:0;background:none;color:#f3ead8;font-family:inherit;font-weight:600;font-size:12px;line-height:1;padding:7px 11px;border-radius:99px;cursor:pointer}
@@ -149,6 +161,10 @@ window.FolkAtlas = (() => {
   }
 
   /* ---------- mount ---------- */
+  const RADIUS = 15;   // km: a dream of a precise place comes true when you sign within this distance of it
+  const kmBetween = (a, b, c, d) => { const r = Math.PI / 180, x = Math.sin((c - a) * r / 2) ** 2 + Math.cos(a * r) * Math.cos(c * r) * Math.sin((d - b) * r / 2) ** 2; return 12742 * Math.asin(Math.sqrt(x)); };
+  const ms = v => { const n = Date.parse(v); return Number.isFinite(n) ? n : 0; };
+
   // opts: { own, uid, name, stamps:[{id,name,lat,lon,clat,clon,on_spot,at}], been:[iso3]|undefined }
   async function mount(host, K, opts) {
     css();
@@ -159,37 +175,65 @@ window.FolkAtlas = (() => {
       catch (err) { dbOk = false; }
     }
     been = been || [];
-    const S = { sel: null, view: "world", folk: {}, confirm: null };
+    const S = { sel: null, view: "world", folk: {}, confirm: null, found: [] };
+    const isPlace = w => w.lat != null && w.lon != null;
 
     // stamps → countries
     const stamps = (opts.stamps || []).map(s => ({ ...s, cc: countryAt(s.lat ?? s.clat, s.lon ?? s.clon) })).filter(s => s.cc);
     const byC = new Map();
-    stamps.forEach(s => { const o = byC.get(s.cc) || { n: 0, on: 0, first: null, list: [] }; o.n++; if (s.on_spot) o.on++; if (!o.first || s.at < o.first) o.first = s.at; o.list.push(s); byC.set(s.cc, o); });
+    stamps.forEach(s => { const o = byC.get(s.cc) || { n: 0, on: 0, list: [] }; o.n++; if (s.on_spot) o.on++; o.list.push(s); byC.set(s.cc, o); });
 
     // saved places → countries (only yours)
     const savedBy = new Map();
     if (own) (K.saved?.() || []).forEach(sp => { const c = countryAt(sp.lat, sp.lon); if (!c) return; const a = savedBy.get(c) || []; a.push(sp); savedBy.set(c, a); });
 
-    const status = id => { const s = byC.get(id); if (s) return s.on ? "onspot" : "signed"; if (been.includes(id)) return "declared"; if (own && (wish.some(w => w.country === id) || savedBy.has(id))) return "wish"; return "none"; };
+    // when a dream comes true: a signature after the dream, near the place (precise dream) or in the country
+    const doneAt = w => {
+      const t0 = ms(w.at), hits = stamps.filter(s => ms(s.at) >= t0 && (isPlace(w) ? s.lat != null && kmBetween(+s.lat, +s.lon, +w.lat, +w.lon) <= RADIUS : s.cc === w.country));
+      return hits.length ? hits.map(s => s.at).sort((a, b) => ms(a) - ms(b))[0] : null;
+    };
+    const status = id => {
+      const s = byC.get(id); if (s) return s.on ? "onspot" : "signed";
+      if (been.includes(id)) return "declared";
+      if (own && (wish.some(w => w.country === id) || savedBy.has(id))) return "wish";
+      return "none";
+    };
+    // the dreams: each one you added (a country or a place) + the countries of your saved places you haven't been to
     const wishes = () => {
-      const ids = [...new Set([...wish.map(w => w.country), ...savedBy.keys()])];
-      return ids.map(id => {
-        const w = wish.find(x => x.country === id), sv = savedBy.get(id) || [], sc = byC.get(id);
-        const doneAt = w && sc ? sc.list.map(s => s.at).filter(a => a && a >= w.at).sort()[0] || sc.first : null;
-        return { id, w, sv, done: !!(w && sc), doneAt, hide: !w && (sc || been.includes(id)) };
-      }).filter(x => !x.hide).sort((a, b) => (a.done - b.done) || String(a.w?.at || "~").localeCompare(String(b.w?.at || "~")));
+      const out = wish.map(w => { const d = doneAt(w); return { key: "w" + w.id, id: w.country, w, sv: isPlace(w) ? [] : savedBy.get(w.country) || [], done: !!d, doneAt: d }; });
+      [...savedBy.keys()].forEach(id => { if (!wish.some(w => w.country === id && !isPlace(w)) && !byC.has(id) && !been.includes(id)) out.push({ key: "c" + id, id, w: null, sv: savedBy.get(id), done: false, doneAt: null }); });
+      return out.sort((a, b) => (a.done - b.done) || (ms(a.w?.at) || 9e15) - (ms(b.w?.at) || 9e15));
     };
 
-    // folk counts for the dreams: spots on the map in each dream country (numbers only)
+    // folk counts for the dreams: other folk who signed places near the place or in the country (numbers only)
     async function loadFolk() {
       if (!own || !dbOk) return;
-      const want = new Set(wishes().filter(x => !x.done).map(x => x.id)); if (!want.size) return;
-      const groups = {};
-      (K.allSpots?.() || []).forEach(sp => { if (sp.lat == null) return; const c = countryAt(sp.lat, sp.lon); if (c && want.has(c)) (groups[c] = groups[c] || []).push(sp.id); });
-      Object.keys(groups).forEach(k => { groups[k] = groups[k].slice(0, 2000); });
-      want.forEach(k => { if (!groups[k]) S.folk[k] = 0; });
+      const open = wishes().filter(x => !x.done); if (!open.length) return;
+      const all = (K.allSpots?.() || []).filter(sp => sp.lat != null), groups = {};
+      open.forEach(x => {
+        const ids = x.w && isPlace(x.w) ? all.filter(sp => kmBetween(+sp.lat, +sp.lon, +x.w.lat, +x.w.lon) <= RADIUS).map(sp => sp.id)
+          : all.filter(sp => countryAt(sp.lat, sp.lon) === x.id).map(sp => sp.id);
+        if (ids.length) groups[x.key] = ids.slice(0, 2000); else S.folk[x.key] = 0;
+      });
       if (!Object.keys(groups).length) { draw(); return; }
       try { const r = (await K.api("/rest/v1/rpc/atlas_folk", { method: "POST", body: { p_groups: groups } })).data || {}; Object.keys(groups).forEach(k => { S.folk[k] = +r[k] || 0; }); draw(); } catch {}
+    }
+
+    // dreams added with only a name (before precise places existed): find their position once
+    async function placeOldDreams() {
+      if (!own || !dbOk || !K.findPlace) return;
+      let moved = false;
+      let tried = []; try { tried = JSON.parse(sessionStorage.getItem("fa-tried") || "[]"); } catch {}
+      for (const w of wish.filter(w => w.label && !isPlace(w) && !tried.includes(w.id)).slice(0, 8)) {
+        try {
+          tried.push(w.id); try { sessionStorage.setItem("fa-tried", JSON.stringify(tried)); } catch {}
+          const r = (await K.findPlace(`${w.label}, ${nameOf(w.country)}`)).find(p => !p.isCountry && countryAt(p.lat, p.lon) === w.country);
+          if (!r || r.big) continue;   // a region (Patagonia) stays a dream of the country
+          await K.api(`/rest/v1/atlas_marks?id=eq.${w.id}`, { method: "PATCH", headers: { Prefer: "return=minimal" }, body: { lat: +r.lat.toFixed(5), lon: +r.lon.toFixed(5) } });
+          w.lat = r.lat; w.lon = r.lon; moved = true;
+        } catch {}
+      }
+      if (moved) { draw(); loadFolk(); }
     }
 
     // map
@@ -212,33 +256,47 @@ window.FolkAtlas = (() => {
       const p = g.feats.map(f => `<path d="${f.d}" fill="${COL[status(f.id)]}" data-c="${f.id}"${S.sel === f.id ? ' class="sel"' : ""}><title>${esc(nameOf(f.id))}</title></path>`).join("");
       const sm = Object.keys(g.small).filter(id => status(id) !== "none").map(id => { const [la, lo] = g.small[id]; return `<circle class="sm" cx="${X(lo).toFixed(1)}" cy="${Y(la).toFixed(1)}" r="2.6" fill="${COL[status(id)]}" data-c="${id}"><title>${esc(nameOf(id))}</title></circle>`; }).join("");
       const dots = stamps.filter(s => s.lat != null).slice(0, 600).map(s => `<circle class="dot" cx="${X(+s.lon).toFixed(1)}" cy="${Y(+s.lat).toFixed(1)}" r="${s.on_spot ? 1.5 : 1.1}"/>`).join("");
+      const pins = own ? wishes().filter(x => x.w && isPlace(x.w)).map(x => `<circle class="pin${x.done ? " ok" : ""}" cx="${X(+x.w.lon).toFixed(1)}" cy="${Y(+x.w.lat).toFixed(1)}" r="3.4" data-c="${x.id}"><title>${esc(x.w.label || "")}</title></circle>`).join("") : "";
       const vb = (views()[S.view] || views().world).map(n => n.toFixed(1)).join(" ");
-      return `<svg class="fa-map" viewBox="${vb}" role="img" aria-label="${esc(t("Folk Atlas"))}">${p}${sm}${dots}</svg>`;
+      return `<svg class="fa-map" viewBox="${vb}" role="img" aria-label="${esc(t("Folk Atlas"))}">${p}${sm}${dots}${pins}</svg>`;
     };
 
     function info() {
       const id = S.sel; if (!id) return `<p class="fa-note">${esc(own ? t("Tap a country to see it, add it to your dreams or declare you've been.") : t("Tap a country to see it."))}</p>`;
-      const sc = byC.get(id), st = status(id), w = wish.find(x => x.country === id), dec = been.includes(id);
+      const sc = byC.get(id), st = status(id), cw = wish.find(x => x.country === id && !isPlace(x)), dec = been.includes(id);
+      const here = own ? wishes().filter(x => x.id === id && x.w && isPlace(x.w)) : [];
       let line = sc ? [sc.n === 1 ? t("1 place signed") : t("{n} places signed", { n: sc.n }), sc.on ? `📍 ${t("{n} on the spot", { n: sc.on })}` : ""].filter(Boolean).join(" · ")
         : dec ? (own ? t("You declared you've been here: sign a place to make it yours.") : t("Declared, not signed yet."))
-        : st === "wish" ? [t("In your dreams"), S.folk[id] ? (S.folk[id] === 1 ? t("1 folk has been") : t("{n} folk have been", { n: S.folk[id] })) : ""].filter(Boolean).join(" · ") : t("Not on this atlas yet.");
+        : st === "wish" ? t("In your dreams") : t("Not on this atlas yet.");
       const list = sc ? sc.list.filter(s => s.id != null && s.name).slice(0, 6) : [];
       const conf = (k, on, a, b) => S.confirm === k ? t("Tap again to remove") : on ? a : b;
       return `<div class="fa-info"><b class="fa-cn">${flag(id)} ${esc(nameOf(id))}</b><p>${esc(line)}</p>
         ${list.length ? `<div class="fa-stamps">${list.map(s => `<button type="button" data-fastamp="${s.id}">${s.on_spot ? "📍" : "✍"} ${esc(s.name)}</button>`).join("")}</div>` : ""}
+        ${here.length ? `<p>${esc(t("Your dreams here"))}: ${here.map(x => `${x.done ? "✓" : "♡"} ${esc(x.w.label)}`).join(" · ")}</p>` : ""}
         ${own && dbOk ? `<div class="fa-acts">${!sc ? `<button type="button" class="fa-btn g${dec ? " on" : ""}" data-fabeen>${esc(conf("been", dec, t("✓ Declared"), t("✓ I've been here")))}</button>` : ""}
-          ${!sc && !dec || w ? `<button type="button" class="fa-btn${w ? " on" : ""}" data-fawish>${esc(conf("wish", !!w, t("♥ In your dreams"), t("♡ I want to go")))}</button>` : ""}</div>` : ""}</div>`;
+          <button type="button" class="fa-btn${cw ? " on" : ""}" data-fawish>${esc(conf("wish", !!cw, t("♥ In your dreams"), (sc || dec) ? t("♡ I want to go back") : t("♡ I want to go")))}</button></div>` : ""}</div>`;
     }
 
     function wishHtml() {
       const ws = wishes();
-      if (!ws.length) return `<p class="fa-note">${esc(t("No dreams yet. Save places on the map or add a country: your dreams turn green when you sign there."))}</p>`;
+      if (!ws.length) return `<p class="fa-note">${esc(t("No dreams yet. Save places on the map or add a dream: it turns green when you sign there."))}</p>`;
       return `<ul class="fa-wish">${ws.map(x => {
-        const title = x.w?.label || nameOf(x.id), sub = [x.w?.label ? nameOf(x.id) : "", x.sv.length ? (x.sv.length === 1 ? t("1 saved place") : t("{n} saved places", { n: x.sv.length })) : "", !x.w ? t("From your saved places") : ""].filter(Boolean).join(" · ");
-        const f = S.folk[x.id], n = x.done ? `✓ ${esc(t("Dream come true"))}` : f == null ? "" : f ? esc(f === 1 ? t("1 folk has been") : t("{n} folk have been", { n: f })) : "";
-        return `<li class="${x.done ? "done" : ""}"><span class="f">${flag(x.id)}</span><span><b>${esc(title)}</b>${sub ? `<small>${esc(sub)}</small>` : ""}${x.done && x.doneAt ? `<small>${esc(t("Dream come true: {w}", { w: K.fmtWhen ? K.fmtWhen(x.doneAt) : String(x.doneAt).slice(0, 10) }))}</small>` : !x.done && f === 0 ? `<small>${esc(t("No folk there yet: you could be the first"))}</small>` : ""}</span><span class="n">${n}</span>
-          ${!x.done ? `<div class="fa-acts"><button type="button" class="fa-btn" data-faask="${x.id}">${esc(t("🧭 Ask the folk"))}</button>${x.sv.length ? `<button type="button" class="fa-btn" data-fashow="${x.id}">${esc(t("Show on the map"))}</button>` : ""}${x.w ? `<button type="button" class="fa-x" data-faunwish="${x.id}">${esc(S.confirm === "un" + x.id ? t("Tap again to remove") : t("Remove"))}</button>` : ""}</div>` : ""}</li>`;
+        const pl = x.w && isPlace(x.w), title = x.w?.label || nameOf(x.id);
+        const sub = [x.w?.label ? nameOf(x.id) : "", x.sv.length ? (x.sv.length === 1 ? t("1 saved place") : t("{n} saved places", { n: x.sv.length })) : "", !x.w ? t("From your saved places") : ""].filter(Boolean).join(" · ");
+        const f = S.folk[x.key], n = x.done ? `✓ ${esc(t("Dream come true"))}` : f ? esc(f === 1 ? t(pl ? "1 folk has been nearby" : "1 folk has been") : t(pl ? "{n} folk have been nearby" : "{n} folk have been", { n: f })) : "";
+        return `<li class="${x.done ? "done" : ""}"><span class="f">${pl ? "📍" : flag(x.id)}</span><span><b>${esc(title)}</b>${sub ? `<small>${esc(sub)}</small>` : ""}${x.done && x.doneAt ? `<small>${esc(t("Dream come true: {w}", { w: K.fmtWhen ? K.fmtWhen(x.doneAt) : String(x.doneAt).slice(0, 10) }))}</small>` : !x.done && f === 0 ? `<small>${esc(t("No folk there yet: you could be the first"))}</small>` : ""}</span><span class="n">${n}</span>
+          ${!x.done ? `<div class="fa-acts"><button type="button" class="fa-btn" data-faask="${x.key}">${esc(t("🧭 Ask the folk"))}</button>${pl || x.sv.length ? `<button type="button" class="fa-btn" data-fashow="${x.key}">${esc(t("Show on the map"))}</button>` : ""}${x.w ? `<button type="button" class="fa-x" data-faunwish="${x.w.id}">${esc(S.confirm === "un" + x.w.id ? t("Tap again to remove") : t("Remove"))}</button>` : ""}</div>` : ""}</li>`;
       }).join("")}</ul>`;
+    }
+
+    function addForm() {
+      return `<details class="fa-add"${S.addOpen ? " open" : ""}><summary>${esc(t("＋ Add a dream"))}</summary><div class="fa-form">
+          <input type="search" data-faq maxlength="80" autocomplete="off" placeholder="${esc(t("A place or a country: Roccascalegna, Lofoten, Japan…"))}" aria-label="${esc(t("Where do you dream of going?"))}">
+          <ul class="fa-found" data-fafound></ul>
+          <p class="fa-h fa-h2">${esc(t("Been somewhere before SpotFolk?"))}</p>
+          <div class="fa-been"><select data-fabeensel aria-label="${esc(t("Country"))}"><option value="">${esc(t("Choose a country"))}</option>${allIds().filter(id => !byC.has(id) && !been.includes(id)).map(id => [id, nameOf(id)]).sort((a, b) => a[1].localeCompare(b[1], lang)).map(([id, n]) => `<option value="${id}">${esc(n)}</option>`).join("")}</select>
+          <button type="button" class="fa-btn g" data-fabeenadd>${esc(t("✓ I've been here"))}</button></div>
+        </div></details>`;
     }
 
     function draw() {
@@ -250,7 +308,7 @@ window.FolkAtlas = (() => {
         <div class="fa-head"><h3>Folk <em>Atlas</em></h3><p>${esc(own ? t("The world you signed. And the one you dream of.") : t("The world {n} signed.", { n: opts.name || "this folk" }))}</p></div>
         <div class="fa-mapbox">${mapSvg()}
           <div class="fa-zoom" role="group">${[["world", t("World")], ["europe", t("Europe")], ...(v.mine ? [["mine", t("Close-up")]] : [])].map(([k, l]) => `<button type="button" data-faview="${k}" class="${S.view === k ? "on" : ""}">${esc(l)}</button>`).join("")}</div></div>
-        <div class="fa-legend">${[["onspot", t("Signed on the spot")], ["signed", t("Signed")], ["declared", t("Declared")], ...(own ? [["wish", t("I want to go")]] : [])].map(([k, l]) => `<span><i style="background:${COL[k]}"></i>${esc(l)} (${cnt(k)})</span>`).join("")}</div>
+        <div class="fa-legend">${[["onspot", t("Signed on the spot")], ["signed", t("Signed")], ["declared", t("Declared")], ...(own ? [["wish", t("I want to go")]] : [])].map(([k, l]) => `<span><i style="background:${COL[k]}"></i>${esc(l)} (${cnt(k)})</span>`).join("")}${own && declW.some(x => isPlace(x.w)) ? `<span><i class="pinkey"></i>${esc(t("A dream place"))}</span>` : ""}</div>
         <div data-fainfo>${info()}</div>
         <div class="fa-stats">
           <div><b>${ids.size}</b><small>${esc(t("Countries"))} · ${esc(t("{n} signed", { n: signedC }))}</small></div>
@@ -260,26 +318,35 @@ window.FolkAtlas = (() => {
             : `<div><b>${been.filter(c => !byC.has(c)).length}</b><small>${esc(t("Declared"))}</small></div>`}
         </div>
         ${own ? `<p class="fa-h">♡ ${esc(t("I want to go"))}</p>${wishHtml()}
-          ${dbOk ? `<details class="fa-add"><summary>${esc(t("＋ Add a dream or a country"))}</summary><form class="fa-form" novalidate>
-            <select name="c" aria-label="${esc(t("Country"))}"><option value="">${esc(t("Choose a country"))}</option>${allIds().map(id => [id, nameOf(id)]).sort((a, b) => a[1].localeCompare(b[1], lang)).map(([id, n]) => `<option value="${id}">${esc(n)}</option>`).join("")}</select>
-            <input name="l" maxlength="60" placeholder="${esc(t("e.g. Patagonia, Lofoten"))}" aria-label="${esc(t("Name (optional)"))}">
-            <div class="fa-acts"><button type="submit" class="fa-btn on" value="wish">${esc(t("♡ I want to go"))}</button><button type="submit" class="fa-btn g" value="been">${esc(t("✓ I've been here"))}</button></div>
-          </form></details>
-          <p class="fa-note">${esc(t("Your dreams are private: only you see them. The countries you declare show in your passport to the folk."))}</p>`
+          ${dbOk ? `${addForm()}<p class="fa-note">${esc(t("Your dreams are private: only you see them. The countries you declare show in your passport to the folk. A dream comes true when you sign there: for a place, within 15 km."))}</p>`
             : `<p class="fa-note">${esc(t("The atlas arrives once the database is updated (supabase-folk-atlas.sql)."))}</p>`}` : ""}
       </section>`;
       wire();
     }
 
-    async function mark(id, kind, on, label) {
+    const fail = err => K.toast(t("Could not save it: {e}", { e: err.message }), true);
+    async function addWish(d) {
+      if (wish.some(w => w.country === d.country && (w.label || "") === (d.label || ""))) { K.toast(t("Already in your dreams.")); return; }
       try {
-        if (on) await K.api("/rest/v1/atlas_marks", { method: "POST", headers: { Prefer: "return=minimal,resolution=ignore-duplicates" }, body: { country: id, kind, ...(label ? { label } : {}) } });
-        else await K.api(`/rest/v1/atlas_marks?country=eq.${id}&kind=eq.${kind}&user_id=eq.${encodeURIComponent(opts.uid)}`, { method: "DELETE" });
-        if (kind === "been") been = on ? [...new Set([...been, id])] : been.filter(c => c !== id);
-        else wish = on ? [...wish.filter(w => w.country !== id), { country: id, label: label || null, at: new Date().toISOString() }] : wish.filter(w => w.country !== id);
-        K.track?.(`Atlas: ${kind} ${on ? "added" : "removed"}`);
-        S.confirm = null; draw(); if (kind === "wish" && on) loadFolk();
-      } catch (err) { K.toast(t("Could not save it: {e}", { e: err.message }), true); }
+        const r = (await K.api("/rest/v1/atlas_marks", { method: "POST", headers: { Prefer: "return=representation" }, body: { kind: "wish", country: d.country, ...(d.label ? { label: d.label.slice(0, 60) } : {}), ...(d.lat != null ? { lat: +(+d.lat).toFixed(5), lon: +(+d.lon).toFixed(5) } : {}) } })).data;
+        const row = Array.isArray(r) ? r[0] : r;
+        wish.push({ id: row?.id, country: d.country, label: d.label || null, lat: d.lat ?? null, lon: d.lon ?? null, at: row?.created_at || new Date().toISOString() });
+        K.track?.(`Atlas: dream added (${d.lat != null ? "place" : "country"})`);
+        S.confirm = null; S.sel = d.country; draw(); loadFolk();
+      } catch (err) { fail(err); }
+    }
+    async function removeWish(id) {
+      try { await K.api(`/rest/v1/atlas_marks?id=eq.${id}`, { method: "DELETE" }); wish = wish.filter(w => String(w.id) !== String(id)); S.confirm = null; draw(); }
+      catch (err) { fail(err); }
+    }
+    async function setBeen(id, on) {
+      try {
+        if (on) await K.api("/rest/v1/atlas_marks", { method: "POST", headers: { Prefer: "return=minimal" }, body: { country: id, kind: "been" } }).catch(err => { if (err.status !== 409) throw err; });
+        else await K.api(`/rest/v1/atlas_marks?country=eq.${id}&kind=eq.been&user_id=eq.${encodeURIComponent(opts.uid)}`, { method: "DELETE" });
+        been = on ? [...new Set([...been, id])] : been.filter(c => c !== id);
+        K.track?.(`Atlas: country ${on ? "declared" : "undeclared"}`);
+        S.confirm = null; S.sel = id; draw();
+      } catch (err) { fail(err); }
     }
 
     function wire() {
@@ -293,29 +360,58 @@ window.FolkAtlas = (() => {
         requestAnimationFrame(step);
       }));
       wireInfo();
+      const item = key => wishes().find(x => x.key === key);
       host.querySelectorAll("[data-faask]").forEach(b => b.addEventListener("click", () => {
-        const id = b.dataset.faask, w = wish.find(x => x.country === id), sp = (savedBy.get(id) || [])[0], c = sp ? { lat: +sp.lat, lon: +sp.lon } : centre(id);
-        if (c) K.askFolk({ lat: c.lat, lon: c.lon, name: w?.label || nameOf(id) });
+        const x = item(b.dataset.faask); if (!x) return;
+        const sp = x.sv[0], c = x.w && isPlace(x.w) ? { lat: +x.w.lat, lon: +x.w.lon } : sp ? { lat: +sp.lat, lon: +sp.lon } : centre(x.id);
+        if (c) K.askFolk({ lat: c.lat, lon: c.lon, name: x.w?.label || nameOf(x.id) });
       }));
-      host.querySelectorAll("[data-fashow]").forEach(b => b.addEventListener("click", () => K.showOnMap((savedBy.get(b.dataset.fashow) || []).map(s => ({ lat: +s.lat, lon: +s.lon })))));
-      host.querySelectorAll("[data-faunwish]").forEach(b => b.addEventListener("click", () => { const id = b.dataset.faunwish; if (S.confirm !== "un" + id) { S.confirm = "un" + id; b.textContent = t("Tap again to remove"); return; } mark(id, "wish", false); }));
-      const f = host.querySelector(".fa-form");
-      f?.addEventListener("submit", ev => {
-        ev.preventDefault(); const kind = ev.submitter?.value || "wish", id = f.elements.c.value, l = f.elements.l.value.trim();
-        if (!id) return f.elements.c.focus();
-        S.sel = id; mark(id, kind, true, kind === "wish" ? l : "");
+      host.querySelectorAll("[data-fashow]").forEach(b => b.addEventListener("click", () => {
+        const x = item(b.dataset.fashow); if (!x) return;
+        K.showOnMap(x.w && isPlace(x.w) ? [{ lat: +x.w.lat, lon: +x.w.lon }] : x.sv.map(s => ({ lat: +s.lat, lon: +s.lon })));
+      }));
+      host.querySelectorAll("[data-faunwish]").forEach(b => b.addEventListener("click", () => { const id = b.dataset.faunwish; if (S.confirm !== "un" + id) { S.confirm = "un" + id; b.textContent = t("Tap again to remove"); return; } removeWish(id); }));
+      const det = host.querySelector(".fa-add"); det?.addEventListener("toggle", () => { S.addOpen = det.open; });
+      // find a place or a country for a dream
+      const q = host.querySelector("[data-faq]"), list = host.querySelector("[data-fafound]");
+      let timer = 0, seq = 0;
+      const show = () => {
+        list.innerHTML = S.found.map((p, i) => `<li><button type="button" data-fapick="${i}"><b>${p.isCountry ? flag(p.country) : "📍"} ${esc(p.name)}</b><small>${esc(p.isCountry ? t("The whole country") : [p.big ? t("A region") : "", p.context || nameOf(p.country)].filter(Boolean).join(" · "))}</small></button></li>`).join("");
+        list.querySelectorAll("[data-fapick]").forEach(b => b.addEventListener("click", () => {
+          const p = S.found[+b.dataset.fapick]; S.found = [];
+          addWish(p.isCountry ? { country: p.country } : p.big ? { country: p.country, label: p.name } : { country: p.country, label: p.name, lat: p.lat, lon: p.lon });
+        }));
+      };
+      q?.addEventListener("input", () => {
+        clearTimeout(timer); const v = q.value.trim();
+        if (v.length < 2) { S.found = []; show(); return; }
+        timer = setTimeout(async () => {
+          const my = ++seq, low = v.toLocaleLowerCase(lang);
+          // a country typed by name comes first, then places (SpotFolk's search)
+          const cs = allIds().filter(id => nameOf(id).toLocaleLowerCase(lang).startsWith(low)).slice(0, 2).map(id => ({ isCountry: true, country: id, name: nameOf(id) }));
+          let ps = [];
+          try { ps = (await K.findPlace(v)).filter(p => !p.isCountry).map(p => ({ ...p, country: countryAt(p.lat, p.lon) })).filter(p => p.country); } catch {}
+          if (my !== seq) return;
+          S.found = [...cs, ...ps].slice(0, 6); show();
+        }, 350);
       });
+      host.querySelector("[data-fabeenadd]")?.addEventListener("click", () => { const sel = host.querySelector("[data-fabeensel]"); if (!sel.value) return sel.focus(); setBeen(sel.value, true); });
     }
     function wireInfo() {
       const box = host.querySelector("[data-fainfo]"), id = S.sel;
       box.querySelectorAll("[data-fastamp]").forEach(b => b.addEventListener("click", () => K.openPlace(+b.dataset.fastamp)));
-      box.querySelector("[data-fabeen]")?.addEventListener("click", () => { const on = been.includes(id); if (on && S.confirm !== "been") { S.confirm = "been"; box.innerHTML = info(); return wireInfo(); } mark(id, "been", !on); });
-      box.querySelector("[data-fawish]")?.addEventListener("click", () => { const on = wish.some(w => w.country === id); if (on && S.confirm !== "wish") { S.confirm = "wish"; box.innerHTML = info(); return wireInfo(); } mark(id, "wish", !on); });
+      box.querySelector("[data-fabeen]")?.addEventListener("click", () => { const on = been.includes(id); if (on && S.confirm !== "been") { S.confirm = "been"; box.innerHTML = info(); return wireInfo(); } setBeen(id, !on); });
+      box.querySelector("[data-fawish]")?.addEventListener("click", () => {
+        const cw = wish.find(w => w.country === id && !isPlace(w));
+        if (cw && S.confirm !== "wish") { S.confirm = "wish"; box.innerHTML = info(); return wireInfo(); }
+        cw ? removeWish(cw.id) : addWish({ country: id });
+      });
     }
 
     if (views().mine) S.view = "mine";   // start close to the countries that are coloured
     draw();
     loadFolk();
+    placeOldDreams();
   }
 
   return { mount, countryAt, nameOf };
