@@ -4080,3 +4080,10 @@ body[data-page="hub"] .sf-nav a.sf-map{background:none;color:#e6ecf3}
 /* sharing a trip or a list with a link */
 .share-url{width:100%;margin:10px 0 4px;padding:12px 14px;border-radius:12px;border:1px solid rgba(156,200,255,.3);background:rgba(255,255,255,.04);color:#e6ecf3;font:14px var(--sans)}
 .me-sharelist{margin-left:10px;font-size:13px;font-weight:600;letter-spacing:0;text-transform:none}
+
+/* sharing a place, in evidence under the title */
+.pc-sharebar{display:flex;gap:8px;margin:10px 0 2px}
+.pc-sh{flex:1;display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:42px;padding:0 14px;border-radius:999px;border:1px solid rgba(255,190,122,.5);background:none;color:#ffbe7a;font:700 13.5px var(--sans);cursor:pointer;white-space:nowrap}
+.pc-sh.main{flex:1.6;background:#f28c1e;border-color:#f28c1e;color:#1a1206}
+.pc-sh:hover{filter:brightness(1.08)}.pc-sh:disabled{opacity:.6}
+.pc-sh:focus-visible{outline:2px solid #ffbe7a;outline-offset:2px}

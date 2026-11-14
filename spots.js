@@ -2202,24 +2202,41 @@ const Spots = (() => {
     for (let i = 0; i < 90; i++) { g.fillStyle = `rgba(255,255,255,${.15 + rnd() * .45})`; g.beginPath(); g.arc(rnd() * W, rnd() * H * .7, rnd() * 2 + .6, 0, 7); g.fill(); }
     const wrap = (text, x, y, maxW, lh, maxLines = 4) => { const words = String(text).split(/\s+/); let line = "", n = 0; for (const w of words) { const t = line ? `${line} ${w}` : w; if (g.measureText(t).width > maxW && line) { g.fillText(line, x, y); y += lh; line = w; if (++n >= maxLines - 1) { line = words.slice(words.indexOf(w)).join(" "); while (g.measureText(line + "…").width > maxW && line.length) line = line.slice(0, -1); if (line !== words.slice(words.indexOf(w)).join(" ")) line += "…"; break; } } else line = t; } if (line) { g.fillText(line, x, y); y += lh; } return y; };
     const logo = await new Promise(res => { const im = new Image(); im.onload = () => res(im); im.onerror = () => res(null); im.src = "img/spotfolk-logo.png"; });
-    if (logo) g.drawImage(logo, 90, 130, 230, 230 * logo.height / logo.width);
+    if (logo) g.drawImage(logo, 90, 120, 200, 200 * logo.height / logo.width);
     const cat = CATS[s.category] || CATS.spot;
-    g.fillStyle = "#ffbe7a"; g.font = `700 30px ${SANS}`; g.letterSpacing = "6px"; g.fillText(`${cat.label}${s.list ? ` · ${s.list}` : ""}`.toUpperCase().slice(0, 48), 90, 520); g.letterSpacing = "0px";
-    g.fillStyle = "#f2f6fb"; g.font = `600 128px ${SERIF}`; let y = wrap(s.name, 90, 660, W - 180, 130, 3);
-    // what the folk know: the conditions and the checked info shown on the card right now
-    const cond = card?.querySelector("[data-condtop]:not([hidden])")?.textContent.trim(), fact = card?.querySelector("[data-facttop]:not([hidden])")?.textContent.trim();
+    g.fillStyle = "#ffbe7a"; g.font = `700 30px ${SANS}`; g.letterSpacing = "6px"; g.fillText(`${cat.label}${s.list ? ` · ${s.list}` : ""}`.toUpperCase().slice(0, 48), 90, 420); g.letterSpacing = "0px";
+    const big = String(s.name).length > 24; g.fillStyle = "#f2f6fb"; g.font = `600 ${big ? 104 : 128}px ${SERIF}`; let y = wrap(s.name, 90, 545, W - 180, big ? 108 : 130, 3);
+    // what the folk know, read from the card as it is on screen: conditions, impressions, before you go, stories
+    const txt = q => card?.querySelector(q)?.textContent.replace(/\s+/g, " ").trim() || "";
+    const cond = card?.querySelector("[data-condtop]:not([hidden])") ? txt("[data-condtop]") : "";
+    const score = txt(".pc-ring b").replace("/5", ""), raters = txt(".pc-ring span:last-child");
+    const facts = [...(card?.querySelectorAll(".byg-item") || [])].slice(0, 2).map(f => `${f.querySelector(".byg-h b")?.textContent.trim() || ""}: ${f.querySelector(".byg-val")?.textContent.replace(/\s+/g, " ").trim() || f.querySelector(".byg-note")?.textContent.trim() || ""}`.replace(/:\s*$/, ""));
+    const stories = [...(card?.querySelectorAll(".pc-text") || [])];
+    // a story's words leave SpotFolk only when the place is already public to everyone (the viewer is a visitor) or the story is yours
+    const mineStory = stories.find(p => p.closest("[data-mine], .mine"));
+    const quoteEl = (guest || !session) ? stories[0] : mineStory;
+    const quote = quoteEl ? quoteEl.textContent.replace(/\s+/g, " ").trim() : "";
     const signs = signMap.get(s.id)?.total || 0;
-    y += 40;
-    const box = (title, text, color) => { g.font = `500 40px ${SANS}`; const lines = []; let line = ""; for (const w of String(text).split(/\s+/)) { const t = line ? `${line} ${w}` : w; if (g.measureText(t).width > W - 300 && line) { lines.push(line); line = w; } else line = t; } if (line) lines.push(line); const L3 = lines.slice(0, 3);
-      const h = 110 + L3.length * 54; g.fillStyle = "rgba(255,255,255,.05)"; g.strokeStyle = color; g.lineWidth = 3; g.beginPath(); g.roundRect(90, y, W - 180, h, 36); g.fill(); g.stroke();
-      g.fillStyle = color; g.font = `700 28px ${SANS}`; g.letterSpacing = "4px"; g.fillText(title.toUpperCase(), 140, y + 66); g.letterSpacing = "0px";
-      g.fillStyle = "#f2f6fb"; g.font = `500 40px ${SANS}`; L3.forEach((l, i) => g.fillText(l, 140, y + 130 + i * 54)); y += h + 34; };
-    if (cond) box(it ? "Com'è adesso" : "How it is now", cond, "#ff7a45");
-    if (fact) box("Before you go", fact, "#9fe3c8");
-    if (!cond && !fact) box(it ? "Sei stato qui?" : "Been here?", it ? "Racconta ai folk com'è adesso: tariffe, neve, mare, folla." : "Tell the folk how it is now: fees, snow, sea, crowds.", "#ffbe7a");
-    g.font = `500 40px ${SANS}`; g.fillStyle = "#c9d6e6";
-    if (s.best_months) { g.fillText(`📅 ${it ? "Periodo migliore" : "Best period"}: ${s.best_months}`.slice(0, 60), 90, y + 20); y += 74; }
-    if (signs) { g.fillText(`✍ ${it ? `Firmato da ${signs} folk` : `Signed by ${signs} folk`}`, 90, y + 20); y += 74; }
+    y += 30;
+    const LIMIT = H - 330, room = () => y < LIMIT - 120;
+    const linesOf = (text, maxW, max) => { const out = []; let line = ""; for (const w of String(text).split(/\s+/)) { const t = line ? `${line} ${w}` : w; if (g.measureText(t).width > maxW && line) { out.push(line); line = w; } else line = t; } if (line) out.push(line);
+      if (out.length > max) { out.length = max; let l = out[max - 1]; while (g.measureText(l + "…").width > maxW && l.length) l = l.slice(0, -1); out[max - 1] = l + "…"; } return out; };
+    const box = (title, items, color, big, perItem = 2) => {
+      const fs = big ? 46 : 38, lh = big ? 58 : 50; g.font = `500 ${fs}px ${SANS}`;
+      const L = items.flatMap(t => linesOf(t, W - 280, perItem)).slice(0, 4), h = 100 + L.length * lh;
+      if (y + h > LIMIT) return false;
+      g.fillStyle = "rgba(255,255,255,.05)"; g.strokeStyle = color; g.lineWidth = 3; g.beginPath(); g.roundRect(90, y, W - 180, h, 34); g.fill(); g.stroke();
+      g.fillStyle = color; g.font = `700 27px ${SANS}`; g.letterSpacing = "4px"; g.fillText(title.toUpperCase(), 136, y + 60); g.letterSpacing = "0px";
+      g.fillStyle = "#f2f6fb"; g.font = `500 ${fs}px ${SANS}`; L.forEach((l, k) => g.fillText(l, 136, y + 118 + k * lh)); y += h + 24; return true; };
+    if (cond) box(it ? "Com'è adesso" : "How it is now", [cond], "#ff7a45", true);
+    if (facts.length && room()) box("Before you go", facts, "#9fe3c8", false, 1);
+    if (score && room()) box(it ? "Le impressioni dei folk" : "Folk impressions", [`⛰ ${score}/5 · ${raters}`], "#ffbe7a");
+    if (quote && room()) { g.font = `italic 500 50px ${SERIF}`; const L = linesOf(`“${quote}”`, W - 180, 3); if (y + 20 + L.length * 60 <= LIMIT) { g.fillStyle = "#f3e6d6"; L.forEach((l, k) => g.fillText(l, 90, y + 50 + k * 60)); y += 40 + L.length * 60; } }
+    else if (stories.length && room()) box("Folk stories", [it ? `${stories.length} ${stories.length === 1 ? "storia" : "storie"} di chi c'è stato` : `${stories.length} ${stories.length === 1 ? "story" : "stories"} from folk who've been`], "#e9a6ff");
+    if (!cond && !score && !facts.length && !stories.length) box(it ? "Sei stato qui?" : "Been here?", [it ? "Racconta ai folk com'è adesso: tariffe, neve, mare, folla." : "Tell the folk how it is now: fees, snow, sea, crowds."], "#ffbe7a");
+    g.font = `500 38px ${SANS}`; g.fillStyle = "#c9d6e6";
+    if (s.best_months && y + 60 <= LIMIT) { g.fillText(`📅 ${it ? "Periodo migliore" : "Best period"}: ${s.best_months}`.slice(0, 60), 90, y + 30); y += 62; }
+    if (signs && y + 60 <= LIMIT) { g.fillText(`✍ ${it ? `Firmato da ${signs} folk` : `Signed by ${signs} folk`}`, 90, y + 30); y += 62; }
     if (y + 90 < H - 300) { g.fillStyle = "#f2f6fb"; g.font = `italic 500 64px ${SERIF}`; g.fillText(it ? "La mappa, firmata dai folk." : "The map, signed by the folk.", 90, Math.max(y + 90, H - 400)); }
     g.fillStyle = "#f28c1e"; g.beginPath(); g.roundRect(90, H - 270, 560, 110, 55); g.fill();
     g.fillStyle = "#1a1206"; g.font = `800 46px ${SANS}`; g.fillText("spotfolk.eu", 150, H - 198);
@@ -3504,6 +3521,7 @@ const Spots = (() => {
         <div class="pop-alerts" data-alerts>${alertsHtml(s)}</div>
         ${fabioPhotosHtml(s)}
         ${commV ? meetHereHtml(s) : ""}
+        <div class="pc-sharebar"><button type="button" class="pc-sh main" data-share>↗ Share this place</button>${s.fragile ? "" : `<button type="button" class="pc-sh" data-story>📲 Story</button>`}</div>
         ${admin && !guest && pubV ? `<div data-pubpick>${pubPickHtml(s)}</div>` : ""}
       </header>
       ${pcSec("folk", "The folk who know this place", "Real people, real experiences.", folkBody, true)}
@@ -3516,8 +3534,6 @@ const Spots = (() => {
       ${schemaV2 ? `<div class="pop-actions pc-acts">
           ${commV ? `<button type="button" class="pop-btn fav-btn${favs.has(s.id) ? " on" : ""}" data-fav>${favs.has(s.id) ? "♥ Saved" : "♡ Save"}</button>` : ""}
           <button type="button" class="pop-btn" data-addphoto>${ICON.img}Add photo</button>
-          <button type="button" class="pop-btn" data-share>↗ Share</button>
-          ${s.fragile ? "" : `<button type="button" class="pop-btn" data-story>📲 Story</button>`}
           <input type="file" accept="image/*" multiple hidden data-photofile>
         </div>
         <p class="pop-rights">By adding a photo you confirm it's yours and accept the <a href="#photoRights" data-rights>photo terms</a>.</p>` : ""}
@@ -5474,7 +5490,7 @@ const Spots = (() => {
       const folkOfR = r => CLUSTERS[r.folk] ? r.folk : ((el._signs || []).find(g => g.user_id === r.user_id && CLUSTERS[g.cluster]) || {}).cluster || pFolks(faceOf(r))[0] || null;
       const stories = reviews.filter(r => r.body || r.r_title);
       el.querySelector("[data-reviews]").innerHTML = stories.length ? stories.map(r => { const sc = revScore(r), ph = photosOf(r), c = CLUSTERS[folkOfR(r)], mineR = r.user_id === uid, canDel = mineR || admin || canCurate(s);
-        return `<article class="pop-rev pc-story${experts.has(r.user_id) ? " by-expert" : ""}${ph.length ? " has-photo" : ""}" style="--c:${c?.color || "#ffbe7a"}">
+        return `<article class="pop-rev pc-story${experts.has(r.user_id) ? " by-expert" : ""}${ph.length ? " has-photo" : ""}"${r.user_id && r.user_id === myUid() ? " data-mine" : ""} style="--c:${c?.color || "#ffbe7a"}">
         ${ph.length ? `<button type="button" class="pc-cover" data-sphoto="${photos.indexOf(ph[0])}" aria-label="Photo by ${esc(r.author_name || "")}"><img src="${esc(urls[ph[0].path])}" alt="" loading="lazy"></button>` : ""}
         <div class="pc-sbody">
           <header class="pc-shead">
