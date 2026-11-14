@@ -6257,7 +6257,7 @@ const Spots = (() => {
         if (sec) setTimeout(() => { const d = document.querySelector(`.leaflet-popup [data-sec="${sec}"]`); if (d && !d.open) d.open = true; d?.scrollIntoView({ block: "nearest", behavior: "smooth" }); }, 1400);   // e.g. straight to Place pulse
       },
       askFolk: pre => { close?.(); openDestForm(pre); },
-      COND, signPhotos,
+      COND, signPhotos, TOPIC, CLUSTERS, factValue: f => factValue(f),
       // the Place pulse of any point (weather, sea, webcams), drawn into el with the place card's own loaders
       pulse: (el, pt) => {
         el.innerHTML = `<div class="pc-wx" data-wx hidden></div><div class="pc-wx pc-sea" data-sea hidden></div><div class="pc-cams" data-cams hidden></div>`;
