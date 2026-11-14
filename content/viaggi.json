@@ -341,6 +341,16 @@
           "lon": "13.402759940634063"
         }
       ]
+    },
+    {
+      "nome": "Montepulciano",
+      "id": "Montepulciano",
+      "lat": "43.106077232325674",
+      "lon": "11.77016469017057",
+      "categoria": "Paesaggi",
+      "immagini": [
+        "/img/foto/fb-untitled-2-2025-11-30t18-03-23-337-3.jpg"
+      ]
     }
   ]
 }
