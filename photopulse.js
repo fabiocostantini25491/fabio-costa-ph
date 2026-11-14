@@ -15,7 +15,7 @@ window.PhotoPulse = (() => {
     "Sunrise": "Alba", "Sunset": "Tramonto", "Subject height": "Altezza del soggetto",
     "statue · 5 m": "statua · 5 m", "church · 20 m": "chiesa · 20 m", "castle · 40 m": "castello · 40 m", "cliff · 100 m": "rupe · 100 m", "mountain · 500 m": "montagna · 500 m",
     "Calculating…": "Calcolo…", "Stand {d} of the place": "Mettiti a {d} del posto", "at about {k}": "a circa {k}",
-    "Navigate to the spot": "Naviga al punto", "Open in the planner": "Apri nel planner",
+    "Navigate to the spot": "Naviga al punto", "On the map": "Sulla mappa", "Open in the planner": "Apri nel planner",
     "sun": "sole", "moon": "luna", "core": "nucleo", "Low clouds {l}% · mid {m}% · high {h}%": "Nuvole basse {l}% · medie {m}% · alte {h}%",
     "No forecast yet for that day: check it a few days before.": "Ancora nessuna previsione per quel giorno: guardala qualche giorno prima.",
     "today": "oggi", "tomorrow": "domani",
@@ -179,6 +179,7 @@ window.PhotoPulse = (() => {
       let out = [];
       try { out = await answer(S, s, off, m); } catch (err) { out = [{ html: `<p class="pp2-bad">${esc(err.message)}</p>` }]; }
       res.innerHTML = out.map(o => o.html).join("") + `<p class="pp2-note">${esc(t(["sunback", "fullmoon"].includes(S.q) ? "The real horizon (hills, mountains) can hide the first minutes: check it in the planner, in 3D." : "Positions are calculated: check them on the spot, a few metres can change everything."))}</p>`;
+      res.querySelectorAll("[data-ppmap]").forEach(b2 => b2.addEventListener("click", ev => { ev.preventDefault(); K.track?.("Photo pulse: on the map"); K.mapPlan(plans[+b2.dataset.ppmap]); }));
       K.update?.();
     }
 
@@ -197,16 +198,19 @@ window.PhotoPulse = (() => {
       if (i < 0) return ms - Date.now() < 7 * DAY ? "" : `<small>☁️ ${esc(t("No forecast yet for that day: check it a few days before."))}</small>`;
       return `<small>☁️ ${esc(t("Low clouds {l}% · mid {m}% · high {h}%", { l: Math.round(H.cloud_cover_low[i]), m: Math.round(H.cloud_cover_mid[i]), h: Math.round(H.cloud_cover_high[i]) }))}</small>`;
     };
-    const links = (cam, ms, off) => {
+    const plans = [];
+    const links = (cam, ms, off, plan) => {
+      const i = plan ? plans.push(plan) - 1 : -1;
       const day = local(ms, off).toISOString().slice(0, 10);
       const pl = `https://fabiocostaph.com/?tp=${cam.lat.toFixed(5)},${cam.lon.toFixed(5)}&tn=${encodeURIComponent((it ? "Da dove scattare: " : "Where to shoot: ") + (s.name || ""))}&td=${day}&tt=planner#tools`;
-      return `<div class="acts"><a href="https://www.google.com/maps/dir/?api=1&destination=${cam.lat.toFixed(5)},${cam.lon.toFixed(5)}" target="_blank" rel="noopener">🗺️ ${esc(t("Navigate to the spot"))}</a><a href="${pl}" target="_blank" rel="noopener">🔭 ${esc(t("Open in the planner"))}</a></div>`;
+      return `<div class="acts">${i >= 0 && K.mapPlan ? `<a href="#spotfolk" data-ppmap="${i}">📍 ${esc(t("On the map"))}</a>` : ""}<a href="https://www.google.com/maps/dir/?api=1&destination=${cam.lat.toFixed(5)},${cam.lon.toFixed(5)}" target="_blank" rel="noopener">🗺️ ${esc(t("Navigate to the spot"))}</a><a href="${pl}" target="_blank" rel="noopener">🔭 ${esc(t("Open in the planner"))}</a></div>`;
     };
-    const card = ({ title, ms, off, camAz, km, bodyAz, icon, text, extra = "", m, side, cams }) => {
+    const card = ({ title, ms, off, camAz, km, bodyAz, icon, text, extra = "", m, side, cams, body }) => {
       const cam = dest(s.lat, s.lon, camAz, km);
+      const plan = body ? { subject: { lat: s.lat, lon: s.lon, name: s.name }, cam, cams: (cams || [camAz]).map(a => dest(s.lat, s.lon, a, km)), body, ms, off, icon, title, h: S.h, aligned: !side && !cams } : null;
       return { html: `<div class="pp2-a">${diagram(cams || [camAz], bodyAz, icon, side)}<div><b>${esc(title)}</b><span class="w">🕒 ${esc(dayName(ms, off))} · ${esc(hm(ms, off))}</span>
         <p>📍 ${esc(t("Stand {d} of the place", { d: dir8(camAz) }))}${km ? ` ${esc(t("at about {k}", { k: kmTxt(km) }))}` : ""} (${Math.round(norm(camAz))}° ${esc(dir16(camAz))})${text ? ` · ${esc(text)}` : ""}</p>
-        ${extra}${clouds(ms, m)}${links(cam, ms, off)}</div></div>` };
+        ${extra}${clouds(ms, m)}${links(cam, ms, off, plan)}</div></div>` };
     };
     // the next local noons, as UTC ms
     const noons = (off, n, from = 0) => { const d0 = local(Date.now(), off).toISOString().slice(0, 10), b = Date.parse(d0 + "T12:00:00Z") - off; return Array.from({ length: n }, (_, i) => b + (from + i) * DAY); };
@@ -219,11 +223,11 @@ window.PhotoPulse = (() => {
         for (const noon of noons(off, 4)) {
           const ev = sunEvents(noon, s)[-0.833]; const base = rise ? ev.rise : ev.set; if (!base || base < Date.now() - 30 * MIN) continue;
           const ms = rise ? base + 18 * MIN : base - 18 * MIN, p = sunAt(ms, s);   // the sun about 2–4° high: the warm, low light
-          if (q === "graze") out.push(card({ title: t("Grazing light"), ms, off, camAz: p.az + 90, km: 0.3, bodyAz: p.az, icon: "☀️", m, side: true, cams: [p.az + 90, p.az - 90],
+          if (q === "graze") out.push(card({ title: t("Grazing light"), ms, off, camAz: p.az + 90, km: 0.3, bodyAz: p.az, icon: "☀️", body: "sun", m, side: true, cams: [p.az + 90, p.az - 90],
             text: t("sun {a}° · {h}° high", { a: Math.round(p.az), h: Math.max(0, Math.round(p.alt)) }), extra: `<p>${esc(t("The sun skims the surfaces sideways: textures, stone and relief come out. Stand so the sun is at 90° from where you look."))}</p>` }));
-          if (q === "front") out.push(card({ title: t("Front light"), ms, off, camAz: p.az, km: 0.3, bodyAz: p.az, icon: "☀️", m, side: true,
+          if (q === "front") out.push(card({ title: t("Front light"), ms, off, camAz: p.az, km: 0.3, bodyAz: p.az, icon: "☀️", body: "sun", m, side: true,
             text: t("sun {a}° · {h}° high", { a: Math.round(p.az), h: Math.max(0, Math.round(p.alt)) }), extra: `<p>${esc(t("Sun behind you, low and warm: the subject is lit in full."))}</p>` }));
-          if (q === "side") out.push(card({ title: t("Side light (3/4)"), ms, off, camAz: p.az + 45, km: 0.3, bodyAz: p.az, icon: "☀️", m, side: true, cams: [p.az + 45, p.az - 45],
+          if (q === "side") out.push(card({ title: t("Side light (3/4)"), ms, off, camAz: p.az + 45, km: 0.3, bodyAz: p.az, icon: "☀️", body: "sun", m, side: true, cams: [p.az + 45, p.az - 45],
             text: t("sun {a}° · {h}° high", { a: Math.round(p.az), h: Math.max(0, Math.round(p.alt)) }), extra: `<p>${esc(t("Sun at 45°: volume and long shadows, the classic three-quarter light."))}</p>` }));
           if (out.length >= 3) break;
         }
@@ -247,7 +251,7 @@ window.PhotoPulse = (() => {
         for (const noon of noons(off, 4)) {
           const ev = sunEvents(noon, s)[-0.833], base = rise ? ev.rise : ev.set; if (!base || base < Date.now()) continue;
           const r = await behind((x, ss) => sunAt(x, ss), base, rise, SUN_D);
-          out.push(card({ title: t(rise ? "The sun rises right behind the top of the subject." : "The sun sets right behind the top of the subject."), ms: r.ms, off, camAz: r.p.az + 180, km: r.km, bodyAz: r.p.az, icon: "☀️", m,
+          out.push(card({ title: t(rise ? "The sun rises right behind the top of the subject." : "The sun sets right behind the top of the subject."), ms: r.ms, off, camAz: r.p.az + 180, km: r.km, bodyAz: r.p.az, icon: "☀️", body: "sun", m,
             text: t("sun {a}° · {h}° high", { a: Math.round(r.p.az), h: String(Math.round(r.p.alt * 10) / 10).replace(".", it ? "," : ".") }), extra: `<p>${esc(t("From here the sun looks as big as the subject. Further away it gets bigger."))}</p>` }));
           if (out.length >= 3) break;
         }
@@ -270,7 +274,7 @@ window.PhotoPulse = (() => {
         const out = [];
         for (const f of found.slice(0, 4)) {
           const r = await behind((x, ss) => moonAt(x, ss), f.ms, f.rising, MOON_D);
-          out.push(card({ title: `${t(f.rising ? "Full moon rising behind it" : "Full moon setting behind it")} · ${Math.round(f.il * 100)}%`, ms: r.ms, off, camAz: r.p.az + 180, km: r.km, bodyAz: r.p.az, icon: "🌕", m,
+          out.push(card({ title: `${t(f.rising ? "Full moon rising behind it" : "Full moon setting behind it")} · ${Math.round(f.il * 100)}%`, ms: r.ms, off, camAz: r.p.az + 180, km: r.km, bodyAz: r.p.az, icon: "🌕", body: "moon", m,
             text: t("moon {a}° · {h}° high", { a: Math.round(r.p.az), h: String(Math.round(r.p.alt * 10) / 10).replace(".", it ? "," : ".") }), extra: `<p>${esc(t("From here the moon looks as big as the subject. Further away it gets bigger."))}</p>` }));
         }
         return out;
@@ -290,7 +294,7 @@ window.PhotoPulse = (() => {
         }
         if (!found.length) return [{ html: `<p class="pp2-bad">${esc(t("No low moon in the good light in the next 45 days."))}</p>` }];
         const best = found.sort((a, b) => b.il - a.il).slice(0, 3).sort((a, b) => a.ms - b.ms);
-        return best.map(f => card({ title: t("Moon {p}% · {w}", { p: Math.round(f.il * 100), w: t(f.w) }), ms: f.ms, off, camAz: f.p.az + 180, km: Math.max(0.15, S.h / Math.tan(MOON_D * rad) / 1000), bodyAz: f.p.az, icon: "🌙", m,
+        return best.map(f => card({ title: t("Moon {p}% · {w}", { p: Math.round(f.il * 100), w: t(f.w) }), ms: f.ms, off, camAz: f.p.az + 180, km: Math.max(0.15, S.h / Math.tan(MOON_D * rad) / 1000), bodyAz: f.p.az, icon: "🌙", body: "moon", m,
           cams: [f.p.az + 180, f.p.az + 135, f.p.az - 135], text: t("moon {a}° · {h}° high", { a: Math.round(f.p.az), h: Math.round(f.p.alt) }),
           extra: `<p>${esc(t("Behind the subject"))}: ${esc(dir8(f.p.az + 180))} · ${esc(t("To the side"))}: ${esc(dir8(f.p.az + 135))} / ${esc(dir8(f.p.az - 135))}</p>` }));
       }
@@ -311,7 +315,7 @@ window.PhotoPulse = (() => {
             : `<p class="pp2-bad">${esc(t("The core of the Milky Way never rises high enough here."))}</p>` }];
         }
         const pick = good.slice().sort((a, b) => b.score - a.score).slice(0, 3).sort((a, b) => a.ms - b.ms);
-        return [{ html: `<p class="pp2-good">🌌 ${esc(t("Good period: {n} good nights in the next 30 days.", { n: good.length }))}</p>` }, ...pick.map(b => card({ title: t("Core at {a}°, dark sky, no moon", { a: Math.round(b.p.alt) }), ms: b.ms, off, camAz: b.p.az + 180, km: 0.2, bodyAz: b.p.az, icon: "🌌", m,
+        return [{ html: `<p class="pp2-good">🌌 ${esc(t("Good period: {n} good nights in the next 30 days.", { n: good.length }))}</p>` }, ...pick.map(b => card({ title: t("Core at {a}°, dark sky, no moon", { a: Math.round(b.p.alt) }), ms: b.ms, off, camAz: b.p.az + 180, km: 0.2, bodyAz: b.p.az, icon: "🌌", body: "core", m,
           text: t("sky {a}° · {h}° high", { a: Math.round(b.p.az), h: Math.round(b.p.alt) }), extra: `<p>${esc(t("Dark sky and no moon: the core stands right behind the subject. Stay close (100–300 m) so the subject fills the frame."))}</p>` }))];
       }
       if (q === "arch") {
@@ -321,12 +325,12 @@ window.PhotoPulse = (() => {
           const mid = (night[0] + night[1]) / 2; let b = null;
           for (let x = night[0] + HOUR; x < night[1] - HOUR; x += 30 * MIN) {
             if (!darkAt(x)) continue;
-            for (const [l, n] of ARCH) { const [ra, dec] = Astro.galToRaDec(l, 0), p = Astro.radecPos(x, s.lat, s.lon, ra, dec); if (p.alt >= 20 && p.alt <= 45) { const sc = -Math.abs(p.alt - 30) - Math.abs(x - mid) / HOUR; if (!b || sc > b.sc) b = { ms: x, p, n, sc }; } }
+            for (const [l, n] of ARCH) { const [ra, dec] = Astro.galToRaDec(l, 0), p = Astro.radecPos(x, s.lat, s.lon, ra, dec); if (p.alt >= 20 && p.alt <= 45) { const sc = -Math.abs(p.alt - 30) - Math.abs(x - mid) / HOUR; if (!b || sc > b.sc) b = { ms: x, p, n, sc, l }; } }
           }
           if (b) out.push(b); if (out.length >= 3) break;
         }
         if (!out.length) return [{ html: `<p class="pp2-bad">${esc(t("No dark, moonless night in the next 45 days."))}</p>` }];
-        return out.map(b => card({ title: t("The arch of {n} at {a}°", { n: t(b.n).trim(), a: Math.round(b.p.alt) }), ms: b.ms, off, camAz: b.p.az + 180, km: 0.2, bodyAz: b.p.az, icon: "🌠", m,
+        return out.map(b => card({ title: t("The arch of {n} at {a}°", { n: t(b.n).trim(), a: Math.round(b.p.alt) }), ms: b.ms, off, camAz: b.p.az + 180, km: 0.2, bodyAz: b.p.az, icon: "🌠", body: ["gal", b.l], m,
           text: t("sky {a}° · {h}° high", { a: Math.round(b.p.az), h: Math.round(b.p.alt) }), extra: `<p>${esc(t("The fainter part of the Milky Way, away from the core: the arch you see in the other seasons."))}</p>` }));
       }
       if (q === "cons") {
@@ -340,7 +344,7 @@ window.PhotoPulse = (() => {
           if (b) out.push(b); if (out.length >= 3) break;
         }
         if (!out.length) return [{ html: `<p class="pp2-bad">${esc(t("Not visible from here in the next 60 nights."))}</p>` }];
-        return out.map(b => card({ title: t("{c} at {a}°, dark sky", { c: t(c[0]), a: Math.round(b.p.alt) }), ms: b.ms, off, camAz: b.p.az + 180, km: 0.2, bodyAz: b.p.az, icon: "✨", m,
+        return out.map(b => card({ title: t("{c} at {a}°, dark sky", { c: t(c[0]), a: Math.round(b.p.alt) }), ms: b.ms, off, camAz: b.p.az + 180, km: 0.2, bodyAz: b.p.az, icon: "✨", body: ["radec", c[1], c[2]], m,
           text: t("sky {a}° · {h}° high", { a: Math.round(b.p.az), h: Math.round(b.p.alt) }) }));
       }
       return [];

@@ -2503,13 +2503,64 @@ const Spots = (() => {
 
   /* «How is it now?» asked to the folk (supabase-com-e-adesso.sql): the open questions around a place, answered with a «how is it now»
      on any place within 15 km; the folk who know the area (signed or saved nearby, or living within 25 km) see them in the Folk Hub. */
+  /* 📍 A Photo pulse answer on the SpotFolk map: the subject, where to stand (drag it), the line of sight and the direction of the sun,
+     the moon or the sky, with a time slider around the moment. The 3D planner stays for the real horizon. */
+  let planLayer = null, planBox = null;
+  function mapPlan(plan) {
+    if (!map || !plan || typeof Astro === "undefined") return;
+    const it = IT_(), rad = Math.PI / 180;
+    const dest = (lat, lon, az, km) => { const d = km / 6371, b = az * rad, p1 = lat * rad, l1 = lon * rad, p2 = Math.asin(Math.sin(p1) * Math.cos(d) + Math.cos(p1) * Math.sin(d) * Math.cos(b));
+      return [p2 / rad, ((l1 + Math.atan2(Math.sin(b) * Math.sin(d) * Math.cos(p1), Math.cos(d) - Math.sin(p1) * Math.sin(p2))) / rad + 540) % 360 - 180]; };
+    const bearing = (a, b) => { const p1 = a.lat * rad, p2 = b.lat * rad, dl = (b.lon - a.lon) * rad; return (Math.atan2(Math.sin(dl) * Math.cos(p2), Math.cos(p1) * Math.sin(p2) - Math.sin(p1) * Math.cos(p2) * Math.cos(dl)) / rad + 360) % 360; };
+    const posOf = (ms, p) => { const b = plan.body;
+      if (b === "sun") return Astro.sunPos(ms, p.lat, p.lon); if (b === "moon") return Astro.moonPos(ms, p.lat, p.lon); if (b === "core") return Astro.corePos(ms, p.lat, p.lon);
+      if (b[0] === "radec") return Astro.radecPos(ms, p.lat, p.lon, b[1], b[2]); const [ra, dec] = Astro.galToRaDec(b[1], 0); return Astro.radecPos(ms, p.lat, p.lon, ra, dec); };
+    const COLB = { sun: "#ffd27a", moon: "#e6ecf3", core: "#c79bff" }, col = COLB[plan.body] || "#9ec5ff";
+    location.hash = "spotfolk"; meView = false;
+    if (onGlobe) toFlat(null);
+    if (planLayer) planLayer.remove();
+    planLayer = L.layerGroup().addTo(map);
+    const S = { cam: { lat: plan.cam.lat, lon: plan.cam.lon }, dt: 0 };
+    const ico = (html, cls) => L.divIcon({ className: "", iconSize: [34, 34], iconAnchor: [17, 17], html: `<div class="mp-ico ${cls}">${html}</div>` });
+    L.marker([plan.subject.lat, plan.subject.lon], { icon: ico("🎯", "subj"), interactive: false }).addTo(planLayer);
+    (plan.cams || []).slice(1).forEach(c => L.marker([c.lat, c.lon], { icon: ico("📷", "alt"), interactive: false, opacity: .55 }).addTo(planLayer));
+    const camM = L.marker([S.cam.lat, S.cam.lon], { icon: ico("📷", "cam"), draggable: true, autoPan: true }).addTo(planLayer);
+    const sight = L.polyline([], { color: "#8fe0a6", weight: 3, opacity: .9 }).addTo(planLayer);
+    const ray = L.polyline([], { color: col, weight: 3, dashArray: "8 7", opacity: .95 }).addTo(planLayer);
+    const host = map.getContainer().closest(".sx-stage") || map.getContainer();
+    planBox?.remove(); planBox = L.DomUtil.create("div", "mp-panel", host); L.DomEvent.disableClickPropagation(planBox); L.DomEvent.disableScrollPropagation(planBox);
+    planBox.innerHTML = `<div class="mp-h"><b>${esc(plan.icon)} ${esc(plan.title)}</b><button type="button" data-mpclose aria-label="Close">×</button></div>
+      <p class="mp-t" data-mpt></p><input type="range" min="-120" max="120" step="2" value="0" data-mpr aria-label="${it ? "Ora" : "Time"}">
+      <p class="mp-r" data-mpinfo></p><p class="mp-n">${it ? "Trascina 📷 per cambiare punto. La linea verde è dove guardi, quella tratteggiata la direzione" : "Drag 📷 to move. The green line is where you look, the dashed one the direction of"} ${plan.body === "sun" ? (it ? "del sole" : "the sun") : plan.body === "moon" ? (it ? "della luna" : "the moon") : (it ? "del cielo" : "the sky")}.</p>
+      <div class="mp-acts"><a href="#" data-mpnav target="_blank" rel="noopener">🗺️ ${it ? "Naviga al punto" : "Navigate there"}</a><a href="#" data-mp3d target="_blank" rel="noopener">🔭 ${it ? "Orizzonte in 3D" : "Horizon in 3D"}</a></div>`;
+    const draw = () => {
+      const ms = plan.ms + S.dt * 6e4, p = posOf(ms, S.cam), km = Math.max(1.5, map.distance([S.cam.lat, S.cam.lon], [plan.subject.lat, plan.subject.lon]) / 1000 * 2.2);
+      const look = bearing(S.cam, plan.subject), distKm = map.distance([S.cam.lat, S.cam.lon], [plan.subject.lat, plan.subject.lon]) / 1000;
+      sight.setLatLngs([[S.cam.lat, S.cam.lon], dest(S.cam.lat, S.cam.lon, look, distKm * 1.25)]);
+      ray.setLatLngs([[S.cam.lat, S.cam.lon], dest(S.cam.lat, S.cam.lon, p.az, km)]);
+      const off = plan.off || 0, t = new Date(ms + off).toISOString();
+      planBox.querySelector("[data-mpt]").textContent = `🕒 ${new Date(t.slice(0, 10) + "T12:00:00").toLocaleDateString(window.I18N?.locale || "en-GB", { weekday: "short", day: "numeric", month: "short" })} · ${t.slice(11, 16)}${S.dt ? ` (${S.dt > 0 ? "+" : ""}${S.dt} min)` : ""}`;
+      const diff = ((p.az - look + 540) % 360) - 180, top = plan.h ? Math.atan2(plan.h, distKm * 1000) / rad : null;
+      const al = plan.aligned ? (Math.abs(diff) < 0.6 ? `<b class="ok">✓ ${it ? "Allineato" : "Lined up"}</b>` : `${it ? "Scarto" : "Off by"} ${Math.abs(diff).toFixed(1)}° ${diff > 0 ? (it ? "a destra" : "right") : (it ? "a sinistra" : "left")}`) : "";
+      const f1 = v => it ? v.toFixed(1).replace(".", ",") : v.toFixed(1);
+      planBox.querySelector("[data-mpinfo]").innerHTML = `${plan.icon} ${Math.round(p.az)}° · ${it ? "alto" : "high"} ${f1(p.alt)}° · ${it ? "guardi" : "you look"} ${Math.round(look)}° · ${distKm < 1 ? `${Math.round(distKm * 1000)} m` : `${f1(distKm)} km`}${top != null && plan.aligned ? ` · ${it ? "cima a" : "top at"} ~${f1(top)}°` : ""}${al ? `<br>${al}` : ""}`;
+      planBox.querySelector("[data-mpnav]").href = `https://www.google.com/maps/dir/?api=1&destination=${S.cam.lat.toFixed(5)},${S.cam.lon.toFixed(5)}`;
+      planBox.querySelector("[data-mp3d]").href = `https://fabiocostaph.com/?tp=${S.cam.lat.toFixed(5)},${S.cam.lon.toFixed(5)}&tn=${encodeURIComponent(plan.subject.name || "")}&td=${t.slice(0, 10)}&tt=planner#tools`;
+    };
+    camM.on("drag", ev => { const ll = ev.target.getLatLng(); S.cam = { lat: ll.lat, lon: ll.lng }; draw(); });
+    planBox.querySelector("[data-mpr]").addEventListener("input", ev => { S.dt = +ev.target.value; draw(); });
+    planBox.querySelector("[data-mpclose]").addEventListener("click", () => { planLayer?.remove(); planLayer = null; planBox?.remove(); planBox = null; });
+    draw();
+    setTimeout(() => { $("#spotsMap")?.scrollIntoView({ behavior: "smooth", block: "center" }); map.fitBounds(L.latLngBounds([[plan.subject.lat, plan.subject.lon], [S.cam.lat, S.cam.lon], ...(plan.cams || []).map(c => [c.lat, c.lon])]).pad(0.6), { maxZoom: 15 }); }, 300);
+  }
+
   /* 📸 Photo pulse (photopulse.js, loaded the first time the section opens): where to stand, and when */
   let ppJs = null;
   function loadPhotoPulse(popup, s) {
     const box = popup.getElement()?.querySelector("[data-photopulse]"); if (!box || box.dataset.done) return;
     box.dataset.done = "1";
     if (!ppJs) ppJs = new Promise((res, rej) => { const v = (document.querySelector('script[src*="spots.js"]')?.getAttribute("src") || "").split("?v=")[1] || ""; const js = document.createElement("script"); js.src = `photopulse.js${v ? `?v=${v}` : ""}`; js.onload = res; js.onerror = rej; document.head.append(js); });
-    ppJs.then(() => { if (typeof Astro === "undefined") throw new Error("astro"); window.PhotoPulse.mount(box, { esc, track: ev => window.fcTrack?.(ev), update: () => popup.update() }, s); setTimeout(() => popup.update(), 50); })
+    ppJs.then(() => { if (typeof Astro === "undefined") throw new Error("astro"); window.PhotoPulse.mount(box, { esc, track: ev => window.fcTrack?.(ev), update: () => popup.update(), mapPlan: plan => { map?.closePopup(); mapPlan(plan); } }, s); setTimeout(() => popup.update(), 50); })
       .catch(() => { ppJs = null; box.dataset.done = ""; box.innerHTML = `<p class="pc-empty">The Photo pulse could not load. Check your connection.</p>`; });
   }
   let asksV = true;
