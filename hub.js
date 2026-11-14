@@ -204,6 +204,7 @@ window.FolkHub = (() => {
   const itemOf = el => { const id = el.closest(".hb-card")?.dataset.id; return [S.items, S.placeFeed?.items || [], S.prev?.items || []].flat().find(x => x.id === id); };
   function repaintCard(i) {
     box.querySelectorAll(`.hb-card[data-id="${CSS.escape(i.id)}"]`).forEach(c => { c.outerHTML = card(i); });
+    box.querySelectorAll(`.hb-card[data-id="${CSS.escape(i.id)}"]`).forEach(c => c.classList.add("still"));   // a repainted card doesn't arrive again
   }
 
   /* ---------- the shell ---------- */
@@ -572,6 +573,7 @@ window.FolkHub = (() => {
       const c = await rpc("hub_react", { p_kind: kind, p_target_kind: i.kind, p_target_id: i.tid, p_on: on });
       i.me = { ...(i.me || {}), [kind]: on }; i.n = { ...(i.n || {}), appreciate: c.appreciate, useful: c.useful };
       repaintCard(i); K.track(`Hub: ${kind}`);
+      if (on) box.querySelectorAll(`.hb-card[data-id="${CSS.escape(i.id)}"] [data-react="${kind}"]`).forEach(x => x.classList.add("pop"));
     } catch (err) { btn.disabled = false; K.toast(/own content/.test(err.message) ? tx("You can't react to your own contributions.") : tx("Could not save it: {e}", { e: err.message }), true); }
   }
   async function follow(btn, uid) {
@@ -581,7 +583,7 @@ window.FolkHub = (() => {
     try {
       if (on) await K.api("/rest/v1/folk_follows", { method: "POST", body: { followed_id: uid }, headers: { Prefer: "return=minimal,resolution=ignore-duplicates" } });
       else await K.api(`/rest/v1/folk_follows?follower_id=eq.${encodeURIComponent(who().uid)}&followed_id=eq.${encodeURIComponent(uid)}`, { method: "DELETE" });
-      S.follow.set(uid, on);
+      S.follow.set(uid, on); if (on) btn.classList.add("pop");
       [S.items, S.placeFeed?.items || [], S.prev?.items || []].flat().filter(x => x.user_id === uid).forEach(x => { x.me = { ...(x.me || {}), follows: on }; });
       box.querySelectorAll(`[data-follow="${CSS.escape(uid)}"]`).forEach(b => {
         if (b.closest(".hb-ch")) { if (on) b.remove(); return; }

@@ -4112,3 +4112,37 @@ body[data-page="hub"] .sf-nav a.sf-map{background:none;color:#e6ecf3}
 /* «Add a photo of this place» at the bottom of the card: easy to see */
 .pop-btn.pc-addph{flex:1 1 100%;order:-1;justify-content:center;min-height:46px;border:1px dashed rgba(255,190,122,.7);background:rgba(242,140,30,.10);color:#ffbe7a;font-weight:700;font-size:14px}
 .pop-btn.pc-addph:hover{background:rgba(242,140,30,.18)}
+
+/* ---------- animations: light, CSS only, off with reduced motion ---------- */
+@keyframes fcUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@keyframes fcPop{0%{transform:scale(1)}35%{transform:scale(1.28)}70%{transform:scale(.94)}100%{transform:scale(1)}}
+@keyframes fcLive{0%{box-shadow:0 0 0 0 rgba(255,122,69,.55)}70%{box-shadow:0 0 0 9px rgba(255,122,69,0)}100%{box-shadow:0 0 0 0 rgba(255,122,69,0)}}
+@keyframes fcShine{0%{background-position:-160% 0}60%,100%{background-position:260% 0}}
+@keyframes fcBounce{0%{transform:scale(.4)}60%{transform:scale(1.2)}100%{transform:scale(1)}}
+@keyframes fcBurst{0%{opacity:1;transform:translate(-50%,-50%) rotate(var(--a)) translateY(0) scale(.6)}100%{opacity:0;transform:translate(-50%,-50%) rotate(var(--a)) translateY(calc(var(--d) * -1)) scale(1.1)}}
+@keyframes fcCeleIn{0%{opacity:0;transform:translate(-50%,-50%) scale(.7)}15%{opacity:1;transform:translate(-50%,-50%) scale(1.05)}25%{transform:translate(-50%,-50%) scale(1)}85%{opacity:1}100%{opacity:0}}
+/* a place card opens section by section */
+.leaflet-popup .spot-pop.pc>*{animation:fcUp .38s ease both}
+.leaflet-popup .spot-pop.pc>*:nth-child(2){animation-delay:.05s}.leaflet-popup .spot-pop.pc>*:nth-child(3){animation-delay:.1s}.leaflet-popup .spot-pop.pc>*:nth-child(4){animation-delay:.15s}
+.leaflet-popup .spot-pop.pc>*:nth-child(5){animation-delay:.2s}.leaflet-popup .spot-pop.pc>*:nth-child(n+6){animation-delay:.25s}
+/* «how it is now»: a live dot */
+.pc-condtop button::before{content:"";display:inline-block;width:8px;height:8px;margin-right:7px;border-radius:50%;background:#ff7a45;vertical-align:1px;animation:fcLive 1.8s ease-out infinite}
+/* the share button catches the eye once */
+.pc-sh.main{background-image:linear-gradient(110deg,transparent 30%,rgba(255,255,255,.45) 50%,transparent 70%);background-size:220% 100%;background-repeat:no-repeat;animation:fcShine 2.6s ease .8s 2}
+/* the Folk Hub: cards arrive, reactions pop, badges bounce */
+.hb-feed>.hb-card{animation:fcUp .35s ease both}
+.hb-feed>.hb-card.still{animation:none}
+.hb-feed>.hb-card:nth-child(2){animation-delay:.04s}.hb-feed>.hb-card:nth-child(3){animation-delay:.08s}.hb-feed>.hb-card:nth-child(4){animation-delay:.12s}.hb-feed>.hb-card:nth-child(n+5){animation-delay:.16s}
+.hb-acts button.pop,.hb-fol.pop{animation:fcPop .45s ease}
+.hb-menu b:not([hidden]),.hb-tabs b:not([hidden]){animation:fcBounce .4s ease}
+/* new things on the map, a gentle pulse on the notice dot */
+.fc-notice-dot{animation:fcLive 1.8s ease-out infinite}
+/* celebration (First folk…) */
+.fc-cele{position:fixed;left:50%;top:45%;z-index:12000;pointer-events:none}
+.fc-cele i{position:absolute;left:0;top:0;font-style:normal;font-size:30px;animation:fcBurst var(--t) cubic-bezier(.2,.7,.3,1) both}
+.fc-cele b{position:absolute;left:0;top:0;white-space:nowrap;padding:14px 22px;border-radius:999px;background:rgba(9,19,33,.95);border:1px solid #ffbe7a;color:#ffe3bf;font:700 16px var(--sans);box-shadow:0 18px 50px rgba(0,0,0,.5);animation:fcCeleIn 2.5s ease both}
+@media (prefers-reduced-motion:reduce){
+  .leaflet-popup .spot-pop.pc>*,.hb-feed>.hb-card,.hb-acts button.pop,.hb-fol.pop,.hb-menu b,.hb-tabs b,.pc-sh.main{animation:none!important}
+  .pc-condtop button::before,.fc-notice-dot{animation:none}
+  .fc-cele i{display:none}
+}

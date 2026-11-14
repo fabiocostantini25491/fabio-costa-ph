@@ -2287,6 +2287,13 @@ const Spots = (() => {
     } catch (err) { toast(`Could not make the picture: ${err.message}`, true); }
     btn.disabled = false; btn.innerHTML = old;
   }
+  /* a small celebration: a burst of the emoji and a line, then gone (just the line with reduced motion) */
+  function celebrate(emoji, text) {
+    const box = document.createElement("div"); box.className = "fc-cele"; box.setAttribute("role", "status");
+    const n = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ? 0 : 14;
+    box.innerHTML = `${Array.from({ length: n }, (_, i) => `<i style="--a:${Math.round(i * 360 / n + Math.random() * 18)}deg;--d:${110 + Math.round(Math.random() * 90)}px;--t:${(0.75 + Math.random() * 0.4).toFixed(2)}s">${emoji}</i>`).join("")}<b>${esc(emoji)} ${esc(text)}</b>`;
+    document.body.appendChild(box); setTimeout(() => box.remove(), 2600);
+  }
   let justSigned = null;
 
   /* Place pulse: live webcams near the place (Windy, through the «webcams» function on Supabase that keeps the key) */
@@ -5470,7 +5477,9 @@ const Spots = (() => {
         p => res(kmBetween(p.coords.latitude, p.coords.longitude, s.lat, s.lon) <= 0.3), () => res(false), { timeout: 6000, maximumAge: 120000 }));
       const body = { spot_id: s.id, cluster: pending, tip: form.querySelector("input").value.trim() || null, author_name: displayName(), ...(evoV ? { on_spot: onSpot } : {}) };
       try {
+        const wasFirst = pending !== "fabio" && !(el._signs || []).some(g => g.cluster !== "fabio");
         await api("/rest/v1/place_signs", { method: "POST", body, headers: { Prefer: "return=minimal" } });
+        if (wasFirst) setTimeout(() => celebrate("👑", IT_() ? "Sei il First folk di questo posto!" : "You're the First folk of this place!"), 250);
         if (pending !== "fabio" && mySignCount != null) { mySignCount++; paintOnboarding(); if (mySignCount === 3) setTimeout(() => toast("🎉 Welcome, you're folk now! Your passport is in My profile."), 600); }
         if (onSpot) toast("📍 Signed on the spot!");
         toast(pending === "fabio" ? "Marked as Fabio's pick." : `Signed as ${folkOf(pending).toLowerCase()}. Thanks!`); window.fcTrack?.("Spots: place signed", { cluster: pending });
