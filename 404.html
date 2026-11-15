@@ -6,6 +6,8 @@
 <script>
   // a share link whose preview page isn't ready yet (it is made a few minutes after publishing): go straight to the content
   (function () {
+    var p = location.pathname.match(/\/guides\/pdf\/([^/]+\.pdf)$/i);
+    if (p) { location.replace("https://github.com/fabiocostantini25491/fabio-costa-ph/releases/download/guide-pdf/" + p[1]); return; }
     var m = location.pathname.match(/\/s\/(art-[^/]+|g-[^/]+|magazine(?:-\d{4}-\d{2})?)\.html$/);
     location.replace("/" + (m ? "#" + m[1] : /\/s\/pdf-/.test(location.pathname) ? "#guides" : ""));
   })();

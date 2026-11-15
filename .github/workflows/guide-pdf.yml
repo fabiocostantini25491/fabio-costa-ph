@@ -5,7 +5,7 @@ name: Guide in PDF (comprimi e sposta)
 #   3. aggiorna content/guide.json con il nuovo indirizzo e la dimensione, e toglie il PDF dalla cartella del sito.
 on:
   push:
-    paths: ["guides/pdf/**"]
+    paths: ["guides/pdf/**", "content/guide.json"]
   workflow_dispatch:
 permissions:
   contents: write
@@ -23,30 +23,34 @@ jobs:
         run: |
           set -e
           shopt -s nullglob nocaseglob
-          files=(guides/pdf/*.pdf)
-          [ ${#files[@]} -eq 0 ] && { echo "Nessun PDF da spostare."; exit 0; }
           TAG=guide-pdf
           gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --title "Guide in PDF" --notes "PDF delle guide del sito (compressi in automatico)." --latest=false
-          for f in "${files[@]}"; do
-            name=$(basename "$f")
-            out="/tmp/$name"
+          # 1. every PDF uploaded from the panel: compress it and move it to the downloads
+          for f in guides/pdf/*.pdf; do
+            name=$(basename "$f"); out="/tmp/$name"
             gs -q -dNOPAUSE -dBATCH -dSAFER -sDEVICE=pdfwrite -dCompatibilityLevel=1.6 -dPDFSETTINGS=/ebook \
               -dDownsampleColorImages=true -dColorImageResolution=150 -dDownsampleGrayImages=true -dGrayImageResolution=150 \
               -dDetectDuplicateImages=true -dCompressFonts=true -sOutputFile="$out" "$f" || cp "$f" "$out"
             before=$(stat -c%s "$f"); after=$(stat -c%s "$out")
-            if [ "$after" -ge "$before" ]; then cp "$f" "$out"; after=$before; fi
-            echo "$name: $((before/1024)) KB → $((after/1024)) KB"
+            if [ "$after" -ge "$before" ]; then cp "$f" "$out"; fi
+            echo "$name: $((before/1024)) KB → $(( $(stat -c%s "$out")/1024 )) KB"
             gh release upload "$TAG" "$out" --clobber
-            url="https://github.com/${GITHUB_REPOSITORY}/releases/download/$TAG/$name"
-            mb=$(awk "BEGIN{printf \"%.1f\", $after/1048576}")
-            # the guide that points to this file now points to the download, with its size
-            tmp=$(mktemp)
-            jq --arg p "/guides/pdf/$name" --arg p2 "guides/pdf/$name" --arg u "$url" --arg mb "$mb" \
-              '(.pdf // []) |= map(if (.file == $p or .file == $p2) then .file = $u | .mb = $mb else . end)' content/guide.json > "$tmp" && mv "$tmp" content/guide.json
             git rm -q "$f"
           done
+          # 2. every guide that still points to a file in guides/pdf/ (the panel can save the guide before or after the file):
+          #    point it to the download, with its size
+          gh release view "$TAG" --json assets -q '.assets[] | "\(.name)\t\(.size)"' > /tmp/assets.tsv
+          while IFS=$'\t' read -r name size; do
+            [ -z "$name" ] && continue
+            url="https://github.com/${GITHUB_REPOSITORY}/releases/download/$TAG/$name"
+            mb=$(awk "BEGIN{v=$size/1048576; printf \"%.1f\", (v<0.1?0.1:v)}")
+            tmp=$(mktemp)
+            jq --arg n "$name" --arg u "$url" --arg mb "$mb" \
+              '(.pdf // []) |= map(if ((.file // "") | test("(^|/)guides/pdf/" + ($n | gsub("[.]"; "[.]")) + "$")) then .file = $u | .mb = $mb else . end)' content/guide.json > "$tmp" && mv "$tmp" content/guide.json
+          done < /tmp/assets.tsv
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add content/guide.json
-          git commit -m "Guide PDF compressi e spostati tra i file scaricabili" || exit 0
+          git add -A content/guide.json guides/pdf
+          git diff --cached --quiet && { echo "Nessuna novità."; exit 0; }
+          git commit -m "Guide PDF compressi e spostati tra i file scaricabili"
           git pull --rebase -q && git push
