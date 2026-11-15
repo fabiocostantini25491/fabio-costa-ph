@@ -50,7 +50,7 @@ jobs:
           done < /tmp/assets.tsv
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A content/guide.json guides/pdf
+          git add content/guide.json
           git diff --cached --quiet && { echo "Nessuna novità."; exit 0; }
           git commit -m "Guide PDF compressi e spostati tra i file scaricabili"
           git pull --rebase -q && git push
