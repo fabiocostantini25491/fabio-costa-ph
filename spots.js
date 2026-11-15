@@ -63,6 +63,7 @@ const Spots = (() => {
   let myStyles = [], clusterV = true, signV = true, folkV = true;
   let signMap = new Map();
   let evoV = true, mySignCount = null;
+  let askSpots = new Map();   // spot id → open folk questions (loadAskPins)
   let subV = true;   // false finché non è stato eseguito supabase-voti-recensioni.sql (i 4 voti delle recensioni)
   let pendingMode = false, foundersLeft = null;   // pendingMode: iscritto in attesa che però vede tutto (ingresso immediato)
   const joinFolk = () => { try { const k = localStorage.getItem("fcph-joinfolk"); return CLUSTERS[k] ? k : ""; } catch { return ""; } };   // evoV: false finché non è stato eseguito supabase-folk-evoluzione.sql
@@ -1319,6 +1320,7 @@ const Spots = (() => {
   function renderApp() {
     setTimeout(sfState, 0);
     setTimeout(loadLive, 1200);
+    setTimeout(() => loadAskPins(), 2500);
     document.documentElement.classList.remove("sf-on-me");
     const lists = [...new Set(spots.map(s => s.list))].sort((a, b) => a.localeCompare(b));
     if (!activeLists) activeLists = new Set(lists);
@@ -2592,6 +2594,25 @@ const Spots = (() => {
     ppJs.then(() => { if (typeof Astro === "undefined") throw new Error("astro"); window.PhotoPulse.mount(box, { esc, track: ev => window.fcTrack?.(ev), update: () => popup.update(), mapPlan: plan => { map?.closePopup(); mapPlan(plan); }, ask: pre => openAskForm(pre, () => loadAsks(popup, s)), pickSubject: done => pickSubject(s, done) }, s); setTimeout(() => popup.update(), 50); })
       .catch(() => { ppJs = null; box.dataset.done = ""; box.innerHTML = `<p class="pc-empty">The Photo pulse could not load. Check your connection.</p>`; });
   }
+  /* ❓ on the pins: the places where a folk has an open question (the place asked about, or the nearest place within 1.5 km). Folk only. */
+  let askPinsAt = 0;
+  async function loadAskPins(force = false) {
+    if (!session || guest || !asksV || (!force && Date.now() - askPinsAt < 5 * 60e3)) return;
+    askPinsAt = Date.now();
+    let list = [];
+    try { list = (await api(`/rest/v1/pulse_asks?select=id,spot_id,lat,lon,target,user_id&expires_at=gt.${encodeURIComponent(new Date().toISOString())}&limit=500`)).data || []; }
+    catch (err) { if ([400, 404].includes(err.status)) asksV = false; return; }
+    const next = new Map(), me = myUid();
+    list.forEach(a => {
+      let id = a.spot_id != null && spotById(+a.spot_id) ? +a.spot_id : null;
+      if (id == null) { let best = 1.5; spots.forEach(x => { if (Math.abs(x.lat - a.lat) > 0.02 || Math.abs(x.lon - a.lon) > 0.03) return; const d = kmBetween(x.lat, x.lon, a.lat, a.lon); if (d < best) { best = d; id = x.id; } }); }
+      if (id == null) return;
+      const o = next.get(id) || { n: 0, photo: false, mine: 0 }; o.n++; if (a.target === "photo") o.photo = true; if (a.user_id === me) o.mine++; next.set(id, o);
+    });
+    const changed = new Set([...askSpots.keys(), ...next.keys()]);
+    askSpots = next;
+    changed.forEach(id => { const s = spotById(id); if (s) markerById.get(id)?.setIcon(pinIcon(s)); });
+  }
   let asksV = true;
   const agoL = t => IT_() ? condAgo(t).replace(/ min ago/, " min fa").replace(/ h ago/, " h fa").replace("yesterday", "ieri").replace(/ days ago/, " giorni fa") : condAgo(t);
   async function loadAsks(popup, s) {
@@ -2626,7 +2647,7 @@ const Spots = (() => {
     }));
     box.querySelectorAll("[data-askoff]").forEach(b => b.addEventListener("click", async () => {
       if (b.dataset.confirm !== "1") { b.dataset.confirm = "1"; b.textContent = it ? "Tocca di nuovo per ritirarla" : "Tap again to withdraw"; return; }
-      try { await api(`/rest/v1/pulse_asks?id=eq.${b.dataset.askoff}`, { method: "DELETE" }); loadAsks(popup, s); } catch (err) { toast(`Could not withdraw it: ${err.message}`, true); }
+      try { await api(`/rest/v1/pulse_asks?id=eq.${b.dataset.askoff}`, { method: "DELETE" }); loadAsks(popup, s); loadAskPins(true); } catch (err) { toast(`Could not withdraw it: ${err.message}`, true); }
     }));
     popup.update();
   }
@@ -2649,7 +2670,7 @@ const Spots = (() => {
       try {
         await api("/rest/v1/pulse_asks", { method: "POST", headers: { Prefer: "return=minimal" }, body: { author_name: displayName(), spot_id: pre.spot_id || null, lat: +(+pre.lat).toFixed(4), lon: +(+pre.lon).toFixed(4), place_name: String(pre.name || "").slice(0, 80) || "?", note: d.querySelector("#askNote").value.trim().slice(0, 200) || null, ...(photo ? { target: "photo" } : {}) } });
         d.close(); toast(it ? "Chiesto: i folk della zona lo vedono nell'Hub. Le risposte arrivano nelle tue notifiche." : "Asked: the folk of the area see it in the Hub. Answers arrive in your notifications.");
-        window.fcTrack?.("Spots: asked how it is now"); done?.();
+        window.fcTrack?.("Spots: asked how it is now"); done?.(); loadAskPins(true);
       } catch (err) {
         btn.disabled = false; msg.hidden = false;
         msg.textContent = /relation|function|schema cache/i.test(err.message) ? (it ? "Arriva quando il database è aggiornato (supabase-com-e-adesso.sql)." : "This arrives once the database is updated (supabase-com-e-adesso.sql).")
@@ -3589,8 +3610,9 @@ const Spots = (() => {
     const icon = plane ? ICON_PLANE : shineLocal ? ICON_LOCAL : cat.icon;
     const color = plane ? "#ffc46e" : shineLocal ? "#7ed69b" : cat.color;
     const alert = alertsOf(s).length ? `<span class="alert-dot" title="${esc(ALERTS[alertsOf(s)[0].kind].label)}"></span>` : "";
+    const ask = askSpots.get(s.id), askB = ask ? `<span class="ask-dot${ask.photo ? " photo" : ""}${ask.mine === ask.n ? " mine" : ""}" title="${esc(IT_() ? (ask.n === 1 ? "Un folk ha una domanda qui" : `${ask.n} domande dei folk qui`) : (ask.n === 1 ? "A folk has a question here" : `${ask.n} folk questions here`))}">?</span>` : "";
     return L.divIcon({ className: "", iconSize: [28, 28], iconAnchor: [14, 14], tooltipAnchor: [0, -14], popupAnchor: [0, -12],
-      html: `<div class="${cls}" style="--c:${color}${sg?.top ? `;--fc:${CLUSTERS[sg.top].color}` : ""}"${tier || sg?.fabio ? ` title="${sg.fabio ? "Fabio's pick" : ""}${sg.fabio && tier ? " · " : ""}${tier ? trS("Signed by {n} folk").replace("{n}", sg.total) : ""}"` : ""}>${icon}${sg?.fabio ? `<span class="pick-star" aria-hidden="true">★</span>` : tier ? `<span class="folk-badge" aria-hidden="true">${CLUSTERS[sg.top].ico}</span>` : ""}${offer ? `<span class="offer-tag" aria-hidden="true">%</span>` : ""}${favs.has(s.id) ? `<span class="fav-dot" aria-hidden="true">♥</span>` : ""}${s.verified_at && !s.outdated ? `<span class="vf-dot" aria-hidden="true">✓</span>` : ""}${alert}</div>` });
+      html: `<div class="${cls}" style="--c:${color}${sg?.top ? `;--fc:${CLUSTERS[sg.top].color}` : ""}"${tier || sg?.fabio ? ` title="${sg.fabio ? "Fabio's pick" : ""}${sg.fabio && tier ? " · " : ""}${tier ? trS("Signed by {n} folk").replace("{n}", sg.total) : ""}"` : ""}>${icon}${sg?.fabio ? `<span class="pick-star" aria-hidden="true">★</span>` : tier ? `<span class="folk-badge" aria-hidden="true">${CLUSTERS[sg.top].ico}</span>` : ""}${offer ? `<span class="offer-tag" aria-hidden="true">%</span>` : ""}${favs.has(s.id) ? `<span class="fav-dot" aria-hidden="true">♥</span>` : ""}${s.verified_at && !s.outdated ? `<span class="vf-dot" aria-hidden="true">✓</span>` : ""}${alert}${askB}</div>` });
   }
   const fmtMoneyWs = (v, cur) => { try { return new Intl.NumberFormat(window.I18N?.locale || "en-GB", { style: "currency", currency: cur || "EUR", maximumFractionDigits: v % 1 ? 2 : 0 }).format(v); } catch { return `${v} ${cur || ""}`; } };
   function wsBoxHtml(s) {
@@ -6038,7 +6060,8 @@ const Spots = (() => {
         ["💬", "New stories", reviews.filter(r => r.body && recent(r)).length], ["🌿", "Tips from the folk", signs.filter(g => g.tip && recent(g)).length]].filter(r => r[2] > 0);
       pbox.innerHTML = rows.length ? `<p class="pc-alive">This place is alive in the community.</p><ul class="pc-pl">${rows.map(([i, l, n]) => `<li><span aria-hidden="true">${i}</span>${l}<b>+${n}</b></li>`).join("")}</ul>`
         : `<p class="pc-empty">Quiet for now: the first signatures will make it move.</p>`;
-      setCnt(el, "pulse", rows.length ? `+${rows.reduce((a, r) => a + r[2], 0)}` : "");
+      const aq = askSpots.get(s.id);
+      setCnt(el, "pulse", [aq ? `❓ ${aq.n}` : "", rows.length ? `+${rows.reduce((a, r) => a + r[2], 0)}` : ""].filter(Boolean).join(" · "));
     }
     popup.update();
   }
