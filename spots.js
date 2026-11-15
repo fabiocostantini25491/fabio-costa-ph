@@ -2409,22 +2409,34 @@ const Spots = (() => {
       <div class="wx-hours moon-cal" tabindex="0">${out.join("")}</div>`;
   }
   // hour by hour, the next 48 hours from now (the place's own time), with sunrise and sunset in their place; scrolls sideways
-  function wxHours(j) {
+  // dayIdx: one day of the week (0 = today, from now), or none for the next 48 hours
+  function wxHours(j, dayIdx = null) {
     const H = j.hourly; if (!H?.time?.length) return "";
     const nowLocal = new Date(Date.now() + (j.utc_offset_seconds || 0) * 1000).toISOString().slice(0, 13);
     let i0 = H.time.findIndex(t => t.slice(0, 13) >= nowLocal); if (i0 < 0) return "";
+    let i1 = Math.min(H.time.length, i0 + 48);
+    const date = dayIdx != null ? j.daily?.time?.[dayIdx] : null;
+    if (date) {
+      const a = H.time.findIndex(t => t.startsWith(date)); if (a < 0) return "";
+      i0 = Math.max(a, dayIdx === 0 ? i0 : a); i1 = a; while (i1 < H.time.length && H.time[i1].startsWith(date)) i1++;
+    }
     const marks = [...(j.daily?.sunrise || []).map(t => [t, "🌅"]), ...(j.daily?.sunset || []).map(t => [t, "🌇"])];
     const cells = [];
-    for (let i = i0; i < Math.min(H.time.length, i0 + 48); i++) {
+    for (let i = i0; i < i1; i++) {
       const t = H.time[i], night = H.is_day && H.is_day[i] === 0, code = H.weather_code[i];
       let [ico, lab] = wxOf(code); if (night && code <= 1) ico = "🌙"; else if (night && code === 2) ico = "☁️";
       const p = H.precipitation_probability?.[i], hh = t.slice(11, 13);
       if (hh === "00" && i > i0) cells.push(`<div class="wx-day"><small>${esc(new Date(t.slice(0, 10) + "T12:00:00").toLocaleDateString(window.I18N?.locale || "en-GB", { weekday: "short" }))}</small></div>`);
-      cells.push(`<div class="${night ? "n" : ""}${i === i0 ? " now" : ""}" title="${esc(lab)}"><small>${i === i0 ? esc(trS("Now")) : hh}</small><b>${ico}</b><span>${Math.round(H.temperature_2m[i])}°</span>
+      const isNow = i === i0 && t.slice(0, 13) <= nowLocal;
+      cells.push(`<div class="${night ? "n" : ""}${isNow ? " now" : ""}" title="${esc(lab)}"><small>${isNow ? esc(trS("Now")) : hh}</small><b>${ico}</b><span>${Math.round(H.temperature_2m[i])}°</span>
         <em>${p != null && p >= 10 ? `💧${p}%` : H.precipitation?.[i] >= 0.2 ? `💧${(+H.precipitation[i]).toFixed(1)}` : "&nbsp;"}</em><i>☁${Math.round(H.cloud_cover?.[i] ?? 0)}%</i><i>💨${Math.round(H.wind_speed_10m?.[i] ?? 0)}</i></div>`);
       marks.filter(([m]) => m.slice(0, 13) === t.slice(0, 13)).forEach(([m, e]) => cells.push(`<div class="wx-sun"><b>${e}</b><small>${m.slice(11, 16)}</small></div>`));
     }
-    return `<p class="wx-hh">${esc(trS("Hour by hour"))} <small>${esc(trS("next 48 hours · rain chance, clouds, wind km/h"))}</small></p><div class="wx-hours" tabindex="0">${cells.join("")}</div>`;
+    if (!date) return `<p class="wx-hh">${esc(trS("Hour by hour"))} <small>${esc(trS("next 48 hours · rain chance, clouds, wind km/h"))}</small></p><div class="wx-hours" tabindex="0">${cells.join("")}</div>`;
+    // further ahead, the models are less sure: say so
+    const conf = dayIdx <= 1 ? ["●", "reliable"] : dayIdx <= 3 ? ["◐", "indicative"] : ["○", "just a trend"];
+    const dl = dayIdx === 0 ? trS("Today") : new Date(date + "T12:00:00").toLocaleDateString(window.I18N?.locale || "en-GB", { weekday: "long", day: "numeric", month: "short" });
+    return `<p class="wx-hh">${esc(trS("Hour by hour"))} · ${esc(dl)} <small>${conf[0]} ${esc(trS(conf[1]))} · ${esc(trS("rain chance, clouds, wind km/h"))} · <button type="button" class="wx-back" data-wxday="">${esc(trS("next 48 hours"))}</button></small></p><div class="wx-hours" tabindex="0">${cells.join("")}</div>`;
   }
   async function loadWeather(popup, s) {
     const box = popup.getElement()?.querySelector("[data-wx]");
@@ -2453,13 +2465,25 @@ const Spots = (() => {
     box.innerHTML = `<p class="pc-cams-h">🌡️ Weather now</p>
       <div class="wx-now"><b>${ico}</b><div><strong>${Math.round(c.temperature_2m)}°</strong> <em>${esc(label)}</em>
         <p>${snow}${frz}<span>💨 ${Math.round(c.wind_speed_10m)} km/h</span><span>🌅 ${hm(d.sunrise?.[0])} · 🌇 ${hm(d.sunset?.[0])}</span></p></div></div>
-      ${wxHours(w.d)}
-      <div class="wx-days">${d.time.map((t, i) => `<div title="${esc(wxOf(d.weather_code[i])[1])}"><small>${esc(day(t, i))}</small><b>${wxOf(d.weather_code[i])[0]}</b>
+      <div data-wxh>${wxHours(w.d)}</div>
+      <p class="wx-pick">${esc(trS("Tap a day to see it hour by hour"))}</p>
+      <div class="wx-days">${d.time.map((t, i) => `<button type="button" data-wxday="${i}" title="${esc(wxOf(d.weather_code[i])[1])}"><small>${esc(day(t, i))}</small><b>${wxOf(d.weather_code[i])[0]}</b>
         <span>${Math.round(d.temperature_2m_max[i])}° <i>${Math.round(d.temperature_2m_min[i])}°</i></span>
-        ${d.snowfall_sum[i] >= 0.5 ? `<em>❄️ ${Math.round(d.snowfall_sum[i])} cm</em>` : d.precipitation_sum[i] >= 0.5 ? `<em>💧 ${Math.round(d.precipitation_sum[i])} mm</em>` : `<em>&nbsp;</em>`}</div>`).join("")}</div>
+        ${d.snowfall_sum[i] >= 0.5 ? `<em>❄️ ${Math.round(d.snowfall_sum[i])} cm</em>` : d.precipitation_sum[i] >= 0.5 ? `<em>💧 ${Math.round(d.precipitation_sum[i])} mm</em>` : `<em>&nbsp;</em>`}</button>`).join("")}</div>
       ${moonCal((w.d.utc_offset_seconds || 0) * 1000, s.lat, s.lon)}
       <p class="pc-cams-by">Weather data by <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo.com</a> (CC BY 4.0)</p>`;
     box.hidden = false;
+    // any day of the week, hour by hour (tap it again, or «next 48 hours», to go back)
+    box.addEventListener("click", e => {
+      const b = e.target.closest("[data-wxday]"); if (!b) return;
+      let i = b.dataset.wxday === "" ? null : +b.dataset.wxday;
+      const cur = box.querySelector(".wx-days .on");
+      if (cur && i != null && +cur.dataset.wxday === i) i = null;
+      box.querySelectorAll(".wx-days [data-wxday]").forEach(x => x.classList.toggle("on", i != null && +x.dataset.wxday === i));
+      box.querySelector("[data-wxh]").innerHTML = wxHours(w.d, i);
+      popup.update();
+      window.fcTrack?.("Spots: weather day");
+    });
     popup.update();
     window.fcTrack?.("Spots: weather shown");
   }
