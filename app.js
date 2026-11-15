@@ -2214,22 +2214,39 @@ function guideMapSvg(points, { w = 640, h = 380, color = "#b20d0d", canal = fals
 }
 const gnum = g => { let n = 0; return (g.zone || []).map((z, zi) => ({ ...z, color: ZONE_COLORS[zi % ZONE_COLORS.length], luoghi: (z.luoghi || []).filter(l => l && l.nome).map(l => ({ ...l, n: ++n, lat: parseFloat(l.lat), lon: parseFloat(l.lon) })) })); };
 const mdInline = t => md(t || "").replace(/^<p>|<\/p>\s*$/g, "");
+// a PDF guide read on the site: #pdf-<slug of the title>; closing it goes back to the shelf
+let pdfViewLib = null;
+async function openPdfGuide(id) {
+  await loadGuides();
+  const g = guidesPdf.find(x => slug(x.titolo) === id);
+  if (!g) { history.replaceState(null, "", "#guides"); return route(); }
+  pdfViewLib = pdfViewLib || new Promise((ok, ko) => { if (window.PdfView) return ok(); const s = document.createElement("script"); s.src = "pdfview.js?v=" + (document.querySelector('script[src^="app.js"]')?.src.split("v=")[1] || ""); s.onload = ok; s.onerror = () => { pdfViewLib = null; ko(); }; document.head.appendChild(s); });
+  try { await pdfViewLib; } catch { location.href = pdfHref(g); return; }
+  if (location.hash !== "#pdf-" + id) return;
+  const url = pdfHref(g), local = !/^https?:\/\//.test(url) || url.startsWith(location.origin);
+  trackEvent("Guide PDF read", { guide: g.titolo });
+  window.PdfView.open({ titolo: g.titolo, file: url, download: url, mb: g.mb }, {
+    share: fnShareBtn(`pdf-${id}`, g.titolo, "guide"),
+    onClose: () => { if (location.hash === "#pdf-" + id) location.hash = "guides"; }
+  });
+  if (!local) console.info("pdf guide hosted elsewhere:", url);
+}
 async function renderGuides() {
   const layout = $("#journalLayout");
   layout.hidden = false; $("#articleReader").hidden = true;
   renderTopics([...new Set(articles.map(a => a.category))], "");
   const list = await loadGuides();
-  if (document.body.dataset.page !== "journal" || !/^#guides$/.test(location.hash)) return;
+  if (document.body.dataset.page !== "journal" || !/^#(guides|pdf-[a-z0-9-]+)$/.test(location.hash)) return;
   const T = s => window.I18N ? I18N.t(s) : s;
   const topics = [...new Set(guidesPdf.map(g => g.argomento || "Altro"))], pdfs = guidesPdf.filter(g => !guideTopic || (g.argomento || "Altro") === guideTopic);
   layout.innerHTML = `<div class="gd-shelf">
     <p class="gd-shelf-lead">${T("Guides with a photographer's eye: places zone by zone, photography, editing and more. Read them here or download the PDF.")}</p>
     ${guidesPdf.length ? `<section class="gd-pdfs"><h3 class="gd-pdfs-h">${T("Guides in PDF")}</h3>
       ${topics.length > 1 ? `<nav class="sub-chips gd-topics"><button type="button" data-gtopic=""${guideTopic ? "" : ' class="on"'}>${T("All")} <small>${guidesPdf.length}</small></button>${topics.map(tp => `<button type="button" data-gtopic="${esc(tp)}"${guideTopic === tp ? ' class="on"' : ""}>${esc(T(PDF_TOPIC_EN[tp] || tp))} <small>${guidesPdf.filter(g => (g.argomento || "Altro") === tp).length}</small></button>`).join("")}</nav>` : ""}
-      <ul class="gd-books">${pdfs.map(g => `<li><a class="gd-book" href="${esc(pdfHref(g))}" target="_blank" rel="noopener" data-guide-pdf>
+      <ul class="gd-books">${pdfs.map(g => `<li><a class="gd-book" href="#pdf-${esc(slug(g.titolo))}">
         <span class="gd-cover${g.copertina ? "" : " no-img"}">${g.copertina ? `<img src="${esc(mediaUrl(g.copertina))}" alt="" loading="lazy">` : ""}<span class="gd-cover-t"><small>Field Notes · ${esc(T(PDF_TOPIC_EN[g.argomento] || g.argomento || "Guide"))}</small><b>${esc(g.titolo)}</b><em>${esc(g.sottotitolo || "")}</em></span></span>
         <span class="gd-book-meta">${g.descrizione ? esc(g.descrizione) : ""}</span></a>
-        <a class="gd-book-pdf" href="${esc(pdfHref(g))}" target="_blank" rel="noopener" data-guide-pdf>PDF${g.mb ? ` · ${esc(g.mb)} MB` : ""}</a>${fnShareBtn(`pdf-${slug(g.titolo)}`, g.titolo, "guide").replace('class="fn-share"', 'class="fn-share gd-book-share"')}</li>`).join("")}</ul></section>` : ""}
+        <a class="gd-book-pdf" href="${esc(pdfHref(g))}" download target="_blank" rel="noopener" data-guide-pdf title="${esc(T("Download"))}">⬇ PDF${g.mb ? ` · ${esc(g.mb)} MB` : ""}</a>${fnShareBtn(`pdf-${slug(g.titolo)}`, g.titolo, "guide").replace('class="fn-share"', 'class="fn-share gd-book-share"')}</li>`).join("")}</ul></section>` : ""}
     ${guidesPdf.length && list.length ? `<h3 class="gd-pdfs-h">${T("Places, zone by zone")}</h3>` : ""}
     ${list.length ? `<ul class="gd-books">${list.map(g => {
       const n = (g.zone || []).reduce((a, z) => a + (z.luoghi || []).length, 0);
@@ -2667,8 +2684,10 @@ function route() {
   const writeMode = hash === "write";
   const magMonth = (hash.match(/^magazine-(\d{4}-\d{2})$/) || [])[1] || "";
   const magazine = hash === "magazine" || !!magMonth;
-  const guidesHash = hash === "guides", guideSlug = (hash.match(/^g-([a-z0-9-]+)$/) || [])[1] || "";
+  const pdfGuide = (hash.match(/^pdf-([a-z0-9-]+)$/) || [])[1] || "";
+  const guidesHash = hash === "guides" || !!pdfGuide, guideSlug = (hash.match(/^g-([a-z0-9-]+)$/) || [])[1] || "";
   if (guidesHash || guideSlug) page = "journal";
+  if (!pdfGuide) window.PdfView?.close();
   if (magazine) page = "journal";
   if (writeMode) page = "journal";
   if (hash.startsWith("author-")) { page = "journal"; authorSlug = hash.slice(7); }
@@ -2727,20 +2746,20 @@ function route() {
     else if (authorSlug) renderAuthor(authorSlug);
     else if (article) renderArticle(article);
     else if (magazine) { setJournalMode("magazine"); renderMagazine.token = ++magToken; renderMagazine(magMonth); }
-    else if (guidesHash) { setJournalMode("guides"); renderGuides(); }
+    else if (guidesHash) { setJournalMode("guides"); if (!pdfGuide || !document.querySelector("#journalLayout .gd-shelf")) renderGuides(); if (pdfGuide) openPdfGuide(pdfGuide); }
     else if (guideSlug) { setJournalMode("guides"); renderGuide(guideSlug); }
     else { $("#articleReader").hidden = true; renderJournal(); }
     if (!magazine && !guidesHash && !guideSlug) setJournalMode("journal");
   }
   if (guideAnchor) setTimeout(() => document.getElementById(guideAnchor)?.scrollIntoView({ behavior: "smooth", block: "start" }), 60);
-  else if ((changed || magazine || guidesHash) && !article && !guideSlug) window.scrollTo(0, 0);
+  else if ((changed || magazine || guidesHash) && !article && !guideSlug && !pdfGuide) window.scrollTo(0, 0);
 }
 
 function renderAll() {
   renderGallery();
   const mm = location.hash.match(/^#magazine(?:-(\d{4}-\d{2}))?$/);
   if (mm) { renderMagazine.token = ++magToken; renderMagazine(mm[1] || ""); }
-  else if (location.hash === "#guides") renderGuides();
+  else if (location.hash === "#guides" || /^#pdf-/.test(location.hash)) renderGuides();
   else if (/^#g-/.test(location.hash)) renderGuide(location.hash.slice(3));
   else renderJournal();
   renderAbout();

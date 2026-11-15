@@ -91,7 +91,7 @@ for (const g of (G.guide || []).filter(g => g && g.titolo && g.slug && !g.bozza)
   page(`g-${g.slug}`, { title: `${g.titolo}${g.sottotitolo ? ` — ${g.sottotitolo}` : ""}`, description: clip(g.intro, 200) || "A guide by Fabio Costa Ph", image: await picture(`g-${g.slug}`, g.copertina), target: `#g-${g.slug}` });
 for (const g of (G.pdf || []).filter(g => g && g.titolo && !g.bozza && (g.file || g.link))) {
   const id = slug(g.titolo), file = String(g.link || g.file).trim();
-  page(`pdf-${id}`, { title: `${g.titolo}${g.sottotitolo ? ` — ${g.sottotitolo}` : ""}`, description: clip(g.descrizione, 200) || "A guide in PDF by Fabio Costa Ph", image: await picture(`pdf-${id}`, g.copertina), target: /^https?:/.test(file) ? file : abs(file) });
+  page(`pdf-${id}`, { title: `${g.titolo}${g.sottotitolo ? ` — ${g.sottotitolo}` : ""}`, description: clip(g.descrizione, 200) || "A guide in PDF by Fabio Costa Ph", image: await picture(`pdf-${id}`, g.copertina), target: `#pdf-${id}` });
 }
 // 4. the magazine: this month's issue and every closed one with stories
 const covers = readJSON("content/rivista.json").numeri || [];

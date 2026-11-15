@@ -23,31 +23,27 @@ jobs:
         run: |
           set -e
           shopt -s nullglob nocaseglob
-          TAG=guide-pdf
-          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --title "Guide in PDF" --notes "PDF delle guide del sito (compressi in automatico)." --latest=false
-          # 1. every PDF uploaded from the panel: compress it and move it to the downloads
+          mkdir -p guides/files
+          # 1. every PDF uploaded from the panel: compress it and keep it in guides/files (read on the site, light)
           for f in guides/pdf/*.pdf; do
-            name=$(basename "$f"); out="/tmp/$name"
+            name=$(basename "$f"); out="guides/files/$name"
             gs -q -dNOPAUSE -dBATCH -dSAFER -sDEVICE=pdfwrite -dCompatibilityLevel=1.6 -dPDFSETTINGS=/ebook \
               -dDownsampleColorImages=true -dColorImageResolution=150 -dDownsampleGrayImages=true -dGrayImageResolution=150 \
               -dDetectDuplicateImages=true -dCompressFonts=true -sOutputFile="$out" "$f" || cp "$f" "$out"
             before=$(stat -c%s "$f"); after=$(stat -c%s "$out")
             if [ "$after" -ge "$before" ]; then cp "$f" "$out"; fi
             echo "$name: $((before/1024)) KB → $(( $(stat -c%s "$out")/1024 )) KB"
-            gh release upload "$TAG" "$out" --clobber
-            git rm -q "$f"
+            git rm -q "$f"; git add "$out"
           done
-          # 2. every guide that still points to a file in guides/pdf/ (the panel can save the guide before or after the file):
-          #    point it to the download, with its size
-          gh release view "$TAG" --json assets -q '.assets[] | "\(.name)\t\(.size)"' > /tmp/assets.tsv
-          while IFS=$'\t' read -r name size; do
-            [ -z "$name" ] && continue
-            url="https://github.com/${GITHUB_REPOSITORY}/releases/download/$TAG/$name"
+          # 2. every guide pointing to an uploaded file (the panel can save the guide before or after the file):
+          #    point it to the light copy, with its size
+          for out in guides/files/*.pdf; do
+            name=$(basename "$out"); size=$(stat -c%s "$out")
             mb=$(awk "BEGIN{v=$size/1048576; printf \"%.1f\", (v<0.1?0.1:v)}")
             tmp=$(mktemp)
-            jq --arg n "$name" --arg u "$url" --arg mb "$mb" \
-              '(.pdf // []) |= map(if ((.file // "") | test("(^|/)guides/pdf/" + ($n | gsub("[.]"; "[.]")) + "$")) then .file = $u | .mb = $mb else . end)' content/guide.json > "$tmp" && mv "$tmp" content/guide.json
-          done < /tmp/assets.tsv
+            jq --arg n "$name" --arg u "/guides/files/$name" --arg mb "$mb" \
+              '(.pdf // []) |= map(if ((.file // "") | test("(^|/)(guides/pdf|guides/files|releases/download/guide-pdf)/" + ($n | gsub("[.]"; "[.]")) + "$")) then .file = $u | .mb = $mb else . end)' content/guide.json > "$tmp" && mv "$tmp" content/guide.json
+          done
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add content/guide.json

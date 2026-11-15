@@ -4253,3 +4253,24 @@ body[data-page="hub"] .sf-nav a.sf-map{background:none;color:#e6ecf3}
 .gd-book-share{position:absolute;top:10px;left:10px;padding:6px 9px;background:var(--paper, #f7f2ea);color:var(--ink, #111);border-color:transparent;opacity:.92}
 .gd-book-share span{display:none}
 .article-actions{display:flex;flex-wrap:wrap;align-items:center;gap:12px}
+
+/* PDF guides read on the site */
+html.pdv-open, html.pdv-open body { overflow: hidden; }
+.pdv { position: fixed; inset: 0; z-index: 100000; display: flex; flex-direction: column; background: #050b14; color: #f2f6fb; }
+.pdv-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: calc(10px + env(safe-area-inset-top, 0px)) max(14px, env(safe-area-inset-right, 0px)) 10px max(14px, env(safe-area-inset-left, 0px)); border-bottom: 1px solid rgba(255,255,255,.1); background: #08121f; }
+.pdv-t { flex: 1 1 160px; min-width: 0; font-size: 15px; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pdv-t small { font-weight: 400; color: #9fb0c3; }
+.pdv-x, .pdv-zoom button { width: 36px; height: 36px; border-radius: 50%; border: 1px solid rgba(255,255,255,.18); background: transparent; color: inherit; font-size: 16px; cursor: pointer; }
+.pdv-x:hover, .pdv-zoom button:hover { background: rgba(255,255,255,.08); }
+.pdv-zoom { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: #9fb0c3; }
+.pdv-zoom span { min-width: 40px; text-align: center; }
+.pdv-dl { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 999px; background: #ffbe7a; color: #1a1006; font-weight: 600; font-size: 14px; text-decoration: none; }
+.pdv-dl svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.pdv-bar .fn-share { margin: 0; }
+.pdv-pages { flex: 1; overflow: auto; -webkit-overflow-scrolling: touch; padding: 16px 12px calc(24px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.pdv-page { width: min(100%, 900px); background: #fff; box-shadow: 0 6px 24px rgba(0,0,0,.45); border-radius: 2px; flex: none; }
+.pdv-page canvas { display: block; }
+.pdv-page:has(canvas) { width: auto; }
+.pdv-msg { margin: auto; text-align: center; color: #9fb0c3; line-height: 1.7; }
+.pdv-msg .pdv-dl { margin-top: 10px; }
+@media (max-width: 560px) { .pdv-zoom { display: none; } .pdv-t { flex-basis: calc(100% - 50px); order: -1; } .pdv-x { order: -2; } }
