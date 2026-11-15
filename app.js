@@ -1901,7 +1901,8 @@ function renderAuthor(authorSlug) {
 const FN_SITE = "https://fabiocostaph.com/";
 const fnShareBtn = (hash, title, kind) => `<button type="button" class="fn-share" data-fnshare="${esc(hash)}" data-fntitle="${esc(title)}" data-fnkind="${esc(kind)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V3M7 8l5-5 5 5M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg><span>Share</span></button>`;
 async function fnShare(b) {
-  const url = /^https?:/.test(b.dataset.fnshare) ? b.dataset.fnshare : `${FN_SITE}?utm_source=share#${b.dataset.fnshare}`, title = b.dataset.fntitle;
+  // the preview page in /s/ (scripts/build-share.mjs): title, description and picture of what you share, then straight to it
+  const url = /^https?:/.test(b.dataset.fnshare) ? b.dataset.fnshare : `${FN_SITE}s/${b.dataset.fnshare}.html`, title = b.dataset.fntitle;
   const text = b.dataset.fnkind === "guide" ? `${title} — a guide by Fabio Costa Ph` : b.dataset.fnkind === "magazine" ? `${title} — the monthly magazine of Fabio Costa Ph` : `${title} — Field Notes by Fabio Costa Ph`;
   window.fcTrack?.(`Field Notes: shared ${b.dataset.fnkind}`);
   try { if (navigator.share) { await navigator.share({ title, text, url }); return; } } catch (err) { if (err?.name === "AbortError") return; }
@@ -2228,7 +2229,7 @@ async function renderGuides() {
       <ul class="gd-books">${pdfs.map(g => `<li><a class="gd-book" href="${esc(pdfHref(g))}" target="_blank" rel="noopener" data-guide-pdf>
         <span class="gd-cover${g.copertina ? "" : " no-img"}">${g.copertina ? `<img src="${esc(mediaUrl(g.copertina))}" alt="" loading="lazy">` : ""}<span class="gd-cover-t"><small>Field Notes · ${esc(T(PDF_TOPIC_EN[g.argomento] || g.argomento || "Guide"))}</small><b>${esc(g.titolo)}</b><em>${esc(g.sottotitolo || "")}</em></span></span>
         <span class="gd-book-meta">${g.descrizione ? esc(g.descrizione) : ""}</span></a>
-        <a class="gd-book-pdf" href="${esc(pdfHref(g))}" target="_blank" rel="noopener" data-guide-pdf>PDF${g.mb ? ` · ${esc(g.mb)} MB` : ""}</a>${fnShareBtn(pdfHref(g).startsWith("http") ? pdfHref(g) : FN_SITE + pdfHref(g), g.titolo, "guide").replace('class="fn-share"', 'class="fn-share gd-book-share"')}</li>`).join("")}</ul></section>` : ""}
+        <a class="gd-book-pdf" href="${esc(pdfHref(g))}" target="_blank" rel="noopener" data-guide-pdf>PDF${g.mb ? ` · ${esc(g.mb)} MB` : ""}</a>${fnShareBtn(`pdf-${slug(g.titolo)}`, g.titolo, "guide").replace('class="fn-share"', 'class="fn-share gd-book-share"')}</li>`).join("")}</ul></section>` : ""}
     ${guidesPdf.length && list.length ? `<h3 class="gd-pdfs-h">${T("Places, zone by zone")}</h3>` : ""}
     ${list.length ? `<ul class="gd-books">${list.map(g => {
       const n = (g.zone || []).reduce((a, z) => a + (z.luoghi || []).length, 0);

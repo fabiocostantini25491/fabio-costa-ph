@@ -1,0 +1,36 @@
+name: Anteprime di condivisione
+# Crea in /s/ una piccola pagina per ogni articolo, guida e numero della rivista, con titolo, descrizione e foto:
+# così quando condividi un link su WhatsApp, Facebook, LinkedIn… si vede l'anteprima di quello che stai condividendo.
+# Parte quando cambia un contenuto dal pannello, ogni 3 ore (per gli articoli scritti sul sito) e a mano.
+on:
+  push:
+    paths: ["content/**", "scripts/build-share.mjs"]
+  schedule:
+    - cron: "17 */3 * * *"
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency: share-pages
+jobs:
+  share:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - name: ImageMagick
+        run: command -v convert >/dev/null || (sudo apt-get update -qq && sudo apt-get install -y -qq imagemagick >/dev/null)
+      - name: Pagine di anteprima
+        run: |
+          # the public Supabase address and key of the site (the same the browser uses), for the articles written on the site
+          export SUPABASE_URL=$(grep -oE 'https://[a-z0-9]+\.supabase\.co' spots.js | head -1)
+          export SUPABASE_ANON=$(grep -oE 'anonKey: *"[^"]+"' spots.js | head -1 | sed -E 's/anonKey: *"([^"]+)"/\1/')
+          node scripts/build-share.mjs
+      - name: Pubblica
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A s
+          git diff --cached --quiet && { echo "Nessuna novità."; exit 0; }
+          git commit -m "Anteprime di condivisione aggiornate"
+          git pull --rebase -q && git push
