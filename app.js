@@ -1897,6 +1897,18 @@ function renderAuthor(authorSlug) {
   reader.hidden = false;
   requestAnimationFrame(() => $("#journalMag").scrollIntoView({ behavior: "smooth", block: "start" }));
 }
+/* share a Field Notes article or guide: the phone's share sheet, otherwise the link is copied */
+const FN_SITE = "https://fabiocostaph.com/";
+const fnShareBtn = (hash, title, kind) => `<button type="button" class="fn-share" data-fnshare="${esc(hash)}" data-fntitle="${esc(title)}" data-fnkind="${esc(kind)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V3M7 8l5-5 5 5M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg><span>Share</span></button>`;
+async function fnShare(b) {
+  const url = /^https?:/.test(b.dataset.fnshare) ? b.dataset.fnshare : `${FN_SITE}?utm_source=share#${b.dataset.fnshare}`, title = b.dataset.fntitle;
+  const text = b.dataset.fnkind === "guide" ? `${title} — a guide by Fabio Costa Ph` : `${title} — Field Notes by Fabio Costa Ph`;
+  window.fcTrack?.(`Field Notes: shared ${b.dataset.fnkind}`);
+  try { if (navigator.share) { await navigator.share({ title, text, url }); return; } } catch (err) { if (err?.name === "AbortError") return; }
+  try { await navigator.clipboard.writeText(url); toast(window.I18N?.lang === "it" ? "Link copiato: incollalo dove vuoi." : "Link copied: paste it wherever you like."); }
+  catch { prompt("Link", url); }
+}
+document.addEventListener("click", ev => { const b = ev.target.closest("[data-fnshare]"); if (b) { ev.preventDefault(); fnShare(b); } });
 function renderArticle(id) {
   const reader = $("#articleReader"), a = articles.find(x => x.id === id);
   if (!a) { reader.hidden = true; return; }
@@ -1905,6 +1917,7 @@ function renderArticle(id) {
   reader.className = `full-article mag-article ${a.type === "reportage" ? "is-reportage" : "is-guide"}`;
   reader.innerHTML = articleHtml(a, t);
   reader.insertAdjacentHTML("beforeend", `<div class="article-actions">
+      ${fnShareBtn(`art-${a.id}`, a.title, "article")}
       ${t ? `<button class="outline-link" type="button" id="articleTrip">VIEW THE JOURNEY ON THE MAP <span aria-hidden="true">→</span></button>` : ""}
       <a class="fn-back" href="#journal">← Back to Field Notes</a>
     </div><p class="fn-foot">Field Notes / Fabio Costa Ph</p>`);
@@ -1960,6 +1973,7 @@ function articleHtml(a, t, back = true) {
     <h1 class="fn-title">${esc(a.title)}</h1>
     ${a.excerpt ? `<p class="fn-deck">${esc(a.excerpt)}</p>` : ""}
     <p class="fn-byline">Text and photographs by ${authorLink(a)} · ${esc(fmtDate(a.date))}${a.minutes ? ` · ${a.minutes} min read` : ""}</p>
+    ${back ? `<div class="fn-sharebar">${fnShareBtn(`art-${a.id}`, a.title, "article")}</div>` : ""}
     ${a.cover ? `<figure class="fn-hero"><img src="${esc(a.cover)}" alt="${esc(a.title)}" data-cat="Paesaggi">${caption}</figure>` : ""}
     ${glance}
     <div class="rich mag-body fn-body" lang="${textLang(a.text + " " + (a.blocks || []).map(b => b.testo || "").join(" "))}">${dropCap(a.blocks?.length ? blocksHtml(a.blocks) : magBody(md(a.text)))}</div>
@@ -2213,14 +2227,14 @@ async function renderGuides() {
       <ul class="gd-books">${pdfs.map(g => `<li><a class="gd-book" href="${esc(pdfHref(g))}" target="_blank" rel="noopener" data-guide-pdf>
         <span class="gd-cover${g.copertina ? "" : " no-img"}">${g.copertina ? `<img src="${esc(mediaUrl(g.copertina))}" alt="" loading="lazy">` : ""}<span class="gd-cover-t"><small>Field Notes · ${esc(T(PDF_TOPIC_EN[g.argomento] || g.argomento || "Guide"))}</small><b>${esc(g.titolo)}</b><em>${esc(g.sottotitolo || "")}</em></span></span>
         <span class="gd-book-meta">${g.descrizione ? esc(g.descrizione) : ""}</span></a>
-        <a class="gd-book-pdf" href="${esc(pdfHref(g))}" target="_blank" rel="noopener" data-guide-pdf>PDF${g.mb ? ` · ${esc(g.mb)} MB` : ""}</a></li>`).join("")}</ul></section>` : ""}
+        <a class="gd-book-pdf" href="${esc(pdfHref(g))}" target="_blank" rel="noopener" data-guide-pdf>PDF${g.mb ? ` · ${esc(g.mb)} MB` : ""}</a>${fnShareBtn(pdfHref(g).startsWith("http") ? pdfHref(g) : FN_SITE + pdfHref(g), g.titolo, "guide").replace('class="fn-share"', 'class="fn-share gd-book-share"')}</li>`).join("")}</ul></section>` : ""}
     ${guidesPdf.length && list.length ? `<h3 class="gd-pdfs-h">${T("Places, zone by zone")}</h3>` : ""}
     ${list.length ? `<ul class="gd-books">${list.map(g => {
       const n = (g.zone || []).reduce((a, z) => a + (z.luoghi || []).length, 0);
       return `<li><a class="gd-book" href="#g-${esc(g.slug)}">
         <span class="gd-cover${g.copertina ? "" : " no-img"}">${g.copertina ? `<img src="${esc(mediaUrl(g.copertina))}" alt="" loading="lazy">` : ""}<span class="gd-cover-t"><small>Field Notes · Guide</small><b>${esc(g.titolo)}</b><em>${esc(g.sottotitolo || "")}</em></span></span>
         <span class="gd-book-meta">${(g.zone || []).length} ${T("zones")} · ${n} ${T("places")}</span></a>
-        <a class="gd-book-pdf" href="guida.html?g=${encodeURIComponent(g.slug)}&amp;print=1" target="_blank" rel="noopener" data-guide-pdf>PDF</a></li>`;
+        <a class="gd-book-pdf" href="guida.html?g=${encodeURIComponent(g.slug)}&amp;print=1" target="_blank" rel="noopener" data-guide-pdf>PDF</a>${fnShareBtn(`g-${g.slug}`, g.titolo, "guide").replace('class="fn-share"', 'class="fn-share gd-book-share"')}</li>`;
     }).join("")}</ul>` : guidesPdf.length ? "" : `<p class="mz-empty">${T("The first guide is being written.")}</p>`}
   </div>`;
   layout.querySelectorAll("[data-gtopic]").forEach(b => b.addEventListener("click", () => { guideTopic = b.dataset.gtopic; renderGuides(); }));
@@ -2242,7 +2256,7 @@ async function renderGuide(slugId) {
       ${g.copertina ? `<img src="${esc(mediaUrl(g.copertina))}" alt="" data-zoom>` : ""}
       <div class="gd-hero-t"><p class="mz-issue">Field Notes · ${T("Guide")}${g.luogo ? ` · ${esc(g.luogo)}` : ""}</p><h2>${esc(g.titolo)}</h2>${g.sottotitolo ? `<p class="gd-sub">${esc(g.sottotitolo)}</p>` : ""}</div>
     </header>
-    <div class="gd-bar"><a class="mz-pdf gd-pdf" href="${pdf}" target="_blank" rel="noopener" data-guide-pdf>
+    <div class="gd-bar">${fnShareBtn(`g-${g.slug}`, g.titolo, "guide")}<a class="mz-pdf gd-pdf" href="${pdf}" target="_blank" rel="noopener" data-guide-pdf>
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 19h14"/></svg>
       <span><b>${T("Download the PDF guide")}</b><small>${T("Prepared on request: choose “Save as PDF” in the print window")}</small></span></a></div>
     ${g.intro ? `<p class="gd-intro">${esc(g.intro)}</p>` : ""}
@@ -2268,6 +2282,7 @@ async function renderGuide(slugId) {
       <ul class="gd-spots">${g.pause.map(p => `<li class="gd-spot"><span class="gd-n gd-cup">☕</span><div><h4>${esc(p.nome)}</h4>${p.consiglio ? `<p>${esc(p.consiglio)}</p>` : ""}${p.nota ? `<p class="gd-note">${esc(p.nota)}</p>` : ""}
         ${Number.isFinite(parseFloat(p.lat)) ? `<p class="gd-coord"><a href="${gmapsUrl(parseFloat(p.lat), parseFloat(p.lon))}" target="_blank" rel="noopener">${T("Open in Maps")}</a></p>` : ""}</div></li>`).join("")}</ul></section>` : ""}
     ${g.pratiche ? `<section class="gd-zone gd-prac"><p class="gd-zk">${T("Before you go")}</p><h3>${T("Practical information")}</h3><div class="rich gd-rich">${md(g.pratiche)}</div></section>` : ""}
+    <div class="fn-sharebar">${fnShareBtn(`g-${g.slug}`, g.titolo, "guide")}</div>
     <p class="fn-foot">Field Notes · ${esc(g.titolo)}${g.aggiornata ? ` · ${T("updated")} ${esc(fmtDate(g.aggiornata))}` : ""}</p>
   </article>`;
   layout.querySelectorAll("[data-gz]").forEach(a => a.addEventListener("click", e => { e.preventDefault(); document.getElementById("gz-" + a.dataset.gz)?.scrollIntoView({ behavior: "smooth", block: "start" }); }));

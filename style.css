@@ -4245,3 +4245,11 @@ body[data-page="hub"] .sf-nav a.sf-map{background:none;color:#e6ecf3}
 .gd-topics{margin-bottom:14px}
 .gd-topics button{background:transparent;border:1px solid rgba(0,0,0,.22);color:#222}.gd-topics button small{color:#777}
 .gd-topics button.on{background:#111;border-color:#111;color:#fff}.gd-topics button.on small{color:#bbb}
+/* share a Field Notes article or guide */
+.fn-share{display:inline-flex;align-items:center;gap:7px;padding:8px 14px;border:1px solid currentColor;border-radius:999px;background:transparent;color:inherit;font:700 11.5px var(--mag-head, inherit);letter-spacing:.14em;text-transform:uppercase;cursor:pointer;opacity:.85}
+.fn-share:hover{opacity:1}.fn-share svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.fn-sharebar{margin:14px 0 6px}
+.gd-bar{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.gd-book-share{position:absolute;top:10px;left:10px;padding:6px 9px;background:var(--paper, #f7f2ea);color:var(--ink, #111);border-color:transparent;opacity:.92}
+.gd-book-share span{display:none}
+.article-actions{display:flex;flex-wrap:wrap;align-items:center;gap:12px}
