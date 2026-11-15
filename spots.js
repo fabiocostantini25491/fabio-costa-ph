@@ -796,7 +796,8 @@ const Spots = (() => {
         <span class="sx-ico">${CATS[k].icon}</span><span class="sx-name">${label}</span><small data-sxcount="${k}">${fmtN(n(k))}</small><span class="sx-check" aria-hidden="true"></span></button>`;
     const subOn = k => activeCats.has("spot") && activeSubs.has(k);
     const subItems = () => `<div class="sx-subs">${SUB_KEYS.map(k => `<button type="button" class="sx-item sx-sub${subOn(k) ? " on" : ""}" data-sxsub="${k}" style="--c:${k === "poi" ? POI_COLOR : CATS.spot.color}" aria-pressed="${subOn(k)}">
-        <span class="sx-ico">${k === "poi" ? ICON_POI : CATS.spot.icon}</span><span class="sx-name">${SUBS[k].label}</span><small data-sxsubcount="${k}">${fmtN(base.filter(s => s.category === "spot" && spotSub(s) === k).length)}</small><span class="sx-check" aria-hidden="true"></span></button>`).join("")}</div>`;
+        <span class="sx-ico">${k === "poi" ? ICON_POI : CATS.spot.icon}</span><span class="sx-name">${SUBS[k].label}</span><small data-sxsubcount="${k}">${fmtN(base.filter(s => s.category === "spot" && spotSub(s) === k).length)}</small><span class="sx-check" aria-hidden="true"></span></button>
+        ${k === "poi" ? `<div class="sx-poi" role="group" aria-label="Kinds of places of interest">${POI_KEYS.map(p => `<button type="button" class="sx-pchip${activePoi.has(p) ? " on" : ""}" data-sxpoi="${p}" aria-pressed="${activePoi.has(p)}">${POI_TYPES[p][1]}<span>${POI_TYPES[p][0]}</span><small data-sxpoicount="${p}">${fmtN(base.filter(s => s.category === "spot" && spotSub(s) === "poi" && poiType(s) === p).length)}</small></button>`).join("")}</div>` : ""}`).join("")}</div>`;
     const lockItem = (label, ico) => `<button type="button" class="sx-item is-locked" data-sxjoin><span class="sx-ico">${ico}</span><span class="sx-name">${label}</span><span class="sx-lock">${SX_ICON.lock}Members</span></button>`;
     // Support local vale per Places ed Essentials: stesso interruttore, conteggio della sezione
     const supportItem = cats => `<button type="button" class="sx-item${onlySupport ? " on" : ""}" data-onlysupport aria-pressed="${onlySupport}" style="--c:#9fe3c8"><span class="sx-ico">🌱</span><span class="sx-name">Support local</span><small>${spots.filter(x => x.support_local && cats.includes(x.category)).length}</small><span class="sx-check" aria-hidden="true"></span></button>`;
@@ -925,6 +926,8 @@ const Spots = (() => {
     base.forEach(s => { by[s.category] = (by[s.category] || 0) + 1; if (s.category === "spot") { const k = spotSub(s); subs[k] = (subs[k] || 0) + 1; } });
     document.querySelectorAll("[data-sxcount]").forEach(el => { el.textContent = fmtN(by[el.dataset.sxcount] || 0); });
     document.querySelectorAll("[data-sxsubcount]").forEach(el => { el.textContent = fmtN(subs[el.dataset.sxsubcount] || 0); });
+    if (document.querySelector("[data-sxpoicount]")) { const pc = {}; base.forEach(s => { if (s.category === "spot" && spotSub(s) === "poi") { const p = poiType(s); pc[p] = (pc[p] || 0) + 1; } });
+      document.querySelectorAll("[data-sxpoicount]").forEach(el => { el.textContent = fmtN(pc[el.dataset.sxpoicount] || 0); }); }
     document.querySelectorAll("[data-sxgcount]").forEach(el => {
       const g = SX_GROUPS.find(x => x.id === el.dataset.sxgcount);
       el.textContent = fmtN(g.cats.reduce((a, k) => a + (!activeCats.has(k) ? 0 : k === "spot" ? SUB_KEYS.filter(x => activeSubs.has(x)).reduce((c, x) => c + (subs[x] || 0), 0) : by[k] || 0), 0) || 0);
@@ -1145,6 +1148,7 @@ const Spots = (() => {
     const syncCats = () => {
       document.querySelectorAll("[data-sxcat]").forEach(b => { const on = activeCats.has(b.dataset.sxcat); b.classList.toggle("on", on); b.setAttribute("aria-pressed", on); });
       document.querySelectorAll("[data-sxsub]").forEach(b => { const on = activeCats.has("spot") && activeSubs.has(b.dataset.sxsub); b.classList.toggle("on", on); b.setAttribute("aria-pressed", on); });
+      document.querySelectorAll("[data-sxpoi]").forEach(b => { const on = activeCats.has("spot") && activeSubs.has("poi") && activePoi.has(b.dataset.sxpoi); b.classList.toggle("on", on); b.setAttribute("aria-pressed", on); });
       document.querySelectorAll(".sx-group").forEach(sec => {
         const g = SX_GROUPS.find(x => x.id === sec.dataset.g);
         sec.classList.toggle("on", g.cats.some(c => activeCats.has(c)) || (g.id === "community" && showFolks.size > 0));
@@ -1162,6 +1166,17 @@ const Spots = (() => {
       if (!activeCats.has("spot")) { activeCats.add("spot"); activeSubs.clear(); activeSubs.add(k); }   // solo questa sottocategoria
       else if (activeSubs.has(k)) { activeSubs.delete(k); if (!activeSubs.size) { activeCats.delete("spot"); SUB_KEYS.forEach(x => activeSubs.add(x)); } }
       else activeSubs.add(k);
+      syncCats();
+    }));
+    // the kinds of places of interest: the first tap shows only that kind, then each tap adds or removes one
+    document.querySelectorAll("[data-sxpoi]").forEach(b => b.addEventListener("click", () => {
+      const p = b.dataset.sxpoi;
+      if (!activeCats.has("spot")) { activeCats.add("spot"); activeSubs.clear(); }
+      activeSubs.add("poi");
+      if (activePoi.size === POI_KEYS.length) { activePoi.clear(); activePoi.add(p); }
+      else if (activePoi.has(p)) { activePoi.delete(p); if (!activePoi.size) POI_KEYS.forEach(x => activePoi.add(x)); }
+      else activePoi.add(p);
+      window.fcTrack?.("Spots: place of interest kind", { kind: p });
       syncCats();
     }));
     document.querySelectorAll("[data-sxjoin]").forEach(b => b.addEventListener("click", () => { wantJoin = true; render(); root().scrollIntoView({ behavior: "smooth" }); }));
@@ -2076,6 +2091,27 @@ const Spots = (() => {
     const k = SUBS.photo.re.test(t) ? "photo" : SUBS.poi.re.test(t) ? "poi" : "photo";
     subCache.set(s.id, k); return k;
   }
+  /* the kinds of places of interest: chosen when adding or editing (info.poi), otherwise guessed from name, note and list.
+     The kind decides what the folk are asked («how is it now», «Before you go»). */
+  const SVG = d => `<svg viewBox="0 0 24 24" aria-hidden="true">${d}</svg>`;
+  const POI_TYPES = {
+    waterfall: ["Waterfall", SVG('<path d="M5 4h14M8 4v9M12 4v12M16 4v9"/><path d="M4 19c1.5-1.4 3-1.4 4.5 0s3 1.4 4.5 0 3-1.4 4.5 0 2.5-1.3 3 0"/>'), /cascat|waterfall|wasserfall|cascade|\bfoss(en)?\b|\bfoss|chute|salto\b|cachoeira/i],
+    lake: ["Lake", SVG('<path d="M3 15c2-1.4 4-1.4 6 0s4 1.4 6 0 4-1.4 6 0M3 19c2-1.4 4-1.4 6 0s4 1.4 6 0 4-1.4 6 0"/><path d="m5 11 4-6 3 4 2-2 5 4"/>'), /\blago\b|\blake\b|\bsee\b|\blac\b|laghett|\blaghi\b|\bloch\b|vatn|\bjezero|tarn\b/i],
+    monument: ["Monument", SVG('<path d="M12 3 9.5 7.5h5z"/><path d="M10 7.5 9 18h6l-1-10.5M6.5 18h11v2.5h-11z"/>'), /monument|torre|tower|\btour\b|turm|\bfaro\b|lighthouse|\bponte\b|bridge|\bpont\b|br[üu]cke|\barco\b|\barch\b|statu[ae]|fontan|fountain|obelisc|obelisk|anfiteatr|amphithe|colosse|rovin|ruin|teatro|theat|museo|museum|palazz|palace|\bvilla\b|acquedott|aqueduct|mural|memorial|mausole|nurag|dolmen|menhir/i],
+    village: ["Village", SVG('<path d="M3 20h18M5 20v-6l4-3 4 3v6M13 20v-9l4-3 4 3v9"/><path d="M8 20v-3h2v3"/>'), /\bborgo\b|borghi|village|\bpaese\b|frazione|hamlet|\bdorf\b|pueblo|aldea|\bborg\b/i],
+    city: ["City", SVG('<path d="M3 20h18M5 20V9h5v11M10 20V4h6v16M16 20v-8h3v8"/><path d="M7 12h1M7 15h1M12.5 7h1M12.5 10h1M12.5 13h1"/>'), /citt[àa]|\bcity\b|\btown\b|piazz|square|platz|plaza|centro|quartier|district|skyline|\bvia\b|street|\brue\b|stra(ss|ß)e|calle|stazione|station|\bporto\b|harbou?r|rooftop|street art|urban/i],
+    castle: ["Castle", SVG('<path d="M4 20V8h3v2h2V8h2v2h2V8h2v2h2V8h3v12z"/><path d="M10 20v-4a2 2 0 0 1 4 0v4"/>'), /castell|castle|ch[âa]teau|\bburg\b|\brocca\b|fortezz|fortress|\bforte\b|fort\b|alc[áa]zar|citadel|cittadell|maniero|manor/i],
+    church: ["Church", SVG('<path d="M12 2.5v4M10 4.5h4M12 6.5l-5 5V21h10v-9.5z"/><path d="M10 21v-4a2 2 0 0 1 4 0v4M4 21h16"/>'), /chies|church|[ée]glise|kirche|iglesia|igreja|duomo|cattedral|cathedral|basilic|abbazi|abbey|monaster|santuari|sanctuary|\bpieve\b|cappell|chapel|convent|temple|tempio|mosque|moschea|synagog|eremo|hermitage/i],
+    other: ["Other", ICON_POI, null]
+  };
+  const POI_KEYS = Object.keys(POI_TYPES), POI_GUESS = ["church", "castle", "waterfall", "lake", "monument", "village", "city"];
+  const activePoi = new Set(POI_KEYS), poiCache = new Map();
+  function poiType(s) {
+    if (s.info?.poi && POI_TYPES[s.info.poi]) return s.info.poi;
+    if (poiCache.has(s.id)) return poiCache.get(s.id);
+    const t = `${s.name || ""} ${s.note || ""} ${s.list || ""}`, k = POI_GUESS.find(x => POI_TYPES[x][2].test(t)) || "other";
+    poiCache.set(s.id, k); return k;
+  }
   /* gli spot che rispettano i filtri di contorno (cerca, preferiti, avvisi…), senza quelli di categoria: per i conteggi */
   function baseSpots() {
     const q = norm(query);
@@ -2088,6 +2124,7 @@ const Spots = (() => {
     const q = norm(query);
     return spots.filter(s => shownStatus(s) && (!onlyFavs || favs.has(s.id)) && (!activeCats || activeCats.has(s.category))
       && (s.category !== "spot" || activeSubs.size === SUB_KEYS.length || activeSubs.has(spotSub(s)))
+      && (s.category !== "spot" || activePoi.size === POI_KEYS.length || spotSub(s) !== "poi" || activePoi.has(poiType(s)))
       && (!onlySupport || s.support_local)
       && (alertMode === "show" || (alertMode === "hide" ? !alertsOf(s).length : alertsOf(s).length > 0))
       && (!q || norm(s.name).includes(q) || norm(s.note).includes(q) || norm(s.list).includes(q) || norm(CATS[s.category].label).includes(q)));
@@ -2444,6 +2481,13 @@ const Spots = (() => {
     const t = `${s.name || ""} ${s.note || ""} ${s.list || ""}`.toLowerCase();
     if (s.category === "restaurant") return ["open", "closed", "wait", "crowded", "quiet"];
     if (s.category === "hotel") return ["open", "closed", "full", "snow", "works"];
+    if (s.category === "spot" && spotSub(s) === "poi") {   // the kind of place of interest decides what to ask the folk
+      const p = poiType(s);
+      if (p === "waterfall") return ["flow", "low", "frozen", "foliage", "fog", "crowded", "works"];
+      if (p === "lake") return ["calm", "windy", "frozen", "low", "foliage", "fog", "crowded"];
+      if (p === "castle" || p === "church" || p === "monument") return ["open", "closed", "wait", "crowded", "quiet", "works", "fog"];
+      if (p === "village" || p === "city") return ["crowded", "quiet", "parking", "works", "fog", "clearsky", "snow"];
+    }
     if (/cascat|waterfall|wasserfall|cascade|salto |chute|gola|forra|gorge/.test(t)) return ["flow", "low", "frozen", "foliage", "fog", "crowded", "works"];
     if (/spiaggi|beach|plage|playa|strand|\bcala\b|baia|bay|scogl|cliff|falesi|coast|costa|mare\b|sea\b|faro|lighthouse|caletta|grotta marina/.test(t)) return ["rough", "calm", "windy", "jelly", "beachfull", "fog", "clearsky"];
     if (/\blago\b|\blake\b|\bsee\b|\blac\b|laghetto|lagh/.test(t)) return ["calm", "windy", "frozen", "low", "foliage", "fog", "crowded"];
@@ -2733,6 +2777,8 @@ const Spots = (() => {
     sea: ["limited_entry", "getting_there", "facilities", "swimming", "season", "parking", "other", "another_season", "quiet_hours", "alternative", "sand", "anchors", "respect"],
     water: ["fee", "parking", "getting_there", "swimming", "season", "time", "other", "another_season", "quiet_hours", "alternative", "respect"],
     city: ["tickets", "hours", "dress", "getting_there", "parking", "other", "another_season", "quiet_hours", "residents", "stay_longer"],
+    monument: ["tickets", "hours", "closing", "booking", "dress", "tripod", "drones", "getting_there", "parking", "other", "another_season", "quiet_hours", "respect", "residents"],
+    village: ["parking", "getting_there", "hours", "facilities", "other", "another_season", "quiet_hours", "residents", "stay_longer", "support_local"],
     food: ["booking", "payment", "closing", "specialities", "other", "support_local", "quiet_hours"],
     stay: ["booking", "checkin", "access_road", "payment", "other", "support_local", "saving", "stay_longer"],
     experience: ["booking", "group", "meeting", "bring", "other", "small_groups", "local_operator", "wildlife"]
@@ -2742,6 +2788,7 @@ const Spots = (() => {
     if (s.category === "restaurant") return "food";
     if (s.category === "hotel") return "stay";
     if (s.category === "experience" || s.category === "workshop") return "experience";
+    if (s.category === "spot" && spotSub(s) === "poi") { const p = poiType(s); if (p === "waterfall" || p === "lake") return "water"; if (p === "castle" || p === "church" || p === "monument") return "monument"; if (p === "village") return "village"; if (p === "city") return "city"; }
     if (/cascat|waterfall|wasserfall|cascade|\bfoss|\blago\b|\blake\b|\bsee\b|\blac\b|laghetto|gola|forra|gorge|canyon/.test(t)) return "water";
     if (/spiaggi|beach|plage|playa|strand|\bcala\b|baia|\bbay\b|scogl|caletta|coast|costa|mare\b|sea\b/.test(t)) return "sea";
     if (s.category === "trekking" || /rifugio|sentiero|trail|hike|trek|cima|\bpiz\b|peak|forcella|malga|vetta|cliff|nípa|nipa/.test(t)) return "trail";
@@ -3603,7 +3650,7 @@ const Spots = (() => {
   // points of interest (churches, towers, castles, bridges, squares…) get their own pin, apart from photo spots
   function pinIcon(s) {
     const poi = s.category === "spot" && spotSub(s) === "poi";
-    const cat = poi ? { ...(CATS.spot), icon: ICON_POI, color: POI_COLOR } : CATS[s.category] || CATS.spot;
+    const cat = poi ? { ...(CATS.spot), icon: POI_TYPES[poiType(s)][1], color: POI_COLOR } : CATS[s.category] || CATS.spot;
     const plane = wsPlane(s), offer = wsOffer(s) && !plane, shineLocal = localNew(s) && !isWs(s), shineWs = (wsNew(s) || freshPlace(s)) && !plane && !offer && !shineLocal;
     const sg = signMap.get(s.id), tier = signTier(s);
     const cls = ["spot-pin", tier ? `signed t${tier}` : "", sg?.fabio ? "pick" : "", s.outdated ? "outdated" : "", s.support_local ? "local" : "", s.fragile ? "fragile" : "", plane ? "plane" : "", offer ? "offer" : "", shineWs ? "shine" : "", shineLocal ? "shine-local" : ""].filter(Boolean).join(" ");
@@ -3760,7 +3807,7 @@ const Spots = (() => {
   }
 
   const canEdit = s => admin || (s.created_by && s.created_by === myUid());
-  const subLabel = s => (WZ_SUBS[s.category] || []).find(([k]) => k === s.subcategory)?.[1] || "";
+  const subLabel = s => s.category === "spot" && spotSub(s) === "poi" ? trS(POI_TYPES[poiType(s)][0]) : (WZ_SUBS[s.category] || []).find(([k]) => k === s.subcategory)?.[1] || "";
   const fmtDay = d => new Date(d + "T12:00:00").toLocaleDateString((window.I18N?.locale || "en-GB"), { day: "numeric", month: "short", year: "numeric" });
   function datesText(s) {
     if (!s.starts_on && !s.ends_on) return "";
@@ -6779,7 +6826,7 @@ const Spots = (() => {
     wz = {
       step: 1, edit, lat: pre?.lat ?? s.lat ?? null, lon: pre?.lon ?? s.lon ?? null, placed: !!(pre || edit),
       name: preset.name || s.name || "", cat: edit ? s.category : (CATS[lastCat] ? lastCat : "spot"),
-      sub: s.category === "spot" ? (["viewpoint", "nature", "urban"].includes(s.subcategory) ? s.subcategory : edit && spotSub(s) === "poi" ? "urban" : "") : (s.subcategory || ""), note: s.note || "", info: { ...(s.info || {}) },
+      sub: s.category === "spot" ? (["viewpoint", "nature", "urban"].includes(s.subcategory) ? s.subcategory : edit && spotSub(s) === "poi" ? "urban" : "") : (s.subcategory || ""), note: s.note || "", info: { ...(s.info || {}), ...(edit && s.category === "spot" && spotSub(s) === "poi" && !s.info?.poi ? { poi: poiType(s) } : {}) },
       support: !!s.support_local, months: s.best_months || "", fragile: !!s.fragile, author: s.author_name || displayName(),
       from: s.starts_on || "", to: s.ends_on || "", files: [], removePhotos: new Set(), photos: [], place: "", rev: 0, tk: null, ws: null
     };
@@ -6974,6 +7021,7 @@ const Spots = (() => {
       ${g === "places" ? `<div class="wz-cats" role="group" aria-label="Category">${PLACE_KINDS.map(([c, sb, label, ico]) => `<button type="button" class="wz-cat${placeKind() === sb ? " on" : ""}" data-wzcat="${c}" data-wzkind="${sb}" style="--c:${sb === "poi" ? POI_COLOR : CATS[c].color}">${ico}<span>${label}</span></button>`).join("")}</div>`
         : cats.length > 1 ? `<div class="wz-cats" role="group" aria-label="Category">${cats.map(k => `<button type="button" class="wz-cat${k === wz.cat ? " on" : ""}" data-wzcat="${k}" style="--c:${CATS[k].color}">${CATS[k].icon}<span>${CATS[k].label}</span></button>`).join("")}</div>` : ""}
       ${subs.length && profV && g !== "places" ? `<div class="wz-subs" role="group" aria-label="Type">${subs.map(([k, l]) => `<button type="button" class="wz-sub${k === wz.sub ? " on" : ""}" data-wzsub="${k}">${esc(l)}</button>`).join("")}</div>` : ""}
+      ${g === "places" && placeKind() === "poi" && profV ? `<p class="wz-poih">What kind of place?</p><div class="wz-subs wz-poi" role="group" aria-label="Kind of place">${POI_KEYS.map(p => `<button type="button" class="wz-sub${(wz.info.poi || "") === p ? " on" : ""}" data-wzpoi="${p}">${POI_TYPES[p][1]}${esc(POI_TYPES[p][0])}</button>`).join("")}</div>` : ""}
       <label>Description <small>(optional)</small><textarea id="wzNote" rows="3" maxlength="2000" placeholder="What makes it worth it? Best time, what to shoot, tips…">${esc(wz.note)}</textarea></label>
       ${wz.cat === "workshop" ? `<div class="add-dates"><div><label for="wzFrom">From</label><input id="wzFrom" type="date" value="${esc(wz.from)}"></div><div><label for="wzTo">To</label><input id="wzTo" type="date" value="${esc(wz.to)}"></div></div>
         ${wsV ? wsFieldsHtml(s, "wzWs") : ""}` : ""}
@@ -7018,6 +7066,7 @@ const Spots = (() => {
       (wz.subBy ||= {})[wz.cat] = wz.sub; wz.cat = b.dataset.wzcat; wz.sub = wz.subBy[wz.cat] || ""; rerender();
     }));
     d.querySelectorAll("[data-wzsub]").forEach(b => b.addEventListener("click", () => { collect(); wz.sub = wz.sub === b.dataset.wzsub ? "" : b.dataset.wzsub; rerender(); }));
+    d.querySelectorAll("[data-wzpoi]").forEach(b => b.addEventListener("click", () => { collect(); wz.info.poi = b.dataset.wzpoi; rerender(); }));
     d.querySelector("[data-wzmeet]")?.addEventListener("click", () => { const p = { lat: wz.lat, lon: wz.lon }; d.close(); withConduct(() => openMeetup(p.lat != null ? p : null)); });
     d.querySelector("[data-wzph]")?.addEventListener("click", () => { d.close(); openProfile(); });
     d.querySelector("[data-wzpass]")?.addEventListener("click", () => { const p = { lat: wz.lat, lon: wz.lon, exact: wz.lat != null }; d.close(); withConduct(() => openPassOn(p.lat != null ? p : null)); });
@@ -7139,7 +7188,8 @@ const Spots = (() => {
     const row = { name: wz.name.slice(0, 300), lat: wz.lat, lon: wz.lon, note: wz.note || null };
     if (schemaV2) Object.assign(row, { category: cat, author_name: (wz.author || displayName()).slice(0, 60),
       starts_on: cat === "workshop" ? wz.from || null : null, ends_on: cat === "workshop" ? (wz.to || wz.from || null) : null });
-    if (profV) Object.assign(row, { subcategory: cat === "spot" ? (wz.sub || (placeKind() === "poi" ? "urban" : "viewpoint")) : wz.sub || null, info: Object.fromEntries(Object.entries(wz.info).filter(([k]) => (WZ_INFO[cat] || []).some(f => f[0] === k) || (k === "currency" && wz.info.price))) });
+    if (profV) Object.assign(row, { subcategory: cat === "spot" ? (wz.sub || (placeKind() === "poi" ? "urban" : "viewpoint")) : wz.sub || null, info: Object.fromEntries(Object.entries(wz.info).filter(([k]) => (WZ_INFO[cat] || []).some(f => f[0] === k) || (k === "currency" && wz.info.price) || (k === "poi" && cat === "spot" && placeKind() === "poi" && POI_TYPES[wz.info.poi]))) });
+    if (profV && cat === "spot" && placeKind() === "poi" && !row.info.poi) { const g2 = poiType({ id: -1, name: wz.name, note: wz.note, list: "" }); poiCache.delete(-1); if (g2 !== "other") row.info.poi = g2; }   // not chosen: guessed from the name
     else if (infoRows(wz.info).length) row.note = [row.note, infoRows(wz.info).map(([a, b]) => `${a}: ${b}`).join("\n")].filter(Boolean).join("\n\n");
     if (schemaV2 && socialV && SOCIAL_CATS.includes(cat)) Object.assign(row, { support_local: wz.support, best_months: wz.months || null });
     if (cat === "trekking" && tkV && wz.tk) { const { _badPark, ...tk } = wz.tk; Object.assign(row, tk); }

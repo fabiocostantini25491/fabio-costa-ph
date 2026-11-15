@@ -4228,3 +4228,14 @@ body[data-page="hub"] .sf-nav a.sf-map{background:none;color:#e6ecf3}
 /* the dot on «The Folk Hub» stays inside the nav, which scrolls sideways on phones and would cut it */
 .sf-hubnav.has-new{padding-right:22px}
 .sf-hubnav.has-new::after{top:50%;right:2px;transform:translateY(-50%)}
+
+/* the kinds of places of interest, under «Places of interest» in the filters */
+.sx-poi{display:flex;flex-wrap:wrap;gap:5px;margin:4px 0 6px 18px}
+.sx-pchip{display:inline-flex;align-items:center;gap:5px;padding:5px 9px;border-radius:999px;border:1px solid rgba(233,216,166,.28);background:rgba(233,216,166,.04);color:#c9d6e6;font:500 12px var(--sans);cursor:pointer}
+.sx-pchip svg{width:14px;height:14px;fill:none;stroke:#e9d8a6;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:0 0 auto}
+.sx-pchip small{color:#8a99ab;font-size:11px}
+.sx-pchip.on{background:rgba(233,216,166,.16);border-color:#e9d8a6;color:#fff}
+.sx-pchip:not(.on){opacity:.6}
+.wz-poih{margin:10px 0 4px;font-size:12.5px;color:#c9d6e6;font-weight:600}
+.wz-poi .wz-sub{display:inline-flex;align-items:center;gap:6px}
+.wz-poi svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
