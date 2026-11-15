@@ -169,7 +169,6 @@
   document.addEventListener("click", e => { const a = e.target.closest?.("[data-contribute]"); if (a) { e.preventDefault(); openContribute(a.dataset.contribute || ""); } });
 
   window.FCFeedback = { open: openForm, tip: showTip, contribute: openContribute };
-  // l'avviso compare dopo 30 secondi di visita (mai durante la prima mezz'ora dopo averlo chiuso, mai dopo aver risposto)
-  setTimeout(showTip, 30000);
+  // the pop-up invitation is off (it could get in the way): the form stays reachable from «Feedback» in the footer
   document.addEventListener("click", e => { const a = e.target.closest?.("[data-feedback]"); if (a) { e.preventDefault(); openForm(); } });
 })();

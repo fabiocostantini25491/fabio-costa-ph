@@ -5456,7 +5456,7 @@ const Spots = (() => {
             <ul class="req-list">${list.filter(f => f.message || f.email).map(f => `<li class="req-row" data-fb="${f.id}"><div><b>${f.rating ? "★".repeat(f.rating) + " · " : ""}${esc(f.message || "(nessun commento)")}</b>
               <span>${fmtDay(String(f.created_at).slice(0, 10))} · ${esc(f.lang || "")} · ${esc(f.device || "")}${f.email ? ` · <a href="mailto:${esc(f.email)}">${esc(f.email)}</a>` : ""}</span></div>
               <button type="button" class="pop-btn" data-delfb>Elimina</button></li>`).join("") || `<li class="gate-help left">Nessun commento scritto.</li>`}</ul>`
-          : `<p class="gate-help left">Ancora nessun feedback. L'avviso compare ai visitatori dopo 30 secondi sul sito.</p>`;
+          : `<p class="gate-help left">Ancora nessun feedback. Il modulo si apre dal link «Feedback» in fondo al sito.</p>`;
         body.querySelectorAll("[data-delfb]").forEach(b => b.addEventListener("click", async () => {
           const li = b.closest("[data-fb]");
           try { await api(`/rest/v1/feedback?id=eq.${li.dataset.fb}`, { method: "DELETE" }); li.remove(); } catch (err) { toast(`Non riuscito (${err.message}).`, true); }
