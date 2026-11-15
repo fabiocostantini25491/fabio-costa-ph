@@ -1902,7 +1902,7 @@ const FN_SITE = "https://fabiocostaph.com/";
 const fnShareBtn = (hash, title, kind) => `<button type="button" class="fn-share" data-fnshare="${esc(hash)}" data-fntitle="${esc(title)}" data-fnkind="${esc(kind)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V3M7 8l5-5 5 5M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg><span>Share</span></button>`;
 async function fnShare(b) {
   const url = /^https?:/.test(b.dataset.fnshare) ? b.dataset.fnshare : `${FN_SITE}?utm_source=share#${b.dataset.fnshare}`, title = b.dataset.fntitle;
-  const text = b.dataset.fnkind === "guide" ? `${title} — a guide by Fabio Costa Ph` : `${title} — Field Notes by Fabio Costa Ph`;
+  const text = b.dataset.fnkind === "guide" ? `${title} — a guide by Fabio Costa Ph` : b.dataset.fnkind === "magazine" ? `${title} — the monthly magazine of Fabio Costa Ph` : `${title} — Field Notes by Fabio Costa Ph`;
   window.fcTrack?.(`Field Notes: shared ${b.dataset.fnkind}`);
   try { if (navigator.share) { await navigator.share({ title, text, url }); return; } } catch (err) { if (err?.name === "AbortError") return; }
   try { await navigator.clipboard.writeText(url); toast(window.I18N?.lang === "it" ? "Link copiato: incollalo dove vuoi." : "Link copied: paste it wherever you like."); }
@@ -2061,6 +2061,7 @@ async function renderMagazine(want) {
       </div>
     </header>
     <div class="mz-pdfslot" id="mzPdf"></div>
+    <div class="fn-sharebar mz-share">${fnShareBtn(closed ? `magazine-${month}` : "magazine", `${MAG_NAME} · N° ${num} · ${monthLabel(month)}`, "magazine")}</div>
     ${setCover?.folk_nome ? `<section class="mz-folk" aria-label="Folk of the month">
       ${setCover.folk_foto ? `<img src="${esc(mediaUrl(setCover.folk_foto))}" alt="" loading="lazy">` : ""}
       <div><p class="mz-folk-k">Folk of the month</p><h3>${esc(setCover.folk_nome)}</h3>${setCover.folk_tipo && FOLK_LABEL[setCover.folk_tipo] ? `<p class="mz-folk-t">${FOLK_LABEL[setCover.folk_tipo]}</p>` : ""}
