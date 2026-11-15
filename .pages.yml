@@ -2,9 +2,18 @@
 # Documentazione: https://pagescms.org/docs/configuration/
 
 media:
-  input: img/foto
-  output: /img/foto
-  categories: [image]
+  - name: foto
+    label: Foto
+    input: img/foto
+    output: /img/foto
+    categories: [image]
+  # PDF delle guide (Canva o altro): dopo il caricamento GitHub li comprime e li sposta tra i file scaricabili del sito,
+  # così non pesano sul sito (vedi .github/workflows/guide-pdf.yml)
+  - name: guide-pdf
+    label: PDF delle guide
+    input: guides/pdf
+    output: /guides/pdf
+    categories: [document]
 
 content:
   # ---------------------------------------------------------------
@@ -454,6 +463,33 @@ content:
             label: Informazioni pratiche
             type: rich-text
             options: { format: markdown }
+      - name: pdf
+        label: Guide in PDF (Canva o altro, su qualsiasi argomento)
+        type: object
+        list:
+          collapsible: { collapsed: true, summary: "{titolo}" }
+        description: "Guide già impaginate: fotografia, editing, viaggi, tecnica… Compaiono nello scaffale «Guides» con copertina e si scaricano in PDF. Il file viene compresso e spostato in automatico dopo il caricamento: non appesantisce il sito."
+        fields:
+          - { name: bozza, label: Bozza (nascosta dal sito), type: boolean, default: false }
+          - { name: titolo, label: Titolo, type: string, required: true }
+          - { name: sottotitolo, label: Sottotitolo, type: string }
+          - name: argomento
+            label: Argomento
+            type: select
+            default: Fotografia
+            options: { values: [Fotografia, Editing, Tecnica, Viaggi, Luoghi, Attrezzatura, Altro] }
+          - name: copertina
+            label: Copertina (facoltativa)
+            type: image
+            options: { media: foto, extensions: [jpg, jpeg, png, webp], rename: true }
+          - { name: descrizione, label: Descrizione breve, type: text }
+          - name: file
+            label: File PDF
+            type: file
+            description: "Carica il PDF esportato da Canva (anche pesante): viene compresso e spostato in automatico in pochi minuti."
+            options: { media: guide-pdf, extensions: [pdf], rename: true }
+          - { name: link, label: Oppure un link al PDF (facoltativo), type: string, description: "Se il PDF è già online (Canva, Google Drive…): incolla qui il link pubblico e non caricare il file." }
+          - { name: aggiornata, label: Aggiornata il (anno-mese-giorno), type: string }
 
   # ---------------------------------------------------------------
   # RIVISTA DEL MESE (Field Notes From Planet Earth)

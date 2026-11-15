@@ -2158,13 +2158,18 @@ function setupArticleZoom() {
 /* =========================================================
    7c. GUIDES — guide per zone (pannello → content/guide.json), con PDF su richiesta (guida.html)
    ========================================================= */
-let guidesData = null;
+let guidesData = null, guidesPdf = [];
 async function loadGuides() {
   if (guidesData) return guidesData;
-  try { const r = await getJSON("content/guide.json"); guidesData = (Array.isArray(r?.guide) ? r.guide : []).filter(g => g && g.titolo && g.slug && !g.bozza); }   // le bozze non si vedono sul sito
-  catch { guidesData = []; }
+  try { const r = await getJSON("content/guide.json"); guidesData = (Array.isArray(r?.guide) ? r.guide : []).filter(g => g && g.titolo && g.slug && !g.bozza);   // le bozze non si vedono sul sito
+    // guides already laid out (Canva or other), on any subject: a cover and the PDF (moved to the downloads by guide-pdf.yml)
+    guidesPdf = (Array.isArray(r?.pdf) ? r.pdf : []).filter(g => g && g.titolo && !g.bozza && (g.file || g.link)); }
+  catch { guidesData = []; guidesPdf = []; }
   return guidesData;
 }
+const pdfHref = g => { const u = String(g.link || g.file || "").trim(); return /^https?:\/\//.test(u) ? u : mediaUrl(u); };
+const PDF_TOPIC_EN = { Fotografia: "Photography", Editing: "Editing", Tecnica: "Technique", Viaggi: "Travel", Luoghi: "Places", Attrezzatura: "Gear", Altro: "Other" };
+let guideTopic = "";
 const LIGHT_ICON = { "Sunrise": "◐", "Early morning": "◔", "Morning": "○", "Afternoon": "◑", "Sunset": "◒", "Blue hour": "◕", "Night": "●", "Any time": "◌" };
 const ZONE_COLORS = ["#b20d0d", "#1f5f8b", "#7a5a12", "#2d6a4f", "#6b3fa0", "#a0522d", "#3d5a80", "#8a1c7c"];
 /* Canal Grande, tracciato schematico (per orientarsi sulle mappe delle guide di Venezia) */
@@ -2200,16 +2205,25 @@ async function renderGuides() {
   const list = await loadGuides();
   if (document.body.dataset.page !== "journal" || !/^#guides$/.test(location.hash)) return;
   const T = s => window.I18N ? I18N.t(s) : s;
+  const topics = [...new Set(guidesPdf.map(g => g.argomento || "Altro"))], pdfs = guidesPdf.filter(g => !guideTopic || (g.argomento || "Altro") === guideTopic);
   layout.innerHTML = `<div class="gd-shelf">
-    <p class="gd-shelf-lead">${T("Travel guides, zone by zone: what to see, when to go, where to stop and the practical things to know — with a photographer's eye. Read them here or download the PDF.")}</p>
+    <p class="gd-shelf-lead">${T("Guides with a photographer's eye: places zone by zone, photography, editing and more. Read them here or download the PDF.")}</p>
+    ${guidesPdf.length ? `<section class="gd-pdfs"><h3 class="gd-pdfs-h">${T("Guides in PDF")}</h3>
+      ${topics.length > 1 ? `<nav class="sub-chips gd-topics"><button type="button" data-gtopic=""${guideTopic ? "" : ' class="on"'}>${T("All")} <small>${guidesPdf.length}</small></button>${topics.map(tp => `<button type="button" data-gtopic="${esc(tp)}"${guideTopic === tp ? ' class="on"' : ""}>${esc(T(PDF_TOPIC_EN[tp] || tp))} <small>${guidesPdf.filter(g => (g.argomento || "Altro") === tp).length}</small></button>`).join("")}</nav>` : ""}
+      <ul class="gd-books">${pdfs.map(g => `<li><a class="gd-book" href="${esc(pdfHref(g))}" target="_blank" rel="noopener" data-guide-pdf>
+        <span class="gd-cover${g.copertina ? "" : " no-img"}">${g.copertina ? `<img src="${esc(mediaUrl(g.copertina))}" alt="" loading="lazy">` : ""}<span class="gd-cover-t"><small>Field Notes · ${esc(T(PDF_TOPIC_EN[g.argomento] || g.argomento || "Guide"))}</small><b>${esc(g.titolo)}</b><em>${esc(g.sottotitolo || "")}</em></span></span>
+        <span class="gd-book-meta">${g.descrizione ? esc(g.descrizione) : ""}</span></a>
+        <a class="gd-book-pdf" href="${esc(pdfHref(g))}" target="_blank" rel="noopener" data-guide-pdf>PDF${g.mb ? ` · ${esc(g.mb)} MB` : ""}</a></li>`).join("")}</ul></section>` : ""}
+    ${guidesPdf.length && list.length ? `<h3 class="gd-pdfs-h">${T("Places, zone by zone")}</h3>` : ""}
     ${list.length ? `<ul class="gd-books">${list.map(g => {
       const n = (g.zone || []).reduce((a, z) => a + (z.luoghi || []).length, 0);
       return `<li><a class="gd-book" href="#g-${esc(g.slug)}">
         <span class="gd-cover${g.copertina ? "" : " no-img"}">${g.copertina ? `<img src="${esc(mediaUrl(g.copertina))}" alt="" loading="lazy">` : ""}<span class="gd-cover-t"><small>Field Notes · Guide</small><b>${esc(g.titolo)}</b><em>${esc(g.sottotitolo || "")}</em></span></span>
         <span class="gd-book-meta">${(g.zone || []).length} ${T("zones")} · ${n} ${T("places")}</span></a>
         <a class="gd-book-pdf" href="guida.html?g=${encodeURIComponent(g.slug)}&amp;print=1" target="_blank" rel="noopener" data-guide-pdf>PDF</a></li>`;
-    }).join("")}</ul>` : `<p class="mz-empty">${T("The first guide is being written.")}</p>`}
+    }).join("")}</ul>` : guidesPdf.length ? "" : `<p class="mz-empty">${T("The first guide is being written.")}</p>`}
   </div>`;
+  layout.querySelectorAll("[data-gtopic]").forEach(b => b.addEventListener("click", () => { guideTopic = b.dataset.gtopic; renderGuides(); }));
 }
 async function renderGuide(slugId) {
   const layout = $("#journalLayout");

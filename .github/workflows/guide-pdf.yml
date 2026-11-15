@@ -1,0 +1,52 @@
+name: Guide in PDF (comprimi e sposta)
+# Quando dal pannello carichi il PDF di una guida (Canva o altro) in guides/pdf/, questo lavoro:
+#   1. lo comprime (Ghostscript: immagini a 150 dpi, quanto basta per schermo e stampa a casa); se non si riduce, tiene l'originale;
+#   2. lo pubblica come file scaricabile della release «guide-pdf» (non pesa sul sito né sulla sua pubblicazione);
+#   3. aggiorna content/guide.json con il nuovo indirizzo e la dimensione, e toglie il PDF dalla cartella del sito.
+on:
+  push:
+    paths: ["guides/pdf/**"]
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency: guide-pdf
+jobs:
+  pdf:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Strumenti
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq ghostscript jq >/dev/null
+      - name: Comprimi, pubblica, aggiorna
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          shopt -s nullglob nocaseglob
+          files=(guides/pdf/*.pdf)
+          [ ${#files[@]} -eq 0 ] && { echo "Nessun PDF da spostare."; exit 0; }
+          TAG=guide-pdf
+          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --title "Guide in PDF" --notes "PDF delle guide del sito (compressi in automatico)." --latest=false
+          for f in "${files[@]}"; do
+            name=$(basename "$f")
+            out="/tmp/$name"
+            gs -q -dNOPAUSE -dBATCH -dSAFER -sDEVICE=pdfwrite -dCompatibilityLevel=1.6 -dPDFSETTINGS=/ebook \
+              -dDownsampleColorImages=true -dColorImageResolution=150 -dDownsampleGrayImages=true -dGrayImageResolution=150 \
+              -dDetectDuplicateImages=true -dCompressFonts=true -sOutputFile="$out" "$f" || cp "$f" "$out"
+            before=$(stat -c%s "$f"); after=$(stat -c%s "$out")
+            if [ "$after" -ge "$before" ]; then cp "$f" "$out"; after=$before; fi
+            echo "$name: $((before/1024)) KB → $((after/1024)) KB"
+            gh release upload "$TAG" "$out" --clobber
+            url="https://github.com/${GITHUB_REPOSITORY}/releases/download/$TAG/$name"
+            mb=$(awk "BEGIN{printf \"%.1f\", $after/1048576}")
+            # the guide that points to this file now points to the download, with its size
+            tmp=$(mktemp)
+            jq --arg p "/guides/pdf/$name" --arg p2 "guides/pdf/$name" --arg u "$url" --arg mb "$mb" \
+              '(.pdf // []) |= map(if (.file == $p or .file == $p2) then .file = $u | .mb = $mb else . end)' content/guide.json > "$tmp" && mv "$tmp" content/guide.json
+            git rm -q "$f"
+          done
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add content/guide.json
+          git commit -m "Guide PDF compressi e spostati tra i file scaricabili" || exit 0
+          git pull --rebase -q && git push
