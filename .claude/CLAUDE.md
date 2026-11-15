@@ -26,3 +26,15 @@ When the owner asks for a new feature, **before writing any code** give a short 
 3. **If ⚠️ or ❌:** how to tie it to the folk (e.g. «ask a folk», the author's face, a «how is it now» left for others), or a better alternative.
 
 Then proceed if it's ✅, or if the owner confirms after the check.
+
+## Ideas parked by the owner («in cascina»)
+
+- **Photo spots by kind** (proposed 15 Nov 2026, check ⚠️→✅ if tied to the folk): Viewpoint/panorama, Mountain, Sea & coast, Water,
+  Woods & countryside, Night sky, City & architecture, Other — guessed from the name like the places of interest (info.photo), filters with icons
+  and counts; the kind drives the «how is it now» choices, the Photo pulse defaults (viewpoint → «where I shoot from», night sky → Milky Way)
+  and the «ask a photo folk» prompt.
+- **Photo forecast / Place pulse notifications for saved places**: declined for now (15 Nov 2026); if revived, only tied to the folk
+  (latest «how is it now», «ask who's there», «were you there? tell how it was»).
+- Trip planning / bucket list; recent folk photos with EXIF date; SEO place pages (declined: too much work).
+- Towards «a friend in every place»: «I'm here until Sunday» (presence by area), «who knows it best» on a place, «Thanks» on answers and
+  «helped N folk» on profiles, private follow-up after an answer (folk only, opt-in).
