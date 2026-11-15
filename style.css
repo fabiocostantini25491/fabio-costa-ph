@@ -4225,3 +4225,6 @@ body[data-page="hub"] .sf-nav a.sf-map{background:none;color:#e6ecf3}
 .ask-dot.mine{animation:none;opacity:.75}
 @keyframes askPulse{50%{transform:scale(1.18)}}
 @media(prefers-reduced-motion:reduce){.ask-dot{animation:none}}
+/* the dot on «The Folk Hub» stays inside the nav, which scrolls sideways on phones and would cut it */
+.sf-hubnav.has-new{padding-right:22px}
+.sf-hubnav.has-new::after{top:50%;right:2px;transform:translateY(-50%)}
