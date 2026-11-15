@@ -95,5 +95,15 @@
     }
   }
 
-  window.PdfView = { open, close };
+  // the first page as a picture (for share images)
+  async function firstPage(url, width = 900) {
+    const pdfjs = await loadLib(), d = await pdfjs.getDocument({ url, isEvalSupported: false }).promise;
+    try {
+      const pg = await d.getPage(1), v = pg.getViewport({ scale: width / pg.getViewport({ scale: 1 }).width });
+      const cv = document.createElement("canvas"); cv.width = Math.round(v.width); cv.height = Math.round(v.height);
+      await pg.render({ canvasContext: cv.getContext("2d"), viewport: v }).promise;
+      return cv;
+    } finally { d.destroy(); }
+  }
+  window.PdfView = { open, close, firstPage };
 })();

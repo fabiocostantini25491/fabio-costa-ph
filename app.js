@@ -1900,7 +1900,7 @@ function renderAuthor(authorSlug) {
 /* share a Field Notes article or guide: the phone's share sheet, otherwise the link is copied */
 const FN_SITE = "https://fabiocostaph.com/";
 const fnShareBtn = (hash, title, kind) => `<button type="button" class="fn-share" data-fnshare="${esc(hash)}" data-fntitle="${esc(title)}" data-fnkind="${esc(kind)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V3M7 8l5-5 5 5M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg><span>Share</span></button>`;
-async function fnShare(b) {
+async function fnShareLink(b) {
   // the preview page in /s/ (scripts/build-share.mjs): title, description and picture of what you share, then straight to it
   const url = /^https?:/.test(b.dataset.fnshare) ? b.dataset.fnshare : `${FN_SITE}s/${b.dataset.fnshare}.html`, title = b.dataset.fntitle;
   const text = b.dataset.fnkind === "guide" ? `${title} — a guide by Fabio Costa Ph` : b.dataset.fnkind === "magazine" ? `${title} — the monthly magazine of Fabio Costa Ph` : `${title} — Field Notes by Fabio Costa Ph`;
@@ -1908,6 +1908,37 @@ async function fnShare(b) {
   try { if (navigator.share) { await navigator.share({ title, text, url }); return; } } catch (err) { if (err?.name === "AbortError") return; }
   try { await navigator.clipboard.writeText(url); toast(window.I18N?.lang === "it" ? "Link copiato: incollalo dove vuoi." : "Link copied: paste it wherever you like."); }
   catch { prompt("Link", url); }
+}
+// small scripts loaded the first time they're needed
+const lazyScript = (() => { const got = {}; return name => got[name] || (got[name] = new Promise((ok, ko) => {
+  const s = document.createElement("script"); s.src = `${name}?v=${document.querySelector('script[src^="app.js"]')?.src.split("v=")[1] || ""}`;
+  s.onload = ok; s.onerror = () => { delete got[name]; ko(new Error(name)); }; document.head.appendChild(s); })); })();
+// what goes on the story / post image
+function fnShareInfo(b) {
+  const h = b.dataset.fnshare, title = b.dataset.fntitle, kind = b.dataset.fnkind;
+  const i = { kind, title, kicker: "Field Notes", sub: "", img: "", pdfPage: null };
+  const T = s => s;   // the image speaks English, like the site
+  let m;
+  if ((m = h.match(/^art-(.+)$/))) {
+    const a = articles.find(x => x.id === m[1]);
+    if (a) Object.assign(i, { kicker: `Field Notes · ${CATEGORY_EN[a.category] || a.category || "Story"}`, sub: a.excerpt || "", img: a.cover || "" });
+  } else if ((m = h.match(/^g-(.+)$/))) {
+    const g = (guidesData || []).find(x => x.slug === m[1]);
+    if (g) Object.assign(i, { kicker: `Field Notes · ${T("Guide")}`, sub: g.sottotitolo || "", img: g.copertina ? mediaUrl(g.copertina) : (document.querySelector("#journalMag .gd-hero img")?.src || "") });
+  } else if ((m = h.match(/^pdf-(.+)$/))) {
+    const g = guidesPdf.find(x => slug(x.titolo) === m[1]);
+    if (g) Object.assign(i, { kicker: `Field Notes · ${T("Free guide")}`, sub: g.sottotitolo || g.descrizione || "", img: g.copertina ? mediaUrl(g.copertina) : "",
+      pdfPage: g.copertina ? null : () => lazyScript("pdfview.js").then(() => window.PdfView.firstPage(pdfHref(g))) });
+  } else if (/^magazine/.test(h)) {
+    const [name, ...rest] = title.split(" · "), cov = document.querySelector("#journalMag .mz-cover-title")?.textContent || "";
+    Object.assign(i, { title: name, kicker: `The monthly magazine${rest.length ? " · " + rest.join(" · ") : ""}`, sub: cov || "Stories, places and photographs from the road", img: document.querySelector("#journalMag .mz-cover-img")?.src || "" });
+  }
+  return i;
+}
+async function fnShare(b) {
+  const url = /^https?:/.test(b.dataset.fnshare) ? b.dataset.fnshare : `${FN_SITE}s/${b.dataset.fnshare}.html`;
+  try { await lazyScript("sharecard.js"); } catch { return fnShareLink(b); }
+  window.ShareCard.open({ ...fnShareInfo(b), url, shareLink: () => fnShareLink(b) });
 }
 document.addEventListener("click", ev => { const b = ev.target.closest("[data-fnshare]"); if (b) { ev.preventDefault(); fnShare(b); } });
 function renderArticle(id) {
@@ -2220,7 +2251,7 @@ async function openPdfGuide(id) {
   await loadGuides();
   const g = guidesPdf.find(x => slug(x.titolo) === id);
   if (!g) { history.replaceState(null, "", "#guides"); return route(); }
-  pdfViewLib = pdfViewLib || new Promise((ok, ko) => { if (window.PdfView) return ok(); const s = document.createElement("script"); s.src = "pdfview.js?v=" + (document.querySelector('script[src^="app.js"]')?.src.split("v=")[1] || ""); s.onload = ok; s.onerror = () => { pdfViewLib = null; ko(); }; document.head.appendChild(s); });
+  pdfViewLib = window.PdfView ? Promise.resolve() : lazyScript("pdfview.js");
   try { await pdfViewLib; } catch { location.href = pdfHref(g); return; }
   if (location.hash !== "#pdf-" + id) return;
   const url = pdfHref(g), local = !/^https?:\/\//.test(url) || url.startsWith(location.origin);
