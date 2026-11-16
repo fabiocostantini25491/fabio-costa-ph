@@ -515,6 +515,7 @@ const Spots = (() => {
   }
   /* ---------- visitatori: la selezione pubblica (vista «public_spots» del database) ---------- */
   async function loadFounders() {
+    return;   // 16 Nov 2026: no member counts in view (they showed how many have joined)
     try { const { data } = await api("/rest/v1/rpc/members_count", { method: "POST", body: {}, auth: false }); if (Number.isFinite(+data)) foundersLeft = Math.max(0, 100 - +data); } catch {}
   }
   async function loadPublic() {
@@ -778,7 +779,7 @@ const Spots = (() => {
         <ol>
           <li><span>01</span><b>Pick your folk</b><small>One or more. Sign up with your email in a minute.</small></li>
           <li><span>02</span><b>Sign three places you've been</b><small>That's your welcome. Be the first to sign one and your name stays on it.</small></li>
-          <li><span>03</span><b>Get your passport</b><small><span>Stamps, levels, Local expert. The first 100 folk get a founding number for good.</span>${foundersLeft != null && foundersLeft > 0 ? ` <b>${foundersLeft}</b> <span>left.</span>` : ""}</small></li>
+          <li><span>03</span><b>Get your passport</b><small><span>Stamps, levels, Local expert.</span></small></li>
         </ol>
       </section>
       <section class="wfa-close" id="wfaCode">
@@ -3378,10 +3379,9 @@ const Spots = (() => {
         ${fab ? `<div class="fh-sh"><div><p class="fh-kick">From Fabio</p><h2>Where it <em>all started</em></h2></div><p>The photographer behind the map, and his places.</p></div>
           <article class="fh-fabio"><div class="fh-fph"><img src="${esc(hubPhoto(fab.photo, CAT_IMG[fab.category]))}" alt="" loading="lazy"></div>
             <div class="fh-ftx"><p class="fh-kick">★ Fabio's pick · ${esc(fab.spot)}</p><q>${esc(fab.txt)}</q>
-              <div class="fh-who">${hubFace(fab, 58)}<span><b>Fabio</b><small>📷 Photo folk · founding folk #1</small></span></div>
+              <div class="fh-who">${hubFace(fab, 58)}<span><b>Fabio</b><small>📷 Photo folk</small></span></div>
               <div class="fh-acts"><button type="button" data-hubgo="${fab.spot_id}">Open the place →</button></div></div></article>` : ""}
         <div class="fh-sh" id="folkRoom"><div><p class="fh-kick">The folk room</p><h2>What the folk <em>are bringing</em></h2></div><p>Signatures, conditions, checks and stories from people who were there. Every line has a name and a date.</p></div>
-        ${tot >= 10 ? `<div class="fh-sum"><div class="fh-faces">${faces.map(f => hubFace(f, 44)).join("")}</div><p><b>This month: ${st.signs} signatures · ${st.checks} checks · ${st.stories} stories</b> from ${st.folk} folk</p></div>` : ""}
         <div class="fh-tabs">${[["all", "All"], ["sign", "✍ Signatures"], ["cond", "📣 Conditions"], ["fact", "🧭 Before you go"], ["story", "💬 Stories"]].map(([k, l]) => `<button type="button" data-hubtab="${k}" class="${(box._tab || "all") === k ? "on" : ""}">${l}</button>`).join("")}</div>
         <div class="fh-feed">${items.length ? [...weeks.entries()].sort((a, b) => b[0] - a[0]).map(([w, list]) => {
             const shown = list.filter(i => !box._tab || box._tab === "all" || i.kind === box._tab || (box._tab === "fact" && i.kind === "check") || (box._tab === "story" && i.kind === "impression"));
@@ -3390,9 +3390,6 @@ const Spots = (() => {
         ${(d.opportunities || []).length || (d.to_check || []).length ? `<div class="fh-sh"><div><p class="fh-kick">👑 Your turn</p><h2>Waiting for their <em>First folk</em></h2></div><p>Sign one of these first, and your name stays on it. Forever.</p></div>
           <div class="fh-crowns">${(d.opportunities || []).map(o => `<button type="button" class="fh-cr" data-hubgo="${o.spot_id}"><img src="${esc(hubPhoto(o.photo, CAT_IMG[o.category]))}" alt="" loading="lazy"><span class="fh-crown">👑</span><span class="fh-ct"><b>${esc(o.spot)}</b><small>${esc((CATS[o.category] || CATS.spot).label)}${o.zone ? ` · ${esc(o.zone)}` : ""}</small><span>Sign it first</span></span></button>`).join("")}</div>
           ${(d.to_check || []).length ? `<ul class="fh-old">${d.to_check.map(o => `<li>🧭 <b>${esc(o.spot)}</b> · ${esc((TOPIC[o.topic] || ["", "info"])[1])} from ${condAgo(o.at)} <button type="button" data-hubgo="${o.spot_id}">Check it →</button></li>`).join("")}</ul>` : ""}` : ""}
-        ${(d.founders || []).length ? `<div class="fh-sh"><div><p class="fh-kick">The first 100</p><h2>The <em>founding folk</em></h2></div><p>A number in the passport that will never come back.</p></div>
-          <div class="fh-founders">${d.founders.map(f => `<div class="fh-fd">${hubFace({ name: f.name, avatar: f.avatar, folk: null }, 96)}<b>${esc(f.name)}</b><small>#${f.rank}</small></div>`).join("")}
-            ${guest && !session && left > 0 ? `<button type="button" class="fh-fd you" data-hubjoin><span class="fh-av" style="--s:96px"><span>#${(st.members || 0) + 1}</span></span><b>You?</b><small>${left} left</small></button>` : ""}</div>` : ""}
       </div>
       ${guest && !session ? `<div class="fh-end"><h2>Your signature <em>could be next.</em></h2><p>Pick your folk, sign a place you love, and you're part of the map.</p><button type="button" class="fh-btn" data-hubjoin>Become folk — free</button></div>` : ""}`;
     wireHub(box);
@@ -6410,7 +6407,7 @@ const Spots = (() => {
       requestAnimationFrame(step);
     });
     // founding number, if any
-    loadPassport(uid).then(pp => { const f = $("#sfmeFounder"); if (f && pp && pp.rank && pp.rank <= 100) { f.textContent = `🏅 Founding folk #${pp.rank}`; f.hidden = false; } }).catch(() => {});
+    loadPassport(uid).then(pp => { const f = $("#sfmeFounder"); if (f && pp && pp.rank && pp.rank <= 100) { f.textContent = "🏅 Founding folk"; f.hidden = false; } }).catch(() => {});
     drawMeTab();
   }
 
@@ -6642,7 +6639,7 @@ const Spots = (() => {
       <p class="pp-kick">SpotFolk passport</p>
       <div class="pp-folks">${folks.length ? folks.map(k => { const lv = levelOf(bf[k]); return `<span class="pp-folk" style="--c:${CLUSTERS[k].color}">${CLUSTERS[k].ico} ${esc(folkOf(k))}<b>${lv ? lv[1] : "New"}</b></span>`; }).join("") : `<span class="muted">No folk chosen yet.</span>`}
         ${xp ? `<span class="pp-folk" style="--c:#ffd9a0">🧭 Local expert<b>${esc(xp.area_name)}</b></span>` : ""}
-        ${pp.rank && pp.rank <= 100 ? `<span class="pp-folk founder" style="--c:#ffd27a">🏅 Founding folk<b>#${pp.rank}</b></span>` : ""}</div>
+        ${pp.rank && pp.rank <= 100 ? `<span class="pp-folk founder" style="--c:#ffd27a">🏅 Founding folk</span>` : ""}</div>
       <dl class="me-stats pp-stats">${[["Signatures", tot], ["Places added", pp.places], ["First to sign", pp.firsts], ["On the spot", onSpot], ["Seconded", pp.seconded], ["Useful tips", pp.useful]].map(([a, b]) => `<div><dt>${a}</dt><dd>${fmtN(+b || 0)}</dd></div>`).join("")}</dl>
       <div class="fa-host" data-atlas>${mapSvg}</div>
       ${stamps.length ? `<p class="pp-h">Latest stamps</p><ul class="pp-stamps">${stamps.slice(0, 18).map(t => `<li><button type="button" data-stamp="${t.id}" style="--c:${(CLUSTERS[t.folk] || {}).color || "#ffd27a"}"><span>${CLUSTERS[t.folk]?.ico || "★"}</span>${esc(t.name)}<small>${esc(fmtWhen(t.at))}${t.on_spot ? " · 📍" : ""}</small></button></li>`).join("")}</ul>` : `<p class="muted">No stamps yet: sign the places you've been to.</p>`}
