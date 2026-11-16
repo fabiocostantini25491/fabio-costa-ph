@@ -2804,7 +2804,7 @@ if (SF) {
 document.addEventListener("DOMContentLoaded", () => {
   $("#hdLogin")?.addEventListener("click", () => window.Spots?.login());
   $("#hdLogout")?.addEventListener("click", () => window.Spots?.logout());
-  showNotice();
+  // showNotice();   // banner «novità» disattivato (16 nov 2026: dava fastidio). Per riattivarlo, togli il commento.
 });
 
 function route() {
