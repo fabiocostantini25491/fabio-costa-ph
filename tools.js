@@ -292,12 +292,24 @@ const Tools = (() => {
     if (linked && linkedDay) { const [y, m, d] = linkedDay.split("-").map(Number); ctx.setDay({ y, m: m - 1, d }); }
   }
 
+  // «lab»: new features visible only on the secret test link (?lab=…), remembered on this device; ?lab=off switches it off
+  const LAB = (() => {
+    const q = new URLSearchParams(location.search).get("lab");
+    try {
+      if (q === "off") localStorage.removeItem("fcph-lab");
+      else if (q === "fc7q-coach") localStorage.setItem("fcph-lab", "1");
+      if (q) history.replaceState(null, "", location.pathname + location.hash);
+      return localStorage.getItem("fcph-lab") === "1";
+    } catch { return q === "fc7q-coach"; }
+  })();
+  window.FC_LAB = LAB;
+  if (LAB) document.querySelectorAll("[data-lab]").forEach(el => (el.hidden = false));
   const TABS = [
     { id: "sun", label: "Sun & Moon", icon: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"/></svg>' },
     { id: "planner", label: "Planner", icon: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 20 6-11 4 6 2.5-3.5L21 20z"/><path d="M12 3v3M16.5 4.5l-1.5 2.5M7.5 4.5 9 7"/></svg>' },
     { id: "shot", label: "Analyze your shot", icon: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8.5h3.2l1.8-2.5h6l1.8 2.5H20V19H4z"/><circle cx="12" cy="13" r="3.4"/></svg>' },
-    { id: "coach", label: "Field coach", icon: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="m15.5 8.5-2 5-5 2 2-5z"/></svg>' }
-  ];
+    { id: "coach", label: "Field coach", icon: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="m15.5 8.5-2 5-5 2 2-5z"/></svg>', lab: true }
+  ].filter(t => !t.lab || LAB);
   const TAB_KEY = "fcph-tools-tab";
   let tab = (() => { try { return localStorage.getItem(TAB_KEY) || "sun"; } catch { return "sun"; } })();
   const listeners = [];
@@ -328,7 +340,7 @@ const Tools = (() => {
       </section>
       <section class="tools-panel" id="panel-planner" role="tabpanel" aria-labelledby="tab-planner" hidden><div id="plannerRoot"></div></section>
       <section class="tools-panel" id="panel-shot" role="tabpanel" aria-labelledby="tab-shot" hidden><div id="shotRoot"></div></section>
-      <section class="tools-panel" id="panel-coach" role="tabpanel" aria-labelledby="tab-coach" hidden><div id="coachRoot"></div></section>`;
+      ${LAB ? `<section class="tools-panel" id="panel-coach" role="tabpanel" aria-labelledby="tab-coach" hidden><div id="coachRoot"></div></section>` : ""}`;
   }
 
   function setTab(id) {
@@ -620,6 +632,7 @@ const Tools = (() => {
   // from the analyzer: open the Field coach with the plan of the test shot (and, if the AI chose one, its technique)
   let coachOpts = null;
   function openCoach(o) {
+    if (!LAB) return;
     coachOpts = o || {};
     setTab("coach");
     root().scrollIntoView({ behavior: "smooth", block: "start" });

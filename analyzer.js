@@ -363,7 +363,7 @@ const Analyzer = (() => {
   function plan() {
     const box = $a("#shotPlan");
     if (!stats) return;
-    if (!scene) { box.hidden = false; box.innerHTML = `<span class="eyebrow">Your shooting plan</span><p class="tool-note">Choose what you're shooting (step 1) to get your plan — or let the AI read the whole scene.</p><section class="ai-read" id="aiRead" data-no-i18n>${aiHtml()}</section>`; wireAi(); return; }
+    if (!scene) { box.hidden = false; box.innerHTML = `<span class="eyebrow">Your shooting plan</span><p class="tool-note">${window.FC_LAB ? "Choose what you're shooting (step 1) to get your plan — or let the AI read the whole scene." : "Choose what you're shooting (step 1) to get your plan."}</p>${window.FC_LAB ? `<section class="ai-read" id="aiRead" data-no-i18n>${aiHtml()}</section>` : ""}`; wireAi(); return; }
     const S = SCENES[scene], s = stats;
     const f = parseFloat($a("#fFocal").value) || null, N = parseFloat($a("#fAperture").value) || null;
     const t = parseShutter($a("#fShutter").value), iso = parseFloat($a("#fIso").value) || null;
@@ -417,7 +417,8 @@ const Analyzer = (() => {
     } else steps.unshift(["Exposure", `${exposureMsg} Fill in shutter, aperture and ISO to get exact settings.`]);
 
     // 4. gamma dinamica → la scala di esposizioni (bracketing o sequenza manuale)
-    if (!S.stars) steps.push(["Your exposure ladder", ladderHtml(s, t, N, iso)]);
+    const lab = !!window.FC_LAB;
+    if (!S.stars && lab) steps.push(["Your exposure ladder", ladderHtml(s, t, N, iso)]);
     if (s.sharp != null && s.sharp < 0.62 && s.edges > 400) warn.push(tripod
       ? "The test shot looks soft: check the focus (zoom in on live view) and use a remote or the 2-second timer."
       : "The test shot looks soft: at this shutter speed the camera probably moved. Use a tripod or a faster shutter.");
@@ -427,7 +428,7 @@ const Analyzer = (() => {
     else if (hiClip > 0.008 && loClip > 0.04) bracket = [3, 2, "the lights are burnt and the shadows are black"];
     else if (hiClip > 0.01) bracket = [2, 2, "the brightest lights are burnt"];
     else if (scene === "sunset" || scene === "city" || scene === "village") bracket = [3, 1.5, "a safety margin for the lights"];
-    if (bracket && S.stars) {
+    if (bracket && (S.stars || !lab)) {
       const [n, step, why] = bracket;
       const evs = n === 2 ? ["0", `−${step}`] : Array.from({ length: n }, (_, i) => (i - (n - 1) / 2) * step).map(v => v === 0 ? "0" : `${v > 0 ? "+" : "−"}${Math.abs(v)}`);
       steps.push(["Bracketing", `Take <strong>${n} shots at ${evs.join(" / ")} EV</strong>: ${why}. Merge them in Lightroom (HDR merge) or blend by hand.`]);
@@ -462,8 +463,8 @@ const Analyzer = (() => {
       <ol class="shot-steps">${steps.map(([k, v]) => `<li><b>${k}</b><p>${v}</p></li>`).join("")}</ol>
       <h3>Tips for this scene</h3>
       <ul class="shot-tips">${S.tips.map(x => `<li>${esc(x)}</li>`).join("")}</ul>
-      <button type="button" class="pop-btn shot-coach" id="shotCoach">Start a guided session with this plan <span aria-hidden="true">→</span></button>
-      <section class="ai-read" id="aiRead" data-no-i18n>${aiHtml()}</section>`;
+      ${lab ? `<button type="button" class="pop-btn shot-coach" id="shotCoach">Start a guided session with this plan <span aria-hidden="true">→</span></button>
+      <section class="ai-read" id="aiRead" data-no-i18n>${aiHtml()}</section>` : ""}`;
     lastSettings = { t, N, iso, f, crop, tripod };
     $a("#shotCoach")?.addEventListener("click", () => window.Tools?.openCoach?.({ scene, ladder: lastLadder, settings: { t, N, iso } }));
     wireAi();
