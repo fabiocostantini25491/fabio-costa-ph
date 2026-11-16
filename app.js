@@ -1595,6 +1595,7 @@ function renderInterest(p) {
   box.onmouseleave = () => { if (interestGone) syncInterest(); };
   box.onclick = e => {
     e.stopPropagation();   // never closes the photo or changes image
+    const w = e.target.closest("[data-printsize]"); if (w) { e.preventDefault(); openPrintSize(w.dataset.printsize, p, true); return; }
     const t = e.target.closest(".pi-toggle");
     if (t) { const open = !box.classList.contains("open"); box.classList.toggle("open", open); t.setAttribute("aria-expanded", String(open));
       if (!open) { interestGone = true; syncInterest(); } else trackEvent("Gallery: print or licence opened"); return; }
