@@ -4363,3 +4363,51 @@ html.ps-open, html.ps-open body { overflow: hidden; }
 .ps-stage svg .ps-t{fill:#4f483f!important}
 .ps-stage svg{max-height:none}
 .ps-card{width:min(860px,100%,calc((100dvh - 330px) * 1.26 + 36px));min-width:min(100%,340px)}
+
+/* Print or licence: chooser in the photo viewer */
+.pi-toggle small{margin-left:6px;font-size:11.5px;color:#ffbe7a;font-weight:600}
+.pi-panel{max-height:min(62vh,560px);overflow:auto}
+.rq-kind{display:inline-flex;border:1px solid rgba(255,255,255,.18);border-radius:999px;overflow:hidden;margin-bottom:12px}
+.rq-kind button{padding:8px 18px;border:0;background:transparent;color:#c9d6e6;font:600 13px var(--sans);cursor:pointer}
+.rq-kind button[aria-selected="true"]{background:#ffbe7a;color:#1a1006}
+.rq-opts{display:grid;gap:6px}
+.rq-sizes{grid-template-columns:repeat(auto-fill,minmax(112px,1fr))}
+.rq-opts button{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.03);color:#f2f6fb;font:500 13px var(--sans);cursor:pointer;text-align:left}
+.rq-opts button b{color:#ffbe7a;font-weight:700;white-space:nowrap}
+.rq-opts button[aria-pressed="true"]{border-color:#ffbe7a;background:rgba(255,190,122,.12)}
+.rq-opts button small{display:block;color:#9fb0c4;font-size:11.5px;line-height:1.35;margin-top:2px}
+.rq-opts button strong{font-weight:600;color:#fff}
+.rq-sizes .rq-wall{grid-column:1/-1;justify-content:center;color:#ffbe7a;background:transparent;border-style:dashed}
+.rq-hint{grid-column:1/-1;margin:2px 0 0!important;font-size:11.5px!important;color:#8a99ab!important}
+.rq-foot{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,.1)}
+.rq-sel{display:flex;flex-direction:column;margin-right:auto}
+.rq-sel small{font-size:11.5px;color:#9fb0c4}.rq-sel b{font-size:18px;color:#ffbe7a}
+.rq-add[aria-pressed="true"]{border-color:#7fd8b0;color:#7fd8b0}
+.rq-now{padding:10px 16px;border-radius:999px;border:0;background:#ffbe7a;color:#1a1006;font:700 13.5px var(--sans);cursor:pointer}
+/* request form */
+.pick-dialog{width:min(640px,94vw)}
+.rq-list li{align-items:flex-start}
+.rq-item{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px}
+.rq-line{display:flex;gap:6px;flex-wrap:wrap}
+.rq-line select{max-width:100%;padding:7px 9px;border-radius:10px;border:1px solid rgba(255,255,255,.18);background:#0b1524;color:#f2f6fb;font:500 13px var(--sans)}
+.rq-desc{color:#8a99ab;font-size:11.5px;line-height:1.35}
+.rq-p{color:#ffbe7a;white-space:nowrap;font-size:14px;margin-top:2px}
+.rq-total{display:flex;justify-content:space-between;align-items:baseline;margin:14px 0 2px;padding-top:12px;border-top:1px solid rgba(255,255,255,.12)}
+.rq-total span{font:600 12px var(--sans);letter-spacing:.14em;text-transform:uppercase;color:#c9d6e6}.rq-total b{font-size:22px;color:#ffbe7a}
+.rq-total-note{margin:0 0 14px;font-size:12px;color:#8a99ab;text-align:right}
+.rq-fields{display:grid;gap:10px;margin-bottom:14px}
+.rq-fields label{display:flex;flex-direction:column;gap:5px;font-size:13px;color:#c9d6e6}
+.rq-fields label small{color:#8a99ab}
+.rq-fields input,.rq-fields textarea{padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.18);background:#0b1524;color:#f2f6fb;font:400 14px var(--sans)}
+.rq-send{background:#ffbe7a!important;color:#1a1006!important;border-color:#ffbe7a!important}
+.rq-small{margin:8px 0 0;font-size:11.5px;color:#8a99ab;line-height:1.45}
+@media (max-width:560px){.rq-foot .rq-now,.rq-foot .rq-add{flex:1 1 auto;text-align:center;justify-content:center}}
+.pi-row{flex-wrap:wrap}
+@media (max-width:560px){.pi-toggle small{display:none}}
+.rq-list li{position:relative;display:grid;grid-template-columns:56px minmax(0,1fr);gap:6px 10px;padding-right:36px}
+.rq-list li img{grid-row:span 2}
+.rq-list .rq-p{grid-column:2;margin:0}
+.rq-list .pick-remove{position:absolute;top:6px;right:4px}
+.rq-line select{flex:1 1 130px;min-width:0}
+.rq-line select[data-rqkindsel]{flex:0 0 auto}
+.rq-line select[data-rqlicsel]{flex:1 1 100%}

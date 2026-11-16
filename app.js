@@ -1557,45 +1557,53 @@ function exifTiff(v, t) {
   return camera || settings || lens ? { camera, lens, settings } : null;
 }
 
-/* «Ti interessa questa foto? Contattami»: stampe e licenze, via email o Instagram */
+/* «Print or licence»: choose a print size or a licence for this photo, with its price, and add it to your request */
+function rqChooser(p) {
+  const o = getPickOpt(p.id);
+  return `<div class="rq-kind" role="tablist">
+      <button type="button" role="tab" data-rqkind="print" aria-selected="${o.kind === "print"}">Print</button>
+      <button type="button" role="tab" data-rqkind="licence" aria-selected="${o.kind === "licence"}">Licence</button></div>
+    <div class="rq-opts rq-sizes"${o.kind === "print" ? "" : " hidden"}>${PRINT_SIZES.map(z => { const k = `${z.w}x${z.h}`;
+      return `<button type="button" data-rqsize="${k}" aria-pressed="${o.size === k}"><span>${z.w}×${z.h} cm</span><b>€${z.price}</b></button>`; }).join("")}
+      <button type="button" class="rq-wall" data-printsize="${esc(o.size)}">See it on a wall <span aria-hidden="true">⤢</span></button>
+      <p class="rq-hint">Matte photographic paper mounted on aluminium · shipping quoted with the order</p></div>
+    <div class="rq-opts rq-lics"${o.kind === "licence" ? "" : " hidden"}>${LICENCES.map(l =>
+      `<button type="button" data-rqlic="${l.id}" aria-pressed="${o.lic === l.id}"><span><strong>${esc(l.name)}</strong><small>${esc(l.desc)}</small></span><b>${l.price != null ? `€${l.price}` : esc(l.label)}</b></button>`).join("")}</div>`;
+}
 function renderInterest(p) {
   const box = $("#photoInterest");
   if (!box) return;
-  const ig = String(about.instagram || "").trim().replace(/^@/, "").replace(/^https?:\/\/(www\.)?instagram\.com\//i, "").replace(/\/.*$/, "");
-  const mail = String(about.email || "").trim();
+  const mail = String(about.email || "").trim(), ig = String(about.instagram || "").trim();
   if (!ig && !/^[^\s@]+@[^\s@]+$/.test(mail)) { box.hidden = true; return; }
-  const subject = encodeURIComponent(`About your photo “${p.title}”`);
-  const body = encodeURIComponent(`Hi Fabio,\n\nI'm interested in your photo “${p.title}”${tripById(p.trip)?.name ? ` (${tripById(p.trip).name})` : ""}.\nhttps://fabiocostaph.com/#gallery\n\nI'd like to know more about: [a print / using it / something else]\n\nThanks!`);
+  const o = getPickOpt(p.id), inReq = picks.has(p.id);
   box.hidden = false;
-  box.classList.remove("open");
+  const wasOpen = box.classList.contains("open") && box.dataset.photo === p.id;
+  box.dataset.photo = p.id;
   box.innerHTML = `
     <div class="pi-row">
-      <button type="button" class="pi-toggle" aria-expanded="false">${ICON_SPARK}<span>Interested in this photo?</span></button>
-      <button type="button" class="pi-pick" data-pick-lb="${esc(p.id)}" aria-pressed="${picks.has(p.id)}">${ICON_PICK}<span>${picks.has(p.id) ? "In your selection" : "Add to selection"}</span></button>
+      <button type="button" class="pi-toggle" aria-expanded="${wasOpen}">${ICON_SPARK}<span>Print or licence</span><small>from €25</small></button>
+      <button type="button" class="pi-pick" data-pick-lb="${esc(p.id)}" aria-pressed="${inReq}">${ICON_PICK}<span>${inReq ? "In your request" : "Add to request"}</span></button>
     </div>
     <div class="pi-panel">
-      <p><strong>Prints, licensing or a special use?</strong> Get in touch and tell me what you have in mind.</p>
-      <div class="pi-actions">
-        ${mail ? `<a class="outline-link" href="mailto:${esc(mail)}?subject=${subject}&body=${body}">${ICON_MAIL}<span>Email me</span></a>` : ""}
-        ${ig ? `<a class="outline-link" href="https://ig.me/m/${encodeURIComponent(ig)}" target="_blank" rel="noopener">${ICON_IG}<span>Message on Instagram</span></a>` : ""}
-      </div>
+      ${rqChooser(p)}
+      <div class="rq-foot"><span class="rq-sel"><small>${esc(optLabel(o))}</small><b>${esc(optPriceLabel(o))}</b></span>
+        <button type="button" class="outline-link rq-add" data-rqadd aria-pressed="${inReq}">${inReq ? "✓ In your request" : "Add to request"}</button>
+        <button type="button" class="rq-now" data-rqnow>Request now <span aria-hidden="true">→</span></button></div>
     </div>`;
+  box.classList.toggle("open", wasOpen);
   syncInterest();
   box.onmouseleave = () => { if (interestGone) syncInterest(); };
-  const t = box.querySelector(".pi-toggle");
-  t.addEventListener("click", e => {
-    e.stopPropagation();
-    const open = !box.classList.contains("open");
-    box.classList.toggle("open", open); t.setAttribute("aria-expanded", String(open));
-    if (!open) { interestGone = true; syncInterest(); }
-    if (open) trackEvent("Gallery: interested in photo");
-  });
-  box.querySelectorAll(".pi-actions a").forEach(a => a.addEventListener("click", e => {
-    e.stopPropagation();
-    trackEvent(a.href.startsWith("mailto:") ? "Gallery: photo enquiry by email" : "Gallery: photo enquiry on Instagram");
-  }));
-  box.querySelector("[data-pick-lb]").addEventListener("click", e => { e.stopPropagation(); togglePick(p.id); renderInterest(p); });
-  box.addEventListener("click", e => e.stopPropagation());   // non chiude la foto né cambia immagine
+  box.onclick = e => {
+    e.stopPropagation();   // never closes the photo or changes image
+    const t = e.target.closest(".pi-toggle");
+    if (t) { const open = !box.classList.contains("open"); box.classList.toggle("open", open); t.setAttribute("aria-expanded", String(open));
+      if (!open) { interestGone = true; syncInterest(); } else trackEvent("Gallery: print or licence opened"); return; }
+    const k = e.target.closest("[data-rqkind]"); if (k) { setPickOpt(p.id, { kind: k.dataset.rqkind }); return renderInterest(p); }
+    const z = e.target.closest("[data-rqsize]"); if (z) { setPickOpt(p.id, { kind: "print", size: z.dataset.rqsize }); return renderInterest(p); }
+    const l = e.target.closest("[data-rqlic]"); if (l) { setPickOpt(p.id, { kind: "licence", lic: l.dataset.rqlic }); return renderInterest(p); }
+    if (e.target.closest("[data-pick-lb]") || e.target.closest("[data-rqadd]")) { togglePick(p.id); return renderInterest(p); }
+    if (e.target.closest("[data-rqnow]")) { if (!picks.has(p.id)) togglePick(p.id); trackEvent("Gallery: request now"); openPickRequest(); }
+  };
 }
 
 /* =========================================================
@@ -1611,6 +1619,11 @@ function togglePick(id) {
   renderPickBar();
 }
 function pickedPhotos() { return [...picks].map(id => photos.find(p => p.id === id)).filter(Boolean); }
+// what each photo is wanted for: { kind: "print" | "licence", size: "40x60", lic: "commercial-web" }
+const PICK_OPT_KEY = "fcph-photo-choice";
+const pickOpts = (() => { try { return JSON.parse(localStorage.getItem(PICK_OPT_KEY) || "{}"); } catch { return {}; } })();
+function getPickOpt(id) { return { kind: "print", size: "40x60", lic: "commercial-web", ...(pickOpts[id] || {}) }; }
+function setPickOpt(id, o) { pickOpts[id] = { ...getPickOpt(id), ...o }; try { localStorage.setItem(PICK_OPT_KEY, JSON.stringify(pickOpts)); } catch {} }
 function renderPickBar() {
   let bar = $("#pickBar");
   if (!bar) {
@@ -1624,9 +1637,9 @@ function renderPickBar() {
   if (!show) return;
   bar.innerHTML = `
     <div class="pick-thumbs">${list.slice(0, 4).map(p => `<img src="${esc(p.src)}" alt="">`).join("")}</div>
-    <p><strong>${list.length} photo${list.length > 1 ? "s" : ""}</strong> in your selection</p>
+    <p><strong>${list.length} photo${list.length > 1 ? "s" : ""}</strong> in your request</p>
     <button type="button" class="text-link" id="pickClear">Clear</button>
-    <button type="button" class="outline-link pick-go" id="pickSend">REQUEST LICENCE OR PRINTS <span aria-hidden="true">→</span></button>`;
+    <button type="button" class="outline-link pick-go" id="pickSend">COMPLETE YOUR REQUEST <span aria-hidden="true">→</span></button>`;
   $("#pickClear").onclick = () => { picks.clear(); savePicks(); $$("[data-pick]").forEach(b => b.setAttribute("aria-pressed", "false")); renderPickBar(); };
   $("#pickSend").onclick = openPickRequest;
 }
@@ -1637,45 +1650,86 @@ function openPickRequest() {
     document.body.appendChild(d);
     d.addEventListener("click", e => { if (e.target === d) d.close(); });
   }
+  // on top of the photo viewer, if it's open
+  const host = $("#photoDialog")?.open ? $("#photoDialog") : document.body;
+  if (d.parentNode !== host && !d.open) host.appendChild(d);
   const list = pickedPhotos();
+  if (!list.length) { d.open && d.close(); return; }
   const ig = String(about.instagram || "").trim().replace(/^@/, "").replace(/^https?:\/\/(www\.)?instagram\.com\//i, "").replace(/\/.*$/, "");
   const mail = String(about.email || "").trim(), okMail = /^[^\s@]+@[^\s@]+$/.test(mail);
+  const keep = d.querySelector("form") ? Object.fromEntries(new FormData(d.querySelector("form"))) : {};
+  const total = () => { const opts = list.map(p => getPickOpt(p.id)); const known = opts.map(optPrice).filter(v => v != null);
+    return { sum: known.reduce((a, b) => a + b, 0), quoted: opts.length - known.length, prints: opts.some(o => o.kind === "print"), lics: opts.some(o => o.kind === "licence") }; };
+  const tt = total();
   d.innerHTML = `
     <button class="dialog-close" type="button" data-close aria-label="Close">${ICON.close}</button>
     <form class="pick-form" novalidate>
-      <span class="eyebrow">Licensing &amp; prints</span>
-      <h2>Your selection</h2>
-      <ul class="pick-list">${list.map(p => `<li><img src="${esc(p.src)}" alt=""><span><strong>${esc(p.title)}</strong><small>${esc([tripById(p.trip)?.name, catLabel(p.category)].filter(Boolean).join(" · "))}</small></span>
-        <button type="button" class="pick-remove" data-unpick="${esc(p.id)}" aria-label="Remove ${esc(p.title)}">${ICON.close}</button></li>`).join("")}</ul>
-      <fieldset class="pick-use"><legend>What would you like?</legend>
-        ${["Fine-art prints", "Editorial licence", "Commercial licence", "Not sure yet"].map((u, i) => `<label><input type="checkbox" name="use" value="${u}"${i === 0 ? "" : ""}> ${u}</label>`).join("")}
-      </fieldset>
-      <label class="pick-msg">Anything else? <small>(sizes, quantity, where you'd use them…)</small>
-        <textarea name="msg" rows="3" maxlength="1200"></textarea></label>
+      <span class="eyebrow">Prints &amp; licences</span>
+      <h2>Your request</h2>
+      <ul class="pick-list rq-list">${list.map(p => { const o = getPickOpt(p.id);
+        return `<li data-rqid="${esc(p.id)}"><img src="${esc(p.src)}" alt=""><div class="rq-item"><strong>${esc(p.title)}</strong>
+          <div class="rq-line"><select data-rqkindsel aria-label="Print or licence"><option value="print"${o.kind === "print" ? " selected" : ""}>Print</option><option value="licence"${o.kind === "licence" ? " selected" : ""}>Licence</option></select>
+          ${o.kind === "print"
+            ? `<select data-rqsizesel aria-label="Size">${PRINT_SIZES.map(z => `<option value="${z.w}x${z.h}"${o.size === `${z.w}x${z.h}` ? " selected" : ""}>${z.w}×${z.h} cm · €${z.price}</option>`).join("")}</select>`
+            : `<select data-rqlicsel aria-label="Use">${LICENCES.map(l => `<option value="${l.id}"${o.lic === l.id ? " selected" : ""}>${esc(trS(l.name))} · ${l.price != null ? `€${l.price}` : esc(trS(l.label))}</option>`).join("")}</select>`}
+          </div>${o.kind === "licence" ? `<small class="rq-desc">${esc(trS(licOf(o.lic).desc))}</small>` : ""}</div>
+          <b class="rq-p">${esc(optPriceLabel(o))}</b>
+          <button type="button" class="pick-remove" data-unpick="${esc(p.id)}" aria-label="Remove ${esc(p.title)}">${ICON.close}</button></li>`; }).join("")}</ul>
+      <p class="rq-total"><span>Estimated total</span><b>€${tt.sum}</b></p>
+      <p class="rq-total-note">${[tt.quoted ? `${tt.quoted} ${trS(tt.quoted > 1 ? "items quoted on request" : "item quoted on request")}` : "", tt.prints ? trS("shipping quoted separately") : "", trS("all taxes included")].filter(Boolean).join(" · ")}</p>
+      <div class="rq-fields">
+        <label>Your name<input name="name" autocomplete="name" maxlength="80" required value="${esc(keep.name || "")}"></label>
+        <label>Your email<input name="email" type="email" autocomplete="email" maxlength="200" required value="${esc(keep.email || "")}"></label>
+        ${tt.prints ? `<label>Delivery: city and country <small>(for the shipping quote)</small><input name="where" autocomplete="address-level2" maxlength="120" value="${esc(keep.where || "")}"></label>` : ""}
+        ${tt.lics ? `<label>How will you use the photos? <small>(where, how long, how many copies…)</small><textarea name="use" rows="2" maxlength="800">${esc(keep.use || "")}</textarea></label>` : ""}
+        <label>Anything else? <small>(optional)</small><textarea name="msg" rows="2" maxlength="1200">${esc(keep.msg || "")}</textarea></label>
+      </div>
       <div class="pick-actions">
-        ${okMail ? `<button type="submit" class="outline-link" data-via="email">${ICON_MAIL}<span>Send by email</span></button>` : ""}
+        ${okMail ? `<button type="submit" class="outline-link rq-send" data-via="email">${ICON_MAIL}<span>Send the request</span></button>` : ""}
         ${ig ? `<button type="button" class="outline-link" data-via="instagram">${ICON_IG}<span>Send on Instagram</span></button>` : ""}
       </div>
       <p class="pick-note" role="status"></p>
+      <p class="rq-small">Your request opens in your email app, ready to send to me. I'll reply with the final quote: nothing is charged now.</p>
     </form>`;
   d.querySelector("[data-close]").onclick = () => d.close();
   d.querySelectorAll("[data-unpick]").forEach(b => b.addEventListener("click", () => { togglePick(b.dataset.unpick); if (picks.size) openPickRequest(); else d.close(); }));
+  d.querySelectorAll(".rq-list li").forEach(li => {
+    const id = li.dataset.rqid;
+    li.querySelector("[data-rqkindsel]").onchange = e => { setPickOpt(id, { kind: e.target.value }); openPickRequest(); };
+    const zs = li.querySelector("[data-rqsizesel]"); if (zs) zs.onchange = e => { setPickOpt(id, { size: e.target.value }); openPickRequest(); };
+    const ls = li.querySelector("[data-rqlicsel]"); if (ls) ls.onchange = e => { setPickOpt(id, { lic: e.target.value }); openPickRequest(); };
+  });
   const f = d.querySelector("form");
   const compose = () => {
-    const uses = [...f.querySelectorAll("[name=use]:checked")].map(x => x.value);
-    return `Hi Fabio,\n\nI'm interested in these photographs from fabiocostaph.com:\n\n${list.map((p, i) => `${i + 1}. ${p.title}${tripById(p.trip)?.name ? ` (${tripById(p.trip).name})` : ""}`).join("\n")}\n\n`
-      + (uses.length ? `For: ${uses.join(", ")}\n\n` : "") + (f.msg.value.trim() ? f.msg.value.trim() + "\n\n" : "") + "Thanks!";
+    const v = Object.fromEntries(new FormData(f)), t = total();
+    return `Hi Fabio,\n\nA request from fabiocostaph.com:\n\n`
+      + list.map((p, i) => { const o = getPickOpt(p.id); return `${i + 1}. ${p.title}${tripById(p.trip)?.name ? ` (${tripById(p.trip).name})` : ""}\n   ${optLabel(o, noTr)} — ${optPriceLabel(o, noTr)}\n   ${new URL(p.src, FN_SITE).href}`; }).join("\n\n")
+      + `\n\nEstimated total: €${t.sum}${t.quoted ? ` + ${t.quoted} item(s) on request` : ""}${t.prints ? " + shipping" : ""}\n\n`
+      + `Name: ${v.name || ""}\nEmail: ${v.email || ""}\n`
+      + (t.prints ? `Delivery (city, country): ${v.where || "—"}\n` : "")
+      + (t.lics ? `Use of the licensed photos: ${v.use || "—"}\n` : "")
+      + (v.msg ? `\n${v.msg}\n` : "") + "\nThanks!";
+  };
+  const check = () => {
+    const note = d.querySelector(".pick-note"), v = Object.fromEntries(new FormData(f));
+    if (!String(v.name || "").trim()) { note.textContent = "Please add your name."; f.name.focus(); return false; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v.email || "").trim())) { note.textContent = "Please add a valid email, so I can reply."; f.email.focus(); return false; }
+    note.textContent = ""; return true;
   };
   f.addEventListener("submit", e => {
     e.preventDefault();
-    trackEvent("Gallery: selection sent by email", { photos: list.length });
-    location.href = `mailto:${mail}?subject=${encodeURIComponent(`Photo request — ${list.length} photo${list.length > 1 ? "s" : ""}`)}&body=${encodeURIComponent(compose())}`;
+    if (!check()) return;
+    const t = total();
+    trackEvent("Gallery: request sent by email", { photos: list.length, total: t.sum });
+    location.href = `mailto:${mail}?subject=${encodeURIComponent(`Request — ${list.length} photo${list.length > 1 ? "s" : ""} · ${list.map(p => getPickOpt(p.id).kind).includes("licence") ? (list.map(p => getPickOpt(p.id).kind).includes("print") ? "prints & licences" : "licence") : "print"}`)}&body=${encodeURIComponent(compose())}`;
+    d.querySelector(".pick-note").textContent = "Your email app should be open with the request ready: just press send.";
   });
   d.querySelector("[data-via=instagram]")?.addEventListener("click", async () => {
+    if (!check()) return;
     const note = d.querySelector(".pick-note");
     try { await navigator.clipboard.writeText(compose()); note.textContent = "Your request is copied: paste it in the Instagram chat that just opened."; }
-    catch { note.textContent = "Open the chat and list the photo titles in your message."; }
-    trackEvent("Gallery: selection sent on Instagram", { photos: list.length });
+    catch { note.textContent = "Open the chat and list the photo titles, sizes and uses in your message."; }
+    trackEvent("Gallery: request sent on Instagram", { photos: list.length });
     window.open(`https://ig.me/m/${encodeURIComponent(ig)}`, "_blank", "noopener");
   });
   if (!d.open) d.showModal();
@@ -1937,20 +1991,53 @@ function fnShareInfo(b) {
 }
 // print sizes on a wall, true to scale (gallery viewer and Prices page)
 const PRINT_SIZES = [{ w: 20, h: 30, price: 70 }, { w: 30, h: 45, price: 120 }, { w: 40, h: 60, price: 180 }, { w: 60, h: 90, price: 320 }, { w: 80, h: 120, price: 480 }];
-async function openPrintSize(el) {
-  const [w, h] = el.dataset.printsize.split("x").map(Number);
-  const inViewer = el.closest("#photoDialog");
-  const p = inViewer ? lightboxList[lightboxIndex] : (photos.find(x => x.category === "Paesaggi") || photos[0]);
+// the licences of the Prices page (price null = quoted on request)
+const LICENCES = [
+  { id: "personal", name: "Personal", desc: "Wallpaper, a print for your home, a personal blog", price: 25 },
+  { id: "editorial-web", name: "Editorial web", desc: "An online article, a magazine's blog, editorial social media", price: 80 },
+  { id: "commercial-web", name: "Commercial web", desc: "A company's website and social media, presentations", price: 120 },
+  { id: "editorial-plus", name: "Editorial plus", desc: "Everything in Editorial web, plus inside a printed magazine or book, up to 10,000 copies", price: 150 },
+  { id: "commercial-plus", name: "Commercial plus", desc: "Everything in Commercial web, plus cover, brochure, online advertising, decoration of premises, merchandise", price: 300 },
+  { id: "advertising", name: "Print advertising & outdoor", desc: "Campaigns, billboards", price: null, label: "from €500" },
+  { id: "royalty-free", name: "Extended royalty-free", desc: "All media, multiple uses, non-exclusive", price: 400 },
+  { id: "exclusive", name: "Exclusive", desc: "Nobody else can use the photo", price: null, label: "On request" }
+];
+const sizeOf = k => PRINT_SIZES.find(z => `${z.w}x${z.h}` === k) || PRINT_SIZES[2];
+const licOf = k => LICENCES.find(l => l.id === k) || LICENCES[2];
+const optPrice = o => o.kind === "licence" ? licOf(o.lic).price : sizeOf(o.size).price;
+const trS = s => (window.I18N ? I18N.t(s) : s);
+const noTr = s => s;   // the email to Fabio stays in English
+const optLabel = (o, t = trS) => o.kind === "licence" ? `${t("Licence")} · ${t(licOf(o.lic).name)}` : `${t("Print")} · ${sizeOf(o.size).w}×${sizeOf(o.size).h} cm`;
+const optPriceLabel = (o, t = trS) => { const v = optPrice(o); return v != null ? `€${v}` : t(licOf(o.lic).label || "On request"); };
+async function openPrintSize(sizeKey, p, fromViewer) {
+  const [w, h] = sizeKey.split("x").map(Number);
   if (!p) return;
-  const title = inViewer ? p.title : (window.I18N ? I18N.t("An example from the gallery") : "An example from the gallery");
+  const title = fromViewer ? p.title : (window.I18N ? I18N.t("An example from the gallery") : "An example from the gallery");
   const mail = String(about.email || "").trim(), okMail = /^[^\s@]+@[^\s@]+$/.test(mail);
   try { await lazyScript("printsize.js"); } catch { location.hash = "prices"; return; }
   window.PrintSize.open({ src: p.src, title, size: { w, h }, sizes: PRINT_SIZES,
-    contact: s => okMail ? `mailto:${mail}?subject=${encodeURIComponent(`Print request · ${inViewer ? p.title : "photo"} · ${s.w}×${s.h} cm`)}` : "#prices" });
-  trackEvent("Prints: wall view", { size: el.dataset.printsize, from: inViewer ? "gallery" : "prices" });
+    contact: s => {
+      if (fromViewer) return `#request-${s.w}x${s.h}`;
+      return okMail ? `mailto:${mail}?subject=${encodeURIComponent(`Print request · ${s.w}×${s.h} cm`)}` : "#prices";
+    } });
+  trackEvent("Prints: wall view", { size: sizeKey, from: fromViewer ? "gallery" : "prices" });
 }
-document.addEventListener("click", e => { const el = e.target.closest("[data-printsize]"); if (el) { e.preventDefault(); openPrintSize(el); } });
-document.addEventListener("keydown", e => { if (e.key === "Enter") { const el = e.target.closest?.("tr[data-printsize]"); if (el) openPrintSize(el); } });
+document.addEventListener("click", e => {
+  const el = e.target.closest("[data-printsize]"); if (!el) return;
+  e.preventDefault();
+  const inViewer = !!el.closest("#photoDialog");
+  openPrintSize(el.dataset.printsize, inViewer ? lightboxList[lightboxIndex] : (photos.find(x => x.category === "Paesaggi") || photos[0]), inViewer);
+});
+document.addEventListener("keydown", e => { if (e.key === "Enter") { const el = e.target.closest?.("tr[data-printsize]"); if (el) openPrintSize(el.dataset.printsize, photos.find(x => x.category === "Paesaggi") || photos[0], false); } });
+// «Ask for this print» from the wall view inside the gallery: choose that size for this photo and open the request
+document.addEventListener("click", e => {
+  const a = e.target.closest('.ps [data-psgo]'); if (!a || !a.getAttribute("href").startsWith("#request-")) return;
+  e.preventDefault();
+  const p = lightboxList[lightboxIndex]; if (!p) return;
+  setPickOpt(p.id, { kind: "print", size: a.getAttribute("href").slice(9) });
+  if (!picks.has(p.id)) togglePick(p.id);
+  window.PrintSize?.close(); openPickRequest();
+});
 async function fnShare(b) {
   const url = /^https?:/.test(b.dataset.fnshare) ? b.dataset.fnshare : `${FN_SITE}s/${b.dataset.fnshare}.html`;
   try { await lazyScript("sharecard.js"); } catch { return fnShareLink(b); }
