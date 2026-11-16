@@ -4411,3 +4411,13 @@ html.ps-open, html.ps-open body { overflow: hidden; }
 .rq-line select{flex:1 1 130px;min-width:0}
 .rq-line select[data-rqkindsel]{flex:0 0 auto}
 .rq-line select[data-rqlicsel]{flex:1 1 100%}
+/* licences only: the print file */
+.rq-print{margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,255,255,.1)}
+.rq-print-h{margin:0 0 8px!important;font-size:13px!important;color:#fff!important;font-weight:600}
+.rq-print-h small{display:block;font-weight:400;color:#8a99ab;font-size:11.5px;margin-top:2px}
+.rq-print .rq-sizes{display:flex;flex-wrap:wrap;gap:6px}
+.rq-print .rq-sizes button{padding:7px 11px;border-radius:999px;border:1px solid rgba(255,255,255,.18);background:transparent;color:#f2f6fb;font:600 12.5px var(--sans);cursor:pointer}
+.rq-print .rq-sizes button[aria-pressed="true"]{border-color:#ffbe7a;background:rgba(255,190,122,.14);color:#ffbe7a}
+.rq-print .rq-wall{margin-top:8px;width:100%;padding:8px;border-radius:12px;border:1px dashed rgba(255,190,122,.5);background:transparent;color:#ffbe7a;font:600 13px var(--sans);cursor:pointer}
+.prices-sizes td:last-child{text-align:right}
+.rq-line select[data-rqsizesel]{flex:1 1 100%}

@@ -48,6 +48,7 @@
     box.querySelectorAll("[data-pssize]").forEach(b => b.classList.toggle("on", b.dataset.pssize === `${cur.w}x${cur.h}`));
     box.querySelectorAll("[data-psor]").forEach(b => b.classList.toggle("on", (b.dataset.psor === "p") === portrait));
     box.querySelector("[data-psprice]").textContent = cur.price ? `€${cur.price}` : "";
+    box.querySelector("[data-psprice]").hidden = !cur.price;
     const go = box.querySelector("[data-psgo]"); go.href = opt.contact ? opt.contact(cur) : "#prices";
   }
 
@@ -68,13 +69,13 @@
       <header><div><small>${esc(T("Print sizes, true to scale"))}</small><b>${esc(o.title || "")}</b></div><button type="button" class="ps-x" data-psx aria-label="${esc(T("Close"))}">✕</button></header>
       <div class="ps-stage"></div>
       <p class="ps-scale">${esc(T("The sofa is 210 cm wide and the person 175 cm tall."))}</p>
-      <div class="ps-sizes">${o.sizes.map(s => `<button type="button" data-pssize="${s.w}x${s.h}">${s.w}×${s.h}<small>€${s.price}</small></button>`).join("")}</div>
+      <div class="ps-sizes">${o.sizes.map(s => `<button type="button" data-pssize="${s.w}x${s.h}">${s.w}×${s.h}${s.price ? `<small>€${s.price}</small>` : ""}</button>`).join("")}</div>
       <div class="ps-row">
         <span class="ps-or"><button type="button" data-psor="l">${esc(T("Landscape"))}</button><button type="button" data-psor="p">${esc(T("Portrait"))}</button></span>
         <b class="ps-price" data-psprice></b>
-        <a class="ps-go" data-psgo href="#prices">${esc(T("Ask for this print"))}</a>
+        <a class="ps-go" data-psgo href="#prices">${esc(T(o.goLabel || "Ask for this print"))}</a>
       </div>
-      <p class="ps-note">${esc(T("Matte photographic paper mounted on aluminium. Formats are 2:3; other proportions on request."))}</p>
+      <p class="ps-note">${esc(T(o.note || "Formats are 2:3."))}</p>
     </div>`;
     // above an open dialog (the photo viewer) too
     (document.querySelector("dialog[open]") || document.body).appendChild(box);
