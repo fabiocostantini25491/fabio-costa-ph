@@ -824,7 +824,7 @@ const Spots = (() => {
           <p class="sx-links"><button type="button" class="text-link" id="phList">List</button><button type="button" class="text-link" id="myProfile">${profiles.some(p => p.user_id === myUid()) ? "My community profile" : "Join the community map"}</button>${nodiV && profiles.some(p => p.user_id === myUid()) ? `<button type="button" class="text-link" id="iPosted">📣 I just posted</button>` : ""}</p>
           ${nodiV ? `<button type="button" class="sx-item" id="expList" style="--c:#ffd9a0"><span class="sx-ico">🧭</span><span class="sx-name">Local experts</span><small>${experts.size}</small><span class="sx-go" aria-hidden="true">›</span></button>` : ""}
           ${nodiV && myExpert() ? `<button type="button" class="sx-item" id="myArea" style="--c:#ffd9a0"><span class="sx-ico">🧭</span><span class="sx-name">My area</span><span class="sx-go" aria-hidden="true">›</span></button>` : ""}
-          <button type="button" class="sx-item" id="meetList" style="--c:#ffd166"><span class="sx-ico">👥</span><span class="sx-name">Meetups</span><small>${upcomingMeetups().length}</small><span class="sx-go" aria-hidden="true">›</span></button>
+          <button type="button" class="sx-item" id="meetList" style="--c:#ffd166"><span class="sx-ico">👥</span><span class="sx-name">Meetups</span><span class="sx-go" aria-hidden="true">›</span></button>
           <p class="sx-links"><button type="button" class="text-link" id="meetAdd">＋ Organise a meetup</button></p>
           ${signV && clusterV ? `<button type="button" class="sx-item" id="folkCollections" style="--c:#ffd27a"><span class="sx-ico">📚</span><span class="sx-name">Collections by folk</span><span class="sx-go" aria-hidden="true">›</span></button>
           <button type="button" class="sx-item" id="folkLocal" style="--c:#ffd27a"><span class="sx-ico">🏅</span><span class="sx-name">Folk of this area</span><span class="sx-go" aria-hidden="true">›</span></button>` : ""}
@@ -1467,7 +1467,7 @@ const Spots = (() => {
       </div>` : ""}
       ${commV && !guest ? `<div class="spots-community" role="group" aria-label="Community">
         <button type="button" class="filter comm-btn${onlyFavs ? " active" : ""}" id="onlyFavs" aria-pressed="${onlyFavs}">♥ My spots <small>${favs.size}</small></button>
-        <button type="button" class="filter comm-btn" id="meetList">👥 Meetups <small>${upcomingMeetups().length}</small></button>
+        <button type="button" class="filter comm-btn" id="meetList">👥 Meetups</button>
         <button type="button" class="filter comm-btn" id="meetAdd">＋ Meetup</button>
         ${CLUSTER_KEYS.map(k => `<button type="button" class="filter comm-btn${showFolks.has(k) ? " active" : ""}" data-showfolk="${k}" aria-pressed="${showFolks.has(k)}">${CLUSTERS[k].ico} ${esc(CLUSTERS[k].folk)} <small>${profiles.filter(p => onMapP(p) && pFolkSet(p).includes(k)).length}</small></button>`).join("")}
         <button type="button" class="text-link" id="phList">List</button>
@@ -3680,7 +3680,7 @@ const Spots = (() => {
     const alert = alertsOf(s).length ? `<span class="alert-dot" title="${esc(ALERTS[alertsOf(s)[0].kind].label)}"></span>` : "";
     const ask = askSpots.get(s.id), askB = ask ? `<span class="ask-dot${ask.photo ? " photo" : ""}${ask.mine === ask.n ? " mine" : ""}" title="${esc(IT_() ? (ask.n === 1 ? "Un folk ha una domanda qui" : `${ask.n} domande dei folk qui`) : (ask.n === 1 ? "A folk has a question here" : `${ask.n} folk questions here`))}">?</span>` : "";
     return L.divIcon({ className: "", iconSize: [28, 28], iconAnchor: [14, 14], tooltipAnchor: [0, -14], popupAnchor: [0, -12],
-      html: `<div class="${cls}" style="--c:${color}${sg?.top ? `;--fc:${CLUSTERS[sg.top].color}` : ""}"${tier || sg?.fabio ? ` title="${sg.fabio ? "Fabio's pick" : ""}${sg.fabio && tier ? " · " : ""}${tier ? trS("Signed by {n} folk").replace("{n}", sg.total) : ""}"` : ""}>${icon}${sg?.fabio ? `<span class="pick-star" aria-hidden="true">★</span>` : tier ? `<span class="folk-badge" aria-hidden="true">${CLUSTERS[sg.top].ico}</span>` : ""}${offer ? `<span class="offer-tag" aria-hidden="true">%</span>` : ""}${favs.has(s.id) ? `<span class="fav-dot" aria-hidden="true">♥</span>` : ""}${s.verified_at && !s.outdated ? `<span class="vf-dot" aria-hidden="true">✓</span>` : ""}${alert}${askB}</div>` });
+      html: `<div class="${cls}" style="--c:${color}${sg?.top ? `;--fc:${CLUSTERS[sg.top].color}` : ""}"${tier || sg?.fabio ? ` title="${sg.fabio ? "Fabio's pick" : ""}${sg.fabio && tier ? " · " : ""}${tier ? trS("Signed by the folk") : ""}"` : ""}>${icon}${sg?.fabio ? `<span class="pick-star" aria-hidden="true">★</span>` : tier ? `<span class="folk-badge" aria-hidden="true">${CLUSTERS[sg.top].ico}</span>` : ""}${offer ? `<span class="offer-tag" aria-hidden="true">%</span>` : ""}${favs.has(s.id) ? `<span class="fav-dot" aria-hidden="true">♥</span>` : ""}${s.verified_at && !s.outdated ? `<span class="vf-dot" aria-hidden="true">✓</span>` : ""}${alert}${askB}</div>` });
   }
   const fmtMoneyWs = (v, cur) => { try { return new Intl.NumberFormat(window.I18N?.locale || "en-GB", { style: "currency", currency: cur || "EUR", maximumFractionDigits: v % 1 ? 2 : 0 }).format(v); } catch { return `${v} ${cur || ""}`; } };
   function wsBoxHtml(s) {
@@ -6062,7 +6062,8 @@ const Spots = (() => {
   /* ---------- la scheda del luogo: prima le persone, poi le parole ----------
      «The folk who know this place»: chi l'ha firmato o raccontato, dal primo (First folk) in poi; poi il consenso e il polso */
   const shortName = n => { const w = String(n || "Folk").trim().split(/\s+/); return w.length > 1 ? `${w[0]} ${w[w.length - 1][0]}.` : w[0]; };
-  const setCnt = (el, k, v) => { const c = el.querySelector(`[data-cnt="${k}"]`); if (c) { c.textContent = v; c.hidden = v === "" || v == null; } };
+  // no counts in view (16 Nov 2026): a dot says «there is something here»; the rating keeps its value
+  const setCnt = (el, k, v) => { const c = el.querySelector(`[data-cnt="${k}"]`); if (c) { const on = !(v === "" || v == null || v === 0); c.textContent = on ? (k === "cons" ? v : "•") : ""; c.hidden = !on; } };
   // not every impression weighs the same: on the spot counts more, then who knows the area and who has been there
   const BASIS = { onspot: ["📍", "on the spot", 1.5], local: ["🏡", "knows the area", 1.25], visited: ["🧳", "has been here", 1] };
   const impWeight = r => (BASIS[r.on_spot ? "onspot" : r.basis] || [, , 1])[2] * (experts.has(r.user_id) ? 1.2 : 1);
@@ -6083,7 +6084,7 @@ const Spots = (() => {
     scored.filter(([r]) => CLUSTERS[r.folk]).forEach(([r, v]) => { (byF[r.folk] ||= []).push(v); });
     const dots = v => `<span class="pc-dots" aria-hidden="true">${[1, 2, 3, 4, 5].map(n => `<i style="--f:${Math.max(0, Math.min(1, v - n + 1)) * 100}%"></i>`).join("")}</span>`;
     return `<div class="pc-cbox${subs.length ? "" : " solo"}">
-        <div class="pc-ring" style="--p:${(avg / 5 * 100).toFixed(1)}%"><span class="pc-ring-ico" aria-hidden="true">⛰</span><b>${avg.toFixed(1)}<small>/5</small></b><em>Overall</em><span>👥 ${scored.length} folk</span></div>
+        <div class="pc-ring" style="--p:${(avg / 5 * 100).toFixed(1)}%"><span class="pc-ring-ico" aria-hidden="true">⛰</span><b>${avg.toFixed(1)}<small>/5</small></b><em>Overall</em></div>
         ${subs.length ? `<ul class="pc-subs">${subs.map(([l, d, v]) => `<li><span>${l}<small>${d}</small></span><b>${v.toFixed(1)}</b>${dots(v)}</li>`).join("")}</ul>` : ""}
       </div>
       ${Object.keys(byF).length > 1 ? `<p class="rev-byfolk">${CLUSTER_KEYS.filter(k => byF[k]).map(k => `<span style="--c:${CLUSTERS[k].color}" title="${folkOf(k)}">${CLUSTERS[k].ico} ${(byF[k].reduce((a, b) => a + b, 0) / byF[k].length).toFixed(1)}</span>`).join("")}</p>` : ""}
@@ -6115,9 +6116,9 @@ const Spots = (() => {
             ${p.uid === first ? `<i class="pc-crown" aria-hidden="true">👑</i>` : ""}<span class="pc-av">${avatarHtml(prof, 56)}</span>
             ${p.uid === first ? `<em class="pc-first">First folk</em>` : ""}
             <b>${esc(shortName(prof.display_name || p.name))}</b><small>${c ? `${c.ico} ${esc(folkOf(p.folk))}` : "Folk"}</small><time title="Signed on">${p.onSpot ? "📍 " : "✍ "}${esc(fmtWhen(p.at))}</time></button>`; }).join("")}
-          ${more > 0 ? `<span class="pc-more"><b>+${more}</b><small>other folk</small></span>` : ""}</div>
-        ${tot ? `<div class="pc-bar" role="img" aria-label="Signed by ${tot} folk">${CLUSTER_KEYS.filter(k => by[k]).map(k => `<i style="--c:${CLUSTERS[k].color};flex:${by[k]}"></i>`).join("")}</div>
-          <p class="pc-legend">${CLUSTER_KEYS.filter(k => by[k]).map(k => `<span style="--c:${CLUSTERS[k].color}">${CLUSTERS[k].ico} ${by[k]}</span>`).join("")}<em>${trS("Signed by {n} folk").replace("{n}", tot)}</em></p>` : ""}`;
+          ${more > 0 ? `<span class="pc-more"><b>+</b><small>other folk</small></span>` : ""}</div>
+        ${tot ? `<div class="pc-bar" role="img" aria-label="Signed by the folk">${CLUSTER_KEYS.filter(k => by[k]).map(k => `<i style="--c:${CLUSTERS[k].color};flex:${by[k]}"></i>`).join("")}</div>
+          <p class="pc-legend">${CLUSTER_KEYS.filter(k => by[k]).map(k => `<span style="--c:${CLUSTERS[k].color}">${CLUSTERS[k].ico} ${esc(folkOf(k))}</span>`).join("")}<em>${trS("Signed by the folk")}</em></p>` : ""}`;
       box.querySelectorAll("[data-member]").forEach(b => b.addEventListener("click", () => openMemberProfile(b.dataset.member)));
     } else box.innerHTML = `<p class="pc-empty">No folk has signed it yet: be the first.</p>`;
     setCnt(el, "folk", list.length || "");
@@ -6126,7 +6127,7 @@ const Spots = (() => {
       const since = new Date(Date.now() - 30 * 864e5).toISOString(), recent = x => String(x.created_at || "") >= since;
       const rows = [["👥", "New signatures (30 days)", folkSigns.filter(recent).length], ["📷", "New photos", photos.filter(recent).length],
         ["💬", "New stories", reviews.filter(r => r.body && recent(r)).length], ["🌿", "Tips from the folk", signs.filter(g => g.tip && recent(g)).length]].filter(r => r[2] > 0);
-      pbox.innerHTML = rows.length ? `<p class="pc-alive">This place is alive in the community.</p><ul class="pc-pl">${rows.map(([i, l, n]) => `<li><span aria-hidden="true">${i}</span>${l}<b>+${n}</b></li>`).join("")}</ul>`
+      pbox.innerHTML = rows.length ? `<p class="pc-alive">This place is alive in the community.</p><ul class="pc-pl">${rows.map(([i, l]) => `<li><span aria-hidden="true">${i}</span>${l}</li>`).join("")}</ul>`
         : `<p class="pc-empty">Quiet for now: the first signatures will make it move.</p>`;
       const aq = askSpots.get(s.id);
       setCnt(el, "pulse", [aq ? `❓ ${aq.n}` : "", rows.length ? `+${rows.reduce((a, r) => a + r[2], 0)}` : ""].filter(Boolean).join(" · "));

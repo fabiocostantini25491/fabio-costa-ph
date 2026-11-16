@@ -29,7 +29,7 @@ window.FolkHub = (() => {
     "gave impressions of {p}": "ha dato le sue impressioni su {p}", "added a photo of {p}": "ha aggiunto una foto di {p}", "added {p} to the map": "ha aggiunto {p} alla mappa",
     "updated {f} of {p}": "ha aggiornato {f} di {p}",
     "👑 First to sign it": "👑 Il primo a firmarlo", "No folk yet: be the first to sign it": "Nessun folk ancora: firmalo per primo",
-    "expires {w}": "scade {w}", "expired": "scaduto", "Confirmed by {n} folk": "Confermato da {n} folk", "Not confirmed yet": "Non ancora confermato",
+    "expires {w}": "scade {w}", "expired": "scaduto", "Confirmed by {n} folk": "Confermato da {n} folk", "Confirmed by the folk": "Confermato dai folk", "Not confirmed yet": "Non ancora confermato",
     "🔒 This place is on the folk's map.": "🔒 Questo posto è sulla mappa dei folk.", "Become folk to see where →": "Diventa folk per vedere dove →",
     "🛡️ A fragile place: its name stays among the folk who know it.": "🛡️ Un posto fragile: il nome resta tra i folk che lo conoscono.",
     "Appreciate": "Apprezza", "Useful": "Utile", "Been there!": "Ci sono stato!", "You've been": "Ci sei stato", "Save": "Salva", "Saved": "Salvato",
@@ -63,7 +63,7 @@ window.FolkHub = (() => {
     "Join the folk to build yours.": "Diventa folk per costruire la tua.",
     "Search folk by name or area": "Cerca folk per nome o zona", "All": "Tutti", "Suggested for you": "Suggeriti per te", "No folk found.": "Nessun folk trovato.",
     "{n} signatures": "{n} firme", "{n} on the spot ": "{n} sul posto ", "{n} followers": "{n} follower", "local in {a}": "locale a {a}",
-    "followed by {n} folk you follow": "seguito da {n} folk che segui", "signed {n} of your places": "ha firmato {n} dei tuoi posti",
+    "followed by {n} folk you follow": "seguito da {n} folk che segui", "followed by folk you follow": "seguito da folk che segui", "signed {n} of your places": "ha firmato {n} dei tuoi posti",
     "local folk in {a}": "folk locale a {a}", "{n} infos confirmed by others": "{n} info confermate da altri", "{n} signatures on the spot": "{n} firme sul posto", "travels like you": "viaggia come te",
     "See activity": "Vedi attività", "Open full profile →": "Apri il profilo completo →", "Recent activity": "Attività recenti", "No public activity yet.": "Ancora nessuna attività pubblica.",
     "followers": "follower", "following": "seguiti",
@@ -172,11 +172,11 @@ window.FolkHub = (() => {
       case "sign": what = tx(i.folk === "fabio" ? "picked {p}" : "signed {p}", { p: place }); big = open && !!i.txt;
         body = `${i.extra?.first ? `<span class="hb-tag gold">${e(tx("👑 First to sign it"))}</span>` : ""}${i.txt ? `<p class="hb-quote">“${u(i.txt)}”</p>` : ""}`; break;
       case "cond": { const c = K.COND[i.extra?.cond] || ["📣", "An update"]; what = tx("says how it is now at {p}", { p: place });
-        body = `<div class="hb-conds"><span>${c[0]} ${e(c[1])}</span>${i.extra?.expires ? `<small>${e(until(i.extra.expires))}</small>` : ""}${nn.checks ? `<small>· ${e(tx("Confirmed by {n} folk", { n: nn.checks }))}</small>` : ""}</div>${i.txt ? `<p class="hb-txt">${u(i.txt)}</p>` : ""}`; break; }
+        body = `<div class="hb-conds"><span>${c[0]} ${e(c[1])}</span>${i.extra?.expires ? `<small>${e(until(i.extra.expires))}</small>` : ""}${nn.checks ? `<small>· ${e(tx("Confirmed by the folk"))}</small>` : ""}</div>${i.txt ? `<p class="hb-txt">${u(i.txt)}</p>` : ""}`; break; }
       case "fact": case "check": {
         what = tx(i.kind === "check" ? "checked {t} at {p}" : i.extra?.changed ? "updated {t} at {p}" : "added {t} at {p}", { t: `<b>${t[0]} ${e(t[1])}</b>`, p: place });
         let val = ""; if (open && i.extra?.data) { try { val = K.factValue({ topic: i.extra.topic, data: i.extra.data, note: i.kind === "fact" ? i.txt : null, _s: { lat: i.lat, lon: i.lon } }); } catch {} }
-        const conf = nn.checks ? tx("Confirmed by {n} folk", { n: nn.checks }) : tx("Not confirmed yet");
+        const conf = nn.checks ? tx("Confirmed by the folk") : tx("Not confirmed yet");
         body = open ? `<div class="hb-fact"><i>${t[0]}</i><div><b>${e(t[1])}</b>${val}<small>${e(conf)}</small></div>${nn.checks ? `<span class="hb-st">✓ ${e(tx("Checked"))}</span>` : ""}</div>` : ""; break; }
       case "story": what = tx("told a story about {p}", { p: place }); big = !!open;
         body = `${i.txt || i.extra?.title ? `<p class="hb-txt">${u(i.txt || i.extra.title)}${(i.txt || "").length >= 280 ? "…" : ""}</p>` : ""}`; break;
@@ -339,7 +339,7 @@ window.FolkHub = (() => {
         ${rest.length ? `<div class="hb-grid">${rest.map(folkCard).join("")}</div>` : (sugg || []).length ? "" : `<div class="hb-empty"><p>${e(tx("No folk found."))}</p></div>`}`;
     } catch (err) { out.innerHTML = errorHtml(err); }
   }
-  const whyText = w => !w ? "" : w.k === "via" ? tx("followed by {n} folk you follow", { n: w.n }) : w.k === "shared" ? tx("signed {n} of your places", { n: w.n })
+  const whyText = w => !w ? "" : w.k === "via" ? tx("followed by folk you follow") : w.k === "shared" ? tx("signed {n} of your places", { n: w.n })
     : w.k === "local" ? tx("local folk in {a}", { a: w.area }) : w.k === "checked" ? tx("{n} infos confirmed by others", { n: w.n }) : w.k === "onspot" ? tx("{n} signatures on the spot", { n: w.n }) : w.k === "folk" ? tx("travels like you") : "";
   function folkCard(f) {
     const follows = S.follow.has(f.user_id) ? S.follow.get(f.user_id) : f.follows;

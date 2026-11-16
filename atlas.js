@@ -18,7 +18,7 @@ window.FolkAtlas = (() => {
     "✓ I've been here": "✓ Ci sono stato", "♡ I want to go": "♡ Voglio andarci", "✓ Declared": "✓ Dichiarato", "♥ In your dreams": "♥ Nei tuoi sogni",
     "Tap again to remove": "Tocca di nuovo per togliere",
     "Dream come true: {w}": "Sogno realizzato: {w}", "Dream come true": "Sogno realizzato",
-    "{n} folk have been": "{n} folk ci sono stati", "1 folk has been": "1 folk c'è stato", "No folk there yet: you could be the first": "Nessun folk ancora: potresti essere il primo",
+    "{n} folk have been": "{n} folk ci sono stati", "Folk have been here": "Ci sono stati dei folk", "Folk have been nearby": "Ci sono stati dei folk qui vicino", "1 folk has been": "1 folk c'è stato", "No folk there yet: you could be the first": "Nessun folk ancora: potresti essere il primo",
     "{n} saved places": "{n} posti salvati", "1 saved place": "1 posto salvato", "From your saved places": "Dai tuoi posti salvati",
     "🧭 Ask the folk": "🧭 Chiedi ai folk", "Show on the map": "Mostra sulla mappa", "Remove": "Togli",
     "＋ Add a dream or a country": "＋ Aggiungi un sogno o un Paese", "Country": "Paese", "Choose a country": "Scegli un Paese",
@@ -367,7 +367,7 @@ window.FolkAtlas = (() => {
     function itemHtml(x) {
       const pl = x.w && isPlace(x.w), title = x.w?.label || nameOf(x.id);
       const sub = [x.w?.label ? [x.w.region, nameOf(x.id)].filter(Boolean).join(" · ") : "", x.sv.length ? (x.sv.length === 1 ? t("1 saved place") : t("{n} saved places", { n: x.sv.length })) : "", !x.w ? t("From your saved places") : ""].filter(Boolean).join(" · ");
-      const f = S.folk[x.key], n = x.done ? `✓ ${esc(t("Dream come true"))}` : f ? esc(f === 1 ? t(pl ? "1 folk has been nearby" : "1 folk has been") : t(pl ? "{n} folk have been nearby" : "{n} folk have been", { n: f })) : "";
+      const f = S.folk[x.key], n = x.done ? `✓ ${esc(t("Dream come true"))}` : f ? esc(t(pl ? "Folk have been nearby" : "Folk have been here")) : "";
       const now = !x.done ? (S.now?.[x.key] || [])[0] : null;
       const listBtn = x.w ? (S.editList === String(x.w.id)
         ? `<input class="fa-listin" data-falistin="${x.w.id}" list="faLists" maxlength="40" value="${esc(x.w.list || "")}" placeholder="${esc(t("e.g. Summer 2027, Weekends"))}" aria-label="${esc(t("List"))}">`
