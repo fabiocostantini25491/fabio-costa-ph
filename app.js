@@ -1977,7 +1977,7 @@ function fnShareInfo(b) {
     if (g) Object.assign(i, { kicker: `Field Notes · ${T("Guide")}`, sub: g.sottotitolo || "", img: g.copertina ? mediaUrl(g.copertina) : (document.querySelector("#journalMag .gd-hero img")?.src || "") });
   } else if ((m = h.match(/^pdf-(.+)$/))) {
     const g = guidesPdf.find(x => slug(x.titolo) === m[1]);
-    if (g) Object.assign(i, { kicker: `Field Notes · ${T("Free guide")}`, sub: g.sottotitolo || g.descrizione || "", img: g.copertina ? mediaUrl(g.copertina) : "",
+    if (g) Object.assign(i, { kicker: `Field Notes · ${T("Guide")}`, sub: g.sottotitolo || g.descrizione || "", img: g.copertina ? mediaUrl(g.copertina) : "",
       pdfPage: g.copertina ? null : () => lazyScript("pdfview.js").then(() => window.PdfView.firstPage(pdfHref(g))) });
   } else if (/^magazine/.test(h)) {
     const [name, ...rest] = title.split(" · "), cov = document.querySelector("#journalMag .mz-cover-title")?.textContent || "";
