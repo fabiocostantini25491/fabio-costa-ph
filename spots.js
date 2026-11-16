@@ -2167,6 +2167,8 @@ const Spots = (() => {
     else map.setView([42.5, 12.5], 5);
     setTimeout(() => { if (map) { map.invalidateSize(); drawClusters(); } }, 30);
     if (ui === "earth") earthAfterBuild();
+    // Fabio's journeys (ex Explore) live on this map: app.js adds them each time the map is (re)built
+    window.dispatchEvent(new CustomEvent("fc:spotsmap", { detail: { map, stage: document.getElementById("spotsMap")?.parentElement } }));
   }
 
   /* raggruppa gli spot vicini (griglia in pixel), solo quelli nell'area visibile */

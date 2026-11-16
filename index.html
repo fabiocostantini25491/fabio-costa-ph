@@ -45,7 +45,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,500&family=Oswald:wght@500;700&family=Libre+Caslon+Text:ital,wght@0,400;0,700;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap">
-  <link rel="stylesheet" href="style.css?v=20261116m">
+  <link rel="stylesheet" href="style.css?v=20261116n">
   <!-- statistiche anonime, senza cookie (Umami): le pagine e i clic li segnala app.js -->
   <script>
   /* single login with spotfolk.eu: a link from there can carry a one-time session of its own (#sfh=…).
@@ -95,7 +95,6 @@
     <span class="header-divider" aria-hidden="true"></span>
     <nav id="mainNav" aria-label="Sections">
       <a href="#home" data-page="home">HOME</a>
-      <a href="#explore" data-page="explore">EXPLORE</a>
       <a href="#gallery" data-page="gallery">GALLERY</a>
       <a href="#journal" data-page="journal">JOURNAL</a>
       <a href="#tools" data-page="tools">TOOLS</a>
@@ -146,7 +145,7 @@
           <p class="hero-kicker">Photography · Travel · Exploration</p>
           <h1>Fabio Costa Ph</h1>
           <p class="hero-tagline">Field notes from planet Earth.</p>
-          <a class="hero-button" href="#explore"><span>EXPLORE THE PLACES</span> <span aria-hidden="true">→</span></a>
+          <a class="hero-button" href="#spotfolk"><span>EXPLORE THE PLACES</span> <span aria-hidden="true">→</span></a>
         </div>
         <div class="hero-foot">
           <p class="hero-coords" aria-live="off">
@@ -177,26 +176,8 @@
       </div>
     </section>
 
-    <!-- EXPLORE -->
-    <section class="page content-page" id="explore" data-page="explore" hidden>
-      <!-- EXPLORE: il pianeta è Marte -->
-      <header class="ex-head">
-        <div class="ex-planet" aria-hidden="true"></div>
-        <div class="ex-titlebox">
-          <svg class="ex-orbit" viewBox="0 0 420 140" aria-hidden="true"><path d="M12 112C40 150 250 128 350 64 398 34 404 10 372 8"/><circle cx="372" cy="10" r="9"/></svg>
-          <h1 class="ex-title">Explore</h1><span class="ex-slash" aria-hidden="true">///</span>
-        </div>
-        <div class="ex-intro"><span class="ex-eyebrow">PHOTOGRAPHIC EXPLORATION</span>
-          <p>Discover my journeys and the locations I've photographed around the world.</p></div>
-      </header>
-      <div class="explore-stage">
-        <div id="exploreMap" class="map map-explore" aria-label="Interactive travel map"></div>
-        <button class="map-search" id="mapSearch" type="button">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 21 21"/></svg>
-          Search a place
-        </button>
-        <svg class="compass compass-small" viewBox="0 0 100 100" aria-hidden="true"><use href="#compassShape"/></svg>
-        <span class="hud-frame" aria-hidden="true"></span>
+    <!-- EXPLORE now lives inside SpotFolk: app.js moves this journey drawer and its tabs onto the SpotFolk map -->
+    <div id="exKit" hidden>
         <div class="ex-tabs" aria-label="Map lists">
           <button type="button" class="ex-tab" data-exlist="journeys" aria-controls="locationPanel" aria-expanded="false" title="Journeys">
             <svg class="ex-tab-ic lander" viewBox="0 0 46 50" aria-hidden="true"><path d="M12 14h22l3 14H9z"/><path d="M17 17h12v6H17z"/><path d="M11 28 5 41M35 28l6 13M17 28l-3 13M29 28l3 13M2 41h7M37 41h7M15 14l2-5h12l2 5M30 9l6-6"/></svg>
@@ -207,8 +188,7 @@
           <button type="button" class="ex-tab-toggle" id="exToggle" aria-controls="locationPanel" aria-expanded="false" aria-label="Open the list"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>
         </div>
         <aside class="location-panel ex-drawer" id="locationPanel" aria-live="polite" aria-hidden="true" inert></aside>
-      </div>
-    </section>
+    </div>
 
     <!-- GALLERY -->
     <section class="page content-page" id="gallery" data-page="gallery" hidden>
@@ -257,7 +237,7 @@
             <nav class="fn-nav" id="fnTopics" aria-label="Topics"></nav>
             <p class="fn-side-label">Quick navigation</p>
             <nav class="fn-nav" aria-label="Site">
-              <a href="#home">Home</a><a href="#explore">Explore</a><a href="#gallery">Gallery</a><a href="#journal" class="active">Journal</a><a href="#tools">Tools</a><a href="#spotfolk">SpotFolk</a><a href="#crew">The crew</a><a href="#about">About</a>
+              <a href="#home">Home</a><a href="#gallery">Gallery</a><a href="#journal" class="active">Journal</a><a href="#tools">Tools</a><a href="#spotfolk">SpotFolk</a><a href="#crew">The crew</a><a href="#about">About</a>
               <a href="#write" class="fn-write">✍ Write for the Journal</a>
             </nav>
           </aside>
@@ -302,16 +282,16 @@
         <a href="guides/contributors-quick-guide.pdf" target="_blank" rel="noopener" download>📄 Contributors in one page</a>
       </div>
       <nav class="guide-toc" aria-label="Guide sections">
-        <a href="#guide-explore">Explore</a><a href="#guide-gallery">Gallery</a><a href="#guide-journal">Field Notes</a>
+        <a href="#guide-explore">My journeys</a><a href="#guide-gallery">Gallery</a><a href="#guide-journal">Field Notes</a>
         <a href="#guide-tools">Tools</a><a href="#guide-spots">SpotFolk</a><a href="#guide-app">App &amp; languages</a>
       </nav>
       <div class="guide">
         <article class="guide-card" id="guide-explore">
-          <span class="guide-num">01</span><h2>Explore</h2>
-          <p>An interactive map of my journeys. Every astronaut is a place I've photographed.</p>
+          <span class="guide-num">01</span><h2>My journeys</h2>
+          <p>My journeys and the places I've photographed are on the SpotFolk map. Every lander is a journey.</p>
           <ul>
-            <li>Tap an astronaut to open the place: photos, notes and the story behind it.</li>
-            <li>Use the <b>search</b> (magnifier, top right) to find places, photos and articles.</li>
+            <li>Tap a lander to open the journey: photos, notes and the story behind it.</li>
+            <li>Use the <b>Journeys</b> and <b>Locations</b> tabs on the map to browse them all.</li>
           </ul>
         </article>
         <article class="guide-card" id="guide-gallery">
@@ -688,7 +668,7 @@
         <button class="pv-ic" type="button" id="pvMenu" aria-label="Menu" aria-expanded="false" aria-controls="pvMenuList"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
       </div>
       <nav class="pv-menu" id="pvMenuList" hidden>
-        <a href="#home" data-pvnav>Home</a><a href="#explore" data-pvnav>Explore</a><a href="#gallery" data-pvnav>Gallery</a><a href="#journal" data-pvnav>Journal</a><a href="#tools" data-pvnav>Tools</a><a href="#spotfolk" data-pvnav>SpotFolk</a><a href="#crew" data-pvnav>The crew</a><a href="#about" data-pvnav>About</a>
+        <a href="#home" data-pvnav>Home</a><a href="#gallery" data-pvnav>Gallery</a><a href="#journal" data-pvnav>Journal</a><a href="#tools" data-pvnav>Tools</a><a href="#spotfolk" data-pvnav>SpotFolk</a><a href="#crew" data-pvnav>The crew</a><a href="#about" data-pvnav>About</a>
       </nav>
     </header>
     <div class="pv-bar">
@@ -741,12 +721,12 @@
 <!--BODY-END-->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
-  <script src="i18n.js?v=20261116m"></script>
-  <script src="app.js?v=20261116m"></script>
-  <script src="spots.js?v=20261116m"></script>
-  <script src="tools.js?v=20261116m"></script>
-  <script src="pwa.js?v=20261116m"></script>
-  <script src="feedback.js?v=20261116m"></script>
-  <script src="system.js?v=20261116m"></script>
+  <script src="i18n.js?v=20261116n"></script>
+  <script src="app.js?v=20261116n"></script>
+  <script src="spots.js?v=20261116n"></script>
+  <script src="tools.js?v=20261116n"></script>
+  <script src="pwa.js?v=20261116n"></script>
+  <script src="feedback.js?v=20261116n"></script>
+  <script src="system.js?v=20261116n"></script>
 </body>
 </html>

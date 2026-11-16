@@ -50,11 +50,11 @@
         { name: "Open the map", go: go("spotfolk") },
         { name: "How SpotFolk works", go: go("guide-spots") },
         { name: "SpotFolk in one page", go: pdf("spots-quick-guide.pdf") }] },
-    { id: "mars", x: 44.0, y: 48.6, r: 2.6, name: "Mars", section: "Explore", label: "Explore",
-      desc: "The explorer's planet: an interactive map of my journeys. Every astronaut is a place, with its photos, exact coordinates and stories.",
-      go: go("explore"), moons: () => trips.filter(t => photosOfTrip(t.id).length)
+    { id: "mars", x: 44.0, y: 48.6, r: 2.6, name: "Mars", section: "My journeys", label: "Journeys",
+      desc: "The explorer's planet: my journeys, on the SpotFolk map. Every lander is a place, with its photos, exact coordinates and stories.",
+      go: go("spotfolk"), moons: () => trips.filter(t => photosOfTrip(t.id).length)
         .slice().sort((a, b) => (b.start || "").localeCompare(a.start || "")).slice(0, 6)
-        .map(t => ({ name: t.name, go: later("explore", () => openTrip(t.id), 140) })) },
+        .map(t => ({ name: t.name, go: () => window.goTrip?.(t.id) })) },
     { id: "jupiter", x: 55.2, y: 48.0, r: 6.4, name: "Jupiter", section: "Journal", label: "Journal",
       desc: "The giant: Field Notes. Reportage in the style of the old picture magazines and practical guides — when to go, where to park, what to avoid.",
       go: () => { if (typeof renderJournal !== "undefined") renderJournal.topic = ""; location.hash = "journal"; },
@@ -71,7 +71,7 @@
       desc: "The odd one, tilted on its side: the site's manual. What each section does, step by step, with one-page guides to download.",
       go: go("guide"), moons: () => [
         { name: "Site guide", go: go("guide") },
-        { name: "Explore & Gallery", go: go("guide-explore") },
+        { name: "Journeys & Gallery", go: go("guide-explore") },
         { name: "The site in one page", go: pdf("site-quick-guide.pdf") }] },
     { id: "neptune", x: 93.0, y: 48.3, r: 3.3, name: "Neptune", section: "The app", label: "App",
       desc: "The farthest blue: take the whole system in your pocket. Install fabiocostaph.com on your phone — it opens like an app and works offline.",

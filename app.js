@@ -789,6 +789,36 @@ function createMap(kind) {
   return map;
 }
 
+/* Explore lives inside SpotFolk (16 Nov 2026): Fabio's journeys, his locations and the journey drawer go on the SpotFolk map,
+   every time spots.js builds it. The drawer and its tabs are kept in #exKit (index.html) and moved into the map's stage. */
+let exKit = null, exStage = null;
+function attachExplore(map, stage) {
+  if (!map || !stage || !window.L) return;
+  exKit ||= { tabs: $("#exKit .ex-tabs"), panel: $("#exKit #locationPanel") };
+  if (!exKit.tabs || !exKit.panel) return;
+  exStage = stage;
+  stage.classList.add("exm");
+  stage.append(exKit.tabs, exKit.panel);
+  roverLayer = L.layerGroup().addTo(map);
+  shotLayer = L.layerGroup().addTo(map);
+  pinLayers.explore = L.layerGroup().addTo(map);
+  maps.explore = map;
+  map.on("zoomend", () => { if (maps.explore === map) { updateShotDots(); drawRovers(); } });
+  map.on("remove", () => { if (maps.explore === map) { maps.explore = null; pinLayers.explore = null; roverLayer = shotLayer = null; } });
+  if (activeTripId && tripById(activeTripId)) { const id = activeTripId; openTrip(id); } else renderPanelIntro();
+  const wait = exWaiters.splice(0); wait.forEach(fn => fn());
+}
+window.addEventListener("fc:spotsmap", e => attachExplore(e.detail?.map, e.detail?.stage));
+/* go to a journey (or a photo of it) on the SpotFolk map */
+const exWaiters = [];
+function onExplore(fn) {
+  const run = () => setTimeout(fn, 80);
+  if (document.body.dataset.page === "spots" && maps.explore) return run();
+  exWaiters.push(run);
+  if (location.hash !== "#spotfolk") location.hash = "spotfolk";
+}
+const goTrip = (id, photoId, subId) => onExplore(() => openTrip(id, photoId, subId));
+window.goTrip = goTrip;
 
 /* =========================================================
    4b. HOME: mappa notturna fissa con astronauti luminosi
@@ -877,14 +907,11 @@ function drawHomePins() {
       title: label, keyboard: true, riseOnHover: true
     }).addTo(map._pins);
     m.bindTooltip(n === 1 ? esc(g.trips[0].name) : `${n} spots<br><small>${g.trips.map(t => esc(t.name)).join(" · ")}</small>`, { direction: "top" });
-    m.on("click", () => {
-      location.hash = "explore";
-      setTimeout(() => {
-        if (n === 1) return openTrip(g.trips[0].id);
-        const em = maps.explore;
-        if (em) em.flyToBounds(L.latLngBounds(g.trips.map(t => [t.lat, t.lon])).pad(0.2), { ...mapPadding(), maxZoom: 9, duration: 1 });
-      }, 120);
-    });
+    m.on("click", () => onExplore(() => {
+      if (n === 1) return openTrip(g.trips[0].id);
+      const em = maps.explore;
+      if (em) em.flyToBounds(L.latLngBounds(g.trips.map(t => [t.lat, t.lon])).pad(0.2), { ...mapPadding(), maxZoom: 9, duration: 1 });
+    }));
   });
   startHomeCycle(spots);
   drawHomeNews();
@@ -940,7 +967,7 @@ function newsItems() {
     if (!fresh.length) return;
     const when = fresh.map(p => addedOn.foto[p.raw]).sort().pop();
     items.push({ kind: "photos", when, lat: t.lat, lon: t.lon, label: fresh.length === 1 ? "New photo" : `${fresh.length} new photos`, title: t.name,
-      go: () => { location.hash = "explore"; setTimeout(() => openTrip(t.id), 120); } });
+      go: () => goTrip(t.id) });
   });
   (homeWorkshops || []).forEach(w => {
     if (!isFresh(w.created_at)) return;
@@ -1038,7 +1065,7 @@ function startHomeCycle(spots) {
 function mapPadding() {
   const wide = window.innerWidth > 900;
   const panel = $("#locationPanel");
-  const open = $(".explore-stage")?.classList.contains("ex-open");
+  const open = exStage?.classList.contains("ex-open");
   const right = wide && panel && open ? panel.offsetWidth + 40 : 40;
   return { paddingTopLeft: [60, 60], paddingBottomRight: [right, 60] };
 }
@@ -1074,7 +1101,7 @@ function drawPins(kind) {
   layer.clearLayers();
   trips.forEach(t => {
     if (!photosOfTrip(t.id).length) return;
-    if (distKm(t, HOME_BASE) > 50)
+    if (kind !== "explore" && distKm(t, HOME_BASE) > 50)   // on the SpotFolk map the routes from home would cross everything
       L.polyline(curve(HOME_BASE, t), { color: "#ffa14a", weight: 1.4, opacity: 0.7, dashArray: "1 7", lineCap: "round", interactive: false, className: "ex-route" }).addTo(layer);
   });
   trips.forEach(t => {
@@ -1082,7 +1109,7 @@ function drawPins(kind) {
     const m = L.marker([t.lat, t.lon], { icon: pinIcon(kind === "explore" && t.id === activeTripId), title: t.name, keyboard: true, riseOnHover: true }).addTo(layer);
     m.bindTooltip(t.name, { direction: "top" });
     m.on("click", () => {
-      if (kind === "home") { location.hash = "explore"; setTimeout(() => openTrip(t.id), 60); }
+      if (kind === "home") goTrip(t.id);
       else openTrip(t.id);
     });
   });
@@ -1107,7 +1134,7 @@ function tripListHtml(list) {
    Da chiuso la mappa usa tutta la larghezza. */
 let exListView = "journeys";
 function exDrawer(open) {
-  const stage = $(".explore-stage"), panel = $("#locationPanel");
+  const stage = exStage, panel = $("#locationPanel");
   if (!stage || !panel) return;
   if (open === undefined) open = !stage.classList.contains("ex-open");
   stage.classList.toggle("ex-open", open);
@@ -1163,7 +1190,7 @@ function renderPanelIntro(view) {
   $$("#locationPanel [data-trip]").forEach(b => b.addEventListener("click", () => openTrip(b.dataset.trip, null, b.dataset.sub || "")));
   $("#exClose").addEventListener("click", () => exDrawer(false));
   $("#exGallery").addEventListener("click", () => { gallery.trip = null; gallery.sub = ""; gallery.collection = ""; gallery.category = "Tutte"; location.hash = "gallery"; });
-  exDrawer($(".explore-stage")?.classList.contains("ex-open"));
+  exDrawer(exStage?.classList.contains("ex-open"));
   drawPins("explore");
 }
 
@@ -1495,7 +1522,7 @@ function renderJourneyFacts(p) {
     <ul>${[t.country, t.start ? fmtRange(t.start, t.end) : "", n === 1 ? tr("1 photo") : tr("{n} photos").replace("{n}", n), sb ? sb.name : ""].filter(Boolean).map(x => `<li>${esc(x)}</li>`).join("")}</ul>`;
   box.querySelector("[data-open-trip]").addEventListener("click", () => {
     $("#photoDialog").close();
-    location.hash = "explore"; setTimeout(() => openTrip(t.id), 60);
+    goTrip(t.id);
   });
 }
 /* Lettore EXIF minimo (JPEG): marca, modello, obiettivo, focale, diaframma, tempo, ISO.
@@ -2056,7 +2083,7 @@ function renderArticle(id) {
       <a class="fn-back" href="#journal">← Back to Field Notes</a>
     </div><p class="fn-foot">Field Notes / Fabio Costa Ph</p>`);
   reader.hidden = false;
-  $("#articleTrip")?.addEventListener("click", () => { location.hash = "explore"; setTimeout(() => openTrip(t.id), 60); });
+  $("#articleTrip")?.addEventListener("click", () => goTrip(t.id));
   requestAnimationFrame(() => $("#journalMag").scrollIntoView({ behavior: "smooth", block: "start" }));
 }
 /* l'articolo impaginato (usato anche per l'anteprima di «Write for the Journal») */
@@ -2569,8 +2596,8 @@ function pickResult(b) {
   const { kind, id } = b.dataset;
   if (kind === "world") return searchWorld(b.dataset.q);
   $("#searchDialog").close();
-  if (kind === "trip") { location.hash = "explore"; setTimeout(() => openTrip(id), 60); }
-  if (kind === "photo") { const p = photos.find(x => x.id === id); location.hash = "explore"; setTimeout(() => { openTrip(p.trip, p.id); openPhoto(p.id, photosOfTrip(p.trip)); }, 60); }
+  if (kind === "trip") goTrip(id);
+  if (kind === "photo") { const p = photos.find(x => x.id === id); if (p) { goTrip(p.trip, p.id); setTimeout(() => openPhoto(p.id, photosOfTrip(p.trip)), 900); } }
   if (kind === "article") location.hash = "art-" + id;
   if (kind === "place") flyToPlace(+b.dataset.lat, +b.dataset.lon, b.dataset.name, b.dataset.full);
 }
@@ -2605,8 +2632,7 @@ async function searchWorld(q) {
 }
 
 function flyToPlace(lat, lon, name, full) {
-  location.hash = "explore";
-  setTimeout(() => {
+  onExplore(() => {
     const map = maps.explore;
     if (!map) return;
     searchMarker?.remove();
@@ -2620,7 +2646,7 @@ function flyToPlace(lat, lon, name, full) {
       .openPopup();
     map.flyTo([lat, lon], 11, { duration: 1.1 });
     searchMarker.getPopup().getElement()?.querySelector("[data-near]")?.addEventListener("click", e => openTrip(e.currentTarget.dataset.near));
-  }, 80);
+  });
 }
 
 /* =========================================================
@@ -2688,7 +2714,7 @@ function renderAbout() {
 /* =========================================================
    10. NAVIGAZIONE
    ========================================================= */
-const PAGES = ["home", "explore", "gallery", "journal", "tools", "spots", "hub", "about", "guide", "privacy", "terms", "cookies", "crew", "prices"];
+const PAGES = ["home", "gallery", "journal", "tools", "spots", "hub", "about", "guide", "privacy", "terms", "cookies", "crew", "prices"];
 
 /* =========================================================
    STATISTICHE (Umami, anonime e senza cookie)
@@ -2826,6 +2852,7 @@ function route() {
   if (hash.startsWith("author-")) { page = "journal"; authorSlug = hash.slice(7); }
   // porte d'ingresso dei folk (link nei post): #wayfolk-hikers, #wayfolk-backpackers… (anche #spots-…)
   if (hash === "spotfolk" || hash === "wayfolk") page = "spots";
+  if (hash === "explore") { history.replaceState(null, "", "#spotfolk"); return route(); }   // Explore now lives inside SpotFolk
   const galleryKey = (hash.match(/^gallery-(.+)$/) || [])[1];
   if (galleryKey) { page = "gallery"; if (!SF) galleryFromHash(galleryKey); }
   // The Folk Hub (#hub): members see everything, visitors an active preview of the public places
@@ -2868,11 +2895,6 @@ function route() {
   if (page === "home") {
     const hm = createHomeMap();
     if (hm) setTimeout(fitHomeMap, 30);
-  }
-  if (page === "explore") {
-    const map = createMap("explore");
-    if (map) setTimeout(() => map.invalidateSize(), 30);
-    if (!activeTripId) renderPanelIntro();
   }
   if (page === "gallery") renderGallery();
   if (page === "crew") renderCrew();
@@ -2974,25 +2996,25 @@ function bindEvents() {
   $("#dialogMapButton").addEventListener("click", () => {
     const p = lightboxList[lightboxIndex];
     dlg.close();
-    if (p) { location.hash = "explore"; setTimeout(() => openTrip(p.trip, p.id), 60); }
+    if (p) goTrip(p.trip, p.id);
   });
 
   const sdlg = $("#searchDialog");
   $("#searchToggle").addEventListener("click", () => openSearch());
-  $("#mapSearch").addEventListener("click", () => openSearch());
+  $("#mapSearch")?.addEventListener("click", () => openSearch());
   // linguette del pannello Explore
   $$(".ex-tab").forEach(b => b.addEventListener("click", () => {
-    const st = $(".explore-stage"), same = st.classList.contains("ex-open") && !activeTripId && exListView === b.dataset.exlist;
+    const st = exStage, same = st.classList.contains("ex-open") && !activeTripId && exListView === b.dataset.exlist;
     if (same) { exDrawer(false); return; }
     photoMarker?.remove(); photoMarker = null;
     renderPanelIntro(b.dataset.exlist); exDrawer(true);
   }));
   $("#exToggle")?.addEventListener("click", () => {
-    const st = $(".explore-stage");
+    const st = exStage;
     if (!st.classList.contains("ex-open") && !activeTripId) renderPanelIntro();
     exDrawer();
   });
-  document.addEventListener("keydown", e => { if (e.key === "Escape" && document.body.dataset.page === "explore" && $(".explore-stage")?.classList.contains("ex-open") && !document.querySelector("dialog[open]")) exDrawer(false); });
+  document.addEventListener("keydown", e => { if (e.key === "Escape" && document.body.dataset.page === "spots" && exStage?.classList.contains("ex-open") && !document.querySelector("dialog[open]")) exDrawer(false); });
   $("#searchClose").addEventListener("click", () => sdlg.close());
   sdlg.addEventListener("click", e => { if (e.target === sdlg) sdlg.close(); });
   $("#searchInput").addEventListener("input", e => {
