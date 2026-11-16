@@ -1935,6 +1935,22 @@ function fnShareInfo(b) {
   }
   return i;
 }
+// print sizes on a wall, true to scale (gallery viewer and Prices page)
+const PRINT_SIZES = [{ w: 20, h: 30, price: 70 }, { w: 30, h: 45, price: 120 }, { w: 40, h: 60, price: 180 }, { w: 60, h: 90, price: 320 }, { w: 80, h: 120, price: 480 }];
+async function openPrintSize(el) {
+  const [w, h] = el.dataset.printsize.split("x").map(Number);
+  const inViewer = el.closest("#photoDialog");
+  const p = inViewer ? lightboxList[lightboxIndex] : (photos.find(x => x.category === "Paesaggi") || photos[0]);
+  if (!p) return;
+  const title = inViewer ? p.title : (window.I18N ? I18N.t("An example from the gallery") : "An example from the gallery");
+  const mail = String(about.email || "").trim(), okMail = /^[^\s@]+@[^\s@]+$/.test(mail);
+  try { await lazyScript("printsize.js"); } catch { location.hash = "prices"; return; }
+  window.PrintSize.open({ src: p.src, title, size: { w, h }, sizes: PRINT_SIZES,
+    contact: s => okMail ? `mailto:${mail}?subject=${encodeURIComponent(`Print request · ${inViewer ? p.title : "photo"} · ${s.w}×${s.h} cm`)}` : "#prices" });
+  trackEvent("Prints: wall view", { size: el.dataset.printsize, from: inViewer ? "gallery" : "prices" });
+}
+document.addEventListener("click", e => { const el = e.target.closest("[data-printsize]"); if (el) { e.preventDefault(); openPrintSize(el); } });
+document.addEventListener("keydown", e => { if (e.key === "Enter") { const el = e.target.closest?.("tr[data-printsize]"); if (el) openPrintSize(el); } });
 async function fnShare(b) {
   const url = /^https?:/.test(b.dataset.fnshare) ? b.dataset.fnshare : `${FN_SITE}s/${b.dataset.fnshare}.html`;
   try { await lazyScript("sharecard.js"); } catch { return fnShareLink(b); }
