@@ -45,7 +45,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,500&family=Oswald:wght@500;700&family=Libre+Caslon+Text:ital,wght@0,400;0,700;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap">
-  <link rel="stylesheet" href="style.css?v=20261115m">
+  <link rel="stylesheet" href="style.css?v=20261116a">
   <!-- statistiche anonime, senza cookie (Umami): le pagine e i clic li segnala app.js -->
   <script>
   /* single login with spotfolk.eu: a link from there can carry a one-time session of its own (#sfh=…).
@@ -320,7 +320,7 @@
           <ul>
             <li>Tap a photo to open it full screen. On a phone, turn it sideways or use the rotate button.</li>
             <li>Tap the <b>heart</b> on the photos you like to build a selection, then send it to me in one message.</li>
-            <li>Every photo is available for <b>licensing</b> (editorial and commercial) and as a <b>fine-art print</b>.</li>
+            <li>Every photo is available for <b>licensing</b> (editorial and commercial) and as a <b>fine-art print</b>: see the <a href="#prices">prices</a>.</li>
           </ul>
         </article>
         <article class="guide-card" id="guide-journal">
@@ -430,8 +430,42 @@
     </section>
 
     <!-- PRIVACY e TERMINI (pagine richieste anche da Google per l'accesso con Google) -->
+    <section class="page content-page legal-page prices-page" id="prices" data-page="prices" hidden>
+      <div class="section-heading"><div><span class="eyebrow">PRINTS &amp; LICENCES</span><h1>Prices</h1></div>
+        <p>Every photograph on the site is available as a print for your wall, and with a licence for editorial or commercial use.</p></div>
+      <div class="legal">
+      <h2>Prints</h2>
+      <p>Matte photographic paper mounted on aluminium: no reflections from the room, perfectly flat, made to last.</p>
+      <div class="legal-table prices-table"><table><thead><tr><th>Size</th><th>Price</th></tr></thead><tbody>
+        <tr><td>20 × 30 cm</td><td><b>€70</b></td></tr>
+        <tr><td>30 × 45 cm</td><td><b>€120</b></td></tr>
+        <tr><td>40 × 60 cm</td><td><b>€180</b></td></tr>
+        <tr><td>60 × 90 cm</td><td><b>€320</b></td></tr>
+        <tr><td>80 × 120 cm</td><td><b>€480</b></td></tr>
+      </tbody></table></div>
+      <p>Hanging system included. Shipping is quoted with your order.</p>
+      <h2>Printing &amp; delivery</h2>
+      <p>Every print is produced by <b>Saal Digital</b>, a professional German photo lab. To keep it safe and fast, your print is shipped <b>directly from the lab to the address you give me</b> — it never passes through a second courier. I check every file before it goes to print.</p>
+      <h2>Licences</h2>
+      <p>Tell me how you'll use the photo and I'll confirm the right licence. Licences are non-exclusive and for one project, unless stated otherwise.</p>
+      <div class="legal-table prices-table prices-lic"><table><thead><tr><th>Licence</th><th>What it covers</th><th>Price</th></tr></thead><tbody>
+        <tr><td>Personal</td><td>Wallpaper, a print for your home, a personal blog</td><td><b>€25</b></td></tr>
+        <tr><td>Editorial web</td><td>An online article, a magazine's blog, editorial social media</td><td><b>€80</b></td></tr>
+        <tr><td>Commercial web</td><td>A company's website and social media, presentations</td><td><b>€120</b></td></tr>
+        <tr><td>Editorial plus</td><td>Everything in Editorial web, plus inside a printed magazine or book, up to 10,000 copies</td><td><b>€150</b></td></tr>
+        <tr><td>Commercial plus</td><td>Everything in Commercial web, plus cover, brochure, online advertising, decoration of premises, merchandise</td><td><b>€300</b></td></tr>
+        <tr><td>Print advertising &amp; outdoor</td><td>Campaigns, billboards</td><td><b>from €500</b>, on request</td></tr>
+        <tr><td>Extended royalty-free</td><td>All media, multiple uses, non-exclusive</td><td><b>€400</b></td></tr>
+        <tr><td>Exclusive</td><td>Nobody else can use the photo</td><td>On request</td></tr>
+      </tbody></table></div>
+      <h2>How to order</h2>
+      <p>Pick your photos in the <a href="#gallery">Gallery</a> (tap the heart to build a selection), then write to me with the size or the use you have in mind:</p>
+      <p class="contact-links prices-contact" data-contact></p>
+      <p class="legal-note">Prices in euros, all taxes included. For prints, your name and delivery address are passed to Saal Digital only to produce and ship your order (see the <a href="#privacy">Privacy</a> page).</p>
+      </div>
+    </section>
     <section class="page content-page legal-page" id="privacy" data-page="privacy" hidden>
-      <div class="section-heading"><div><span class="eyebrow">PRIVACY NOTICE · ART. 13 GDPR · UPDATED 12 NOVEMBER 2026</span><h1>Privacy</h1></div>
+      <div class="section-heading"><div><span class="eyebrow">PRIVACY NOTICE · ART. 13 GDPR · UPDATED 16 NOVEMBER 2026</span><h1>Privacy</h1></div>
         <p>How fabiocostaph.com and SpotFolk (spotfolk.eu) use your personal data, why, for how long, and what you can do about it. No advertising, no tracking cookies, nothing sold to anyone.</p></div>
       <div class="legal">
       <h2>1. Data controller</h2>
@@ -447,6 +481,7 @@
       <li><b>Private to you</b> — saved places, the meetups you join and your activity history.</li>
       <li><b>Position</b> — used only when you tap “Near me” or add something at your position; it is processed in your browser and stored only if you save a place, trip or notice there.</li>
       <li><b>Messages</b> — what you write to me by email, in the feedback form or in a request to become a contributor.</li>
+      <li><b>Orders</b> — if you buy a print or a licence: name, email, delivery address (for prints), what you ordered and the invoice details.</li>
       </ul>
       <p>I don't process special categories of data (health, religion, political opinions and similar): please don't include them in what you write.</p>
       <h2>3. Why, on what legal basis, for how long</h2>
@@ -456,6 +491,7 @@
       <tr><td>Creating and managing your SpotFolk account</td><td>Performance of the service you ask for (art. 6.1.b)</td><td>Until you delete your account</td></tr>
       <tr><td>Showing what you share to the other members and, on the places of the public selection, to every visitor</td><td>Performance of the service (art. 6.1.b)</td><td>Until you delete it or your account; places stay on the map without your name</td></tr>
       <tr><td>Moderation, flags, abuse, defending legal claims</td><td>Legitimate interest (art. 6.1.f)</td><td>As long as needed to handle them and any related claim</td></tr>
+      <tr><td>Selling prints and licences: producing, shipping and invoicing your order</td><td>Performance of the contract (art. 6.1.b) and legal obligation (art. 6.1.c)</td><td>As long as tax law requires for invoices and accounting records</td></tr>
       <tr><td>Answering your messages and requests</td><td>Your request (art. 6.1.b) and legitimate interest (art. 6.1.f)</td><td>Until the matter is closed, or until you ask me to delete them</td></tr>
       <tr><td>Complying with the law and with authorities' requests</td><td>Legal obligation (art. 6.1.c)</td><td>As long as the law requires</td></tr>
       </tbody></table></div>
@@ -466,6 +502,7 @@
       <ul>
       <li><b>Supabase Inc.</b> — database, login and file storage; it acts as processor on my behalf.</li>
       <li><b>GitHub Inc.</b> — hosting of the two sites and of the downloadable PDFs.</li>
+      <li><b>Saal Digital Fotoservice GmbH</b> (Germany) — only if you order a print: your name and delivery address, to produce and ship it directly to you.</li>
       <li><b>Umami</b> — anonymous statistics, without cookies.</li>
       <li><b>Map, font and data services</b> — Esri, NASA, OpenStreetMap, Komoot (Photon), Nominatim, Open-Meteo, Windy (webcams), NOAA (aurora forecast), Google Fonts, jsDelivr and cdnjs receive your IP address to deliver their content, as with any website.</li>
       <li><b>Other members</b> — see your name next to what you share. On the places of the public selection (about one every 15 km, never fragile places) the full card is visible to everyone, including visitors who are not members: your name, folk, profile photo, signatures, stories and photos on those places. Everything else stays visible to members only.</li>
@@ -632,7 +669,7 @@
   <footer class="site-footer">
     <span>© <span id="year"></span> <span class="owner-name" data-owner>Fabio Costantini</span> · FABIO COSTA PH · <span class="vat" data-no-i18n>P.IVA IT16670871009</span></span>
     <span class="contact-links footer-contact" data-contact aria-label="Contacts"></span>
-    <span><a class="footer-guide" href="#guide">How it works</a> · <a class="footer-guide" href="#privacy">Privacy</a> · <a class="footer-guide" href="#cookies">Cookies</a> · <a class="footer-guide" href="#terms">Terms</a> · <a class="footer-guide" href="#crew">The crew</a> · <a class="footer-guide" href="#feedback" data-feedback>Feedback</a></span>
+    <span><a class="footer-guide" href="#guide">How it works</a> · <a class="footer-guide" href="#prices">Prices</a> · <a class="footer-guide" href="#privacy">Privacy</a> · <a class="footer-guide" href="#cookies">Cookies</a> · <a class="footer-guide" href="#terms">Terms</a> · <a class="footer-guide" href="#crew">The crew</a> · <a class="footer-guide" href="#feedback" data-feedback>Feedback</a></span>
   </footer>
 
   <!-- Lightbox -->
@@ -703,12 +740,12 @@
 <!--BODY-END-->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
-  <script src="i18n.js?v=20261115m"></script>
-  <script src="app.js?v=20261115m"></script>
-  <script src="spots.js?v=20261115m"></script>
-  <script src="tools.js?v=20261115m"></script>
-  <script src="pwa.js?v=20261115m"></script>
-  <script src="feedback.js?v=20261115m"></script>
-  <script src="system.js?v=20261115m"></script>
+  <script src="i18n.js?v=20261116a"></script>
+  <script src="app.js?v=20261116a"></script>
+  <script src="spots.js?v=20261116a"></script>
+  <script src="tools.js?v=20261116a"></script>
+  <script src="pwa.js?v=20261116a"></script>
+  <script src="feedback.js?v=20261116a"></script>
+  <script src="system.js?v=20261116a"></script>
 </body>
 </html>

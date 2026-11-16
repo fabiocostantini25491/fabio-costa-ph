@@ -4301,3 +4301,24 @@ html.shc-open, html.shc-open body { overflow: hidden; }
 .shc-acts button { flex: 1 1 30%; padding: 11px 10px; border-radius: 12px; border: 1px solid rgba(255,255,255,.18); background: transparent; color: #f2f6fb; font: 600 14px var(--sans, "DM Sans", sans-serif); cursor: pointer; }
 .shc-acts .shc-go { flex-basis: 100%; background: #ffbe7a; border-color: #ffbe7a; color: #1a1006; font-size: 15px; }
 .shc-tip { margin: 0; font-size: 12.5px; line-height: 1.45; color: #8a99ab; }
+
+/* Prices page: tables fit the phone, prices never wrap */
+.prices-table table{min-width:0}
+.prices-table td:last-child,.prices-table th:last-child{white-space:nowrap;text-align:right}
+.prices-table td:last-child b{font-size:16px}
+.prices-contact{display:flex;flex-wrap:wrap;gap:10px 18px;margin-top:10px}
+@media (max-width:560px){
+  .prices-table table{font-size:13.5px}
+  .prices-table th,.prices-table td{padding:9px 9px}
+  .prices-table td:first-child{width:34%}
+}
+.prices-table td:last-child{white-space:normal}.prices-table td:last-child b{white-space:nowrap}
+@media (max-width:560px){
+  .prices-lic thead{display:none}
+  .prices-lic tr{display:grid;grid-template-columns:1fr auto;border-top:1px solid rgba(220,230,245,.1)}
+  .prices-lic tr:first-child{border-top:0}
+  .prices-lic td{border-top:0!important;width:auto!important}
+  .prices-lic td:first-child{font-weight:600;color:var(--head,#fff);padding-bottom:2px}
+  .prices-lic td:nth-child(2){grid-column:1/-1;grid-row:2;padding-top:0;color:var(--muted,#9fb0c4)}
+  .prices-lic td:last-child{grid-column:2;grid-row:1;padding-bottom:2px}
+}

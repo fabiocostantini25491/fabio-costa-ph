@@ -2546,7 +2546,7 @@ function renderContacts() {
     if (closed) note.hidden = true;
     note.innerHTML = `<span class="gl-lic-ic">${ICON_SPARK}</span>
       <div class="gl-lic-body"><p class="gl-lic-lead">${intro}</p>
-        <p class="gl-lic-more" id="licMore" hidden>${write}${okMail ? `${T(" at ")}<a href="mailto:${esc(mail)}?subject=${encodeURIComponent("Photo licensing / prints")}" data-lic="email">${esc(mail)}</a>` : ""}${okMail && ig ? T(" or") : ""}${ig ? `${T(" on ")}<a href="https://ig.me/m/${encodeURIComponent(ig)}" target="_blank" rel="noopener" data-lic="instagram">Instagram @${esc(ig)}</a>` : ""}.</p></div>
+        <p class="gl-lic-more" id="licMore" hidden><a href="#prices" data-lic="prices">${T("See the prices")}</a> · ${write}${okMail ? `${T(" at ")}<a href="mailto:${esc(mail)}?subject=${encodeURIComponent("Photo licensing / prints")}" data-lic="email">${esc(mail)}</a>` : ""}${okMail && ig ? T(" or") : ""}${ig ? `${T(" on ")}<a href="https://ig.me/m/${encodeURIComponent(ig)}" target="_blank" rel="noopener" data-lic="instagram">Instagram @${esc(ig)}</a>` : ""}.</p></div>
       <button type="button" class="outline-link gl-lic-go" aria-expanded="false" aria-controls="licMore">Learn more <span aria-hidden="true">→</span></button>
       <button type="button" class="gl-lic-x" aria-label="Close">${ICON.close}</button>`;
     note.querySelector(".gl-lic-go").addEventListener("click", e => {
@@ -2586,7 +2586,7 @@ function renderAbout() {
 /* =========================================================
    10. NAVIGAZIONE
    ========================================================= */
-const PAGES = ["home", "explore", "gallery", "journal", "tools", "spots", "hub", "about", "guide", "privacy", "terms", "cookies", "crew"];
+const PAGES = ["home", "explore", "gallery", "journal", "tools", "spots", "hub", "about", "guide", "privacy", "terms", "cookies", "crew", "prices"];
 
 /* =========================================================
    STATISTICHE (Umami, anonime e senza cookie)
