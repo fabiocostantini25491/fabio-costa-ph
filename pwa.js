@@ -32,7 +32,10 @@
   const SHARE = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V3M8 7l4-4 4 4"/><path d="M6 11H5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-8a1 1 0 0 0-1-1h-1"/></svg>`;
   let box = null, timer = null;
 
+  // 16 nov 2026: the automatic install tip is switched off (it disturbed visitors). Remove the next line to bring it back.
+  const AUTO_TIP = false;
   function schedule() {
+    if (!AUTO_TIP) return;
     if (box || timer || dismissedRecently() || !isMobile) return;
     timer = setTimeout(show, 25000);   // non disturbare subito: dopo 25 secondi di visita
   }
