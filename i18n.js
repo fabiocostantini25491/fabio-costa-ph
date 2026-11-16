@@ -1555,6 +1555,8 @@ const I18N = (() => {
     "How big would it be?": ["Quanto verrebbe grande?"],
     "print sizes on a wall": ["formati di stampa su una parete"],
     "Licence requests": ["Richieste di licenza"],
+    "See the photos": ["Guarda le foto"],
+    "Read the story": ["Leggi la storia"],
     "Signed by the folk": ["Firmato dai folk", "Firmado por los folk", "Signé par les folk", "Von den Folk signiert"],
     "Field coach": ["Coach sul campo"],
     "The field coach could not be loaded. Check your connection.": ["Il coach sul campo non si è caricato. Controlla la connessione."],

@@ -789,27 +789,87 @@ function createMap(kind) {
   return map;
 }
 
-/* Explore lives inside SpotFolk (16 Nov 2026): Fabio's journeys, his locations and the journey drawer go on the SpotFolk map,
-   every time spots.js builds it. The drawer and its tabs are kept in #exKit (index.html) and moved into the map's stage. */
-let exKit = null, exStage = null;
+/* Explore lives inside SpotFolk (16 Nov 2026): the places of Fabio's photos are ordinary SpotFolk pins with the «Fabio's pick» star
+   (no separate «Explore world»: Fabio is the first folk, not the owner of the map). Tapping one opens a small card with his photo,
+   a few lines and the links to the photos and the story. They are drawn every time the SpotFolk map is built. */
+const FAB_CAM = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8.5h3.2l1.8-2.5h6l1.8 2.5H20V19H4z"/><circle cx="12" cy="13" r="3.4"/></svg>';
+let fabLayer = null, exStage = null;   // exStage: the old Explore drawer, gone (kept null for the old helpers)
+const fabPins = new Map();   // "trip|sub" → marker
+function fabPlaces() {
+  const out = [];
+  trips.forEach(t => {
+    const all = photosOfTrip(t.id);
+    if (!all.length) return;
+    const own = t.subs.filter(sb => sb.ownCoords && distKm(t, sb) > 0.05 && all.some(p => p.sub === sb.id));
+    own.forEach(sb => out.push({ t, sb, lat: sb.lat, lon: sb.lon, items: all.filter(p => p.sub === sb.id) }));
+    const rest = all.filter(p => !own.some(sb => sb.id === p.sub));
+    if (rest.length) out.push({ t, sb: null, lat: t.lat, lon: t.lon, items: rest });
+  });
+  return out;
+}
+function fabCard(x, photoId) {
+  const { t, sb, items } = x, p = items.find(q => q.id === photoId) || items[0];
+  const article = t.article && articles.find(a => a.id === t.article);
+  const desc = (sb && sb.description) || t.description || "";
+  const T = s => window.I18N ? I18N.t(s) : s;
+  return `<div class="fab-card">
+    ${p ? `<button type="button" class="fab-ph" data-fabphoto="${esc(p.id)}"><img src="${esc(p.src)}" alt="${esc(p.title)}" loading="lazy"></button>` : ""}
+    <p class="fab-kick">★ Fabio's pick${sb ? ` · ${esc(t.name)}` : ""}</p>
+    <h3>${esc(sb ? sb.name : t.name)}</h3>
+    ${desc ? `<p class="fab-desc">${esc(desc)}</p>` : ""}
+    ${items.length > 1 ? `<div class="fab-thumbs">${items.slice(0, 4).map(q => `<button type="button" data-fabphoto="${esc(q.id)}" aria-label="${esc(q.title)}"><img src="${esc(q.src)}" alt="" loading="lazy"></button>`).join("")}</div>` : ""}
+    <div class="fab-acts"><button type="button" data-fabgallery>${T("See the photos")} →</button>${article ? `<a href="#art-${esc(article.id)}">${T("Read the story")} →</a>` : ""}</div>
+  </div>`;
+}
+function drawFabioPlaces() {
+  const map = maps.explore;
+  if (!map || !fabLayer) return;
+  fabLayer.clearLayers(); fabPins.clear();
+  fabPlaces().forEach(x => {
+    const name = x.sb ? x.sb.name : x.t.name;
+    const m = L.marker([x.lat, x.lon], { keyboard: true, riseOnHover: true, title: name,
+      icon: L.divIcon({ className: "", iconSize: [28, 28], iconAnchor: [14, 14], tooltipAnchor: [0, -14], popupAnchor: [0, -12],
+        html: `<div class="spot-pin pick fab-pin" style="--c:#9cc8ff" title="Fabio's pick">${FAB_CAM}<span class="pick-star" aria-hidden="true">★</span></div>` }) })
+      .addTo(fabLayer)
+      .bindTooltip(esc(name), { direction: "top" })
+      .bindPopup(() => fabCard(x, m._fabPhoto), { className: "fab-pop", maxWidth: 300, minWidth: 240, autoPanPadding: [30, 60] });
+    m.on("popupopen", e => {
+      const el = e.popup.getElement();
+      el?.querySelectorAll("[data-fabphoto]").forEach(b => b.addEventListener("click", () => openPhoto(b.dataset.fabphoto, x.items)));
+      el?.querySelector("[data-fabgallery]")?.addEventListener("click", () => {
+        gallery.trip = x.t.id; gallery.sub = x.sb ? x.sb.id : ""; gallery.collection = ""; gallery.category = "Tutte"; location.hash = "gallery"; });
+      trackEvent("SpotFolk: Fabio's place opened", { place: name });
+    });
+    m.on("popupclose", () => { m._fabPhoto = null; });
+    fabPins.set(`${x.t.id}|${x.sb ? x.sb.id : ""}`, m);
+  });
+}
+/* open one of Fabio's places (from the gallery, the home map, an article, the search) */
+function openFabioPlace(tripId, photoId, subId) {
+  const map = maps.explore;
+  if (!map) return;
+  const p = photoId && photos.find(q => q.id === photoId);
+  const sub = subId != null && subId !== "" ? subId : p ? (p.sub || "") : "";
+  const m = fabPins.get(`${tripId}|${sub}`) || fabPins.get(`${tripId}|`) || [...fabPins.entries()].find(([k]) => k.startsWith(tripId + "|"))?.[1];
+  if (!m) return;
+  m._fabPhoto = photoId || null;
+  document.getElementById("spotsMap")?.scrollIntoView({ behavior: "smooth", block: "center" });
+  map.flyTo(m.getLatLng(), Math.max(map.getZoom(), 11), { duration: 1 });
+  map.once("moveend", () => m.openPopup());
+}
 function attachExplore(map, stage) {
-  if (!map || !stage || !window.L) return;
-  exKit ||= { tabs: $("#exKit .ex-tabs"), panel: $("#exKit #locationPanel") };
-  if (!exKit.tabs || !exKit.panel) return;
-  exStage = stage;
-  stage.classList.add("exm");
-  stage.append(exKit.tabs, exKit.panel);
-  roverLayer = L.layerGroup().addTo(map);
-  shotLayer = L.layerGroup().addTo(map);
-  pinLayers.explore = L.layerGroup().addTo(map);
+  if (!map || !window.L) return;
+  roverLayer = shotLayer = null; pinLayers.explore = null;   // no landers, rovers or Explore drawer any more
+  fabLayer = L.layerGroup().addTo(map);
   maps.explore = map;
-  map.on("zoomend", () => { if (maps.explore === map) { updateShotDots(); drawRovers(); } });
-  map.on("remove", () => { if (maps.explore === map) { maps.explore = null; pinLayers.explore = null; roverLayer = shotLayer = null; } });
-  if (activeTripId && tripById(activeTripId)) { const id = activeTripId; openTrip(id); } else renderPanelIntro();
-  const wait = exWaiters.splice(0); wait.forEach(fn => fn());
+  map.on("remove", () => { if (maps.explore === map) { maps.explore = null; fabLayer = null; fabPins.clear(); } });
+  drawFabioPlaces();
+  // the SpotFolk map may be rebuilt right after (data arriving): run what was waiting once it has settled
+  clearTimeout(attachExplore.t);
+  attachExplore.t = setTimeout(() => { const wait = exWaiters.splice(0); wait.forEach(fn => fn()); }, 700);
 }
 window.addEventListener("fc:spotsmap", e => attachExplore(e.detail?.map, e.detail?.stage));
-/* go to a journey (or a photo of it) on the SpotFolk map */
+/* go to one of Fabio's places on the SpotFolk map */
 const exWaiters = [];
 function onExplore(fn) {
   const run = () => setTimeout(fn, 80);
@@ -817,7 +877,7 @@ function onExplore(fn) {
   exWaiters.push(run);
   if (location.hash !== "#spotfolk") location.hash = "spotfolk";
 }
-const goTrip = (id, photoId, subId) => onExplore(() => openTrip(id, photoId, subId));
+const goTrip = (id, photoId, subId) => onExplore(() => openFabioPlace(id, photoId, subId));
 window.goTrip = goTrip;
 
 /* =========================================================
@@ -2645,7 +2705,7 @@ function flyToPlace(lat, lon, name, full) {
       .bindPopup(`<strong>${esc(name)}</strong>${esc(full && full !== name ? full.split(",").slice(1, 3).join(",") : "")}<br><span class="muted">No photos here yet.</span>${nearHtml}`)
       .openPopup();
     map.flyTo([lat, lon], 11, { duration: 1.1 });
-    searchMarker.getPopup().getElement()?.querySelector("[data-near]")?.addEventListener("click", e => openTrip(e.currentTarget.dataset.near));
+    searchMarker.getPopup().getElement()?.querySelector("[data-near]")?.addEventListener("click", e => openFabioPlace(e.currentTarget.dataset.near));
   });
 }
 
@@ -2924,7 +2984,7 @@ function renderAll() {
   else renderJournal();
   renderAbout();
   drawHomePins();
-  if (activeTripId && tripById(activeTripId)) drawPins("explore"); else if (maps.explore) renderPanelIntro();
+  drawFabioPlaces();
 }
 
 /* =========================================================

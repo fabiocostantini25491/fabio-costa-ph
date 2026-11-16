@@ -4513,3 +4513,19 @@ html.cch-open{overflow:hidden}
 .cch-nav button{min-height:60px;white-space:nowrap;border-radius:16px;border:1px solid var(--c-line);background:none;color:var(--c-fg);font:500 16px var(--sans);cursor:pointer;padding:0 16px}
 .cch-nav button:disabled{opacity:.3}
 .cch-nav .cch-next{background:var(--c-btn);color:var(--c-btn-fg);border-color:transparent;font-size:19px}
+
+/* SpotFolk: Fabio's places (ex Explore) — ordinary pins with the «Fabio's pick» star, and a small card */
+.fab-pop .leaflet-popup-content-wrapper{background:#0a1422;color:var(--text);border:1px solid var(--line-strong);border-radius:14px;padding:0;overflow:hidden}
+.fab-pop .leaflet-popup-content{margin:0;width:auto!important}
+.fab-pop .leaflet-popup-tip{background:#0a1422}
+.fab-card{display:grid;gap:6px;padding:0 0 12px}
+.fab-ph{display:block;padding:0;border:0;background:none;cursor:zoom-in}
+.fab-ph img{display:block;width:100%;aspect-ratio:3/2;object-fit:cover}
+.fab-kick{margin:6px 14px 0;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#ffd27a}
+.fab-card h3{margin:0 14px;font:500 20px/1.2 var(--display);color:#fff}
+.fab-desc{margin:0 14px;font-size:13px;line-height:1.5;color:var(--soft)}
+.fab-thumbs{display:flex;gap:6px;margin:2px 14px 0}
+.fab-thumbs button{padding:0;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:none;cursor:pointer;width:52px;height:38px}
+.fab-thumbs img{width:100%;height:100%;object-fit:cover;display:block}
+.fab-acts{display:flex;flex-wrap:wrap;gap:6px 14px;margin:4px 14px 0}
+.fab-acts button,.fab-acts a{padding:0;border:0;background:none;color:var(--accent);font:500 13px var(--sans);cursor:pointer;text-decoration:none}
