@@ -4518,7 +4518,7 @@ html.cch-open{overflow:hidden}
 .fab-pop .leaflet-popup-content-wrapper{background:#0a1422;color:var(--text);border:1px solid var(--line-strong);border-radius:14px;padding:0;overflow:hidden}
 .fab-pop .leaflet-popup-content{margin:0;width:auto!important}
 .fab-pop .leaflet-popup-tip{background:#0a1422}
-.fab-card{display:grid;gap:6px;padding:0 0 12px}
+.fab-card{display:grid;gap:6px;padding:0 0 12px;width:min(260px,72vw)}
 .fab-ph{display:block;padding:0;border:0;background:none;cursor:zoom-in}
 .fab-ph img{display:block;width:100%;aspect-ratio:3/2;object-fit:cover}
 .fab-kick{margin:6px 14px 0;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#ffd27a}
@@ -4529,3 +4529,9 @@ html.cch-open{overflow:hidden}
 .fab-thumbs img{width:100%;height:100%;object-fit:cover;display:block}
 .fab-acts{display:flex;flex-wrap:wrap;gap:6px 14px;margin:4px 14px 0}
 .fab-acts button,.fab-acts a{padding:0;border:0;background:none;color:var(--accent);font:500 13px var(--sans);cursor:pointer;text-decoration:none}
+.fab-light{margin:0 14px;font-size:12.5px;color:var(--soft)}
+.fab-light b{color:#fff;font-weight:500}
+.fab-guide{display:flex;align-items:center;gap:8px;margin:4px 14px 0;padding:8px 10px;border-radius:10px;border:1px solid rgba(255,210,122,.35);background:rgba(255,210,122,.07);color:#ffe4ad!important;font-size:13px;text-decoration:none}
+.fab-guide span{flex:1;min-width:0}
+.fab-guide b{color:#fff;font-weight:500}
+.gd-sf{display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:999px;border:1px solid currentColor;background:none;color:inherit;font:500 14px var(--sans, inherit);cursor:pointer}

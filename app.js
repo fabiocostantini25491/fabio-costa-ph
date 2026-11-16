@@ -805,20 +805,35 @@ function fabPlaces() {
     const rest = all.filter(p => !own.some(sb => sb.id === p.sub));
     if (rest.length) out.push({ t, sb: null, lat: t.lat, lon: t.lon, items: rest });
   });
+  out.forEach(x => { x.key = `${x.t.id}|${x.sb ? x.sb.id : ""}`; x.guides = []; });
+  // the places of the guides (Field Notes): the same place as a journey gets the link to the guide, a new one becomes a pin of its own
+  (guidesData || []).forEach(g => gnum(g).forEach((z, zi) => z.luoghi.forEach(l => {
+    if (!Number.isFinite(l.lat) || !Number.isFinite(l.lon)) return;
+    const ref = { g, zi, l };
+    const near = out.map(x => ({ x, d: distKm(x, l) })).filter(o => o.d < 0.4).sort((a, b) => a.d - b.d)[0];
+    if (near) near.x.guides.push(ref);
+    else out.push({ key: `g:${g.slug}:${l.n}`, t: null, sb: null, lat: l.lat, lon: l.lon, items: [], guides: [ref], gl: ref });
+  })));
   return out;
 }
+const fabName = x => x.gl ? x.gl.l.nome : x.sb ? x.sb.name : x.t.name;
 function fabCard(x, photoId) {
   const { t, sb, items } = x, p = items.find(q => q.id === photoId) || items[0];
-  const article = t.article && articles.find(a => a.id === t.article);
-  const desc = (sb && sb.description) || t.description || "";
   const T = s => window.I18N ? I18N.t(s) : s;
+  const article = t && t.article && articles.find(a => a.id === t.article);
+  const gl = x.gl || x.guides[0];
+  const desc = (sb && sb.description) || (t && t.description) || (gl && gl.l.consiglio ? String(gl.l.consiglio).replace(/[*_#>`]/g, "").slice(0, 220) : "");
+  const img = p ? p.src : gl && gl.l.foto ? mediaUrl(gl.l.foto) : "";
+  const guides = [...new Map(x.guides.map(r => [r.g.slug, r.g])).values()];
   return `<div class="fab-card">
-    ${p ? `<button type="button" class="fab-ph" data-fabphoto="${esc(p.id)}"><img src="${esc(p.src)}" alt="${esc(p.title)}" loading="lazy"></button>` : ""}
-    <p class="fab-kick">★ Fabio's pick${sb ? ` · ${esc(t.name)}` : ""}</p>
-    <h3>${esc(sb ? sb.name : t.name)}</h3>
+    ${img ? `<button type="button" class="fab-ph"${p ? ` data-fabphoto="${esc(p.id)}"` : ""}><img src="${esc(img)}" alt="${esc(p ? p.title : fabName(x))}" loading="lazy"></button>` : ""}
+    <p class="fab-kick">★ Fabio's pick${sb ? ` · ${esc(t.name)}` : x.gl ? ` · ${esc(x.gl.g.titolo)}` : ""}</p>
+    <h3>${esc(fabName(x))}</h3>
+    ${gl && gl.l.luce ? `<p class="fab-light">${LIGHT_ICON[gl.l.luce] || "○"} ${T("Best time")}: <b>${esc(T(gl.l.luce))}</b></p>` : ""}
     ${desc ? `<p class="fab-desc">${esc(desc)}</p>` : ""}
     ${items.length > 1 ? `<div class="fab-thumbs">${items.slice(0, 4).map(q => `<button type="button" data-fabphoto="${esc(q.id)}" aria-label="${esc(q.title)}"><img src="${esc(q.src)}" alt="" loading="lazy"></button>`).join("")}</div>` : ""}
-    <div class="fab-acts"><button type="button" data-fabgallery>${T("See the photos")} →</button>${article ? `<a href="#art-${esc(article.id)}">${T("Read the story")} →</a>` : ""}</div>
+    ${guides.map(g => `<a class="fab-guide" href="#g-${esc(g.slug)}">📘 <span>${T("In the guide")}: <b>${esc(g.titolo)}</b></span> →</a>`).join("")}
+    <div class="fab-acts">${items.length ? `<button type="button" data-fabgallery>${T("See the photos")} →</button>` : ""}${article ? `<a href="#art-${esc(article.id)}">${T("Read the story")} →</a>` : ""}</div>
   </div>`;
 }
 function drawFabioPlaces() {
@@ -826,22 +841,24 @@ function drawFabioPlaces() {
   if (!map || !fabLayer) return;
   fabLayer.clearLayers(); fabPins.clear();
   fabPlaces().forEach(x => {
-    const name = x.sb ? x.sb.name : x.t.name;
+    const name = fabName(x);
     const m = L.marker([x.lat, x.lon], { keyboard: true, riseOnHover: true, title: name,
       icon: L.divIcon({ className: "", iconSize: [28, 28], iconAnchor: [14, 14], tooltipAnchor: [0, -14], popupAnchor: [0, -12],
         html: `<div class="spot-pin pick fab-pin" style="--c:#9cc8ff" title="Fabio's pick">${FAB_CAM}<span class="pick-star" aria-hidden="true">★</span></div>` }) })
       .addTo(fabLayer)
       .bindTooltip(esc(name), { direction: "top" })
-      .bindPopup(() => fabCard(x, m._fabPhoto), { className: "fab-pop", maxWidth: 300, minWidth: 240, autoPanPadding: [30, 60] });
+      .bindPopup(() => fabCard(x, m._fabPhoto), { className: "fab-pop", maxWidth: 300, minWidth: 240, autoPanPaddingTopLeft: [20, 40], autoPanPaddingBottomRight: [20, 170] });
     m.on("popupopen", e => {
       const el = e.popup.getElement();
       el?.querySelectorAll("[data-fabphoto]").forEach(b => b.addEventListener("click", () => openPhoto(b.dataset.fabphoto, x.items)));
       el?.querySelector("[data-fabgallery]")?.addEventListener("click", () => {
+        if (!x.t) return;
         gallery.trip = x.t.id; gallery.sub = x.sb ? x.sb.id : ""; gallery.collection = ""; gallery.category = "Tutte"; location.hash = "gallery"; });
       trackEvent("SpotFolk: Fabio's place opened", { place: name });
     });
     m.on("popupclose", () => { m._fabPhoto = null; });
-    fabPins.set(`${x.t.id}|${x.sb ? x.sb.id : ""}`, m);
+    m._fab = x;
+    fabPins.set(x.key, m);
   });
 }
 /* open one of Fabio's places (from the gallery, the home map, an article, the search) */
@@ -857,6 +874,17 @@ function openFabioPlace(tripId, photoId, subId) {
   map.flyTo(m.getLatLng(), Math.max(map.getZoom(), 11), { duration: 1 });
   map.once("moveend", () => m.openPopup());
 }
+/* a guide on the SpotFolk map: all its places in view (or one of them, opened) */
+function fabGuideView(slugId, n) {
+  const map = maps.explore;
+  if (!map) return;
+  const ms = [...fabPins.values()].filter(m => m._fab.guides.some(r => r.g.slug === slugId && (n == null || r.l.n === n)));
+  if (!ms.length) return;
+  document.getElementById("spotsMap")?.scrollIntoView({ behavior: "smooth", block: "center" });
+  if (n != null || ms.length === 1) { map.flyTo(ms[0].getLatLng(), Math.max(map.getZoom(), 12), { duration: 1 }); map.once("moveend", () => ms[0].openPopup()); }
+  else map.flyToBounds(L.latLngBounds(ms.map(m => m.getLatLng())).pad(0.25), { maxZoom: 12, duration: 1 });
+}
+window.openGuideOnMap = (slugId, n) => onExplore(() => fabGuideView(slugId, n));   // (a different name: top-level functions are window properties)
 function attachExplore(map, stage) {
   if (!map || !window.L) return;
   roverLayer = shotLayer = null; pinLayers.explore = null;   // no landers, rovers or Explore drawer any more
@@ -864,6 +892,7 @@ function attachExplore(map, stage) {
   maps.explore = map;
   map.on("remove", () => { if (maps.explore === map) { maps.explore = null; fabLayer = null; fabPins.clear(); } });
   drawFabioPlaces();
+  loadGuides().then(() => { if (maps.explore === map) drawFabioPlaces(); });
   // the SpotFolk map may be rebuilt right after (data arriving): run what was waiting once it has settled
   clearTimeout(attachExplore.t);
   attachExplore.t = setTimeout(() => { const wait = exWaiters.splice(0); wait.forEach(fn => fn()); }, 700);
@@ -2495,7 +2524,7 @@ async function renderGuide(slugId) {
       ${g.copertina ? `<img src="${esc(mediaUrl(g.copertina))}" alt="" data-zoom>` : ""}
       <div class="gd-hero-t"><p class="mz-issue">Field Notes · ${T("Guide")}${g.luogo ? ` · ${esc(g.luogo)}` : ""}</p><h2>${esc(g.titolo)}</h2>${g.sottotitolo ? `<p class="gd-sub">${esc(g.sottotitolo)}</p>` : ""}</div>
     </header>
-    <div class="gd-bar">${fnShareBtn(`g-${g.slug}`, g.titolo, "guide")}<a class="mz-pdf gd-pdf" href="${pdf}" target="_blank" rel="noopener" data-guide-pdf>
+    <div class="gd-bar">${fnShareBtn(`g-${g.slug}`, g.titolo, "guide")}${all.some(l => Number.isFinite(l.lat)) ? `<button type="button" class="gd-sf" data-gdmap>🗺 <span>${T("See the places on the SpotFolk map")}</span></button>` : ""}<a class="mz-pdf gd-pdf" href="${pdf}" target="_blank" rel="noopener" data-guide-pdf>
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 19h14"/></svg>
       <span><b>${T("Download the PDF guide")}</b><small>${T("Prepared on request: choose “Save as PDF” in the print window")}</small></span></a></div>
     ${g.intro ? `<p class="gd-intro">${esc(g.intro)}</p>` : ""}
@@ -2514,7 +2543,7 @@ async function renderGuide(slugId) {
           ${l.consiglio ? `<p>${mdInline(l.consiglio)}</p>` : ""}
           ${l.nota ? `<p class="gd-note">${esc(l.nota)}</p>` : ""}
           ${l.foto ? `<figure class="gd-photo"><img src="${esc(mediaUrl(l.foto))}" alt="${esc(l.nome)}" loading="lazy"></figure>` : ""}
-          ${Number.isFinite(l.lat) ? `<p class="gd-coord">${fmtCoord(l.lat, l.lon)} · <a href="${gmapsUrl(l.lat, l.lon)}" target="_blank" rel="noopener">${T("Open in Maps")}</a></p>` : ""}
+          ${Number.isFinite(l.lat) ? `<p class="gd-coord">${fmtCoord(l.lat, l.lon)} · <a href="${gmapsUrl(l.lat, l.lon)}" target="_blank" rel="noopener">${T("Open in Maps")}</a> · <a href="#spotfolk" data-gdspot="${l.n}">${T("On SpotFolk")}</a></p>` : ""}
         </div></li>`).join("")}</ol>
     </section>`).join("")}
     ${(g.pause || []).length ? `<section class="gd-zone gd-pause"><p class="gd-zk">${T("Take a break")}</p><h3>${T("Where to stop")}</h3>
@@ -2525,6 +2554,8 @@ async function renderGuide(slugId) {
     <p class="fn-foot">Field Notes · ${esc(g.titolo)}${g.aggiornata ? ` · ${T("updated")} ${esc(fmtDate(g.aggiornata))}` : ""}</p>
   </article>`;
   layout.querySelectorAll("[data-gz]").forEach(a => a.addEventListener("click", e => { e.preventDefault(); document.getElementById("gz-" + a.dataset.gz)?.scrollIntoView({ behavior: "smooth", block: "start" }); }));
+  layout.querySelector("[data-gdmap]")?.addEventListener("click", () => { trackEvent("Guide: places on SpotFolk", { guide: g.titolo }); window.openGuideOnMap(g.slug); });
+  layout.querySelectorAll("[data-gdspot]").forEach(a => a.addEventListener("click", e => { e.preventDefault(); window.openGuideOnMap(g.slug, +a.dataset.gdspot); }));
   requestAnimationFrame(() => $("#journalMag")?.scrollIntoView({ block: "start" }));
 }
 
