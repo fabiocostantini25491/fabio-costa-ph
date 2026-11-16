@@ -2737,7 +2737,12 @@ function route() {
   const guideAnchor = hash.startsWith("guide-") ? hash : null;
   if (guideAnchor) page = "guide";
   if (join) page = "spots";
-  if (!PAGES.includes(page)) page = "home";
+  if (!PAGES.includes(page)) {
+    // a link to a section this copy of the site doesn't know yet (a tab opened before an update): load the new version once
+    if (/^[a-z][a-z0-9-]*$/.test(hash)) { let tried = ""; try { tried = sessionStorage.getItem("fcph-reload-for") || ""; } catch {}
+      if (tried !== hash) { try { sessionStorage.setItem("fcph-reload-for", hash); } catch {} location.reload(); return; } }
+    page = "home";
+  }
   if (SF && page === "guide" && !guideAnchor) { history.replaceState(null, "", "#guide-spots"); return route(); }
   if (SF && !SF_PAGES.includes(page)) {
     if (page === "home" || !hash) page = "spots";

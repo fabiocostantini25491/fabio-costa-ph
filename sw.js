@@ -4,7 +4,7 @@
 //  - immagini del sito, librerie e font: copia salvata, aggiornata in background
 //  - tasselli delle mappe: copia salvata (le zone già viste funzionano offline), con un limite
 //  - Supabase, OpenStreetMap, meteo, statistiche: sempre e solo rete (dati personali o in tempo reale)
-const VERSION = "fcph-20261116a";
+const VERSION = "fcph-20261116b";
 const CORE = `${VERSION}-core`;
 const ASSETS = `${VERSION}-assets`;
 const TILES = "fcph-tiles";            // non legato alla versione: le mappe salvate restano
@@ -46,7 +46,8 @@ self.addEventListener("fetch", e => {
 async function networkFirst(req, cacheName, fallbackPath) {
   const cache = await caches.open(cacheName);
   try {
-    const res = await fetch(req);
+    // always ask the server whether the page or the code has changed (the browser could otherwise reuse a copy for minutes)
+    const res = await fetch(req.mode === "navigate" ? new Request(req.url, { cache: "no-cache", credentials: "same-origin" }) : new Request(req, { cache: "no-cache" }));
     if (res.ok) cache.put(req, res.clone());
     return res;
   } catch (err) {
