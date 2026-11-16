@@ -45,7 +45,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,500&family=Oswald:wght@500;700&family=Libre+Caslon+Text:ital,wght@0,400;0,700;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap">
-  <link rel="stylesheet" href="style.css?v=20261116g">
+  <link rel="stylesheet" href="style.css?v=20261116h">
   <!-- statistiche anonime, senza cookie (Umami): le pagine e i clic li segnala app.js -->
   <script>
   /* single login with spotfolk.eu: a link from there can carry a one-time session of its own (#sfh=…).
@@ -479,6 +479,7 @@
       <li><b>Position</b> — used only when you tap “Near me” or add something at your position; it is processed in your browser and stored only if you save a place, trip or notice there.</li>
       <li><b>Messages</b> — what you write to me by email, in the feedback form or in a request to become a contributor.</li>
       <li><b>Licence requests</b> — name, email, the photos and uses you ask for and, if you go ahead, the details needed for the receipt or invoice.</li>
+      <li><b>AI scene reading (optional)</b> — in Tools › Analyze your shot, only when you tap “Read my scene” or ask a question: a reduced copy of your test photo (1024 px, without camera data or position), the measurements and settings shown on the page and your question. The analysis itself runs on your device; nothing is kept by me.</li>
       </ul>
       <p>I don't process special categories of data (health, religion, political opinions and similar): please don't include them in what you write.</p>
       <h2>3. Why, on what legal basis, for how long</h2>
@@ -489,6 +490,7 @@
       <tr><td>Showing what you share to the other members and, on the places of the public selection, to every visitor</td><td>Performance of the service (art. 6.1.b)</td><td>Until you delete it or your account; places stay on the map without your name</td></tr>
       <tr><td>Moderation, flags, abuse, defending legal claims</td><td>Legitimate interest (art. 6.1.f)</td><td>As long as needed to handle them and any related claim</td></tr>
       <tr><td>Licensing photos: quoting, issuing and invoicing the licence</td><td>Performance of the contract (art. 6.1.b) and legal obligation (art. 6.1.c)</td><td>As long as tax law requires for invoices and accounting records</td></tr>
+      <tr><td>Reading the scene of a test shot with AI, when you ask for it</td><td>Performance of the service you ask for (art. 6.1.b)</td><td>Not stored by me: passed through and discarded</td></tr>
       <tr><td>Answering your messages and requests</td><td>Your request (art. 6.1.b) and legitimate interest (art. 6.1.f)</td><td>Until the matter is closed, or until you ask me to delete them</td></tr>
       <tr><td>Complying with the law and with authorities' requests</td><td>Legal obligation (art. 6.1.c)</td><td>As long as the law requires</td></tr>
       </tbody></table></div>
@@ -500,6 +502,7 @@
       <li><b>Supabase Inc.</b> — database, login and file storage; it acts as processor on my behalf.</li>
       <li><b>GitHub Inc.</b> — hosting of the two sites and of the downloadable PDFs.</li>
       <li><b>Umami</b> — anonymous statistics, without cookies.</li>
+      <li><b>Google (Gemini API)</b> — only if you use the AI scene reading: it receives the reduced photo, the measurements and your question to produce the answer. It's Google's free service: under its terms Google may keep and use this content to improve its products, and people may review it — so don't send photos of people, documents or private places.</li>
       <li><b>Map, font and data services</b> — Esri, NASA, OpenStreetMap, Komoot (Photon), Nominatim, Open-Meteo, Windy (webcams), NOAA (aurora forecast), Google Fonts, jsDelivr and cdnjs receive your IP address to deliver their content, as with any website.</li>
       <li><b>Other members</b> — see your name next to what you share. On the places of the public selection (about one every 15 km, never fragile places) the full card is visible to everyone, including visitors who are not members: your name, folk, profile photo, signatures, stories and photos on those places. Everything else stays visible to members only.</li>
       <li><b>Authorities</b> — only when the law requires it.</li>
@@ -738,12 +741,12 @@
 <!--BODY-END-->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
-  <script src="i18n.js?v=20261116g"></script>
-  <script src="app.js?v=20261116g"></script>
-  <script src="spots.js?v=20261116g"></script>
-  <script src="tools.js?v=20261116g"></script>
-  <script src="pwa.js?v=20261116g"></script>
-  <script src="feedback.js?v=20261116g"></script>
-  <script src="system.js?v=20261116g"></script>
+  <script src="i18n.js?v=20261116h"></script>
+  <script src="app.js?v=20261116h"></script>
+  <script src="spots.js?v=20261116h"></script>
+  <script src="tools.js?v=20261116h"></script>
+  <script src="pwa.js?v=20261116h"></script>
+  <script src="feedback.js?v=20261116h"></script>
+  <script src="system.js?v=20261116h"></script>
 </body>
 </html>
