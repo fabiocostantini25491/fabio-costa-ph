@@ -2196,6 +2196,9 @@ const Spots = (() => {
     else toast("That place isn't on the map anymore, or it's in a filter you've hidden.");
   }
   const placeLink = s => `https://spotfolk.eu/?place=${s.id}&utm_source=share${myUid() && !guest ? `&via=${myUid()}` : ""}`;
+  // stories link to the SpotFolk section of fabiocostaph.com: a known name behind the link builds more trust (17 Nov 2026)
+  const STORY_SITE = "https://fabiocostaph.com/";
+  const storyLink = s => `${STORY_SITE}?place=${s.id}&utm_source=story${myUid() && !guest ? `&via=${myUid()}` : ""}#spotfolk`;
   async function sharePlace(s, invite = false) {
     const url = placeLink(s);
     const text = invite ? `I signed ${s.name} on SpotFolk. You were there too: sign it with me.` : `${s.name}, signed by the folk on SpotFolk.`;
@@ -2354,9 +2357,9 @@ const Spots = (() => {
     if (s.best_months && y + 60 <= LIMIT) { g.fillText(`📅 ${it ? "Periodo migliore" : "Best period"}: ${s.best_months}`.slice(0, 60), 90, y + 30); y += 62; }
     if (signs && y + 60 <= LIMIT) { g.fillText(`✍ ${it ? "Firmato dai folk" : "Signed by the folk"}`, 90, y + 30); y += 62; }
     if (y + 90 < H - 300) { g.fillStyle = "#f2f6fb"; g.font = `italic 500 64px ${SERIF}`; g.fillText(it ? "La mappa, firmata dai folk." : "The map, signed by the folk.", 90, Math.max(y + 90, H - 400)); }
-    g.fillStyle = "#f28c1e"; g.beginPath(); g.roundRect(90, H - 270, 560, 110, 55); g.fill();
-    g.fillStyle = "#1a1206"; g.font = `800 46px ${SANS}`; g.fillText("spotfolk.eu", 150, H - 198);
-    g.fillStyle = "#8a99ab"; g.font = `500 30px ${SANS}`; g.fillText(it ? "Apri il posto dal link nella storia" : "Open the place from the link in the story", 90, H - 110);
+    g.fillStyle = "#f28c1e"; g.beginPath(); g.roundRect(90, H - 270, 620, 110, 55); g.fill();
+    g.fillStyle = "#1a1206"; g.font = `800 46px ${SANS}`; g.fillText("fabiocostaph.com", 150, H - 198);
+    g.fillStyle = "#8a99ab"; g.font = `500 30px ${SANS}`; g.fillText(it ? "SpotFolk · apri il posto dal link nella storia" : "SpotFolk · open the place from the link in the story", 90, H - 110);
     return new Promise(res => c.toBlob(b => res(b), "image/png"));
   }
   /* «New on the map»: one story with the places added in the last 24 hours (else the last 7 days). Admin only.
@@ -2414,12 +2417,12 @@ const Spots = (() => {
         g.fillText(name, tx, y + 46 + (rowH > 170 ? 66 : 56));
         y += rowH;
       }
-      g.fillStyle = "#f28c1e"; g.beginPath(); g.roundRect(90, H - 270, 560, 110, 55); g.fill();
-      g.fillStyle = "#1a1206"; g.font = `800 46px ${SANS}`; g.fillText("spotfolk.eu", 150, H - 198);
-      g.fillStyle = "#8a99ab"; g.font = `500 30px ${SANS}`; g.fillText(it ? "Apri la mappa dal link nella storia" : "Open the map from the link in the story", 90, H - 110);
+      g.fillStyle = "#f28c1e"; g.beginPath(); g.roundRect(90, H - 270, 620, 110, 55); g.fill();
+      g.fillStyle = "#1a1206"; g.font = `800 46px ${SANS}`; g.fillText("fabiocostaph.com", 150, H - 198);
+      g.fillStyle = "#8a99ab"; g.font = `500 30px ${SANS}`; g.fillText(it ? "SpotFolk · apri la mappa dal link nella storia" : "SpotFolk · open the map from the link in the story", 90, H - 110);
       const blob = await new Promise(res => c.toBlob(res, "image/png"));
       const name = `spotfolk-new-${new Date().toISOString().slice(0, 10)}.png`, file = new File([blob], name, { type: "image/png" });
-      const url = "https://spotfolk.eu/?utm_source=story#spotfolk";
+      const url = `${STORY_SITE}?utm_source=story#spotfolk`;
       if (navigator.canShare?.({ files: [file] })) {
         try { await navigator.share({ files: [file], title: "SpotFolk", text: url }); window.fcTrack?.("Spots: new-places story shared"); } catch (err) { if (err?.name !== "AbortError") throw err; }
       } else {
@@ -2447,7 +2450,7 @@ const Spots = (() => {
     btn.disabled = true; const old = btn.innerHTML; btn.textContent = "…";
     try {
       const blob = await storyImage(s, card), name = `spotfolk-${(s.name || "place").toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 40)}.png`;
-      const file = new File([blob], name, { type: "image/png" }), url = placeLink(s);
+      const file = new File([blob], name, { type: "image/png" }), url = storyLink(s);
       if (navigator.canShare?.({ files: [file] })) {
         try { await navigator.share({ files: [file], title: s.name, text: url }); window.fcTrack?.("Spots: story shared"); } catch (err) { if (err?.name !== "AbortError") throw err; }
       } else {

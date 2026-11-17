@@ -102,9 +102,9 @@
     ctx.strokeStyle = "rgba(255,255,255,.14)"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(X, H - (story ? 236 : 128)); ctx.lineTo(W - X, H - (story ? 236 : 128)); ctx.stroke();
     ctx.font = `600 ${story ? 26 : 22}px ${SANS}`; spaced(ctx, 5); ctx.fillStyle = "#c9d6e6";
     const sf = info.brand === "spotfolk";   // a place of SpotFolk: its own address, Fabio's name under it
-    ctx.fillText(sf ? "SPOTFOLK.EU" : "FABIOCOSTAPH.COM", W / 2, H - (story ? 186 : 86));
+    ctx.fillText("FABIOCOSTAPH.COM", W / 2, H - (story ? 186 : 86));
     ctx.font = `500 ${story ? 24 : 21}px ${SANS}`; spaced(ctx, 1); ctx.fillStyle = "#7f91a6";
-    ctx.fillText(sf ? "The places behind the photographs · by Fabio Costa Ph" : "Field Notes · Photographs · SpotFolk", W / 2, H - (story ? 146 : 50));
+    ctx.fillText(sf ? "SpotFolk · the places behind the photographs" : "Field Notes · Photographs · SpotFolk", W / 2, H - (story ? 146 : 50));
     ctx.textAlign = "left"; spaced(ctx, 0);
     return new Promise(ok => cv.toBlob(ok, "image/jpeg", .9));
   }

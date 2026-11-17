@@ -867,7 +867,7 @@ async function fabStory(x, photoId) {
   const p = x.items.find(q => q.id === photoId) || x.items[0], gl = x.gl || x.guides[0];
   const img = p ? p.src : gl && gl.l.foto ? mediaUrl(gl.l.foto) : "";
   const desc = (x.sb && x.sb.description) || (x.t && x.t.description) || (gl && gl.l.consiglio ? String(gl.l.consiglio).replace(/[*_#>`]/g, "") : "");
-  const url = `https://spotfolk.eu/?fab=${encodeURIComponent(x.key)}#spotfolk`;
+  const url = `https://fabiocostaph.com/?fab=${encodeURIComponent(x.key)}&utm_source=story#spotfolk`;   // the section of Fabio's site: more trust than a new domain
   const link = async () => {
     try { if (navigator.share) return await navigator.share({ title: fabName(x), url }); } catch (err) { if (err?.name === "AbortError") return; }
     try { await navigator.clipboard.writeText(url); toast("Link copied: paste it wherever you like."); } catch {}
@@ -875,7 +875,7 @@ async function fabStory(x, photoId) {
   try { await lazyScript("sharecard.js"); } catch { return link(); }
   window.ShareCard.open({ kind: "place", brand: "spotfolk", kicker: `★ Fabio's pick${x.t ? ` · ${x.t.name}` : ""}`, title: fabName(x),
     sub: desc.slice(0, 160), img: img && !/^https?:/.test(img) ? new URL(img, location.href).href : img, url,
-    cta: "Open it on spotfolk.eu", shareLink: link });
+    cta: "Open it on fabiocostaph.com", shareLink: link });
 }
 // a link to one of Fabio's places (?fab=trip|sub): opens it once the photos are loaded
 let fabFromUrl = new URLSearchParams(location.search).get("fab");
