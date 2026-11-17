@@ -833,7 +833,7 @@ function fabCard(x, photoId) {
     ${desc ? `<p class="fab-desc">${esc(desc)}</p>` : ""}
     ${items.length > 1 ? `<div class="fab-thumbs">${items.slice(0, 4).map(q => `<button type="button" data-fabphoto="${esc(q.id)}" aria-label="${esc(q.title)}"><img src="${esc(q.src)}" alt="" loading="lazy"></button>`).join("")}</div>` : ""}
     ${guides.map(g => `<a class="fab-guide" href="#g-${esc(g.slug)}">📘 <span>${T("In the guide")}: <b>${esc(g.titolo)}</b></span> →</a>`).join("")}
-    <div class="fab-acts">${items.length ? `<button type="button" data-fabgallery>${T("See the photos")} →</button>` : ""}${article ? `<a href="#art-${esc(article.id)}">${T("Read the story")} →</a>` : ""}</div>
+    <div class="fab-acts">${items.length ? `<button type="button" data-fabgallery>${T("See the photos")} →</button>` : ""}${article ? `<a href="#art-${esc(article.id)}">${T("Read the story")} →</a>` : ""}${img ? `<button type="button" data-fabstory>📲 Story</button>` : ""}</div>
   </div>`;
 }
 function drawFabioPlaces() {
@@ -856,11 +856,29 @@ function drawFabioPlaces() {
         gallery.trip = x.t.id; gallery.sub = x.sb ? x.sb.id : ""; gallery.collection = ""; gallery.category = "Tutte"; location.hash = "gallery"; });
       trackEvent("SpotFolk: Fabio's place opened", { place: name });
     });
+    m.on("popupopen", e => e.popup.getElement()?.querySelector("[data-fabstory]")?.addEventListener("click", () => fabStory(x, m._fabPhoto)));
     m.on("popupclose", () => { m._fabPhoto = null; });
     m._fab = x;
     fabPins.set(x.key, m);
   });
 }
+/* one of Fabio's places as an Instagram story or post (sharecard.js), with the link that opens it on spotfolk.eu */
+async function fabStory(x, photoId) {
+  const p = x.items.find(q => q.id === photoId) || x.items[0], gl = x.gl || x.guides[0];
+  const img = p ? p.src : gl && gl.l.foto ? mediaUrl(gl.l.foto) : "";
+  const desc = (x.sb && x.sb.description) || (x.t && x.t.description) || (gl && gl.l.consiglio ? String(gl.l.consiglio).replace(/[*_#>`]/g, "") : "");
+  const url = `https://spotfolk.eu/?fab=${encodeURIComponent(x.key)}#spotfolk`;
+  const link = async () => {
+    try { if (navigator.share) return await navigator.share({ title: fabName(x), url }); } catch (err) { if (err?.name === "AbortError") return; }
+    try { await navigator.clipboard.writeText(url); toast("Link copied: paste it wherever you like."); } catch {}
+  };
+  try { await lazyScript("sharecard.js"); } catch { return link(); }
+  window.ShareCard.open({ kind: "place", brand: "spotfolk", kicker: `★ Fabio's pick${x.t ? ` · ${x.t.name}` : ""}`, title: fabName(x),
+    sub: desc.slice(0, 160), img: img && !/^https?:/.test(img) ? new URL(img, location.href).href : img, url,
+    cta: "Open it on spotfolk.eu", shareLink: link });
+}
+// a link to one of Fabio's places (?fab=trip|sub): opens it once the photos are loaded
+let fabFromUrl = new URLSearchParams(location.search).get("fab");
 /* open one of Fabio's places (from the gallery, the home map, an article, the search) */
 function openFabioPlace(tripId, photoId, subId) {
   const map = maps.explore;
@@ -892,7 +910,13 @@ function attachExplore(map, stage) {
   maps.explore = map;
   map.on("remove", () => { if (maps.explore === map) { maps.explore = null; fabLayer = null; fabPins.clear(); } });
   drawFabioPlaces();
-  loadGuides().then(() => { if (maps.explore === map) drawFabioPlaces(); });
+  loadGuides().then(() => {
+    if (maps.explore !== map) return;
+    drawFabioPlaces();
+    if (fabFromUrl && trips.length) { const [tid, sid] = fabFromUrl.split("|"); fabFromUrl = null; trackEvent("SpotFolk: Fabio's place from a link");
+      try { history.replaceState(null, "", location.pathname + location.hash); } catch {}
+      setTimeout(() => (tid.startsWith("g:") ? fabGuideView(tid.split(":")[1], +tid.split(":")[2]) : openFabioPlace(tid, null, sid || "")), 900); }
+  });
   // the SpotFolk map may be rebuilt right after (data arriving): run what was waiting once it has settled
   clearTimeout(attachExplore.t);
   attachExplore.t = setTimeout(() => { const wait = exWaiters.splice(0); wait.forEach(fn => fn()); }, 700);

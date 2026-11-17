@@ -2295,15 +2295,31 @@ const Spots = (() => {
     let seed = s.id * 9301 + 49297; const rnd = () => ((seed = (seed * 9301 + 49297) % 233280) / 233280);
     for (let i = 0; i < 90; i++) { g.fillStyle = `rgba(255,255,255,${.15 + rnd() * .45})`; g.beginPath(); g.arc(rnd() * W, rnd() * H * .7, rnd() * 2 + .6, 0, 7); g.fill(); }
     const wrap = (text, x, y, maxW, lh, maxLines = 4) => { const words = String(text).split(/\s+/); let line = "", n = 0; for (const w of words) { const t = line ? `${line} ${w}` : w; if (g.measureText(t).width > maxW && line) { g.fillText(line, x, y); y += lh; line = w; if (++n >= maxLines - 1) { line = words.slice(words.indexOf(w)).join(" "); while (g.measureText(line + "…").width > maxW && line.length) line = line.slice(0, -1); if (line !== words.slice(words.indexOf(w)).join(" ")) line += "…"; break; } } else line = t; } if (line) { g.fillText(line, x, y); y += lh; } return y; };
+    // the place's photo on top (17 Nov 2026): the author's first, else the first; loaded with CORS so the picture can be saved
+    let photo = null;
+    try {
+      let ph = card?._photos, urls = card?._urls;
+      if (!ph) { ph = (await api(`/rest/v1/spot_photos?select=id,path,user_id&spot_id=eq.${s.id}&order=created_at.asc&limit=6`)).data || []; urls = ph.length ? await signPhotos(ph.map(p => p.path), true) : {}; }
+      const pick = ph.find(p => p.user_id === s.created_by && urls?.[p.path]) || ph.find(p => urls?.[p.path]);
+      if (pick) photo = await new Promise(res => { const im = new Image(); im.crossOrigin = "anonymous"; im.onload = () => res(im); im.onerror = () => res(null); im.src = urls[pick.path]; });
+    } catch {}
+    const PH = 1000;
+    if (photo) {
+      const r = Math.max(W / photo.width, PH / photo.height), sw = W / r, sh = PH / r;
+      g.drawImage(photo, (photo.width - sw) / 2, (photo.height - sh) / 2.4, sw, sh, 0, 0, W, PH);
+      let f = g.createLinearGradient(0, PH * .5, 0, PH); f.addColorStop(0, "rgba(5,11,20,0)"); f.addColorStop(1, "#060d18"); g.fillStyle = f; g.fillRect(0, 0, W, PH + 2);
+      f = g.createLinearGradient(0, 0, 0, 340); f.addColorStop(0, "rgba(5,11,20,.6)"); f.addColorStop(1, "rgba(5,11,20,0)"); g.fillStyle = f; g.fillRect(0, 0, W, 340);
+    }
     const logo = await new Promise(res => { const im = new Image(); im.onload = () => res(im); im.onerror = () => res(null); im.src = "img/spotfolk-logo.png"; });
     if (logo) g.drawImage(logo, 90, 120, 200, 200 * logo.height / logo.width);
-    const cat = CATS[s.category] || CATS.spot;
-    g.fillStyle = "#ffbe7a"; g.font = `700 30px ${SANS}`; g.letterSpacing = "6px"; g.fillText(`${cat.label}${s.list ? ` · ${s.list}` : ""}`.toUpperCase().slice(0, 48), 90, 420); g.letterSpacing = "0px";
-    const big = String(s.name).length > 24; g.fillStyle = "#f2f6fb"; g.font = `600 ${big ? 104 : 128}px ${SERIF}`; let y = wrap(s.name, 90, 545, W - 180, big ? 108 : 130, 3);
+    const cat = CATS[s.category] || CATS.spot, fab = signMap.get(s.id)?.fabio;
+    const top = photo ? PH - 110 : 420;
+    g.fillStyle = "#ffbe7a"; g.font = `700 30px ${SANS}`; g.letterSpacing = "6px"; g.fillText(`${fab ? "★ Fabio's pick · " : ""}${cat.label}${s.list && !fab ? ` · ${s.list}` : ""}`.toUpperCase().slice(0, 48), 90, top); g.letterSpacing = "0px";
+    const big = String(s.name).length > 24; g.fillStyle = "#f2f6fb"; g.font = `600 ${big ? 104 : 128}px ${SERIF}`; let y = wrap(s.name, 90, top + 125, W - 180, big ? 108 : 130, photo ? 2 : 3);
     // what the folk know, read from the card as it is on screen: conditions, impressions, before you go, stories
     const txt = q => card?.querySelector(q)?.textContent.replace(/\s+/g, " ").trim() || "";
     const cond = card?.querySelector("[data-condtop]:not([hidden])") ? txt("[data-condtop]") : "";
-    const score = txt(".pc-ring b").replace("/5", ""), raters = txt(".pc-ring span:last-child");
+    const score = txt(".pc-ring b").replace("/5", "");
     const facts = [...(card?.querySelectorAll(".byg-item") || [])].slice(0, 2).map(f => `${f.querySelector(".byg-h b")?.textContent.trim() || ""}: ${f.querySelector(".byg-val")?.textContent.replace(/\s+/g, " ").trim() || f.querySelector(".byg-note")?.textContent.trim() || ""}`.replace(/:\s*$/, ""));
     const stories = [...(card?.querySelectorAll(".pc-text") || [])];
     // a story's words leave SpotFolk only when the place is already public to everyone (the viewer is a visitor) or the story is yours
@@ -2324,18 +2340,34 @@ const Spots = (() => {
       g.fillStyle = "#f2f6fb"; g.font = `500 ${fs}px ${SANS}`; L.forEach((l, k) => g.fillText(l, 136, y + 118 + k * lh)); y += h + 24; return true; };
     if (cond) box(it ? "Com'è adesso" : "How it is now", [cond], "#ff7a45", true);
     if (facts.length && room()) box("Before you go", facts, "#9fe3c8", false, 1);
-    if (score && room()) box(it ? "Le impressioni dei folk" : "Folk impressions", [`⛰ ${score}/5 · ${raters}`], "#ffbe7a");
+    if (score && room()) box(it ? "Le impressioni dei folk" : "Folk impressions", [`⛰ ${score}/5`], "#ffbe7a");
     if (quote && room()) { g.font = `italic 500 50px ${SERIF}`; const L = linesOf(`“${quote}”`, W - 180, 3); if (y + 20 + L.length * 60 <= LIMIT) { g.fillStyle = "#f3e6d6"; L.forEach((l, k) => g.fillText(l, 90, y + 50 + k * 60)); y += 40 + L.length * 60; } }
-    else if (stories.length && room()) box("Folk stories", [it ? `${stories.length} ${stories.length === 1 ? "storia" : "storie"} di chi c'è stato` : `${stories.length} ${stories.length === 1 ? "story" : "stories"} from folk who've been`], "#e9a6ff");
-    if (!cond && !score && !facts.length && !stories.length) box(it ? "Sei stato qui?" : "Been here?", [it ? "Racconta ai folk com'è adesso: tariffe, neve, mare, folla." : "Tell the folk how it is now: fees, snow, sea, crowds."], "#ffbe7a");
+    else if (stories.length && room()) box("Folk stories", [it ? "Le storie di chi c'è stato" : "Stories from folk who've been"], "#e9a6ff");
+    // the author's own words (a new place of yours: its note is the story)
+    const mine = !guest && session && s.created_by && s.created_by === myUid();
+    const note = String(s.note || "").split(/\n\n/)[0].replace(/\s+/g, " ").trim();
+    if (!quote && mine && note && room()) { g.font = `italic 500 50px ${SERIF}`; const L = linesOf(`“${note}”`, W - 180, 3); if (y + 20 + L.length * 60 <= LIMIT) { g.fillStyle = "#f3e6d6"; L.forEach((l, k) => g.fillText(l, 90, y + 50 + k * 60)); y += 40 + L.length * 60; } }
+    if (!cond && !score && !facts.length && !stories.length && !(mine && note)) box(it ? "Sei stato qui?" : "Been here?", [it ? "Racconta ai folk com'è adesso: tariffe, neve, mare, folla." : "Tell the folk how it is now: fees, snow, sea, crowds."], "#ffbe7a");
     g.font = `500 38px ${SANS}`; g.fillStyle = "#c9d6e6";
     if (s.best_months && y + 60 <= LIMIT) { g.fillText(`📅 ${it ? "Periodo migliore" : "Best period"}: ${s.best_months}`.slice(0, 60), 90, y + 30); y += 62; }
-    if (signs && y + 60 <= LIMIT) { g.fillText(`✍ ${it ? `Firmato da ${signs} folk` : `Signed by ${signs} folk`}`, 90, y + 30); y += 62; }
+    if (signs && y + 60 <= LIMIT) { g.fillText(`✍ ${it ? "Firmato dai folk" : "Signed by the folk"}`, 90, y + 30); y += 62; }
     if (y + 90 < H - 300) { g.fillStyle = "#f2f6fb"; g.font = `italic 500 64px ${SERIF}`; g.fillText(it ? "La mappa, firmata dai folk." : "The map, signed by the folk.", 90, Math.max(y + 90, H - 400)); }
     g.fillStyle = "#f28c1e"; g.beginPath(); g.roundRect(90, H - 270, 560, 110, 55); g.fill();
     g.fillStyle = "#1a1206"; g.font = `800 46px ${SANS}`; g.fillText("spotfolk.eu", 150, H - 198);
     g.fillStyle = "#8a99ab"; g.font = `500 30px ${SANS}`; g.fillText(it ? "Apri il posto dal link nella storia" : "Open the place from the link in the story", 90, H - 110);
     return new Promise(res => c.toBlob(b => res(b), "image/png"));
+  }
+  // right after publishing a new place: offer to turn it into a story (only to its author, never to visitors)
+  function offerStory(id) {
+    const s = spots.find(x => x.id === id); if (!s) return;
+    const it = IT_();
+    const d = dlg("storyOffer", `<div class="import-body"><span class="eyebrow">📲 ${it ? "La tua nuova storia" : "Your new story"}</span><h2>${esc(s.name)}</h2>
+      <p class="gate-help left">${it ? "È sulla mappa. Vuoi farne una storia per Instagram, con la foto e il link al posto?" : "It's on the map. Turn it into an Instagram story, with the photo and the link to the place?"}</p>
+      <div class="pop-actions"><button type="button" class="pop-btn primary" data-sgo>📲 ${it ? "Crea la storia" : "Make the story"}</button><button type="button" class="pop-btn" data-slater>${it ? "Più tardi" : "Later"}</button></div>
+      <p class="gate-help left">${it ? "La trovi sempre nella scheda del posto: «📲 Story»." : "It's always in the place's card: «📲 Story»."}</p></div>`);
+    d.querySelector("[data-slater]").addEventListener("click", () => d.close());
+    d.querySelector("[data-sgo]").addEventListener("click", async ev => { await shareStory(s, null, ev.currentTarget); d.close(); });
+    window.fcTrack?.("Spots: story offered after publishing");
   }
   async function shareStory(s, card, btn) {
     btn.disabled = true; const old = btn.innerHTML; btn.textContent = "…";
@@ -7249,6 +7281,7 @@ const Spots = (() => {
       if (meView) renderMe();
       else { renderApp(); const s = spots.find(x => x.id === saved.id); if (s) focusSpot(s); }
       toast(photoErr ? `Saved, but a photo failed: ${photoErr}` : edit ? `«${row.name}» updated.` : `«${row.name}» is on the map.`, !!photoErr);
+      if (!edit && !wz.fragile && !photoErr && cat !== "workshop") setTimeout(() => offerStory(saved.id), 900);
     } catch (err) {
       status(/row-level|policy|permission/i.test(err.message) ? "Your account can't save this place." : `Could not save: ${err.message}`, true);
       btn.disabled = false;

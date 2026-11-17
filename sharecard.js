@@ -50,6 +50,9 @@
       cover(ctx, im, 0, 0, W, ih);
       const f = ctx.createLinearGradient(0, ih * .45, 0, ih); f.addColorStop(0, "rgba(5,11,20,0)"); f.addColorStop(1, "#050b14");
       ctx.fillStyle = f; ctx.fillRect(0, 0, W, ih + 2);
+      // the ground's blue glow again over the fade, so the photo melts into it without a seam
+      g = ctx.createRadialGradient(0, H, 0, 0, H, W); g.addColorStop(0, "rgba(90,140,255,.16)"); g.addColorStop(1, "rgba(90,140,255,0)");
+      ctx.fillStyle = g; ctx.fillRect(0, ih * .6, W, ih * .4 + 2);
       if (story) { const t = ctx.createLinearGradient(0, 0, 0, 300); t.addColorStop(0, "rgba(5,11,20,.55)"); t.addColorStop(1, "rgba(5,11,20,0)"); ctx.fillStyle = t; ctx.fillRect(0, 0, W, 300); }
       textTop = ih - (story ? 170 : 120);
     } else if (info.pdfPage) {
@@ -98,9 +101,10 @@
     ctx.textAlign = "center";
     ctx.strokeStyle = "rgba(255,255,255,.14)"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(X, H - (story ? 236 : 128)); ctx.lineTo(W - X, H - (story ? 236 : 128)); ctx.stroke();
     ctx.font = `600 ${story ? 26 : 22}px ${SANS}`; spaced(ctx, 5); ctx.fillStyle = "#c9d6e6";
-    ctx.fillText("FABIOCOSTAPH.COM", W / 2, H - (story ? 186 : 86));
+    const sf = info.brand === "spotfolk";   // a place of SpotFolk: its own address, Fabio's name under it
+    ctx.fillText(sf ? "SPOTFOLK.EU" : "FABIOCOSTAPH.COM", W / 2, H - (story ? 186 : 86));
     ctx.font = `500 ${story ? 24 : 21}px ${SANS}`; spaced(ctx, 1); ctx.fillStyle = "#7f91a6";
-    ctx.fillText("Field Notes · Photographs · SpotFolk, travel with a friend in every place", W / 2, H - (story ? 146 : 50));
+    ctx.fillText(sf ? "The places behind the photographs · by Fabio Costa Ph" : "Field Notes · Photographs · SpotFolk", W / 2, H - (story ? 146 : 50));
     ctx.textAlign = "left"; spaced(ctx, 0);
     return new Promise(ok => cv.toBlob(ok, "image/jpeg", .9));
   }
@@ -148,7 +152,7 @@
       const blob = blobs[fmt]; if (!blob) return;
       const file = new File([blob], fileName(), { type: "image/jpeg" });
       try { navigator.clipboard?.writeText(i.url).catch(() => {}); } catch {}
-      window.fcTrack?.(`Field Notes: ${fmt} image (${i.kind})`);
+      window.fcTrack?.(`${i.brand === "spotfolk" ? "SpotFolk" : "Field Notes"}: ${fmt} image (${i.kind})`);
       if (e.target.closest("[data-shgo]") && navigator.canShare?.({ files: [file] })) {
         try { await navigator.share({ files: [file], title: i.title }); return; } catch (err) { if (err?.name === "AbortError") return; }
       }
