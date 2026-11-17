@@ -858,6 +858,7 @@ const Spots = (() => {
           ${guest && !session ? welcomeHtml() : ""}
           ${SF_LOOK ? `<div class="sf-quick${!guest && (schemaV2 || admin) ? " two" : ""}"><button type="button" class="sf-near" id="sfNear">${SX_ICON.near}<span>Places near me</span></button>${!guest && (schemaV2 || admin) ? `<button type="button" class="sf-near sf-addplace" id="sfAddPlace">${ICON_PLUS}<span>Add a place</span></button>` : ""}</div>` : ""}
           <a class="sf-hubdoor" href="#hub"><span aria-hidden="true">👥</span><span><b>The Folk Hub</b><small>what the folk are bringing to the map</small></span><em aria-hidden="true">→</em></a>
+          ${admin && !guest ? `<button type="button" class="sf-hubdoor sf-daystory" id="sfDayStory"><span aria-hidden="true">📲</span><span><b>${IT_() ? "Storia: i nuovi posti delle ultime 24 ore" : "Story: new places of the last 24 hours"}</b><small>${IT_() ? "lo vedi solo tu" : "only you see this"}</small></span><em aria-hidden="true">→</em></button>` : ""}
           ${searchHtml}
           <div class="onb-folk" id="onbFolk" hidden></div>
           <div class="sx-groups">${groups}</div>
@@ -1184,6 +1185,7 @@ const Spots = (() => {
     document.querySelectorAll("[data-sxmode]").forEach(b => b.addEventListener("click", () => setViewMode(b.dataset.sxmode)));
     $("#sxNear")?.addEventListener("click", locateMe);
     $("#sfNear")?.addEventListener("click", locateMe);
+    $("#sfDayStory")?.addEventListener("click", ev => dayStory(ev.currentTarget));
     $("#sxIn")?.addEventListener("click", () => onGlobe ? globe.zoomIn() : map.zoomIn());
     $("#sxOut")?.addEventListener("click", () => onGlobe ? globe.zoomOut() : map.zoomOut());
     $("#sxHome")?.addEventListener("click", () => { if (viewMode !== "globe") setViewMode("globe"); else if (onGlobe) globe.flyTo({ zoom: earthZoom(), duration: 1400 }); else { const c = map.getCenter(); toGlobe([c.lat, c.lng], Math.min(map.getZoom() - 1, 5), true); } });
@@ -2356,6 +2358,78 @@ const Spots = (() => {
     g.fillStyle = "#1a1206"; g.font = `800 46px ${SANS}`; g.fillText("spotfolk.eu", 150, H - 198);
     g.fillStyle = "#8a99ab"; g.font = `500 30px ${SANS}`; g.fillText(it ? "Apri il posto dal link nella storia" : "Open the place from the link in the story", 90, H - 110);
     return new Promise(res => c.toBlob(b => res(b), "image/png"));
+  }
+  /* «New on the map»: one story with the places added in the last 24 hours (else the last 7 days). Admin only.
+     No counts; photos only Fabio's own (the others' photos are theirs); fragile places never. */
+  async function dayStory(btn) {
+    const it = IT_(), now = Date.now(), since = h => spots.filter(s => !s.fragile && s.category !== "workshop" && Date.parse(s.created_at) > now - h * 36e5)
+      .sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
+    let list = since(24), week = false;
+    if (!list.length) { list = since(24 * 7); week = true; }
+    if (!list.length) return toast(it ? "Nessun posto nuovo negli ultimi 7 giorni." : "No new places in the last 7 days.");
+    list = list.slice(0, 6);
+    btn.disabled = true; const old = btn.innerHTML; btn.querySelector("b").textContent = "…";
+    try {
+      const W = 1080, H = 1920, c = document.createElement("canvas"); c.width = W; c.height = H;
+      const g = c.getContext("2d"), SERIF = "'Cormorant Garamond', Georgia, serif", SANS = "'DM Sans', system-ui, sans-serif";
+      try { await Promise.all([document.fonts.load("600 120px 'Cormorant Garamond'"), document.fonts.load("italic 500 60px 'Cormorant Garamond'"), document.fonts.load("500 40px 'DM Sans'"), document.fonts.load("700 30px 'DM Sans'")]); } catch {}
+      let bg = g.createLinearGradient(0, 0, 0, H); bg.addColorStop(0, "#0b1626"); bg.addColorStop(1, "#050b14"); g.fillStyle = bg; g.fillRect(0, 0, W, H);
+      let rg = g.createRadialGradient(W * .85, 0, 0, W * .85, 0, 1000); rg.addColorStop(0, "rgba(242,140,30,.30)"); rg.addColorStop(1, "rgba(242,140,30,0)"); g.fillStyle = rg; g.fillRect(0, 0, W, H);
+      rg = g.createRadialGradient(0, H, 0, 0, H, 900); rg.addColorStop(0, "rgba(90,140,255,.18)"); rg.addColorStop(1, "rgba(90,140,255,0)"); g.fillStyle = rg; g.fillRect(0, 0, W, H);
+      const img = (src, cors) => new Promise(res => { const im = new Image(); if (cors) im.crossOrigin = "anonymous"; im.onload = () => res(im); im.onerror = () => res(null); im.src = src; });
+      const logo = await img("img/spotfolk-logo.png");
+      if (logo) g.drawImage(logo, 90, 110, 180, 180 * logo.height / logo.width);
+      // Fabio's own photos of these places
+      const me = myUid(), photo = {};
+      try {
+        const { data } = await api(`/rest/v1/spot_photos?select=spot_id,path,user_id&spot_id=in.(${list.map(s => s.id).join(",")})&user_id=eq.${me}&order=created_at.asc`);
+        const first = new Map(); (data || []).forEach(p => { if (!first.has(p.spot_id)) first.set(p.spot_id, p); });
+        const urls = first.size ? await signPhotos([...first.values()].map(p => p.path), true) : {};
+        await Promise.all([...first.entries()].map(async ([id, p]) => { if (urls[p.path]) photo[id] = await img(urls[p.path], true); }));
+      } catch {}
+      const day = new Intl.DateTimeFormat(window.I18N?.locale || "en-GB", { day: "numeric", month: "long" }).format(new Date());
+      g.fillStyle = "#ffbe7a"; g.font = `700 30px ${SANS}`; g.letterSpacing = "6px";
+      g.fillText((week ? (it ? "Nuovi questa settimana" : "New this week") : (it ? `Nuovi sulla mappa · ${day}` : `New on the map · ${day}`)).toUpperCase(), 90, 400); g.letterSpacing = "0px";
+      g.fillStyle = "#f2f6fb"; g.font = `600 104px ${SERIF}`; g.fillText(it ? "Posti appena" : "Places just", 90, 510); g.fillText(it ? "arrivati." : "arrived.", 90, 610);
+      const rowH = list.length > 4 ? 160 : 200, th = rowH - 30;
+      let y = 680;
+      for (const s of list) {
+        const cat = CATS[s.category] || CATS.spot, fab = signMap.get(s.id)?.fabio || s.created_by === me;
+        g.save(); g.beginPath(); g.roundRect(90, y, th, th, 22); g.clip();
+        const ph = photo[s.id];
+        if (ph) { const r = Math.max(th / ph.width, th / ph.height), sw = th / r, sh = th / r; g.drawImage(ph, (ph.width - sw) / 2, (ph.height - sh) / 2, sw, sh, 90, y, th, th); }
+        else {
+          g.fillStyle = "#0d1b2c"; g.fillRect(90, y, th, th);
+          const svg = cat.icon.replace("<svg ", `<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" fill="none" stroke="${cat.color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" `);
+          const ic = await img("data:image/svg+xml," + encodeURIComponent(svg));
+          if (ic) g.drawImage(ic, 90 + th * .25, y + th * .25, th * .5, th * .5);
+        }
+        g.restore();
+        g.strokeStyle = fab ? "#ffd27a" : cat.color; g.lineWidth = 3; g.beginPath(); g.roundRect(90, y, th, th, 22); g.stroke();
+        const tx = 90 + th + 36, tw = W - tx - 90;
+        g.fillStyle = fab ? "#ffd27a" : cat.color; g.font = `700 24px ${SANS}`; g.letterSpacing = "4px";
+        g.fillText(`${fab ? "★ Fabio's pick · " : ""}${cat.label}`.toUpperCase().slice(0, 40), tx, y + 46); g.letterSpacing = "0px";
+        g.fillStyle = "#f2f6fb"; g.font = `600 ${rowH > 170 ? 54 : 46}px ${SERIF}`;
+        let name = String(s.name); while (g.measureText(name).width > tw && name.length > 3) name = name.slice(0, -2).trim() + "…";
+        g.fillText(name, tx, y + 46 + (rowH > 170 ? 66 : 56));
+        y += rowH;
+      }
+      g.fillStyle = "#f28c1e"; g.beginPath(); g.roundRect(90, H - 270, 560, 110, 55); g.fill();
+      g.fillStyle = "#1a1206"; g.font = `800 46px ${SANS}`; g.fillText("spotfolk.eu", 150, H - 198);
+      g.fillStyle = "#8a99ab"; g.font = `500 30px ${SANS}`; g.fillText(it ? "Apri la mappa dal link nella storia" : "Open the map from the link in the story", 90, H - 110);
+      const blob = await new Promise(res => c.toBlob(res, "image/png"));
+      const name = `spotfolk-new-${new Date().toISOString().slice(0, 10)}.png`, file = new File([blob], name, { type: "image/png" });
+      const url = "https://spotfolk.eu/?utm_source=story#spotfolk";
+      if (navigator.canShare?.({ files: [file] })) {
+        try { await navigator.share({ files: [file], title: "SpotFolk", text: url }); window.fcTrack?.("Spots: new-places story shared"); } catch (err) { if (err?.name !== "AbortError") throw err; }
+      } else {
+        const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name; document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+        try { await navigator.clipboard.writeText(url); } catch {}
+        toast(it ? "Immagine scaricata e link copiato: aggiungilo come sticker link nella storia." : "Picture downloaded and the link copied: add it as a link sticker in your story.");
+        window.fcTrack?.("Spots: new-places story downloaded");
+      }
+    } catch (err) { toast(`Could not make the picture: ${err.message}`, true); }
+    btn.disabled = false; btn.innerHTML = old;
   }
   // right after publishing a new place: offer to turn it into a story (only to its author, never to visitors)
   function offerStory(id) {

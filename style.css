@@ -4535,3 +4535,5 @@ html.cch-open{overflow:hidden}
 .fab-guide span{flex:1;min-width:0}
 .fab-guide b{color:#fff;font-weight:500}
 .gd-sf{display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:999px;border:1px solid currentColor;background:none;color:inherit;font:500 14px var(--sans, inherit);cursor:pointer}
+.sf-daystory{width:100%;font:inherit;text-align:left;cursor:pointer;color:inherit}
+.sf-daystory:disabled{opacity:.6;cursor:wait}
