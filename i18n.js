@@ -1555,6 +1555,7 @@ const I18N = (() => {
     "How big would it be?": ["Quanto verrebbe grande?"],
     "print sizes on a wall": ["formati di stampa su una parete"],
     "Licence requests": ["Richieste di licenza"],
+    "Woods": ["Boschi", "Bosques", "Forêts", "Wälder"],
     "In the guide": ["Nella guida"],
     "See the places on the SpotFolk map": ["Guarda i posti sulla mappa di SpotFolk"],
     "On SpotFolk": ["Su SpotFolk"],

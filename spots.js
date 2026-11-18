@@ -2100,6 +2100,7 @@ const Spots = (() => {
   const POI_TYPES = {
     waterfall: ["Waterfall", SVG('<path d="M5 4h14M8 4v9M12 4v12M16 4v9"/><path d="M4 19c1.5-1.4 3-1.4 4.5 0s3 1.4 4.5 0 3-1.4 4.5 0 2.5-1.3 3 0"/>'), /cascat|waterfall|wasserfall|cascade|\bfoss(en)?\b|\bfoss|chute|salto\b|cachoeira/i],
     lake: ["Lake", SVG('<path d="M3 15c2-1.4 4-1.4 6 0s4 1.4 6 0 4-1.4 6 0M3 19c2-1.4 4-1.4 6 0s4 1.4 6 0 4-1.4 6 0"/><path d="m5 11 4-6 3 4 2-2 5 4"/>'), /\blago\b|\blake\b|\bsee\b|\blac\b|laghett|\blaghi\b|\bloch\b|vatn|\bjezero|tarn\b/i],
+    woods: ["Woods", SVG('<path d="M8 3 4 10h2.5L3.5 15H7v5h2v-5h3.5l-3-5H12z"/><path d="M16 6l-3.5 6h2l-2.5 4.5h3V20h2v-3.5h3L17.5 12h2z"/>'), /\bbosc(o|hi)\b|\bforest(a|e)?\b|\bforest\b|\bwoods?\b|woodland|\bwald\b|\bbois\b|\bbosque\b|\bselva\b|faggeta|pineta|abetaia|castagnet|lecceta|sughereta|\bpinewood|beech wood/i],
     monument: ["Monument", SVG('<path d="M12 3 9.5 7.5h5z"/><path d="M10 7.5 9 18h6l-1-10.5M6.5 18h11v2.5h-11z"/>'), /monument|torre|tower|\btour\b|turm|\bfaro\b|lighthouse|\bponte\b|bridge|\bpont\b|br[üu]cke|\barco\b|\barch\b|statu[ae]|fontan|fountain|obelisc|obelisk|anfiteatr|amphithe|colosse|rovin|ruin|teatro|theat|museo|museum|palazz|palace|\bvilla\b|acquedott|aqueduct|mural|memorial|mausole|nurag|dolmen|menhir/i],
     village: ["Village", SVG('<path d="M3 20h18M5 20v-6l4-3 4 3v6M13 20v-9l4-3 4 3v9"/><path d="M8 20v-3h2v3"/>'), /\bborgo\b|borghi|village|\bpaese\b|frazione|hamlet|\bdorf\b|pueblo|aldea|\bborg\b/i],
     city: ["City", SVG('<path d="M3 20h18M5 20V9h5v11M10 20V4h6v16M16 20v-8h3v8"/><path d="M7 12h1M7 15h1M12.5 7h1M12.5 10h1M12.5 13h1"/>'), /citt[àa]|\bcity\b|\btown\b|piazz|square|platz|plaza|centro|quartier|district|skyline|\bvia\b|street|\brue\b|stra(ss|ß)e|calle|stazione|station|\bporto\b|harbou?r|rooftop|street art|urban/i],
@@ -2107,7 +2108,7 @@ const Spots = (() => {
     church: ["Church", SVG('<path d="M12 2.5v4M10 4.5h4M12 6.5l-5 5V21h10v-9.5z"/><path d="M10 21v-4a2 2 0 0 1 4 0v4M4 21h16"/>'), /chies|church|[ée]glise|kirche|iglesia|igreja|duomo|cattedral|cathedral|basilic|abbazi|abbey|monaster|santuari|sanctuary|\bpieve\b|cappell|chapel|convent|temple|tempio|mosque|moschea|synagog|eremo|hermitage/i],
     other: ["Other", ICON_POI, null]
   };
-  const POI_KEYS = Object.keys(POI_TYPES), POI_GUESS = ["church", "castle", "waterfall", "lake", "monument", "village", "city"];
+  const POI_KEYS = Object.keys(POI_TYPES), POI_GUESS = ["church", "castle", "waterfall", "lake", "woods", "monument", "village", "city"];
   const activePoi = new Set(POI_KEYS), poiCache = new Map();
   function poiType(s) {
     if (s.info?.poi && POI_TYPES[s.info.poi]) return s.info.poi;
@@ -2621,6 +2622,7 @@ const Spots = (() => {
       const p = poiType(s);
       if (p === "waterfall") return ["flow", "low", "frozen", "foliage", "fog", "crowded", "works"];
       if (p === "lake") return ["calm", "windy", "frozen", "low", "foliage", "fog", "crowded"];
+      if (p === "woods") return ["foliage", "fog", "snow", "clear_trail", "bloom", "quiet", "crowded"];
       if (p === "castle" || p === "church" || p === "monument") return ["open", "closed", "wait", "crowded", "quiet", "works", "fog"];
       if (p === "village" || p === "city") return ["crowded", "quiet", "parking", "works", "fog", "clearsky", "snow"];
     }
@@ -2924,7 +2926,7 @@ const Spots = (() => {
     if (s.category === "restaurant") return "food";
     if (s.category === "hotel") return "stay";
     if (s.category === "experience" || s.category === "workshop") return "experience";
-    if (s.category === "spot" && spotSub(s) === "poi") { const p = poiType(s); if (p === "waterfall" || p === "lake") return "water"; if (p === "castle" || p === "church" || p === "monument") return "monument"; if (p === "village") return "village"; if (p === "city") return "city"; }
+    if (s.category === "spot" && spotSub(s) === "poi") { const p = poiType(s); if (p === "waterfall" || p === "lake") return "water"; if (p === "castle" || p === "church" || p === "monument") return "monument"; if (p === "village") return "village"; if (p === "city") return "city"; if (p === "woods") return "trail"; }
     if (/cascat|waterfall|wasserfall|cascade|\bfoss|\blago\b|\blake\b|\bsee\b|\blac\b|laghetto|gola|forra|gorge|canyon/.test(t)) return "water";
     if (/spiaggi|beach|plage|playa|strand|\bcala\b|baia|\bbay\b|scogl|caletta|coast|costa|mare\b|sea\b/.test(t)) return "sea";
     if (s.category === "trekking" || /rifugio|sentiero|trail|hike|trek|cima|\bpiz\b|peak|forcella|malga|vetta|cliff|nípa|nipa/.test(t)) return "trail";
