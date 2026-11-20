@@ -4241,6 +4241,10 @@ body[data-page="hub"] .sf-nav a.sf-map{background:none;color:#e6ecf3}
 .sx-pchip small{color:#8a99ab;font-size:11px}
 .sx-pchip.on{background:rgba(233,216,166,.16);border-color:#e9d8a6;color:#fff}
 .sx-pchip:not(.on){opacity:.6}
+/* the lights of the photo spots: the blue of the photo spots, so they never look like the gold of the places of interest */
+.sx-pchip[data-sxphoto]{border-color:rgba(156,200,255,.3);background:rgba(156,200,255,.05)}
+.sx-pchip[data-sxphoto] svg{stroke:#9cc8ff}
+.sx-pchip[data-sxphoto].on{background:rgba(156,200,255,.18);border-color:#9cc8ff}
 .wz-poih{margin:10px 0 4px;font-size:12.5px;color:#c9d6e6;font-weight:600}
 .wz-poi .wz-sub{display:inline-flex;align-items:center;gap:6px}
 .wz-poi svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
@@ -4618,5 +4622,5 @@ html.cch-open{overflow:hidden}
 
 /* the lights a photo spot is for */
 .lt-chips{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 0}
-.lt-chip{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:999px;border:1px solid rgba(255,190,122,.4);background:rgba(255,190,122,.1);color:#ffd9a8;font-size:11.5px;line-height:1.5;white-space:nowrap}
+.lt-chip{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:999px;border:1px solid rgba(156,200,255,.45);background:rgba(156,200,255,.12);color:#cfe3ff;font-size:11.5px;line-height:1.5;white-space:nowrap}
 .lt-chip svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
