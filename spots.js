@@ -558,8 +558,8 @@ const Spots = (() => {
         <div class="gate-row">
           <div><label for="joinFirst">First name</label>
             <input id="joinFirst" type="text" autocomplete="given-name" maxlength="60" required></div>
-          <div><label for="joinLast">Last name <small>(optional)</small></label>
-            <input id="joinLast" type="text" autocomplete="family-name" maxlength="60"></div>
+          <div><label for="joinLast">Last name</label>
+            <input id="joinLast" type="text" autocomplete="family-name" maxlength="60" required></div>
         </div>
         <label for="joinEmail">Email</label>
         <input id="joinEmail" type="email" autocomplete="email" placeholder="you@example.com" required>
@@ -600,7 +600,7 @@ const Spots = (() => {
       const first = $("#joinFirst").value.trim(), last = $("#joinLast").value.trim(), email = $("#joinEmail").value.trim(),
         password = $("#joinPassword").value, msg = $("#gateMsg"), btn = $("#joinSend");
       msg.className = "gate-note warn";
-      if (!first) { msg.textContent = "Please enter your first name."; window.fcTrack?.("Join: form error", { field: "name" }); return; }
+      if (!first || !last) { msg.textContent = "Please enter your first and last name."; window.fcTrack?.("Join: form error", { field: "name" }); return; }
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { msg.textContent = "Please enter a valid email address."; return; }
       if (password.length < 8) { msg.textContent = "The password needs at least 8 characters."; window.fcTrack?.("Join: form error", { field: "password" }); return; }
       const styles = [...document.querySelectorAll("#joinStyles input:checked")].map(i => i.value);
