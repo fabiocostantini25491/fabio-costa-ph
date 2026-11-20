@@ -506,13 +506,13 @@ const Spots = (() => {
     if (SF_LOOK) return `<div class="spots-gate sf-door">
       <img class="sf-door-logo" src="img/spotfolk-logo.png" alt="SpotFolk" width="640" height="365">
       <h2>${wantJoin ? "Pull up a seat, <em>folk.</em>" : "Welcome back, <em>folk.</em>"}</h2>
-      <p>${wantJoin ? "Free, one minute. Sign places, read the tips, get your passport." : "Log in to see the whole map, sign the places you know and share your stories."}</p>
+      <p>${wantJoin ? "One minute. Sign places, read the tips, get your passport." :"Log in to see the whole map, sign the places you know and share your stories."}</p>
       ${inner}
     </div>`;
     return `<div class="spots-gate">
       <div class="gate-icon" aria-hidden="true">${LOCK_SVG}</div>
       <h2>${wantJoin ? "Become folk" : "Welcome back, folk"}</h2>
-      <p>${wantJoin ? "Free, in a minute. Pick your folk and step in: you can explore, sign, review and add places right away." : "Log in to see the whole map, sign the places you know, plan trips and open your passport."}</p>
+      <p>${wantJoin ? "In a minute. Pick your folk and step in: you can explore, sign, review and add places right away." : "Log in to see the whole map, sign the places you know, plan trips and open your passport."}</p>
       ${inner}
     </div>`;
   }
@@ -554,7 +554,7 @@ const Spots = (() => {
       ${notice ? `<p class="gate-note warn">${esc(notice)}</p>` : ""}
       <div class="gate-tabs" role="tablist">
         <button type="button" role="tab" class="${join ? "" : "on"}" aria-selected="${!join}" data-gtab="login">Log in</button>
-        <button type="button" role="tab" class="${join ? "on" : ""}" aria-selected="${join}" data-gtab="join">${SF_LOOK ? "Become folk" : "Find your folk — free"}</button>
+        <button type="button" role="tab" class="${join ? "on" : ""}" aria-selected="${join}" data-gtab="join">${SF_LOOK ? "Become folk" : "Find your folk"}</button>
       </div>
       ${join ? `<form class="gate-form" id="joinForm" novalidate>
         ${joinFolk() ? `<p class="join-folk" style="--c:${CLUSTERS[joinFolk()].color}"><i aria-hidden="true">${CLUSTERS[joinFolk()].ico}</i><span>${IT_() ? "Entri come" : "You're joining as"} <b>${esc(CLUSTERS[joinFolk()].folk)}</b></span><button type="button" class="text-link" id="joinChange">${IT_() ? "cambia" : "change"}</button></p>` : ""}
@@ -574,7 +574,7 @@ const Spots = (() => {
         ${foundersLeft != null && foundersLeft > 0 ? `<p class="wf-found">🏅 Join now and you're one of the first 100 <b>Founding folk</b> <span class="wf-left">${foundersLeft}</span> <span>places left.</span></p>` : ""}
         <label class="gate-check"><input type="checkbox" id="joinPrivacy"> <span><a href="#privacy" target="_blank">I have read the privacy notice</a> (art. 13 GDPR).</span></label>
         <label class="gate-check"><input type="checkbox" id="joinCode"> <span>I accept the <button type="button" class="text-link" id="joinShowCode">community code</button> and agree to the <a href="#terms" target="_blank">terms</a>. I'm 16 or older.</span></label>
-        ${SF_LOOK ? `<button class="sf-submit" type="submit" id="joinSend">Become folk — free →</button>` : `<button class="outline-link" type="submit" id="joinSend">JOIN <span aria-hidden="true">→</span></button>`}
+        ${SF_LOOK ? `<button class="sf-submit" type="submit" id="joinSend">Become folk →</button>` : `<button class="outline-link" type="submit" id="joinSend">JOIN <span aria-hidden="true">→</span></button>`}
         <p class="gate-note" id="gateMsg" role="status"></p>
       </form>` : `<form class="gate-form" id="gateForm" novalidate>
         <label for="gateEmail">Email</label>
@@ -751,7 +751,7 @@ const Spots = (() => {
       <p class="fcard-h">${it ? "Cosa trovi dentro" : "What you get inside"}</p>
       <ul class="fcard-gets">${(it ? F.it : F.en).map(x => `<li>${esc(x)}</li>`).join("")}</ul>
       ${taste.length ? `<p class="fcard-h">${it ? "Un assaggio" : "A taste"}</p><div class="fcard-taste">${taste.map(s => `<button type="button" data-fctaste="${s.id}"><b>${esc(s.name)}</b><small>${signMap.get(s.id)?.fabio ? "★ Fabio's pick · " : ""}${esc((CATS[s.category] || CATS.spot).label)}</small></button>`).join("")}</div>` : ""}
-      <p class="fcard-cost">✓ ${it ? "Gratis" : "Free"} · ✓ ${it ? "Un minuto: nome ed email" : "One minute: name and email"} · ✓ ${it ? "Niente pubblicità" : "No ads"} · ✓ ${it ? "Ti cancelli quando vuoi" : "Leave whenever you like"}</p>
+      <p class="fcard-cost">✓ ${it ? "Un minuto: nome ed email" : "One minute: name and email"} · ✓ ${it ? "Niente pubblicità" : "No ads"} · ✓ ${it ? "Ti cancelli quando vuoi" : "Leave whenever you like"}</p>
       <div class="pop-actions"><button type="button" class="pop-btn primary" data-fcgo>${it ? "Continua: crea il mio account" : "Continue: create my account"} →</button>
         <button type="button" class="pop-btn" data-fcmap>${it ? "Prima guardo la mappa" : "Look at the map first"}</button></div>
     </div>`);
@@ -776,7 +776,7 @@ const Spots = (() => {
       </article>
       <p class="wf-pick">Your piece is the one they're missing. Which folk are you?</p>
       <div class="wf-folks">${CLUSTER_KEYS.map(k => `<button type="button" data-joinfolk="${k}" style="--c:${CLUSTERS[k].color}"><span>${CLUSTERS[k].ico}</span>${esc(CLUSTERS[k].label)}</button>`).join("")}</div>
-      <button type="button" class="wf-cta" id="wfJoin">Find your folk — free <span aria-hidden="true">→</span></button>
+      <button type="button" class="wf-cta" id="wfJoin">Find your folk <span aria-hidden="true">→</span></button>
       ${foundersLeft != null && foundersLeft > 0 ? `<p class="wf-found">🏅 <b>${foundersLeft}</b> of 100 places left as <b>Founding folk</b>: a badge in your passport, forever.</p>` : ""}
       <p class="wf-login">Already folk? <button type="button" class="text-link" id="wfLogin">Log in</button> · <a class="text-link" href="#guide-spots">How it works</a></p>
     </section>`;
@@ -838,7 +838,7 @@ const Spots = (() => {
       <section class="wfa-close" id="wfaCode">
         <h2 class="wfa-h2">The fire is lit. <em>Pull up a seat.</em></h2>
         <p class="wfa-lead">Leave no trace, protect fragile places, respect people, support local, share honestly, be kind. That's the whole code.</p>
-        ${inside ? `<button type="button" class="wfa-btn big" id="wfaToMap">Back to the map</button>` : `<button type="button" class="wfa-btn big" id="wfaJoin">Become folk — it's free</button>
+        ${inside ? `<button type="button" class="wfa-btn big" id="wfaToMap">Back to the map</button>` : `<button type="button" class="wfa-btn big" id="wfaJoin">Become folk</button>
         <p class="wfa-log">Already folk? <button type="button" class="text-link" id="wfaLogin">Log in</button></p>`}
       </section>
       <p class="wfa-ip">© Fabio Costa Ph — the selection of the places, the cards and the photographs. Base map and data: Esri, OpenStreetMap, NASA, OpenTopoMap and the other sources shown on the map. What the folk share stays theirs. Copying the collection, or taking it out by automated means, is not allowed: see the <a href="#terms">terms</a>.</p>
@@ -1413,7 +1413,7 @@ const Spots = (() => {
         <div class="spots-user">
           ${guest && session ? `<span class="spots-email">${esc(memberName || email)}</span>
           <button class="text-link" type="button" id="spotsLogout">Log out</button>` : guest ? `<button class="text-link" type="button" id="spotsLogin">Log in</button>
-          <button class="outline-link spots-add" type="button" id="spotsJoin">${LOCK_SVG}Join free</button>` : `
+          <button class="outline-link spots-add" type="button" id="spotsJoin">${LOCK_SVG}Join</button>` : `
           <a class="outline-link spots-add me-link" href="#me">◉ My profile</a>
           ${admin ? `<button class="outline-link spots-add req-btn${pendingMembers.length + openFlags ? " has" : ""}" type="button" id="spotsRequests">Admin <b>${pendingMembers.length + openFlags}</b></button>` : ""}
           ${schemaV2 || admin ? `<button class="outline-link spots-add" type="button" id="spotsAdd">${ICON_PLUS}Add a place</button>` : ""}
@@ -1427,14 +1427,14 @@ const Spots = (() => {
       ${pendingMode ? `<div class="guest-banner pending-banner in"><p><strong>Welcome, folk!</strong> Explore everything. Signing, reviews and adding places unlock in a moment: reload the page if they don't.</p></div>` : ""}
       ${guest && !session ? `<div class="guest-banner">${LOCK_SVG}<p>${guestLoading || !spots.length ? `<strong>${guestLoading ? "Loading the shared spots…" : "The community map"}</strong>
           Open any place to read who signed it, the stories and the photos. Folk see the whole map, and sign, share and add their own.
-          <em>Membership is free:</em> <a href="#join">join in a minute</a>.` : (() => {
+          <a href="#join">Join in a minute</a>.` : (() => {
           const tr = window.I18N ? I18N.t("GUEST_BANNER2") : "GUEST_BANNER2";
           const tpl = tr !== "GUEST_BANNER2" ? tr : `<strong>You're seeing {n} of {total} places</strong>: open any of them to read who signed it, the stories and the photos.
           Folk see the whole map, and sign, share and add their own.
-          <em>Membership is free:</em> <a href="#join">join in a minute</a>.`;
+          <a href="#join">Join in a minute</a>.`;
           return tpl.replace("{n}", fmtN(spots.length)).replace("{total}", fmtN(Math.max(publicTotal, spots.length)));
         })()}</p>
-          <button type="button" class="outline-link" id="guestJoin">JOIN FREE <span aria-hidden="true">→</span></button>
+          <button type="button" class="outline-link" id="guestJoin">JOIN <span aria-hidden="true">→</span></button>
           <a class="text-link guest-guide" href="#guide-spots">How SpotFolk works</a> <a class="text-link guest-guide" href="guides/spots-quick-guide.pdf" target="_blank" rel="noopener">📄 One-page guide</a></div>` : ""}
 `;
     const tailHtml = `
@@ -1483,7 +1483,7 @@ const Spots = (() => {
         <div class="spots-user">
           ${guest && session ? `<span class="spots-email">${esc(memberName || email)}</span>
           <button class="text-link" type="button" id="spotsLogout">Log out</button>` : guest ? `<button class="text-link" type="button" id="spotsLogin">Log in</button>
-          <button class="outline-link spots-add" type="button" id="spotsJoin">${LOCK_SVG}Join free</button>` : `
+          <button class="outline-link spots-add" type="button" id="spotsJoin">${LOCK_SVG}Join</button>` : `
           ${admin ? `<button class="outline-link spots-add req-btn${pendingMembers.length + openFlags ? " has" : ""}" type="button" id="spotsRequests">Admin <b>${pendingMembers.length + openFlags}</b></button>` : ""}
           ${schemaV2 || admin ? `<button class="outline-link spots-add" type="button" id="spotsAdd">${ICON_PLUS}Add a place</button>` : ""}
           ${admin ? `<button class="text-link" type="button" id="spotsImport">${ICON_UPLOAD}Importa da Google Maps</button>` : ""}
@@ -1500,14 +1500,14 @@ const Spots = (() => {
       ${pendingMode ? `<div class="guest-banner pending-banner in"><p><strong>Welcome, folk!</strong> Explore everything. Signing, reviews and adding places unlock in a moment: reload the page if they don't.</p></div>` : ""}
       ${guest && !session ? `<div class="guest-banner">${LOCK_SVG}<p>${guestLoading || !spots.length ? `<strong>${guestLoading ? "Loading the shared spots…" : "The community map"}</strong>
           Open any place to read who signed it, the stories and the photos. Folk see the whole map, and sign, share and add their own.
-          <em>Membership is free:</em> <a href="#join">join in a minute</a>.` : (() => {
+          <a href="#join">Join in a minute</a>.` : (() => {
           const tr = window.I18N ? I18N.t("GUEST_BANNER2") : "GUEST_BANNER2";
           const tpl = tr !== "GUEST_BANNER2" ? tr : `<strong>You're seeing {n} of {total} places</strong>: open any of them to read who signed it, the stories and the photos.
           Folk see the whole map, and sign, share and add their own.
-          <em>Membership is free:</em> <a href="#join">join in a minute</a>.`;
+          <a href="#join">Join in a minute</a>.`;
           return tpl.replace("{n}", fmtN(spots.length)).replace("{total}", fmtN(Math.max(publicTotal, spots.length)));
         })()}</p>
-          <button type="button" class="outline-link" id="guestJoin">JOIN FREE <span aria-hidden="true">→</span></button>
+          <button type="button" class="outline-link" id="guestJoin">JOIN <span aria-hidden="true">→</span></button>
           <a class="text-link guest-guide" href="#guide-spots">How SpotFolk works</a> <a class="text-link guest-guide" href="guides/spots-quick-guide.pdf" target="_blank" rel="noopener">📄 One-page guide</a></div>` : ""}
       ${schemaV2 && socialV && !guest ? `<div class="spots-social" role="group" aria-label="Alerts and community">
         <label class="soc-pick">${ICON_ALERT}<span class="sr-only">Alerts</span>
@@ -2247,7 +2247,7 @@ const Spots = (() => {
     if (!s && guestLoading) return;
     deepPlace = null;
     if (s) { $("#spotsMap")?.scrollIntoView({ behavior: "smooth", block: "center" }); setTimeout(() => focusSpot(s), 400); window.fcTrack?.("Spots: shared place opened"); }
-    else if (guest && !session) { toast("This place is on the folk's map: join free to open it."); window.fcTrack?.("Spots: shared place needs joining"); }
+    else if (guest && !session) { toast("This place is on the folk's map: join to open it."); window.fcTrack?.("Spots: shared place needs joining"); }
     else toast("That place isn't on the map anymore, or it's in a filter you've hidden.");
   }
   const placeLink = s => `https://spotfolk.eu/?place=${s.id}&utm_source=share${myUid() && !guest ? `&via=${myUid()}` : ""}`;
@@ -3989,8 +3989,8 @@ const Spots = (() => {
       ${s.support_local ? `<p class="soc-note">🌱 Support local — your visit helps this place</p>` : ""}
       ${cardV && !session ? `<p class="spot-coords">${ICON.pin}<span>Opening the full card…</span></p>` : `<p class="spot-coords">${ICON.pin}<span>Approximate area (about 1 km)</span></p>`}
       ${cardV && !session ? "" : session ? `<div class="guest-cta">${LOCK_SVG}<p><b>Members see more.</b> You'll see the exact location, photos, reviews and alerts as soon as your account is approved.</p></div>`
-      : `<div class="guest-cta">${LOCK_SVG}<p><b>Members see more:</b> exact location and directions, photos, reviews, prices, live alerts and all the other spots nearby. Membership is free.</p>
-        <button type="button" class="pop-btn primary" data-join>Join free</button> <button type="button" class="pop-btn" data-login>Log in</button></div>`}
+      : `<div class="guest-cta">${LOCK_SVG}<p><b>Members see more:</b> exact location and directions, photos, reviews, prices, live alerts and all the other spots nearby.</p>
+        <button type="button" class="pop-btn primary" data-join>Join</button> <button type="button" class="pop-btn" data-login>Log in</button></div>`}
     </div>`;
   }
 
