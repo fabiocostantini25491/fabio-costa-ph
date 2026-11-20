@@ -44,7 +44,7 @@
         return [{ name: "Landscapes", go: show("Paesaggi") }, { name: "Urban", go: show("Urban") }, ...cols.map(c => ({ name: c, go: show("Tutte", c) }))];
       } },
     { id: "earth", x: 34.9, y: 48.8, r: 4.1, name: "Earth", section: "SpotFolk", label: "SpotFolk",
-      desc: "The home planet of the community: SpotFolk, the travel toolkit built by travellers. Places signed by the folk, trips, Pass it on, places to eat and stay, meetups. Free to join.",
+      desc: "The home planet of the community: SpotFolk, the travel toolkit built by travellers. Places signed by the folk, trips, places to eat and stay, meetups. Free to join.",
       go: go("spotfolk"), moons: () => [
         { name: "Join for free", go: go("join") },
         { name: "Open the map", go: go("spotfolk") },

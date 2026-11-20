@@ -135,7 +135,10 @@ const Spots = (() => {
   };
   const folkPinOf = p => { const f = pFolks(p); return f.length ? f[0] : pKind(p) === "traveller" ? "slow" : "photo"; };
   const onMapP = p => p.visible && p.on_map !== false && p.lat != null;
-  let passItems = [], passV = true, showPass = true, commDirty = false;
+  // 20 Nov 2026: «Pass it on» switched off for now (the whole feature stays in the code and in the database).
+  // To bring it back, set PASS_ON to true: the side group, the map buttons, the notices and the about block come back.
+  const PASS_ON = false;
+  let passItems = [], passV = PASS_ON, showPass = PASS_ON, commDirty = false;
   let trips = null, tripsV = true, tripCount = 0, showTrips = false, tripLayer = null, tripEd = null;   // itinerari (null = non ancora caricati)   // Pass it on (false finché non è stato eseguito supabase-pass-it-on.sql)
   let tkV = true;           // false finché non è stato eseguito supabase-trekking.sql
   let wsV = true;           // false finché non è stato eseguito supabase-workshop.sql
@@ -728,8 +731,8 @@ const Spots = (() => {
              it: ["Posti con l'ora e la stagione migliori, da chi c'era", "I Fabio's pick, e come li ha scattati", "Chiedi a chi è sul posto com'è la luce adesso"], cats: ["spot"], img: "photo.jpg" },
     hike:  { en: ["Trails with parking, time and difficulty", "Snow, mud and ice: how it is now, from who walked it", "Huts and viewpoints signed by hiker folk"],
              it: ["Sentieri con parcheggio, tempi e difficoltà", "Neve, fango e ghiaccio: com'è adesso, da chi l'ha percorso", "Rifugi e belvedere firmati dagli hiker folk"], cats: ["trekking", "spot"], img: "hike.jpg" },
-    slow:  { en: ["Places to sleep and eat with real prices", "Pass it on: what travellers leave behind, free or cheap", "Tips from who travels slow, like you"],
-             it: ["Dove dormire e mangiare con prezzi veri", "Pass it on: quello che lasciano i viaggiatori, gratis o quasi", "Consigli di chi viaggia lento, come te"], cats: ["hotel", "restaurant"], img: "slow.jpg" },
+    slow:  { en: ["Places to sleep and eat with real prices", "What's worth the detour and what isn't, from who went", "Tips from who travels slow, like you"],
+             it: ["Dove dormire e mangiare con prezzi veri", "Cosa vale la deviazione e cosa no, da chi c'è stato", "Consigli di chi viaggia lento, come te"], cats: ["hotel", "restaurant"], img: "slow.jpg" },
     road:  { en: ["Stops worth the detour, on one map", "Your trips stop by stop, to keep or share", "Parking and access: how it is now"],
              it: ["Le soste che valgono la deviazione, su una mappa", "I tuoi viaggi tappa per tappa, da tenere o condividere", "Parcheggi e accessi: com'è adesso"], cats: ["spot", "experience"], img: "road.jpg" },
     nomad: { en: ["Places to stay and work from, signed by folk", "Meet the folk passing through your area", "Local tips from who lives there"],
@@ -771,11 +774,6 @@ const Spots = (() => {
         <b class="wf-pn">Santa Maddalena viewpoint</b>
         ${VOICES.map(([k, q]) => `<p class="wf-voice" style="--c:${CLUSTERS[k].color}"><small><i aria-hidden="true">${CLUSTERS[k].ico}</i>${esc(CLUSTERS[k].folk)}</small><q>${esc(q)}</q></p>`).join("")}
       </article>
-      <div class="wf-start">
-        <p class="wf-kick">It starts with my places</p>
-        <p class="wf-st">My light. <em>Your trail. Their table.</em></p>
-        <p class="wf-stl">I mark the places I photograph, and how I shot them. Each folk adds the piece they see.</p>
-      </div>
       <p class="wf-pick">Your piece is the one they're missing. Which folk are you?</p>
       <div class="wf-folks">${CLUSTER_KEYS.map(k => `<button type="button" data-joinfolk="${k}" style="--c:${CLUSTERS[k].color}"><span>${CLUSTERS[k].ico}</span>${esc(CLUSTERS[k].label)}</button>`).join("")}</div>
       <button type="button" class="wf-cta" id="wfJoin">Find your folk — free <span aria-hidden="true">→</span></button>
@@ -822,7 +820,7 @@ const Spots = (() => {
           <article><h3>Places</h3><p>Photo spots, points of interest and trekking, with best months, live alerts and protection for fragile places.</p></article>
           <article><h3>Essentials</h3><p>Where to sleep and eat, with real prices, reviews by folk and Support local.</p></article>
           <article><h3>Trips</h3><p>Journeys stop by stop, with how you got there, on the map and on the 3D Earth.</p></article>
-          <article class="new"><h3>Pass it on <span>NEW</span></h3><p>Leaving? Sell or give away what you won't take home to the folk arriving after you.</p></article>
+          ${PASS_ON ? `<article class="new"><h3>Pass it on <span>NEW</span></h3><p>Leaving? Sell or give away what you won't take home to the folk arriving after you.</p></article>` : ""}
           <article><h3>Passport</h3><p>Every place you sign is a stamp. Wanderer, Pathfinder, Trusted, and Local expert in your area.</p></article>
           <article><h3>Field Notes</h3><p>Every folk can write. Stories go into <a href="#journal">Field Notes</a> and the monthly magazine.</p></article>
         </div>
@@ -866,7 +864,7 @@ const Spots = (() => {
         + `<button type="button" class="sx-item${camsOn ? " on" : ""}" id="camsToggle" aria-pressed="${camsOn}" style="--c:#9ec5ff"><span class="sx-ico">📹</span><span class="sx-name">Live webcams</span><span class="sx-check" aria-hidden="true"></span></button>`;
       if (g.id === "pass") {
         const intro = `<p class="sx-pass-intro">Leaving and can't take it home? Sell it or give it away to the travellers arriving after you: chargers, adapters, tents, guidebooks…</p>`;
-        if (guest || !commV) return intro + lockItem("Pass it on", "🎁");
+        if (guest || !commV) return intro + (PASS_ON ? lockItem("Pass it on", "🎁") : "");
         return intro + `<button type="button" class="sx-item${showPass ? " on" : ""}" id="showPass" aria-pressed="${showPass}" style="--c:#8fe0a8"><span class="sx-ico">${SX_ICON.pass}</span><span class="sx-name">Show on the map</span><small>${livePass().length}</small><span class="sx-check" aria-hidden="true"></span></button>
           <button type="button" class="sx-item" id="passList" style="--c:#8fe0a8"><span class="sx-ico">☰</span><span class="sx-name">All the items</span><span class="sx-go" aria-hidden="true">›</span></button>
           <button type="button" class="sx-pass-cta" id="passAdd">🎁 Sell or give away something</button>`;
@@ -888,7 +886,7 @@ const Spots = (() => {
       if (g.id === "essentials") return g.cats.map(k => item(k)).join("") + (!guest && schemaV2 && socialV ? supportItem(g.cats) : "");
       return g.cats.map(k => item(k)).join("");
     };
-    const groups = SX_GROUPS.filter(g => g.id !== "pass" || guest || !commV || passV).map(g => {
+    const groups = SX_GROUPS.filter(g => g.id !== "pass" || (PASS_ON && (guest || !commV || passV))).map(g => {
       const open = sxOpen.has(g.id), on = g.cats.some(k => activeCats.has(k)) || (g.id === "community" && showFolks.size > 0) || (g.id === "pass" && showPass && !guest && commV);
       const count = g.cats.reduce((a, k) => a + n(k), 0);
       return `<section class="sx-group${open ? " open" : ""}${on ? " on" : ""}" data-g="${g.id}">
