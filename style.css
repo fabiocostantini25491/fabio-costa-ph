@@ -4537,3 +4537,27 @@ html.cch-open{overflow:hidden}
 .gd-sf{display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:999px;border:1px solid currentColor;background:none;color:inherit;font:500 14px var(--sans, inherit);cursor:pointer}
 .sf-daystory{width:100%;font:inherit;text-align:left;cursor:pointer;color:inherit}
 .sf-daystory:disabled{opacity:.6;cursor:wait}
+
+/* the folk card: what your folk gives you, shown before the sign-up form */
+.fcard{--c:#9cc8ff;display:grid;gap:12px}
+.fcard-hero{display:flex;align-items:center;gap:14px}
+.fcard-hero img{width:84px;height:84px;border-radius:50%;object-fit:cover;border:2px solid var(--c)}
+.fcard-hero h2{margin:2px 0 0;font:500 28px/1.15 var(--display);color:#fff}
+.fcard-hero em{color:var(--c);font-style:italic}
+.fcard-h{margin:4px 0 0;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.fcard-gets{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.fcard-gets li{position:relative;padding-left:26px;font-size:15px;line-height:1.5;color:var(--text)}
+.fcard-gets li::before{content:"";position:absolute;left:6px;top:.62em;width:8px;height:8px;border-radius:50%;background:var(--c)}
+.fcard-taste{display:grid;gap:6px}
+.fcard-taste button{text-align:left;padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:rgba(255,255,255,.03);color:inherit;font:inherit;cursor:pointer}
+.fcard-taste b{display:block;color:#fff;font-weight:500;font-size:14.5px}
+.fcard-taste small{color:var(--muted);font-size:12px}
+.fcard-cost{margin:2px 0 0;font-size:12.5px;line-height:1.7;color:var(--soft)}
+.fcard .pop-actions{display:grid;gap:8px;margin-top:4px}
+.fcard .pop-actions .pop-btn{width:100%;justify-content:center;text-align:center;padding:14px 16px;font-size:15px}
+.join-folk{display:flex;align-items:center;gap:10px;margin:0 0 4px;padding:10px 12px;border-radius:12px;border:1px solid var(--c);background:rgba(255,255,255,.04);font-size:14px}
+.join-folk i{font-style:normal;font-size:20px}
+.join-folk span{flex:1;min-width:0;color:var(--soft)}
+.join-folk b{color:#fff;font-weight:500}
+.cl-pick.is-picked{opacity:.85}
+.cl-pick.is-picked legend{color:var(--muted)}

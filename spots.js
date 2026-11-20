@@ -554,17 +554,18 @@ const Spots = (() => {
         <button type="button" role="tab" class="${join ? "on" : ""}" aria-selected="${join}" data-gtab="join">${SF_LOOK ? "Become folk" : "Find your folk — free"}</button>
       </div>
       ${join ? `<form class="gate-form" id="joinForm" novalidate>
+        ${joinFolk() ? `<p class="join-folk" style="--c:${CLUSTERS[joinFolk()].color}"><i aria-hidden="true">${CLUSTERS[joinFolk()].ico}</i><span>${IT_() ? "Entri come" : "You're joining as"} <b>${esc(CLUSTERS[joinFolk()].folk)}</b></span><button type="button" class="text-link" id="joinChange">${IT_() ? "cambia" : "change"}</button></p>` : ""}
         <div class="gate-row">
           <div><label for="joinFirst">First name</label>
             <input id="joinFirst" type="text" autocomplete="given-name" maxlength="60" required></div>
-          <div><label for="joinLast">Last name</label>
-            <input id="joinLast" type="text" autocomplete="family-name" maxlength="60" required></div>
+          <div><label for="joinLast">Last name <small>(optional)</small></label>
+            <input id="joinLast" type="text" autocomplete="family-name" maxlength="60"></div>
         </div>
         <label for="joinEmail">Email</label>
         <input id="joinEmail" type="email" autocomplete="email" placeholder="you@example.com" required>
         <label for="joinPassword">Password</label>
         <input id="joinPassword" type="password" autocomplete="new-password" minlength="8" placeholder="At least 8 characters" required>
-        <fieldset class="cl-pick" id="joinStyles"><legend>Choose your folk <small>(how you travel: pick all that fit)</small></legend>
+        <fieldset class="cl-pick${joinFolk() ? " is-picked" : ""}" id="joinStyles"><legend>${joinFolk() ? `${IT_() ? "Aggiungi un altro folk" : "Add another folk"} <small>${IT_() ? "(facoltativo)" : "(optional)"}</small>` : "Choose your folk <small>(how you travel: pick all that fit)</small>"}</legend>
           ${CLUSTER_KEYS.map(k => `<label><input type="checkbox" value="${k}"${DOORS[doorNow()] === k || joinFolk() === k ? " checked" : ""}><span>${SF_LOOK ? `<i aria-hidden="true">${CLUSTERS[k].ico}</i>${CLUSTERS[k].label}` : `${CLUSTERS[k].ico} ${CLUSTERS[k].long}`}</span></label>`).join("")}
         </fieldset>
         ${foundersLeft != null && foundersLeft > 0 ? `<p class="wf-found">🏅 Join now and you're one of the first 100 <b>Founding folk</b> <span class="wf-left">${foundersLeft}</span> <span>places left.</span></p>` : ""}
@@ -588,18 +589,24 @@ const Spots = (() => {
       (wantJoin ? $("#joinFirst") : $("#gateEmail"))?.focus();
     }));
     $("#joinShowCode")?.addEventListener("click", () => showConduct());
+    $("#joinChange")?.addEventListener("click", () => { try { localStorage.removeItem("fcph-joinfolk"); } catch {} renderGate(); });
+    if (wantJoin) {   // where people stop: form shown → first field filled → signed up (anonymous counts)
+      window.fcTrack?.("Join: form shown");
+      let typed = false;
+      $("#joinForm")?.addEventListener("input", () => { if (!typed) { typed = true; window.fcTrack?.("Join: form started"); } });
+    }
     $("#joinForm")?.addEventListener("submit", async e => {
       e.preventDefault();
       const first = $("#joinFirst").value.trim(), last = $("#joinLast").value.trim(), email = $("#joinEmail").value.trim(),
         password = $("#joinPassword").value, msg = $("#gateMsg"), btn = $("#joinSend");
       msg.className = "gate-note warn";
-      if (!first || !last) { msg.textContent = "Please enter your first and last name."; return; }
+      if (!first) { msg.textContent = "Please enter your first name."; window.fcTrack?.("Join: form error", { field: "name" }); return; }
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { msg.textContent = "Please enter a valid email address."; return; }
-      if (password.length < 8) { msg.textContent = "The password needs at least 8 characters."; return; }
+      if (password.length < 8) { msg.textContent = "The password needs at least 8 characters."; window.fcTrack?.("Join: form error", { field: "password" }); return; }
       const styles = [...document.querySelectorAll("#joinStyles input:checked")].map(i => i.value);
-      if (!styles.length) { msg.textContent = "Choose your folk: pick at least one."; return; }
-      if (!$("#joinPrivacy").checked) { msg.textContent = "Please confirm you have read the privacy notice."; return; }
-      if (!$("#joinCode").checked) { msg.textContent = "Please accept the community code and the terms."; return; }
+      if (!styles.length) { msg.textContent = "Choose your folk: pick at least one."; window.fcTrack?.("Join: form error", { field: "folk" }); return; }
+      if (!$("#joinPrivacy").checked) { msg.textContent = "Please confirm you have read the privacy notice."; window.fcTrack?.("Join: form error", { field: "privacy" }); return; }
+      if (!$("#joinCode").checked) { msg.textContent = "Please accept the community code and the terms."; window.fcTrack?.("Join: form error", { field: "code" }); return; }
       btn.disabled = true; msg.className = "gate-note"; msg.textContent = "Sending your request…";
       try {
         const how = await signUp(first, last, email, password, styles);
@@ -714,6 +721,44 @@ const Spots = (() => {
   ];
 
   /* --- BENVENUTO per chi non è ancora folk: cos'è, perché entrare, quale folk sei --- */
+  /* «Folk card» (18 Nov 2026): after picking a folk and before the form, what that choice gives — in that folk's words,
+     with a taste of real places — and what it costs (nothing, a minute). Two ways out: continue, or look at the map first. */
+  const FOLK_GETS = {
+    photo: { en: ["Places with the best hour and season, from who stood there", "Fabio's picks, and how he shot them", "Ask who's on the spot how the light is now"],
+             it: ["Posti con l'ora e la stagione migliori, da chi c'era", "I Fabio's pick, e come li ha scattati", "Chiedi a chi è sul posto com'è la luce adesso"], cats: ["spot"], img: "photo.jpg" },
+    hike:  { en: ["Trails with parking, time and difficulty", "Snow, mud and ice: how it is now, from who walked it", "Huts and viewpoints signed by hiker folk"],
+             it: ["Sentieri con parcheggio, tempi e difficoltà", "Neve, fango e ghiaccio: com'è adesso, da chi l'ha percorso", "Rifugi e belvedere firmati dagli hiker folk"], cats: ["trekking", "spot"], img: "hike.jpg" },
+    slow:  { en: ["Places to sleep and eat with real prices", "Pass it on: what travellers leave behind, free or cheap", "Tips from who travels slow, like you"],
+             it: ["Dove dormire e mangiare con prezzi veri", "Pass it on: quello che lasciano i viaggiatori, gratis o quasi", "Consigli di chi viaggia lento, come te"], cats: ["hotel", "restaurant"], img: "slow.jpg" },
+    road:  { en: ["Stops worth the detour, on one map", "Your trips stop by stop, to keep or share", "Parking and access: how it is now"],
+             it: ["Le soste che valgono la deviazione, su una mappa", "I tuoi viaggi tappa per tappa, da tenere o condividere", "Parcheggi e accessi: com'è adesso"], cats: ["spot", "experience"], img: "road.jpg" },
+    nomad: { en: ["Places to stay and work from, signed by folk", "Meet the folk passing through your area", "Local tips from who lives there"],
+             it: ["Posti dove stare e lavorare, firmati dai folk", "Incontra i folk di passaggio nella tua zona", "Consigli locali da chi ci vive"], cats: ["hotel", "experience"], img: "nomad.jpg" },
+    food:  { en: ["The trattorie the locals actually use", "Real prices and Support local", "One line each from who sat at that table"],
+             it: ["Le trattorie dove vanno davvero i locali", "Prezzi veri e Support local", "Una riga per ognuno da chi si è seduto a quel tavolo"], cats: ["restaurant"], img: "food.jpg" }
+  };
+  function folkCard(k) {
+    const C = CLUSTERS[k], F = FOLK_GETS[k]; if (!C || !F) { wantJoin = true; render(); return; }
+    const it = IT_();
+    // a taste of real places for this folk: Fabio's picks first
+    const pool = spots.filter(s => F.cats.includes(s.category) && !s.fragile);
+    const taste = [...pool.filter(s => signMap.get(s.id)?.fabio), ...pool.filter(s => !signMap.get(s.id)?.fabio)].slice(0, 3);
+    const d = dlg("folkCardDialog", `<div class="import-body fcard" style="--c:${C.color}">
+      <div class="fcard-hero"><img src="img/wf/${F.img}" alt="" width="120" height="120"><div><span class="eyebrow">${it ? "La tua scelta" : "Your pick"}</span><h2>${it ? "Sei un" : "You're a"} <em>${esc(C.folk)}</em></h2></div></div>
+      <p class="fcard-h">${it ? "Cosa trovi dentro" : "What you get inside"}</p>
+      <ul class="fcard-gets">${(it ? F.it : F.en).map(x => `<li>${esc(x)}</li>`).join("")}</ul>
+      ${taste.length ? `<p class="fcard-h">${it ? "Un assaggio" : "A taste"}</p><div class="fcard-taste">${taste.map(s => `<button type="button" data-fctaste="${s.id}"><b>${esc(s.name)}</b><small>${signMap.get(s.id)?.fabio ? "★ Fabio's pick · " : ""}${esc((CATS[s.category] || CATS.spot).label)}</small></button>`).join("")}</div>` : ""}
+      <p class="fcard-cost">✓ ${it ? "Gratis" : "Free"} · ✓ ${it ? "Un minuto: nome ed email" : "One minute: name and email"} · ✓ ${it ? "Niente pubblicità" : "No ads"} · ✓ ${it ? "Ti cancelli quando vuoi" : "Leave whenever you like"}</p>
+      <div class="pop-actions"><button type="button" class="pop-btn primary" data-fcgo>${it ? "Continua: crea il mio account" : "Continue: create my account"} →</button>
+        <button type="button" class="pop-btn" data-fcmap>${it ? "Prima guardo la mappa" : "Look at the map first"}</button></div>
+    </div>`);
+    window.fcTrack?.("Join: folk card shown", { folk: k });
+    d.querySelector("[data-fcgo]").addEventListener("click", () => { window.fcTrack?.("Join: folk card continue", { folk: k }); d.close(); wantJoin = true; render(); root().scrollIntoView({ behavior: "smooth" }); });
+    d.querySelector("[data-fcmap]").addEventListener("click", () => { window.fcTrack?.("Join: folk card map first", { folk: k }); d.close(); ($(".sx-stage") || $(".spots-stage") || root()).scrollIntoView({ behavior: "smooth", block: "start" }); });
+    d.querySelectorAll("[data-fctaste]").forEach(b => b.addEventListener("click", () => {
+      const s = spots.find(x => x.id === +b.dataset.fctaste); window.fcTrack?.("Join: folk card place opened", { folk: k }); d.close(); if (s) focusSpot(s);
+    }));
+  }
   function welcomeHtml() {
     return `<section class="wf-welcome" aria-label="Join SpotFolk">
       <h3>Is it worth the trip? <em>Ask the folk who went.</em></h3>
@@ -1543,10 +1588,10 @@ const Spots = (() => {
     $("#spotsLogout")?.addEventListener("click", logout);
     $("#spotsLogin")?.addEventListener("click", () => { wantLogin = true; wantJoin = false; render(); root().scrollIntoView({ behavior: "smooth" }); });
     [$("#spotsJoin"), $("#guestJoin"), $("#wfJoin"), $("#wfaJoin"), $("#wfaPeek")].forEach(b => b?.addEventListener("click", () => { wantJoin = true; render(); root().scrollIntoView({ behavior: "smooth" }); }));
-    $$("[data-joinfolk]").forEach(b => b.addEventListener("click", () => {   // scegli il folk e vai all'iscrizione con quel folk già scelto
+    $$("[data-joinfolk]").forEach(b => b.addEventListener("click", () => {   // scegli il folk: prima la sua «carta» (cosa ottieni), poi l'iscrizione
       try { localStorage.setItem("fcph-joinfolk", b.dataset.joinfolk); } catch {}
       window.fcTrack?.("Spots: log in prompt"); window.fcTrack?.("Wayfolk: folk picked", { folk: b.dataset.joinfolk });
-      wantJoin = true; render(); root().scrollIntoView({ behavior: "smooth" });
+      folkCard(b.dataset.joinfolk);
     }));
     $("#wfaToMap")?.addEventListener("click", () => ($(".sx-stage") || $(".spots-stage") || root()).scrollIntoView({ behavior: "smooth", block: "start" }));
     $("#wfaLogin")?.addEventListener("click", () => { wantLogin = true; wantJoin = false; render(); root().scrollIntoView({ behavior: "smooth" }); });
