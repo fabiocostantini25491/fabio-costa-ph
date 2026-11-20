@@ -4569,3 +4569,27 @@ html.cch-open{overflow:hidden}
 .wf-voice small{display:flex;align-items:center;gap:6px;color:var(--c);font-size:11.5px;letter-spacing:.06em;text-transform:uppercase}
 .wf-voice i{font-style:normal;font-size:14px}
 .wf-voice q{display:block;margin-top:3px;color:var(--soft);font-size:14px;line-height:1.5;quotes:"“" "”"}
+
+/* phone (20 Nov 2026): the map right after the title, everything else below — the page was 7.7 screenfuls */
+@media (max-width:980px){
+  #spots .sx-kick{order:1}
+  #spots .sx-title{order:2}
+  #spots .sx-stage{order:3}
+  #spots .wf-welcome{order:4;margin:4px 0 0}
+  #spots .onb-folk{order:4}
+  #spots .sx-panel .spots-search{order:5}
+  #spots .sf-quick{order:6}
+  #spots .sf-hubdoor{order:7}
+  #spots .sx-groups{order:8}
+  #spots .sx-foot{order:9}
+  #spots .sx-user{order:10}
+  #spots .sx-home{order:11}
+  #spots .sx-more{order:12}
+}
+/* the long presentation: the essentials, the rest behind «Read more» */
+.wfa-more{margin:0}
+.wfa-more > summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;margin:0 auto;padding:12px 20px;width:fit-content;border:1px solid var(--line-strong);border-radius:999px;color:var(--accent);font:500 14px var(--sans)}
+.wfa-more > summary::-webkit-details-marker{display:none}
+.wfa-more > summary::after{content:"＋";font-size:16px;line-height:1}
+.wfa-more[open] > summary{margin-bottom:8px}
+.wfa-more[open] > summary::after{content:"−"}

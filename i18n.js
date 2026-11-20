@@ -1555,6 +1555,8 @@ const I18N = (() => {
     "How big would it be?": ["Quanto verrebbe grande?"],
     "print sizes on a wall": ["formati di stampa su una parete"],
     "Licence requests": ["Richieste di licenza"],
+    "Read more about SpotFolk": ["Scopri di più su SpotFolk"],
+    "Three steps to the fire": ["Tre passi verso il fuoco"],
     "What you know is": ["Quello che sai è"],
     "what somebody else is missing.": ["quello che manca a un altro."],
     "You travel one way, the folk beside you another. Leave your piece and the place becomes whole for everyone.": ["Tu viaggi in un modo, il folk accanto a te in un altro. Lascia il tuo pezzo e il posto diventa completo per tutti."],

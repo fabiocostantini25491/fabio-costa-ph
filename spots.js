@@ -778,7 +778,6 @@ const Spots = (() => {
       <div class="wf-folks">${CLUSTER_KEYS.map(k => `<button type="button" data-joinfolk="${k}" style="--c:${CLUSTERS[k].color}"><span>${CLUSTERS[k].ico}</span>${esc(CLUSTERS[k].label)}</button>`).join("")}</div>
       <button type="button" class="wf-cta" id="wfJoin">Find your folk — free <span aria-hidden="true">→</span></button>
       ${foundersLeft != null && foundersLeft > 0 ? `<p class="wf-found">🏅 <b>${foundersLeft}</b> of 100 places left as <b>Founding folk</b>: a badge in your passport, forever.</p>` : ""}
-      <div class="wf-peek" aria-label="What you find inside"><span>★ Fabio's pick</span><span>✍ Signed by hiker folk</span><span>📍 On the spot</span><span>👍 Useful tips</span><span>🛂 Your passport</span></div>
       <p class="wf-login">Already folk? <button type="button" class="text-link" id="wfLogin">Log in</button> · <a class="text-link" href="#guide-spots">How it works</a></p>
     </section>`;
   }
@@ -797,6 +796,7 @@ const Spots = (() => {
           ? `<div class="wfa-f is-static"><span class="wfa-ring"><img src="img/wf/${img}" alt="" loading="lazy" width="120" height="120"></span><b>${n}</b><small>${line}</small></div>`
           : `<button type="button" data-joinfolk="${k}" class="wfa-f"><span class="wfa-ring"><img src="img/wf/${img}" alt="" loading="lazy" width="120" height="120"></span><b>${n}</b><small>${line}</small></button>`).join("")}</div>
       </section>
+      <details class="wfa-more"><summary>Read more about SpotFolk</summary>
       <section class="wfa-blk wfa-split" id="wfaTips">
         <div>
           <p class="wfa-kick">What the maps don't tell you</p>
@@ -814,6 +814,7 @@ const Spots = (() => {
           </div>
         </article>
       </section>
+      </details>
       <section class="wfa-blk" id="wfaInside">
         <h2 class="wfa-h2">One toolkit for the road, <em>kept alive by its folk.</em></h2>
         <div class="wfa-grid">
@@ -825,14 +826,15 @@ const Spots = (() => {
           <article><h3>Field Notes</h3><p>Every folk can write. Stories go into <a href="#journal">Field Notes</a> and the monthly magazine.</p></article>
         </div>
       </section>
+      <details class="wfa-more"><summary>Three steps to the fire</summary>
       <section class="wfa-blk wfa-steps">
-        <h2 class="wfa-h2">Three steps to the fire.</h2>
         <ol>
           <li><span>01</span><b>Pick your folk</b><small>One or more. Sign up with your email in a minute.</small></li>
           <li><span>02</span><b>Sign three places you've been</b><small>That's your welcome. Be the first to sign one and your name stays on it.</small></li>
           <li><span>03</span><b>Get your passport</b><small><span>Stamps, levels, Local expert.</span></small></li>
         </ol>
       </section>
+      </details>
       <section class="wfa-close" id="wfaCode">
         <h2 class="wfa-h2">The fire is lit. <em>Pull up a seat.</em></h2>
         <p class="wfa-lead">Leave no trace, protect fragile places, respect people, support local, share honestly, be kind. That's the whole code.</p>
