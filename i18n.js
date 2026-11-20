@@ -1555,6 +1555,7 @@ const I18N = (() => {
     "How big would it be?": ["Quanto verrebbe grande?"],
     "print sizes on a wall": ["formati di stampa su una parete"],
     "Licence requests": ["Richieste di licenza"],
+    "© Fabio Costa Ph — the selection of the places, the cards and the photographs. Base map and data: Esri, OpenStreetMap, NASA, OpenTopoMap and the other sources shown on the map. What the folk share stays theirs. Copying the collection, or taking it out by automated means, is not allowed: see the": ["© Fabio Costa Ph — la selezione dei luoghi, le schede e le fotografie. Mappa di base e dati: Esri, OpenStreetMap, NASA, OpenTopoMap e le altre fonti indicate sulla mappa. Quello che condividono i folk resta loro. Copiare la raccolta, o estrarla con mezzi automatici, non è consentito: vedi i"],
     "Read more about SpotFolk": ["Scopri di più su SpotFolk"],
     "Three steps to the fire": ["Tre passi verso il fuoco"],
     "What you know is": ["Quello che sai è"],

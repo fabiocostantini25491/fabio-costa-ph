@@ -4593,3 +4593,5 @@ html.cch-open{overflow:hidden}
 .wfa-more > summary::after{content:"＋";font-size:16px;line-height:1}
 .wfa-more[open] > summary{margin-bottom:8px}
 .wfa-more[open] > summary::after{content:"−"}
+.wfa-ip{margin:18px auto 0;max-width:720px;padding-top:14px;border-top:1px solid var(--line);font-size:11.5px;line-height:1.6;color:var(--muted);text-align:center}
+.wfa-ip a{color:var(--soft)}

@@ -841,6 +841,7 @@ const Spots = (() => {
         ${inside ? `<button type="button" class="wfa-btn big" id="wfaToMap">Back to the map</button>` : `<button type="button" class="wfa-btn big" id="wfaJoin">Become folk — it's free</button>
         <p class="wfa-log">Already folk? <button type="button" class="text-link" id="wfaLogin">Log in</button></p>`}
       </section>
+      <p class="wfa-ip">© Fabio Costa Ph — the selection of the places, the cards and the photographs. Base map and data: Esri, OpenStreetMap, NASA, OpenTopoMap and the other sources shown on the map. What the folk share stays theirs. Copying the collection, or taking it out by automated means, is not allowed: see the <a href="#terms">terms</a>.</p>
     </div>`;
   }
   function earthHtml({ searchHtml, userHtml, bannerHtml, tailHtml }) {
