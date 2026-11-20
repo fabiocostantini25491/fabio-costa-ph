@@ -4595,3 +4595,8 @@ html.cch-open{overflow:hidden}
 .wfa-more[open] > summary::after{content:"−"}
 .wfa-ip{margin:18px auto 0;max-width:720px;padding-top:14px;border-top:1px solid var(--line);font-size:11.5px;line-height:1.6;color:var(--muted);text-align:center}
 .wfa-ip a{color:var(--soft)}
+
+/* a guide that is still growing: published as it is built */
+.gd-wip{display:inline-block;padding:3px 10px;border-radius:999px;background:rgba(159,227,200,.16);border:1px solid rgba(159,227,200,.5);color:#9fe3c8;font:600 10.5px/1.4 var(--sans);letter-spacing:.1em;text-transform:uppercase;white-space:nowrap}
+.gd-cover .gd-wip{position:absolute;top:12px;right:12px;z-index:2;background:rgba(6,14,32,.82)}
+.gd-wip-line{margin:8px 0 0;display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12.5px;color:var(--soft)}

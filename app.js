@@ -2524,8 +2524,8 @@ async function renderGuides() {
     ${list.length ? `<ul class="gd-books">${list.map(g => {
       const n = (g.zone || []).reduce((a, z) => a + (z.luoghi || []).length, 0);
       return `<li><a class="gd-book" href="#g-${esc(g.slug)}">
-        <span class="gd-cover${g.copertina ? "" : " no-img"}">${g.copertina ? `<img src="${esc(mediaUrl(g.copertina))}" alt="" loading="lazy">` : ""}<span class="gd-cover-t"><small>Field Notes · Guide</small><b>${esc(g.titolo)}</b><em>${esc(g.sottotitolo || "")}</em></span></span>
-        <span class="gd-book-meta">${(g.zone || []).length} ${T("zones")} · ${n} ${T("places")}</span></a>
+        <span class="gd-cover${g.copertina ? "" : " no-img"}">${g.copertina ? `<img src="${esc(mediaUrl(g.copertina))}" alt="" loading="lazy">` : ""}<span class="gd-cover-t"><small>Field Notes · Guide</small><b>${esc(g.titolo)}</b><em>${esc(g.sottotitolo || "")}</em></span>${g.in_corso ? `<span class="gd-wip">${T("Growing")}</span>` : ""}</span>
+        <span class="gd-book-meta">${g.in_corso && g.aggiornata ? `${T("updated")} ${esc(fmtDate(g.aggiornata))}` : `${(g.zone || []).length} ${T("zones")} · ${n} ${T("places")}`}</span></a>
         <a class="gd-book-pdf" href="guida.html?g=${encodeURIComponent(g.slug)}&amp;print=1" target="_blank" rel="noopener" data-guide-pdf>PDF</a>${fnShareBtn(`g-${g.slug}`, g.titolo, "guide").replace('class="fn-share"', 'class="fn-share gd-book-share"')}</li>`;
     }).join("")}</ul>` : guidesPdf.length ? "" : `<p class="mz-empty">${T("The first guide is being written.")}</p>`}
   </div>`;
@@ -2546,7 +2546,8 @@ async function renderGuide(slugId) {
     <a class="fn-back" href="#guides">← ${T("All guides")}</a>
     <header class="gd-hero${g.copertina ? "" : " no-img"}">
       ${g.copertina ? `<img src="${esc(mediaUrl(g.copertina))}" alt="" data-zoom>` : ""}
-      <div class="gd-hero-t"><p class="mz-issue">Field Notes · ${T("Guide")}${g.luogo ? ` · ${esc(g.luogo)}` : ""}</p><h2>${esc(g.titolo)}</h2>${g.sottotitolo ? `<p class="gd-sub">${esc(g.sottotitolo)}</p>` : ""}</div>
+      <div class="gd-hero-t"><p class="mz-issue">Field Notes · ${T("Guide")}${g.luogo ? ` · ${esc(g.luogo)}` : ""}</p><h2>${esc(g.titolo)}</h2>${g.sottotitolo ? `<p class="gd-sub">${esc(g.sottotitolo)}</p>` : ""}
+        ${g.in_corso ? `<p class="gd-wip-line"><span class="gd-wip">${T("Growing")}</span> ${T("I add a place whenever I come back with one.")}${g.aggiornata ? ` ${T("Last added")}: ${esc(fmtDate(g.aggiornata))}.` : ""}</p>` : ""}</div>
     </header>
     <div class="gd-bar">${fnShareBtn(`g-${g.slug}`, g.titolo, "guide")}${all.some(l => Number.isFinite(l.lat)) ? `<button type="button" class="gd-sf" data-gdmap>🗺 <span>${T("See the places on the SpotFolk map")}</span></button>` : ""}<a class="mz-pdf gd-pdf" href="${pdf}" target="_blank" rel="noopener" data-guide-pdf>
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 19h14"/></svg>
