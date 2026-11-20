@@ -852,7 +852,8 @@ const Spots = (() => {
     const subOn = k => activeCats.has("spot") && activeSubs.has(k);
     const subItems = () => `<div class="sx-subs">${SUB_KEYS.map(k => `<button type="button" class="sx-item sx-sub${subOn(k) ? " on" : ""}" data-sxsub="${k}" style="--c:${k === "poi" ? POI_COLOR : CATS.spot.color}" aria-pressed="${subOn(k)}">
         <span class="sx-ico">${k === "poi" ? ICON_POI : CATS.spot.icon}</span><span class="sx-name">${SUBS[k].label}</span><small data-sxsubcount="${k}">${fmtN(base.filter(s => s.category === "spot" && spotSub(s) === k).length)}</small><span class="sx-check" aria-hidden="true"></span></button>
-        ${k === "poi" ? `<div class="sx-poi" role="group" aria-label="Kinds of places of interest">${POI_KEYS.map(p => `<button type="button" class="sx-pchip${activePoi.has(p) ? " on" : ""}" data-sxpoi="${p}" aria-pressed="${activePoi.has(p)}">${POI_TYPES[p][1]}<span>${POI_TYPES[p][0]}</span><small data-sxpoicount="${p}">${fmtN(base.filter(s => s.category === "spot" && spotSub(s) === "poi" && poiType(s) === p).length)}</small></button>`).join("")}</div>` : ""}`).join("")}</div>`;
+        ${k === "poi" ? `<div class="sx-poi" role="group" aria-label="Kinds of places of interest">${POI_KEYS.map(p => `<button type="button" class="sx-pchip${activePoi.has(p) ? " on" : ""}" data-sxpoi="${p}" aria-pressed="${activePoi.has(p)}">${POI_TYPES[p][1]}<span>${POI_TYPES[p][0]}</span><small data-sxpoicount="${p}">${fmtN(base.filter(s => s.category === "spot" && spotSub(s) === "poi" && poiType(s) === p).length)}</small></button>`).join("")}</div>`
+          : `<div class="sx-poi" role="group" aria-label="Kinds of photo spot">${PHOTO_KEYS.map(p => `<button type="button" class="sx-pchip${activePhoto.has(p) ? " on" : ""}" data-sxphoto="${p}" aria-pressed="${activePhoto.has(p)}">${PHOTO_TYPES[p][1]}<span>${PHOTO_TYPES[p][0]}</span><small data-sxphotocount="${p}">${fmtN(base.filter(s => s.category === "spot" && spotSub(s) === "photo" && photoType(s) === p).length)}</small></button>`).join("")}</div>`}`).join("")}</div>`;
     const lockItem = (label, ico) => `<button type="button" class="sx-item is-locked" data-sxjoin><span class="sx-ico">${ico}</span><span class="sx-name">${label}</span><span class="sx-lock">${SX_ICON.lock}Members</span></button>`;
     // Support local vale per Places ed Essentials: stesso interruttore, conteggio della sezione
     const supportItem = cats => `<button type="button" class="sx-item${onlySupport ? " on" : ""}" data-onlysupport aria-pressed="${onlySupport}" style="--c:#9fe3c8"><span class="sx-ico">🌱</span><span class="sx-name">Support local</span><small>${spots.filter(x => x.support_local && cats.includes(x.category)).length}</small><span class="sx-check" aria-hidden="true"></span></button>`;
@@ -982,6 +983,8 @@ const Spots = (() => {
     base.forEach(s => { by[s.category] = (by[s.category] || 0) + 1; if (s.category === "spot") { const k = spotSub(s); subs[k] = (subs[k] || 0) + 1; } });
     document.querySelectorAll("[data-sxcount]").forEach(el => { el.textContent = fmtN(by[el.dataset.sxcount] || 0); });
     document.querySelectorAll("[data-sxsubcount]").forEach(el => { el.textContent = fmtN(subs[el.dataset.sxsubcount] || 0); });
+    if (document.querySelector("[data-sxphotocount]")) { const fc = {}; base.forEach(s => { if (s.category === "spot" && spotSub(s) === "photo") { const p = photoType(s); fc[p] = (fc[p] || 0) + 1; } });
+      document.querySelectorAll("[data-sxphotocount]").forEach(e => (e.textContent = fmtN(fc[e.dataset.sxphotocount] || 0))); }
     if (document.querySelector("[data-sxpoicount]")) { const pc = {}; base.forEach(s => { if (s.category === "spot" && spotSub(s) === "poi") { const p = poiType(s); pc[p] = (pc[p] || 0) + 1; } });
       document.querySelectorAll("[data-sxpoicount]").forEach(el => { el.textContent = fmtN(pc[el.dataset.sxpoicount] || 0); }); }
     document.querySelectorAll("[data-sxgcount]").forEach(el => {
@@ -1204,6 +1207,7 @@ const Spots = (() => {
     const syncCats = () => {
       document.querySelectorAll("[data-sxcat]").forEach(b => { const on = activeCats.has(b.dataset.sxcat); b.classList.toggle("on", on); b.setAttribute("aria-pressed", on); });
       document.querySelectorAll("[data-sxsub]").forEach(b => { const on = activeCats.has("spot") && activeSubs.has(b.dataset.sxsub); b.classList.toggle("on", on); b.setAttribute("aria-pressed", on); });
+      document.querySelectorAll("[data-sxphoto]").forEach(b => { const on = activeCats.has("spot") && activeSubs.has("photo") && activePhoto.has(b.dataset.sxphoto); b.classList.toggle("on", on); b.setAttribute("aria-pressed", String(on)); });
       document.querySelectorAll("[data-sxpoi]").forEach(b => { const on = activeCats.has("spot") && activeSubs.has("poi") && activePoi.has(b.dataset.sxpoi); b.classList.toggle("on", on); b.setAttribute("aria-pressed", on); });
       document.querySelectorAll(".sx-group").forEach(sec => {
         const g = SX_GROUPS.find(x => x.id === sec.dataset.g);
@@ -1233,6 +1237,17 @@ const Spots = (() => {
       else if (activePoi.has(p)) { activePoi.delete(p); if (!activePoi.size) POI_KEYS.forEach(x => activePoi.add(x)); }
       else activePoi.add(p);
       window.fcTrack?.("Spots: place of interest kind", { kind: p });
+      syncCats();
+    }));
+    // the kinds of photo spot: same behaviour
+    document.querySelectorAll("[data-sxphoto]").forEach(b => b.addEventListener("click", () => {
+      const p = b.dataset.sxphoto;
+      if (!activeCats.has("spot")) { activeCats.add("spot"); activeSubs.clear(); }
+      activeSubs.add("photo");
+      if (activePhoto.size === PHOTO_KEYS.length) { activePhoto.clear(); activePhoto.add(p); }
+      else if (activePhoto.has(p)) { activePhoto.delete(p); if (!activePhoto.size) PHOTO_KEYS.forEach(x => activePhoto.add(x)); }
+      else activePhoto.add(p);
+      window.fcTrack?.("Spots: photo spot kind", { kind: p });
       syncCats();
     }));
     document.querySelectorAll("[data-sxjoin]").forEach(b => b.addEventListener("click", () => { wantJoin = true; render(); root().scrollIntoView({ behavior: "smooth" }); }));
@@ -2163,6 +2178,27 @@ const Spots = (() => {
     church: ["Church", SVG('<path d="M12 2.5v4M10 4.5h4M12 6.5l-5 5V21h10v-9.5z"/><path d="M10 21v-4a2 2 0 0 1 4 0v4M4 21h16"/>'), /chies|church|[ée]glise|kirche|iglesia|igreja|duomo|cattedral|cathedral|basilic|abbazi|abbey|monaster|santuari|sanctuary|\bpieve\b|cappell|chapel|convent|temple|tempio|mosque|moschea|synagog|eremo|hermitage/i],
     other: ["Other", ICON_POI, null]
   };
+  /* the kinds of photo spot: chosen when adding or editing (info.photo), otherwise guessed from the name.
+     The kind gives the pin its own icon and decides what the folk are asked about it. */
+  const PHOTO_TYPES = {
+    view:   ["Viewpoint", SVG('<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/>'), /belveder|panoram|viewpoint|view point|\bvista\b|\bvedetta\b|mirador|aussicht|\bpoint de vue\b|terrazz|balcon|overlook|scenic/i],
+    mount:  ["Mountain", SVG('<path d="m2.5 19 6.5-11 4 6.5 2.5-3.5 6 8z"/><path d="m7.6 13.4 1.4-2.4 1.4 2.4"/>'), /\bmonte\b|\bmont\b|\bmount\b|mountain|\bcima\b|vetta|\bpiz\b|\bpunta\b|peak|\bgipfel\b|\bberg\b|\bpasso\b|\bcol\b|forcella|\bsella\b|rifugio|\bmalga\b|alpe\b|dolomit|\balpi\b|\balps\b|ghiacciai|glacier|crinale|ridge/i],
+    sea:    ["Sea & coast", SVG('<path d="M3 16c2-1.4 4-1.4 6 0s4 1.4 6 0 4-1.4 6 0M3 20c2-1.4 4-1.4 6 0s4 1.4 6 0 4-1.4 6 0"/><path d="M7 12V4l9 3-9 3"/>'), /spiagg|beach|plage|playa|strand|\bcala\b|\bbaia\b|\bbay\b|scogl|falesi|cliff|\bcosta\b|coast|\bmare\b|\bsea\b|seaside|\bporto\b|harbou?r|\bfaro\b|lighthouse|isola|island|laguna|fiord|fjord/i],
+    water:  ["Water", SVG('<path d="M12 3.5c3.4 4 5.5 6.8 5.5 9.4A5.5 5.5 0 0 1 6.5 13c0-2.6 2.1-5.4 5.5-9.5z"/>'), /\blago\b|\blake\b|\blaghett|\bsee\b|\blac\b|cascat|waterfall|wasserfall|cascade|\bfiume\b|river|\btorrent|\bgola\b|forra|gorge|canyon|\bponte\b|\briver\b|laguna|stagno|\bfonte\b|sorgent/i],
+    woods:  ["Woods & fields", SVG('<path d="M8 3 4 10h2.5L3.5 15H7v5h2v-5h3.5l-3-5H12z"/><path d="M16 6l-3.5 6h2l-2.5 4.5h3V20h2v-3.5h3L17.5 12h2z"/>'), /\bbosc(o|hi)\b|\bforest|\bwood|\bwald\b|\bbois\b|\bbosque\b|faggeta|pineta|castagnet|\bcipress|cypress|\bcampagna\b|countryside|\bcampi\b|\bfield|\bprat(o|i)\b|meadow|\bvignet|vineyard|\bulivi\b|olive|lavand|lavender|girasol|sunflower|\bcolline\b|\bhills?\b|\bpodere\b|\bcasale\b|\bfattoria\b|farmhouse/i],
+    night:  ["Night sky", SVG('<path d="M12 3.2 13.9 9l5.9.1-4.7 3.5 1.7 5.6L12 14.9l-4.8 3.3 1.7-5.6L4.2 9.1 10.1 9z"/><path d="M19.5 3.5 20 5l1.5.5L20 6l-.5 1.5L19 6l-1.5-.5L19 5z"/>'), /via lattea|milky ?way|\bstelle\b|\bstars?\b|\bstellat|starry|\bnotturn|night sky|astro|aurora|northern lights|\bluna\b|\bmoon\b|\bcielo\b/i],
+    city:   ["City & architecture", SVG('<path d="M3 20h18M5 20V9h5v11M10 20V4h6v16M16 20v-8h3v8"/><path d="M7 12h1M7 15h1M12.5 7h1M12.5 10h1"/>'), /citt[àa]|\bcity\b|\btown\b|skyline|piazz|square|\bvia\b|street|\brue\b|stra(ss|ß)e|calle|\bborgo\b|village|\bpaese\b|quartier|rooftop|\bponte\b|bridge|stazione|station|architett|architectur|\bduomo\b|\bchies|church|castell|castle|\bpalazz/i],
+    other:  ["Other", CATS.spot.icon, null]
+  };
+  const PHOTO_KEYS = Object.keys(PHOTO_TYPES);
+  const PHOTO_GUESS = ["night", "sea", "mount", "water", "view", "woods", "city"];
+  const activePhoto = new Set(PHOTO_KEYS), photoCache = new Map();
+  function photoType(s) {
+    if (s.info?.photo && PHOTO_TYPES[s.info.photo]) return s.info.photo;
+    if (photoCache.has(s.id)) return photoCache.get(s.id);
+    const t = `${s.name || ""} ${s.note || ""} ${s.list || ""}`, k = PHOTO_GUESS.find(x => PHOTO_TYPES[x][2].test(t)) || "other";
+    photoCache.set(s.id, k); return k;
+  }
   const POI_KEYS = Object.keys(POI_TYPES), POI_GUESS = ["parking", "church", "castle", "waterfall", "lake", "woods", "monument", "village", "city"];
   const activePoi = new Set(POI_KEYS), poiCache = new Map();
   function poiType(s) {
@@ -2184,6 +2220,7 @@ const Spots = (() => {
     return spots.filter(s => shownStatus(s) && (!onlyFavs || favs.has(s.id)) && (!activeCats || activeCats.has(s.category))
       && (s.category !== "spot" || activeSubs.size === SUB_KEYS.length || activeSubs.has(spotSub(s)))
       && (s.category !== "spot" || activePoi.size === POI_KEYS.length || spotSub(s) !== "poi" || activePoi.has(poiType(s)))
+      && (s.category !== "spot" || activePhoto.size === PHOTO_KEYS.length || spotSub(s) !== "photo" || activePhoto.has(photoType(s)))
       && (!onlySupport || s.support_local)
       && (alertMode === "show" || (alertMode === "hide" ? !alertsOf(s).length : alertsOf(s).length > 0))
       && (!q || norm(s.name).includes(q) || norm(s.note).includes(q) || norm(s.list).includes(q) || norm(CATS[s.category].label).includes(q)));
@@ -2679,6 +2716,16 @@ const Spots = (() => {
       if (p === "lake") return ["calm", "windy", "frozen", "low", "foliage", "fog", "crowded"];
       if (p === "woods") return ["foliage", "fog", "snow", "clear_trail", "bloom", "quiet", "crowded"];
       if (p === "parking") return ["parking", "quiet", "closed", "works", "snow", "open"];
+    }
+    if (s.category === "spot" && spotSub(s) === "photo") {   // the kind of photo spot decides what to ask the folk
+      const p = photoType(s);
+      if (p === "night") return ["clearsky", "stars", "fog", "crowded", "quiet", "works"];
+      if (p === "sea") return ["rough", "calm", "windy", "jelly", "beachfull", "fog", "clearsky"];
+      if (p === "mount") return ["snow", "ice", "clear_trail", "fog", "cloudsea", "foliage", "parking"];
+      if (p === "water") return ["flow", "low", "frozen", "foliage", "fog", "crowded"];
+      if (p === "woods") return ["foliage", "bloom", "fog", "snow", "quiet", "crowded"];
+      if (p === "city") return ["crowded", "quiet", "parking", "works", "fog", "clearsky"];
+      if (p === "view") return ["clearsky", "fog", "cloudsea", "foliage", "crowded", "parking"];
       if (p === "castle" || p === "church" || p === "monument") return ["open", "closed", "wait", "crowded", "quiet", "works", "fog"];
       if (p === "village" || p === "city") return ["crowded", "quiet", "parking", "works", "fog", "clearsky", "snow"];
     }
@@ -3840,7 +3887,9 @@ const Spots = (() => {
   // points of interest (churches, towers, castles, bridges, squares…) get their own pin, apart from photo spots
   function pinIcon(s) {
     const poi = s.category === "spot" && spotSub(s) === "poi";
-    const cat = poi ? { ...(CATS.spot), icon: POI_TYPES[poiType(s)][1], color: POI_COLOR } : CATS[s.category] || CATS.spot;
+    const photoK = s.category === "spot" && !poi ? photoType(s) : null;
+    const cat = poi ? { ...(CATS.spot), icon: POI_TYPES[poiType(s)][1], color: POI_COLOR }
+      : photoK && photoK !== "other" ? { ...(CATS.spot), icon: PHOTO_TYPES[photoK][1] } : CATS[s.category] || CATS.spot;
     const plane = wsPlane(s), offer = wsOffer(s) && !plane, shineLocal = localNew(s) && !isWs(s), shineWs = (wsNew(s) || freshPlace(s)) && !plane && !offer && !shineLocal;
     const sg = signMap.get(s.id), tier = signTier(s);
     const cls = ["spot-pin", tier ? `signed t${tier}` : "", sg?.fabio ? "pick" : "", s.outdated ? "outdated" : "", s.support_local ? "local" : "", s.fragile ? "fragile" : "", plane ? "plane" : "", offer ? "offer" : "", shineWs ? "shine" : "", shineLocal ? "shine-local" : ""].filter(Boolean).join(" ");
