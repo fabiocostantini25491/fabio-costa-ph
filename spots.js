@@ -2210,6 +2210,32 @@ const Spots = (() => {
     photoCache.set(s.id, r); return r;
   }
   const photoType = s => photoTags(s)[0];
+  /* «The story of this place» (20 Nov 2026): what a map doesn't tell you — history, who built it, why it looks like this.
+     Written by whoever added the place (info.story), shown with their name and readable aloud by the phone. */
+  const storyHtml = s => {
+    const txt = String(s.info?.story || "").trim();
+    if (!txt) return "";
+    const who = (s.author_name || "").trim();
+    return `<section class="pc-story" data-placestory>
+      <p class="pc-sh"><span aria-hidden="true">📖</span><b>${trS("The story of this place")}</b>${who ? `<small>${trS("told by")} ${esc(who)}</small>` : ""}
+        <button type="button" class="pc-listen" data-listen aria-label="${trS("Listen")}">▶ ${trS("Listen")}</button></p>
+      <div class="pc-stxt">${ugc(txt)}</div>
+    </section>`;
+  };
+  function wireStory(el) {
+    const b = el.querySelector("[data-listen]"), box = el.querySelector("[data-placestory] .pc-stxt");
+    if (!b || !box || !("speechSynthesis" in window)) { b?.remove(); return; }
+    b.addEventListener("click", () => {
+      if (speechSynthesis.speaking) { speechSynthesis.cancel(); b.textContent = `▶ ${trS("Listen")}`; return; }
+      const u = new SpeechSynthesisUtterance(box.textContent.replace(/\s+/g, " ").trim().slice(0, 3000));
+      const lang = (window.I18N?.lang || "en");
+      u.lang = { it: "it-IT", es: "es-ES", fr: "fr-FR", de: "de-DE" }[lang] || "en-GB";
+      u.onend = () => (b.textContent = `▶ ${trS("Listen")}`);
+      speechSynthesis.cancel(); speechSynthesis.speak(u);
+      b.textContent = `■ ${trS("Stop")}`;
+      window.fcTrack?.("Spots: story listened");
+    });
+  }
   // the lights a photo spot is for, on its card: «sunrise · Milky Way»
   const lightChips = s => {
     if (s.category !== "spot" || spotSub(s) !== "photo") return "";
@@ -4213,6 +4239,7 @@ const Spots = (() => {
         <div class="pc-sharebar"><button type="button" class="pc-sh main" data-share>↗ Share this place</button>${s.fragile ? "" : `<button type="button" class="pc-sh" data-story>📲 Story</button>`}</div>
         ${admin && !guest && pubV ? `<div data-pubpick>${pubPickHtml(s)}</div>` : ""}
       </header>
+      ${storyHtml(s)}
       ${pcSec("folk", "The folk who know this place", "Real people, real experiences.", folkBody, true)}
       ${pcSec("before", "Before you go", "What to know, checked by the folk.", `<div class="pc-byg" data-byg><p class="pc-empty">Loading…</p></div>`)}
       ${pcSec("cons", "Folk consensus", "The collective impression of the folk.", consBody)}
@@ -4276,6 +4303,7 @@ const Spots = (() => {
     if (socialV) wireSocial(popup, s);
     el.querySelector("[data-fav]")?.addEventListener("click", ev => toggleFav(s, ev.currentTarget));
     el.querySelector("[data-share]")?.addEventListener("click", () => sharePlace(s));
+    wireStory(el);
     el.querySelector("[data-story]")?.addEventListener("click", ev => shareStory(s, el, ev.currentTarget));
     wireCurate(popup, s);
     el.querySelector("[data-meethere]")?.addEventListener("click", () => { map.closePopup(); withConduct(() => openMeetup({ lat: s.lat, lon: s.lon, spot: s })); });
@@ -7281,6 +7309,8 @@ const Spots = (() => {
       ${g === "places" && placeKind() === "photo" && profV ? `<p class="wz-poih">${IT_() ? "Per quale luce è buono?" : "Which light is it good for?"} <small>${IT_() ? "(più di una)" : "(more than one)"}</small></p>
         <div class="wz-subs wz-light" role="group" aria-label="${IT_() ? "Luce" : "Light"}">${PHOTO_KEYS.filter(p => p !== "other").map(p => `<button type="button" class="wz-sub${(wz.info.light || []).includes(p) ? " on" : ""}" data-wzlight="${p}" aria-pressed="${(wz.info.light || []).includes(p)}">${PHOTO_TYPES[p][1]}${esc(trS(PHOTO_TYPES[p][0]))}</button>`).join("")}</div>` : ""}
       <label>Description <small>(optional)</small><textarea id="wzNote" rows="3" maxlength="2000" placeholder="What makes it worth it? Best time, what to shoot, tips…">${esc(wz.note)}</textarea></label>
+      ${g === "places" && profV ? `<label>${IT_() ? "Racconta il posto" : "The story of this place"} <small>${IT_() ? "(facoltativo: storia, chi l'ha costruito, perché è così)" : "(optional: history, who built it, why it looks like this)"}</small>
+        <textarea id="wzStory" rows="4" maxlength="2500" placeholder="${IT_() ? "Quello che una mappa non ti dice…" : "What a map doesn't tell you…"}">${esc(wz.info.story || "")}</textarea></label>` : ""}
       ${wz.cat === "workshop" ? `<div class="add-dates"><div><label for="wzFrom">From</label><input id="wzFrom" type="date" value="${esc(wz.from)}"></div><div><label for="wzTo">To</label><input id="wzTo" type="date" value="${esc(wz.to)}"></div></div>
         ${wsV ? wsFieldsHtml(s, "wzWs") : ""}` : ""}
       ${wz.cat === "trekking" && tkV ? `<fieldset class="soc-add tk-add"><legend>Trail <small>(optional)</small></legend>${tkFieldsHtml(s, "wzTk")}</fieldset>` : ""}
@@ -7356,6 +7386,7 @@ const Spots = (() => {
     const v = id => d.querySelector(`#${id}`);
     if (v("wzName")) wz.name = v("wzName").value.trim();
     if (v("wzNote")) wz.note = v("wzNote").value.trim();
+    if (v("wzStory")) { const x = v("wzStory").value.trim(); if (x) wz.info.story = x; else delete wz.info.story; }
     if (v("wzAuthor")) wz.author = v("wzAuthor").value.trim();
     if (v("wzSupport")) wz.support = v("wzSupport").checked;
     if (v("wzMonths")) wz.months = v("wzMonths").value.trim();
@@ -7453,7 +7484,8 @@ const Spots = (() => {
     if (schemaV2) Object.assign(row, { category: cat, author_name: (wz.author || displayName()).slice(0, 60),
       starts_on: cat === "workshop" ? wz.from || null : null, ends_on: cat === "workshop" ? (wz.to || wz.from || null) : null });
     if (profV) Object.assign(row, { subcategory: cat === "spot" ? (wz.sub || (placeKind() === "poi" ? "urban" : "viewpoint")) : wz.sub || null, info: Object.fromEntries(Object.entries(wz.info).filter(([k]) => (WZ_INFO[cat] || []).some(f => f[0] === k) || (k === "currency" && wz.info.price) || (k === "poi" && cat === "spot" && placeKind() === "poi" && POI_TYPES[wz.info.poi])
-      || (k === "light" && cat === "spot" && placeKind() === "photo" && Array.isArray(wz.info.light) && wz.info.light.length))) });
+      || (k === "light" && cat === "spot" && placeKind() === "photo" && Array.isArray(wz.info.light) && wz.info.light.length)
+      || (k === "story" && typeof wz.info.story === "string" && wz.info.story.trim()))) });
     if (profV && cat === "spot" && placeKind() === "poi" && !row.info.poi) { const g2 = poiType({ id: -1, name: wz.name, note: wz.note, list: "" }); poiCache.delete(-1); if (g2 !== "other") row.info.poi = g2; }   // not chosen: guessed from the name
     else if (infoRows(wz.info).length) row.note = [row.note, infoRows(wz.info).map(([a, b]) => `${a}: ${b}`).join("\n")].filter(Boolean).join("\n\n");
     if (schemaV2 && socialV && SOCIAL_CATS.includes(cat)) Object.assign(row, { support_local: wz.support, best_months: wz.months || null });
