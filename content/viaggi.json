@@ -360,6 +360,17 @@
         "/img/foto/fb-untitled-2-2025-11-30t18-03-23-337-3.jpg",
         "/img/foto/fb-untitled-4-1.jpg"
       ]
+    },
+    {
+      "nome": "Lago di Campotosto",
+      "id": "Lago di Campotosto",
+      "lat": "42.551309761215954",
+      "lon": "13.360577022489585",
+      "categoria": "Paesaggi",
+      "immagini": [
+        "/img/foto/fb-untitled-7-2025-06-21t19-24-05-334.jpg",
+        "/img/foto/fb-untitled-1-2024-12-02t19-52-06-321.jpg"
+      ]
     }
   ]
 }
