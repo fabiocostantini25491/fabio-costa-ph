@@ -7081,7 +7081,8 @@ const Spots = (() => {
     wz = {
       step: 1, edit, lat: pre?.lat ?? s.lat ?? null, lon: pre?.lon ?? s.lon ?? null, placed: !!(pre || edit),
       name: preset.name || s.name || "", cat: edit ? s.category : (CATS[lastCat] ? lastCat : "spot"),
-      sub: s.category === "spot" ? (["viewpoint", "nature", "urban"].includes(s.subcategory) ? s.subcategory : edit && spotSub(s) === "poi" ? "urban" : "") : (s.subcategory || ""), note: s.note || "", info: { ...(s.info || {}), ...(edit && s.category === "spot" && spotSub(s) === "poi" && !s.info?.poi ? { poi: poiType(s) } : {}) },
+      sub: s.category === "spot" ? (["viewpoint", "nature", "urban"].includes(s.subcategory) ? s.subcategory : edit && spotSub(s) === "poi" ? "urban" : "") : (s.subcategory || ""), note: s.note || "", info: { ...(s.info || {}), ...(edit && s.category === "spot" && spotSub(s) === "poi" && !s.info?.poi ? { poi: poiType(s) } : {}),
+        ...(edit && s.category === "spot" && spotSub(s) === "photo" && !Array.isArray(s.info?.light) ? { light: photoTags(s).filter(k => k !== "other") } : {}) },
       support: !!s.support_local, months: s.best_months || "", fragile: !!s.fragile, author: s.author_name || displayName(),
       from: s.starts_on || "", to: s.ends_on || "", files: [], removePhotos: new Set(), photos: [], place: "", rev: 0, tk: null, ws: null
     };
@@ -7277,6 +7278,8 @@ const Spots = (() => {
         : cats.length > 1 ? `<div class="wz-cats" role="group" aria-label="Category">${cats.map(k => `<button type="button" class="wz-cat${k === wz.cat ? " on" : ""}" data-wzcat="${k}" style="--c:${CATS[k].color}">${CATS[k].icon}<span>${CATS[k].label}</span></button>`).join("")}</div>` : ""}
       ${subs.length && profV && g !== "places" ? `<div class="wz-subs" role="group" aria-label="Type">${subs.map(([k, l]) => `<button type="button" class="wz-sub${k === wz.sub ? " on" : ""}" data-wzsub="${k}">${esc(l)}</button>`).join("")}</div>` : ""}
       ${g === "places" && placeKind() === "poi" && profV ? `<p class="wz-poih">What kind of place?</p><div class="wz-subs wz-poi" role="group" aria-label="Kind of place">${POI_KEYS.map(p => `<button type="button" class="wz-sub${(wz.info.poi || "") === p ? " on" : ""}" data-wzpoi="${p}">${POI_TYPES[p][1]}${esc(POI_TYPES[p][0])}</button>`).join("")}</div>` : ""}
+      ${g === "places" && placeKind() === "photo" && profV ? `<p class="wz-poih">${IT_() ? "Per quale luce è buono?" : "Which light is it good for?"} <small>${IT_() ? "(più di una)" : "(more than one)"}</small></p>
+        <div class="wz-subs wz-light" role="group" aria-label="${IT_() ? "Luce" : "Light"}">${PHOTO_KEYS.filter(p => p !== "other").map(p => `<button type="button" class="wz-sub${(wz.info.light || []).includes(p) ? " on" : ""}" data-wzlight="${p}" aria-pressed="${(wz.info.light || []).includes(p)}">${PHOTO_TYPES[p][1]}${esc(trS(PHOTO_TYPES[p][0]))}</button>`).join("")}</div>` : ""}
       <label>Description <small>(optional)</small><textarea id="wzNote" rows="3" maxlength="2000" placeholder="What makes it worth it? Best time, what to shoot, tips…">${esc(wz.note)}</textarea></label>
       ${wz.cat === "workshop" ? `<div class="add-dates"><div><label for="wzFrom">From</label><input id="wzFrom" type="date" value="${esc(wz.from)}"></div><div><label for="wzTo">To</label><input id="wzTo" type="date" value="${esc(wz.to)}"></div></div>
         ${wsV ? wsFieldsHtml(s, "wzWs") : ""}` : ""}
@@ -7322,6 +7325,12 @@ const Spots = (() => {
     }));
     d.querySelectorAll("[data-wzsub]").forEach(b => b.addEventListener("click", () => { collect(); wz.sub = wz.sub === b.dataset.wzsub ? "" : b.dataset.wzsub; rerender(); }));
     d.querySelectorAll("[data-wzpoi]").forEach(b => b.addEventListener("click", () => { collect(); wz.info.poi = b.dataset.wzpoi; rerender(); }));
+    d.querySelectorAll("[data-wzlight]").forEach(b => b.addEventListener("click", () => {
+      collect();
+      const k = b.dataset.wzlight, cur = Array.isArray(wz.info.light) ? wz.info.light.slice() : [];
+      wz.info.light = cur.includes(k) ? cur.filter(x => x !== k) : [...cur, k];
+      rerender();
+    }));
     d.querySelector("[data-wzmeet]")?.addEventListener("click", () => { const p = { lat: wz.lat, lon: wz.lon }; d.close(); withConduct(() => openMeetup(p.lat != null ? p : null)); });
     d.querySelector("[data-wzph]")?.addEventListener("click", () => { d.close(); openProfile(); });
     d.querySelector("[data-wzpass]")?.addEventListener("click", () => { const p = { lat: wz.lat, lon: wz.lon, exact: wz.lat != null }; d.close(); withConduct(() => openPassOn(p.lat != null ? p : null)); });
@@ -7443,7 +7452,8 @@ const Spots = (() => {
     const row = { name: wz.name.slice(0, 300), lat: wz.lat, lon: wz.lon, note: wz.note || null };
     if (schemaV2) Object.assign(row, { category: cat, author_name: (wz.author || displayName()).slice(0, 60),
       starts_on: cat === "workshop" ? wz.from || null : null, ends_on: cat === "workshop" ? (wz.to || wz.from || null) : null });
-    if (profV) Object.assign(row, { subcategory: cat === "spot" ? (wz.sub || (placeKind() === "poi" ? "urban" : "viewpoint")) : wz.sub || null, info: Object.fromEntries(Object.entries(wz.info).filter(([k]) => (WZ_INFO[cat] || []).some(f => f[0] === k) || (k === "currency" && wz.info.price) || (k === "poi" && cat === "spot" && placeKind() === "poi" && POI_TYPES[wz.info.poi]))) });
+    if (profV) Object.assign(row, { subcategory: cat === "spot" ? (wz.sub || (placeKind() === "poi" ? "urban" : "viewpoint")) : wz.sub || null, info: Object.fromEntries(Object.entries(wz.info).filter(([k]) => (WZ_INFO[cat] || []).some(f => f[0] === k) || (k === "currency" && wz.info.price) || (k === "poi" && cat === "spot" && placeKind() === "poi" && POI_TYPES[wz.info.poi])
+      || (k === "light" && cat === "spot" && placeKind() === "photo" && Array.isArray(wz.info.light) && wz.info.light.length))) });
     if (profV && cat === "spot" && placeKind() === "poi" && !row.info.poi) { const g2 = poiType({ id: -1, name: wz.name, note: wz.note, list: "" }); poiCache.delete(-1); if (g2 !== "other") row.info.poi = g2; }   // not chosen: guessed from the name
     else if (infoRows(wz.info).length) row.note = [row.note, infoRows(wz.info).map(([a, b]) => `${a}: ${b}`).join("\n")].filter(Boolean).join("\n\n");
     if (schemaV2 && socialV && SOCIAL_CATS.includes(cat)) Object.assign(row, { support_local: wz.support, best_months: wz.months || null });
@@ -7963,7 +7973,8 @@ const Spots = (() => {
 
   const prefetch = () => { if (ui === "earth" && viewMode === "globe" && !globeFailed) loadMapLibre().catch(() => {}); };
   const login = () => { if (session && !guest) return; wantLogin = true; wantJoin = false; if (location.hash !== "#spotfolk" && document.body.dataset.page !== "spots") location.hash = "spotfolk"; render(); setTimeout(() => root()?.scrollIntoView({ behavior: "smooth" }), 60); };
-  return { show, showHub, prefetch, handleCallback, loadSession, renderWrite, goOther, login, logout: () => { meView = false; meCache = null; if (location.hash === "#me") location.hash = "spotfolk"; return logout(); }, parse: { fromCSV, fromKML, fromGeoJSON, coordsFromText } };
+  return { show, showHub, prefetch, handleCallback, loadSession, renderWrite, goOther, login, logout: () => { meView = false; meCache = null; if (location.hash === "#me") location.hash = "spotfolk"; return logout(); }, parse: { fromCSV, fromKML, fromGeoJSON, coordsFromText },
+    _t: { openAdd, photoTags, poiType } };   // used by the tests
 })();
 
 const LOCK_SVG = '<svg viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/><circle cx="12" cy="15.5" r="1.3"/></svg>';

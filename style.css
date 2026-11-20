@@ -4246,8 +4246,10 @@ body[data-page="hub"] .sf-nav a.sf-map{background:none;color:#e6ecf3}
 .sx-pchip[data-sxphoto] svg{stroke:#9cc8ff}
 .sx-pchip[data-sxphoto].on{background:rgba(156,200,255,.18);border-color:#9cc8ff}
 .wz-poih{margin:10px 0 4px;font-size:12.5px;color:#c9d6e6;font-weight:600}
-.wz-poi .wz-sub{display:inline-flex;align-items:center;gap:6px}
-.wz-poi svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.wz-poi .wz-sub,.wz-light .wz-sub{display:inline-flex;align-items:center;gap:6px}
+.wz-poi svg,.wz-light svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.wz-light .wz-sub{border-color:rgba(156,200,255,.4)}
+.wz-light .wz-sub.on{border-style:solid;border-color:#9cc8ff;background:rgba(156,200,255,.18);color:#fff}
 
 /* Guides in PDF (Canva or other, any subject) on the Guides shelf */
 .gd-pdfs{margin-bottom:28px}.gd-pdfs-h{margin:22px 0 12px;font:600 26px/1.1 'Cormorant Garamond',Georgia,serif}
