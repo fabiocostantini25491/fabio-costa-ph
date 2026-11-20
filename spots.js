@@ -760,15 +760,23 @@ const Spots = (() => {
     }));
   }
   function welcomeHtml() {
+    // the proof of the whole idea: one place, read by three folk — each leaves the piece the others don't see
+    const VOICES = [["photo", "Come at first light in October, stand by the wooden fence above the church."],
+      ["hike", "Park lower down and take the trail through the meadows: twenty minutes."],
+      ["food", "The farm below sells cheese and speck. Ask for the aged one."]];
     return `<section class="wf-welcome" aria-label="Join SpotFolk">
-      <h3>Is it worth the trip? <em>Ask the folk who went.</em></h3>
-      <p class="wf-lead">Every place here is signed by someone who's been there, with a face, a name and a way of travelling. Read it through people who travel like you.</p>
-      <ul class="wf-ben">
-        <li><b>Advice you can trace:</b> who signed it, when, and whether they were on the spot.</li>
-        <li><b>The right moment:</b> the best hour and season, from those who stood there.</li>
-        <li><b>8,000+ places</b> scouted with a photographer's eye, waiting for the folk to confirm them.</li>
-      </ul>
-      <p class="wf-pick">You don't join as a user. Which folk are you?</p>
+      <h3>One place. <em>Three folk. Three pieces.</em></h3>
+      <p class="wf-lead">A photographer sees the light, a hiker the trail, a foodie the table below. Nobody sees it all alone.</p>
+      <article class="wf-proof">
+        <b class="wf-pn">Santa Maddalena viewpoint</b>
+        ${VOICES.map(([k, q]) => `<p class="wf-voice" style="--c:${CLUSTERS[k].color}"><small><i aria-hidden="true">${CLUSTERS[k].ico}</i>${esc(CLUSTERS[k].folk)}</small><q>${esc(q)}</q></p>`).join("")}
+      </article>
+      <div class="wf-start">
+        <p class="wf-kick">It starts with my places</p>
+        <p class="wf-st">My light. <em>Your trail. Their table.</em></p>
+        <p class="wf-stl">I mark the places I photograph, and how I shot them. Each folk adds the piece they see.</p>
+      </div>
+      <p class="wf-pick">Your piece is the one they're missing. Which folk are you?</p>
       <div class="wf-folks">${CLUSTER_KEYS.map(k => `<button type="button" data-joinfolk="${k}" style="--c:${CLUSTERS[k].color}"><span>${CLUSTERS[k].ico}</span>${esc(CLUSTERS[k].label)}</button>`).join("")}</div>
       <button type="button" class="wf-cta" id="wfJoin">Find your folk — free <span aria-hidden="true">→</span></button>
       ${foundersLeft != null && foundersLeft > 0 ? `<p class="wf-found">🏅 <b>${foundersLeft}</b> of 100 places left as <b>Founding folk</b>: a badge in your passport, forever.</p>` : ""}
@@ -897,8 +905,8 @@ const Spots = (() => {
       <aside class="sx-side">
         <p class="sx-kick"><img class="sx-logo" src="img/spotfolk-logo.png" alt="SpotFolk" width="640" height="365"></p>
         <a class="sx-home" href="https://spotfolk.eu" target="_blank" rel="noopener">spotfolk.eu ↗</a>
-        <h2 class="sx-title">${SF_LOOK ? "The map, <em>signed by the folk.</em>" : "Explore the Earth"}</h2>
-        <p class="sx-lead">${esc(DOOR_LEAD[doorNow()] || "Made by its community: travellers like you share, sign and review the places worth the trip, and look after them.")}</p>
+        <h2 class="sx-title">${SF_LOOK ? "What you know is <em>what somebody else is missing.</em>" : "Explore the Earth"}</h2>
+        <p class="sx-lead">${esc(DOOR_LEAD[doorNow()] || "You travel one way, the folk beside you another. Leave your piece and the place becomes whole for everyone.")}</p>
         <div class="sx-panel">
           ${guest && !session ? welcomeHtml() : ""}
           ${SF_LOOK ? `<div class="sf-quick${!guest && (schemaV2 || admin) ? " two" : ""}"><button type="button" class="sf-near" id="sfNear">${SX_ICON.near}<span>Places near me</span></button>${!guest && (schemaV2 || admin) ? `<button type="button" class="sf-near sf-addplace" id="sfAddPlace">${ICON_PLUS}<span>Add a place</span></button>` : ""}</div>` : ""}
