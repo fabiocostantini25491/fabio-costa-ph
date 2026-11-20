@@ -4622,14 +4622,6 @@ html.cch-open{overflow:hidden}
 .gd-maphint{margin:8px 0 0;font-size:12.5px;color:var(--ink-soft,#5b5b5b);text-align:center}
 .gd-go{display:flex;flex-wrap:wrap;gap:8px 16px;margin:4px 0 0;font-size:13.5px;font-weight:500}
 
-/* «The story of this place»: what a map doesn't tell you */
-.pc-story{margin:14px 0 0;padding:14px;border-radius:16px;border:1px solid rgba(255,190,122,.28);background:linear-gradient(180deg,rgba(255,190,122,.07),rgba(255,190,122,.02))}
-.pc-sh{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 8px;font-size:13px;color:var(--warm)}
-.pc-sh b{color:#fff;font-weight:500}
-.pc-sh small{color:var(--muted);font-size:12px}
-.pc-listen{margin-left:auto;padding:5px 12px;border-radius:999px;border:1px solid rgba(255,190,122,.5);background:none;color:var(--warm);font:500 12px var(--sans);cursor:pointer}
-.pc-stxt{font-size:14.5px;line-height:1.65;color:var(--text);white-space:pre-wrap}
-
 /* the lights a photo spot is for */
 .lt-chips{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 0}
 .lt-chip{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:999px;border:1px solid rgba(156,200,255,.45);background:rgba(156,200,255,.12);color:#cfe3ff;font-size:11.5px;line-height:1.5;white-space:nowrap}
