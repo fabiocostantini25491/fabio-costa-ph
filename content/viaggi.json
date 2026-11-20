@@ -371,6 +371,17 @@
         "/img/foto/fb-untitled-7-2025-06-21t19-24-05-334.jpg",
         "/img/foto/fb-untitled-1-2024-12-02t19-52-06-321.jpg"
       ]
+    },
+    {
+      "nome": "Siena",
+      "id": "Italia",
+      "paese": "Italia",
+      "lat": "43.326616374100716",
+      "lon": "11.326275056638531",
+      "categoria": "Urban",
+      "immagini": [
+        "/img/foto/fb-untitled-4-2025-09-25t21-33-39-614.jpg"
+      ]
     }
   ]
 }
