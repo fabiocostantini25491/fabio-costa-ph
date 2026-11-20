@@ -4600,3 +4600,18 @@ html.cch-open{overflow:hidden}
 .gd-wip{display:inline-block;padding:3px 10px;border-radius:999px;background:rgba(159,227,200,.16);border:1px solid rgba(159,227,200,.5);color:#9fe3c8;font:600 10.5px/1.4 var(--sans);letter-spacing:.1em;text-transform:uppercase;white-space:nowrap}
 .gd-cover .gd-wip{position:absolute;top:12px;right:12px;z-index:2;background:rgba(6,14,32,.82)}
 .gd-wip-line{margin:8px 0 0;display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12.5px;color:var(--soft)}
+
+/* the guide's map: real, zoomable, with Google Maps on every place */
+.gd-map.live{height:min(62vh,460px);border-radius:14px;overflow:hidden;border:1px solid rgba(0,0,0,.14);background:#0b1626}
+.gd-map.live .leaflet-container{height:100%;font:inherit}
+.gd-pin{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:var(--c);color:#fff;border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.45);font:700 14px/1 var(--sans)}
+.gd-pin.two{width:auto;min-width:30px;padding:0 7px;border-radius:999px;font-size:12.5px}
+.gd-pop .leaflet-popup-content-wrapper{background:#fff;color:#111;border:0;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+.gd-pop .leaflet-popup-tip{background:#fff}
+.gd-pop .leaflet-popup-close-button{color:#777 !important}
+.gd-pop .leaflet-popup-content{margin:12px 14px;display:grid;gap:3px}
+.gd-pop-n{font:600 15px/1.25 var(--sans);color:#111}
+.gd-pop small{color:#555;font-size:12px}
+.gd-pop a{display:block;margin-top:2px;font-size:13.5px;font-weight:500;color:#b20d0d}
+.gd-maphint{margin:8px 0 0;font-size:12.5px;color:var(--ink-soft,#5b5b5b);text-align:center}
+.gd-go{display:flex;flex-wrap:wrap;gap:8px 16px;margin:4px 0 0;font-size:13.5px;font-weight:500}

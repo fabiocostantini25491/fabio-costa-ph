@@ -1555,6 +1555,8 @@ const I18N = (() => {
     "How big would it be?": ["Quanto verrebbe grande?"],
     "print sizes on a wall": ["formati di stampa su una parete"],
     "Licence requests": ["Richieste di licenza"],
+    "place": ["posto"],
+    "Tap a place on the map: you can open it in Google Maps or get directions.": ["Tocca un posto sulla mappa: puoi aprirlo in Google Maps o farti dare le indicazioni."],
     "Growing": ["In crescita"],
     "I add a place whenever I come back with one.": ["Aggiungo un posto ogni volta che torno con uno nuovo."],
     "Last added": ["Ultimo aggiunto"],

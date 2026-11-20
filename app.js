@@ -2464,6 +2464,42 @@ const ZONE_COLORS = ["#b20d0d", "#1f5f8b", "#7a5a12", "#2d6a4f", "#6b3fa0", "#a0
 /* Canal Grande, tracciato schematico (per orientarsi sulle mappe delle guide di Venezia) */
 const VENICE_CANAL = [[45.4378,12.3172],[45.4398,12.3208],[45.4412,12.3228],[45.4424,12.3262],[45.4434,12.3296],[45.442,12.333],[45.44,12.335],[45.438,12.336],[45.4362,12.334],[45.435,12.3312],[45.4344,12.3275],[45.4334,12.3264],[45.4318,12.3287],[45.4316,12.332],[45.431,12.335],[45.4318,12.339]];
 /* mappa schematica in SVG: punti numerati su un riquadro in scala, senza tessere (va bene anche nel PDF) */
+/* the guide's map on a phone (20 Nov 2026): a real map you can zoom, with Google Maps and directions on every place.
+   The schematic drawing below stays as the fallback (printed PDF, and while Leaflet loads). */
+let gdMap = null;
+const gmapsDir = (lat, lon) => `https://www.google.com/maps/dir/?api=1&destination=${(+lat).toFixed(6)},${(+lon).toFixed(6)}`;
+function buildGuideMap(points, g) {
+  const box = $("#gdMap"), pts = (points || []).filter(p => Number.isFinite(p.lat) && Number.isFinite(p.lon));
+  if (!box || !pts.length || !window.L) return;
+  try { gdMap?.remove(); } catch {}
+  gdMap = null;
+  box.innerHTML = "";
+  box.classList.add("live");
+  const T = s => window.I18N ? I18N.t(s) : s;
+  const map = L.map(box, { zoomControl: true, scrollWheelZoom: false, attributionControl: true, minZoom: 3, maxZoom: 18 });
+  map.attributionControl.setPrefix(false);
+  const ESRI = "https://server.arcgisonline.com/ArcGIS/rest/services/";
+  L.tileLayer(ESRI + "World_Imagery/MapServer/tile/{z}/{y}/{x}", { maxZoom: 18, maxNativeZoom: 18, attribution: "Imagery &copy; Esri, Maxar, Earthstar Geographics and the GIS community" }).addTo(map);
+  map.createPane("gdLabels"); map.getPane("gdLabels").style.zIndex = 450; map.getPane("gdLabels").style.pointerEvents = "none";
+  L.tileLayer(ESRI + "Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}", { maxZoom: 18, maxNativeZoom: 16, pane: "gdLabels", opacity: .9 }).addTo(map);
+  // the same spot can appear in more than one zone (sunset and blue hour): one pin, with every entry in its popup
+  const byPos = new Map();
+  pts.forEach(p => { const k = `${(+p.lat).toFixed(5)},${(+p.lon).toFixed(5)}`; (byPos.get(k) || byPos.set(k, []).get(k)).push(p); });
+  byPos.forEach(group => {
+    const p = group[0], ns = group.map(x => x.n).filter(Boolean);
+    L.marker([p.lat, p.lon], { title: group.map(x => x.nome || x.label).join(" · "),
+      icon: L.divIcon({ className: "", iconSize: [30, 30], iconAnchor: [15, 15], popupAnchor: [0, -14],
+        html: `<span class="gd-pin${ns.length > 1 ? " two" : ""}" style="--c:${p.color || "#b20d0d"}">${ns.join("·") || ""}</span>` }) })
+      .addTo(map)
+      .bindPopup(group.map(x => `<b class="gd-pop-n">${esc(x.nome || x.label || "")}</b>${x.luce ? `<small>${esc(T("Best time"))}: ${esc(T(x.luce))}</small>` : ""}`).join("")
+        + `<a href="${gmapsUrl(p.lat, p.lon)}" target="_blank" rel="noopener">${esc(T("Open in Maps"))}</a>
+        <a href="${gmapsDir(p.lat, p.lon)}" target="_blank" rel="noopener">${esc(T("Directions"))}</a>`, { className: "gd-pop" });
+  });
+  map.fitBounds(L.latLngBounds(pts.map(p => [p.lat, p.lon])).pad(0.25), { maxZoom: 14 });
+  window.addMapFullscreen?.(map, box);
+  map.on("click", () => map.scrollWheelZoom.enable());
+  setTimeout(() => map.invalidateSize(), 60);
+}
 function guideMapSvg(points, { w = 640, h = 380, color = "#b20d0d", canal = false, labels = false } = {}) {
   const pts = points.filter(p => Number.isFinite(p.lat) && Number.isFinite(p.lon));
   if (!pts.length) return "";
@@ -2555,12 +2591,12 @@ async function renderGuide(slugId) {
     ${g.intro ? `<p class="gd-intro">${esc(g.intro)}</p>` : ""}
     <section class="gd-glance"><h3>${T("The zones")}</h3>
       <div class="gd-map" id="gdMap">${guideMapSvg(all, { w: 900, h: 560, canal: venice })}</div>
-      <ol class="gd-zlist">${zones.map((z, i) => `<li><a href="#" data-gz="${i}"><span class="gd-dot" style="background:${z.color}"></span><b>${esc(z.nome)}</b><small>${z.luoghi.length} ${T("places")}</small></a></li>`).join("")}</ol>
+      <p class="gd-maphint">${T("Tap a place on the map: you can open it in Google Maps or get directions.")}</p>
+      <ol class="gd-zlist">${zones.map((z, i) => `<li><a href="#" data-gz="${i}"><span class="gd-dot" style="background:${z.color}"></span><b>${esc(z.nome)}</b><small>${z.luoghi.length} ${T(z.luoghi.length === 1 ? "place" : "places")}</small></a></li>`).join("")}</ol>
     </section>
     ${zones.map((z, i) => `<section class="gd-zone" id="gz-${i}" style="--zc:${z.color}">
       <p class="gd-zk">${T("Zone")} ${i + 1}</p><h3>${esc(z.nome)}</h3>
       ${z.intro ? `<p class="gd-zintro">${esc(z.intro)}</p>` : ""}
-      <div class="gd-zmap">${guideMapSvg(z.luoghi, { color: z.color, canal: venice })}</div>
       <ol class="gd-spots">${z.luoghi.map(l => `<li class="gd-spot">
         <span class="gd-n" style="background:${z.color}">${l.n}</span>
         <div><h4>${esc(l.nome)}</h4>
@@ -2568,7 +2604,8 @@ async function renderGuide(slugId) {
           ${l.consiglio ? `<p>${mdInline(l.consiglio)}</p>` : ""}
           ${l.nota ? `<p class="gd-note">${esc(l.nota)}</p>` : ""}
           ${l.foto ? `<figure class="gd-photo"><img src="${esc(mediaUrl(l.foto))}" alt="${esc(l.nome)}" loading="lazy"></figure>` : ""}
-          ${Number.isFinite(l.lat) ? `<p class="gd-coord">${fmtCoord(l.lat, l.lon)} · <a href="${gmapsUrl(l.lat, l.lon)}" target="_blank" rel="noopener">${T("Open in Maps")}</a> · <a href="#spotfolk" data-gdspot="${l.n}">${T("On SpotFolk")}</a></p>` : ""}
+          ${Number.isFinite(l.lat) ? `<p class="gd-coord">${fmtCoord(l.lat, l.lon)}</p>
+          <p class="gd-go"><a href="${gmapsUrl(l.lat, l.lon)}" target="_blank" rel="noopener">${T("Open in Maps")}</a><a href="${gmapsDir(l.lat, l.lon)}" target="_blank" rel="noopener">${T("Directions")}</a><a href="#spotfolk" data-gdspot="${l.n}">${T("On SpotFolk")}</a></p>` : ""}
         </div></li>`).join("")}</ol>
     </section>`).join("")}
     ${(g.pause || []).length ? `<section class="gd-zone gd-pause"><p class="gd-zk">${T("Take a break")}</p><h3>${T("Where to stop")}</h3>
@@ -2579,6 +2616,7 @@ async function renderGuide(slugId) {
     <p class="fn-foot">Field Notes · ${esc(g.titolo)}${g.aggiornata ? ` · ${T("updated")} ${esc(fmtDate(g.aggiornata))}` : ""}</p>
   </article>`;
   layout.querySelectorAll("[data-gz]").forEach(a => a.addEventListener("click", e => { e.preventDefault(); document.getElementById("gz-" + a.dataset.gz)?.scrollIntoView({ behavior: "smooth", block: "start" }); }));
+  buildGuideMap(all, g);
   layout.querySelector("[data-gdmap]")?.addEventListener("click", () => { trackEvent("Guide: places on SpotFolk", { guide: g.titolo }); window.openGuideOnMap(g.slug); });
   layout.querySelectorAll("[data-gdspot]").forEach(a => a.addEventListener("click", e => { e.preventDefault(); window.openGuideOnMap(g.slug, +a.dataset.gdspot); }));
   requestAnimationFrame(() => $("#journalMag")?.scrollIntoView({ block: "start" }));
