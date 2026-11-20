@@ -853,7 +853,7 @@ const Spots = (() => {
     const subItems = () => `<div class="sx-subs">${SUB_KEYS.map(k => `<button type="button" class="sx-item sx-sub${subOn(k) ? " on" : ""}" data-sxsub="${k}" style="--c:${k === "poi" ? POI_COLOR : CATS.spot.color}" aria-pressed="${subOn(k)}">
         <span class="sx-ico">${k === "poi" ? ICON_POI : CATS.spot.icon}</span><span class="sx-name">${SUBS[k].label}</span><small data-sxsubcount="${k}">${fmtN(base.filter(s => s.category === "spot" && spotSub(s) === k).length)}</small><span class="sx-check" aria-hidden="true"></span></button>
         ${k === "poi" ? `<div class="sx-poi" role="group" aria-label="Kinds of places of interest">${POI_KEYS.map(p => `<button type="button" class="sx-pchip${activePoi.has(p) ? " on" : ""}" data-sxpoi="${p}" aria-pressed="${activePoi.has(p)}">${POI_TYPES[p][1]}<span>${POI_TYPES[p][0]}</span><small data-sxpoicount="${p}">${fmtN(base.filter(s => s.category === "spot" && spotSub(s) === "poi" && poiType(s) === p).length)}</small></button>`).join("")}</div>`
-          : `<div class="sx-poi" role="group" aria-label="Kinds of photo spot">${PHOTO_KEYS.map(p => `<button type="button" class="sx-pchip${activePhoto.has(p) ? " on" : ""}" data-sxphoto="${p}" aria-pressed="${activePhoto.has(p)}">${PHOTO_TYPES[p][1]}<span>${PHOTO_TYPES[p][0]}</span><small data-sxphotocount="${p}">${fmtN(base.filter(s => s.category === "spot" && spotSub(s) === "photo" && photoType(s) === p).length)}</small></button>`).join("")}</div>`}`).join("")}</div>`;
+          : `<div class="sx-poi" role="group" aria-label="Kinds of photo spot">${PHOTO_KEYS.map(p => `<button type="button" class="sx-pchip${activePhoto.has(p) ? " on" : ""}" data-sxphoto="${p}" aria-pressed="${activePhoto.has(p)}">${PHOTO_TYPES[p][1]}<span>${PHOTO_TYPES[p][0]}</span><small data-sxphotocount="${p}">${fmtN(base.filter(s => s.category === "spot" && spotSub(s) === "photo" && photoTags(s).includes(p)).length)}</small></button>`).join("")}</div>`}`).join("")}</div>`;
     const lockItem = (label, ico) => `<button type="button" class="sx-item is-locked" data-sxjoin><span class="sx-ico">${ico}</span><span class="sx-name">${label}</span><span class="sx-lock">${SX_ICON.lock}Members</span></button>`;
     // Support local vale per Places ed Essentials: stesso interruttore, conteggio della sezione
     const supportItem = cats => `<button type="button" class="sx-item${onlySupport ? " on" : ""}" data-onlysupport aria-pressed="${onlySupport}" style="--c:#9fe3c8"><span class="sx-ico">🌱</span><span class="sx-name">Support local</span><small>${spots.filter(x => x.support_local && cats.includes(x.category)).length}</small><span class="sx-check" aria-hidden="true"></span></button>`;
@@ -983,7 +983,7 @@ const Spots = (() => {
     base.forEach(s => { by[s.category] = (by[s.category] || 0) + 1; if (s.category === "spot") { const k = spotSub(s); subs[k] = (subs[k] || 0) + 1; } });
     document.querySelectorAll("[data-sxcount]").forEach(el => { el.textContent = fmtN(by[el.dataset.sxcount] || 0); });
     document.querySelectorAll("[data-sxsubcount]").forEach(el => { el.textContent = fmtN(subs[el.dataset.sxsubcount] || 0); });
-    if (document.querySelector("[data-sxphotocount]")) { const fc = {}; base.forEach(s => { if (s.category === "spot" && spotSub(s) === "photo") { const p = photoType(s); fc[p] = (fc[p] || 0) + 1; } });
+    if (document.querySelector("[data-sxphotocount]")) { const fc = {}; base.forEach(s => { if (s.category === "spot" && spotSub(s) === "photo") photoTags(s).forEach(p => (fc[p] = (fc[p] || 0) + 1)); });
       document.querySelectorAll("[data-sxphotocount]").forEach(e => (e.textContent = fmtN(fc[e.dataset.sxphotocount] || 0))); }
     if (document.querySelector("[data-sxpoicount]")) { const pc = {}; base.forEach(s => { if (s.category === "spot" && spotSub(s) === "poi") { const p = poiType(s); pc[p] = (pc[p] || 0) + 1; } });
       document.querySelectorAll("[data-sxpoicount]").forEach(el => { el.textContent = fmtN(pc[el.dataset.sxpoicount] || 0); }); }
@@ -2178,27 +2178,44 @@ const Spots = (() => {
     church: ["Church", SVG('<path d="M12 2.5v4M10 4.5h4M12 6.5l-5 5V21h10v-9.5z"/><path d="M10 21v-4a2 2 0 0 1 4 0v4M4 21h16"/>'), /chies|church|[ée]glise|kirche|iglesia|igreja|duomo|cattedral|cathedral|basilic|abbazi|abbey|monaster|santuari|sanctuary|\bpieve\b|cappell|chapel|convent|temple|tempio|mosque|moschea|synagog|eremo|hermitage/i],
     other: ["Other", ICON_POI, null]
   };
-  /* the kinds of photo spot: chosen when adding or editing (info.photo), otherwise guessed from the name.
-     The kind gives the pin its own icon and decides what the folk are asked about it. */
+  /* photo spots are sorted by the light they are for, not by their subject (that is what the places of interest are for).
+     A spot can be good for more than one: «sunset» and «Milky Way» live together. Chosen when adding or editing (info.light),
+     otherwise guessed from the name and the note. The first one, by the order below, gives the pin its icon. */
   const PHOTO_TYPES = {
-    view:   ["Viewpoint", SVG('<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/>'), /belveder|panoram|viewpoint|view point|\bvista\b|\bvedetta\b|mirador|aussicht|\bpoint de vue\b|terrazz|balcon|overlook|scenic/i],
-    mount:  ["Mountain", SVG('<path d="m2.5 19 6.5-11 4 6.5 2.5-3.5 6 8z"/><path d="m7.6 13.4 1.4-2.4 1.4 2.4"/>'), /\bmonte\b|\bmont\b|\bmount\b|mountain|\bcima\b|vetta|\bpiz\b|\bpunta\b|peak|\bgipfel\b|\bberg\b|\bpasso\b|\bcol\b|forcella|\bsella\b|rifugio|\bmalga\b|alpe\b|dolomit|\balpi\b|\balps\b|ghiacciai|glacier|crinale|ridge/i],
-    sea:    ["Sea & coast", SVG('<path d="M3 16c2-1.4 4-1.4 6 0s4 1.4 6 0 4-1.4 6 0M3 20c2-1.4 4-1.4 6 0s4 1.4 6 0 4-1.4 6 0"/><path d="M7 12V4l9 3-9 3"/>'), /spiagg|beach|plage|playa|strand|\bcala\b|\bbaia\b|\bbay\b|scogl|falesi|cliff|\bcosta\b|coast|\bmare\b|\bsea\b|seaside|\bporto\b|harbou?r|\bfaro\b|lighthouse|isola|island|laguna|fiord|fjord/i],
-    water:  ["Water", SVG('<path d="M12 3.5c3.4 4 5.5 6.8 5.5 9.4A5.5 5.5 0 0 1 6.5 13c0-2.6 2.1-5.4 5.5-9.5z"/>'), /\blago\b|\blake\b|\blaghett|\bsee\b|\blac\b|cascat|waterfall|wasserfall|cascade|\bfiume\b|river|\btorrent|\bgola\b|forra|gorge|canyon|\bponte\b|\briver\b|laguna|stagno|\bfonte\b|sorgent/i],
-    woods:  ["Woods & fields", SVG('<path d="M8 3 4 10h2.5L3.5 15H7v5h2v-5h3.5l-3-5H12z"/><path d="M16 6l-3.5 6h2l-2.5 4.5h3V20h2v-3.5h3L17.5 12h2z"/>'), /\bbosc(o|hi)\b|\bforest|\bwood|\bwald\b|\bbois\b|\bbosque\b|faggeta|pineta|castagnet|\bcipress|cypress|\bcampagna\b|countryside|\bcampi\b|\bfield|\bprat(o|i)\b|meadow|\bvignet|vineyard|\bulivi\b|olive|lavand|lavender|girasol|sunflower|\bcolline\b|\bhills?\b|\bpodere\b|\bcasale\b|\bfattoria\b|farmhouse/i],
-    night:  ["Night sky", SVG('<path d="M12 3.2 13.9 9l5.9.1-4.7 3.5 1.7 5.6L12 14.9l-4.8 3.3 1.7-5.6L4.2 9.1 10.1 9z"/><path d="M19.5 3.5 20 5l1.5.5L20 6l-.5 1.5L19 6l-1.5-.5L19 5z"/>'), /via lattea|milky ?way|\bstelle\b|\bstars?\b|\bstellat|starry|\bnotturn|night sky|astro|aurora|northern lights|\bluna\b|\bmoon\b|\bcielo\b/i],
-    city:   ["City & architecture", SVG('<path d="M3 20h18M5 20V9h5v11M10 20V4h6v16M16 20v-8h3v8"/><path d="M7 12h1M7 15h1M12.5 7h1M12.5 10h1"/>'), /citt[àa]|\bcity\b|\btown\b|skyline|piazz|square|\bvia\b|street|\brue\b|stra(ss|ß)e|calle|\bborgo\b|village|\bpaese\b|quartier|rooftop|\bponte\b|bridge|stazione|station|architett|architectur|\bduomo\b|\bchies|church|castell|castle|\bpalazz/i],
-    other:  ["Other", CATS.spot.icon, null]
+    milky:   ["Milky Way", SVG('<path d="M3 17c4-1.5 7-4 9-7s4-5.5 8-6.5"/><circle cx="7" cy="15.5" r="1"/><circle cx="12" cy="11" r="1.2"/><circle cx="16.5" cy="7" r="1"/><circle cx="19.5" cy="12.5" r=".9"/><circle cx="5" cy="9" r=".9"/>'),
+              /via lattea|milky ?way|galassi|galactic|\bcore\b|star ?trail|scie stellari|astrofoto|astrophoto|\bstell(e|ata|ato|ate)\b|starry|\bstars?\b/i],
+    sunrise: ["Sunrise", SVG('<path d="M3 19h18M6.5 19a5.5 5.5 0 0 1 11 0"/><path d="M12 4.5v3M5.6 7.6l2 2M18.4 7.6l-2 2"/>'),
+              /\balba\b|albe\b|sunrise|\bdawn\b|first light|lever du soleil|sonnenaufgang|amanecer|\bsorge\b|\baurora\b(?! boreal)/i],
+    sunset:  ["Sunset", SVG('<path d="M3 19h18M6.5 19a5.5 5.5 0 0 1 11 0"/><path d="M12 10.5v-3M8 12l-2-2M16 12l2-2M9 4.5l3 3 3-3"/>'),
+              /tramont|sunset|sundown|golden hour|ora d’oro|ora d\'oro|coucher|sonnenuntergang|atardecer|puesta de sol/i],
+    blue:    ["Blue hour", SVG('<path d="M3 15h18"/><path d="M6.5 15a5.5 5.5 0 0 1 11 0"/><path d="M4 19h4M10 19h4M16 19h4"/>'),
+              /ora blu|blue hour|blaue stunde|hora azul|heure bleue|crepuscol|twilight|dusk/i],
+    night:   ["Night", SVG('<path d="M20 14.5A8 8 0 0 1 9.5 4 8.2 8.2 0 1 0 20 14.5z"/>'),
+              /notturn|\bnotte\b|by night|\bnight\b|luci della citt|city lights|nacht|nocturn/i],
+    day:     ["Daytime", SVG('<circle cx="12" cy="12" r="4"/><path d="M12 2.5V5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"/>'),
+              /\bdi giorno\b|daytime|midday|mezzogiorno|\bdiurn/i],
+    other:   ["Any light", CATS.spot.icon, null]
   };
   const PHOTO_KEYS = Object.keys(PHOTO_TYPES);
-  const PHOTO_GUESS = ["night", "sea", "mount", "water", "view", "woods", "city"];
+  const PHOTO_GUESS = PHOTO_KEYS.filter(k => PHOTO_TYPES[k][2]);
   const activePhoto = new Set(PHOTO_KEYS), photoCache = new Map();
-  function photoType(s) {
-    if (s.info?.photo && PHOTO_TYPES[s.info.photo]) return s.info.photo;
+  /* every light a spot is good for */
+  function photoTags(s) {
+    const chosen = Array.isArray(s.info?.light) ? s.info.light.filter(k => PHOTO_TYPES[k]) : [];
+    if (chosen.length) return chosen;
     if (photoCache.has(s.id)) return photoCache.get(s.id);
-    const t = `${s.name || ""} ${s.note || ""} ${s.list || ""}`, k = PHOTO_GUESS.find(x => PHOTO_TYPES[x][2].test(t)) || "other";
-    photoCache.set(s.id, k); return k;
+    const t = `${s.name || ""} ${s.note || ""} ${s.list || ""}`;
+    const out = PHOTO_GUESS.filter(k => PHOTO_TYPES[k][2].test(t));
+    const r = out.length ? out : ["other"];
+    photoCache.set(s.id, r); return r;
   }
+  const photoType = s => photoTags(s)[0];
+  // the lights a photo spot is for, on its card: «sunrise · Milky Way»
+  const lightChips = s => {
+    if (s.category !== "spot" || spotSub(s) !== "photo") return "";
+    const tags = photoTags(s).filter(k => k !== "other");
+    return tags.length ? `<p class="lt-chips">${tags.map(k => `<span class="lt-chip">${PHOTO_TYPES[k][1]}${trS(PHOTO_TYPES[k][0])}</span>`).join("")}</p>` : "";
+  };
   const POI_KEYS = Object.keys(POI_TYPES), POI_GUESS = ["parking", "church", "castle", "waterfall", "lake", "woods", "monument", "village", "city"];
   const activePoi = new Set(POI_KEYS), poiCache = new Map();
   function poiType(s) {
@@ -2220,7 +2237,7 @@ const Spots = (() => {
     return spots.filter(s => shownStatus(s) && (!onlyFavs || favs.has(s.id)) && (!activeCats || activeCats.has(s.category))
       && (s.category !== "spot" || activeSubs.size === SUB_KEYS.length || activeSubs.has(spotSub(s)))
       && (s.category !== "spot" || activePoi.size === POI_KEYS.length || spotSub(s) !== "poi" || activePoi.has(poiType(s)))
-      && (s.category !== "spot" || activePhoto.size === PHOTO_KEYS.length || spotSub(s) !== "photo" || activePhoto.has(photoType(s)))
+      && (s.category !== "spot" || activePhoto.size === PHOTO_KEYS.length || spotSub(s) !== "photo" || photoTags(s).some(k => activePhoto.has(k)))
       && (!onlySupport || s.support_local)
       && (alertMode === "show" || (alertMode === "hide" ? !alertsOf(s).length : alertsOf(s).length > 0))
       && (!q || norm(s.name).includes(q) || norm(s.note).includes(q) || norm(s.list).includes(q) || norm(CATS[s.category].label).includes(q)));
@@ -2719,13 +2736,10 @@ const Spots = (() => {
     }
     if (s.category === "spot" && spotSub(s) === "photo") {   // the kind of photo spot decides what to ask the folk
       const p = photoType(s);
-      if (p === "night") return ["clearsky", "stars", "fog", "crowded", "quiet", "works"];
-      if (p === "sea") return ["rough", "calm", "windy", "jelly", "beachfull", "fog", "clearsky"];
-      if (p === "mount") return ["snow", "ice", "clear_trail", "fog", "cloudsea", "foliage", "parking"];
-      if (p === "water") return ["flow", "low", "frozen", "foliage", "fog", "crowded"];
-      if (p === "woods") return ["foliage", "bloom", "fog", "snow", "quiet", "crowded"];
-      if (p === "city") return ["crowded", "quiet", "parking", "works", "fog", "clearsky"];
-      if (p === "view") return ["clearsky", "fog", "cloudsea", "foliage", "crowded", "parking"];
+      if (p === "milky") return ["clearsky", "stars", "fog", "quiet", "crowded", "works"];
+      if (p === "sunrise" || p === "sunset") return ["clearsky", "fog", "cloudsea", "foliage", "crowded", "parking"];
+      if (p === "blue") return ["clearsky", "fog", "crowded", "quiet", "works"];
+      if (p === "night") return ["clearsky", "stars", "crowded", "quiet", "parking", "works"];
       if (p === "castle" || p === "church" || p === "monument") return ["open", "closed", "wait", "crowded", "quiet", "works", "fog"];
       if (p === "village" || p === "city") return ["crowded", "quiet", "parking", "works", "fog", "clearsky", "snow"];
     }
@@ -4035,6 +4049,7 @@ const Spots = (() => {
     return `<div class="spot-pop">
       <span class="spot-cat" style="--c:${cat.color}">${cat.icon}${cat.label}${subLabel(s) ? ` · ${esc(subLabel(s))}` : ""}</span>
       <strong>${esc(s.name)}</strong>
+      ${lightChips(s)}
       ${s.status && s.status !== "published" ? `<span class="ws-chip st-chip">${s.status === "review" ? "In review" : "Hidden"}</span>` : ""}
       ${s.avg_rating ? `<p class="pop-rating"><span class="stars-static" style="--v:${(s.avg_rating / 5 * 100).toFixed(0)}%">★★★★★</span> <b>${(+s.avg_rating).toFixed(1)}</b> · ${s.reviews} review${s.reviews > 1 ? "s" : ""}</p>` : ""}
       ${s.support_local ? `<p class="soc-note">🌱 Support local — your visit helps this place</p>` : ""}

@@ -4615,3 +4615,8 @@ html.cch-open{overflow:hidden}
 .gd-pop a{display:block;margin-top:2px;font-size:13.5px;font-weight:500;color:#b20d0d}
 .gd-maphint{margin:8px 0 0;font-size:12.5px;color:var(--ink-soft,#5b5b5b);text-align:center}
 .gd-go{display:flex;flex-wrap:wrap;gap:8px 16px;margin:4px 0 0;font-size:13.5px;font-weight:500}
+
+/* the lights a photo spot is for */
+.lt-chips{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 0}
+.lt-chip{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:999px;border:1px solid rgba(255,190,122,.4);background:rgba(255,190,122,.1);color:#ffd9a8;font-size:11.5px;line-height:1.5;white-space:nowrap}
+.lt-chip svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}

@@ -1555,6 +1555,8 @@ const I18N = (() => {
     "How big would it be?": ["Quanto verrebbe grande?"],
     "print sizes on a wall": ["formati di stampa su una parete"],
     "Licence requests": ["Richieste di licenza"],
+    "Daytime": ["Di giorno"],
+    "Any light": ["Qualsiasi luce"],
     "Mountain": ["Montagna"],
     "Sea & coast": ["Mare e costa"],
     "Water": ["Acqua"],
