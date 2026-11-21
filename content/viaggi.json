@@ -67,11 +67,19 @@
           ]
         },
         {
-          "nome": "Cipressi del Gladiatore (Pienza)",
+          "nome": "Pienza",
           "lat": "43.073370667100086",
           "lon": "11.668184877204943",
           "immagini": [
             "/img/foto/fb-untitled-2-2025-11-30t18-03-23-337-4.jpg"
+          ]
+        },
+        {
+          "nome": "San Quirico d'Orcia",
+          "lat": "43.058948874078574",
+          "lon": "11.605259078895946",
+          "immagini": [
+            "/img/foto/fb-untitled-2-2025-11-30t18-03-23-337-5.jpg"
           ]
         }
       ]
