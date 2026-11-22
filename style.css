@@ -2992,7 +2992,16 @@ body[data-page="explore"]::after{background:radial-gradient(90% 55% at 85% 0,rgb
 .gd-rich{max-width:820px;font:400 16px/1.6 var(--mag-serif);color:var(--ink)}
 .gd-rich h3{font:700 22px var(--mag-serif);margin:1.2em 0 .4em;text-transform:none;color:var(--ink)}
 .gd-rich a{color:var(--rule)}
-@media (max-width:760px){.gd-spots{columns:1}}
+/* il grassetto di .rich è bianco per lo sfondo scuro del sito: sulla carta chiara del magazine serve l'inchiostro */
+.mag-body strong,.gd-rich strong{color:var(--ink);font-weight:700}
+.mag-body table,.gd-rich table{width:100%;border-collapse:collapse;margin:1.3em 0;font-size:15px;line-height:1.45}
+.mag-body th,.gd-rich th{text-align:left;font-weight:700;color:var(--ink);border-bottom:2px solid var(--rule);padding:9px 12px 9px 0}
+.mag-body td,.gd-rich td{vertical-align:top;border-bottom:1px solid rgba(17,17,17,.14);padding:9px 12px 9px 0}
+.mag-body tr:last-child td,.gd-rich tr:last-child td{border-bottom:0}
+.mag-body th:last-child,.gd-rich th:last-child,.mag-body td:last-child,.gd-rich td:last-child{padding-right:0}
+@media (max-width:760px){.gd-spots{columns:1}
+  .mag-body table,.gd-rich table{font-size:13.5px}
+  .mag-body th,.gd-rich th,.mag-body td,.gd-rich td{padding:7px 8px 7px 0}}
 .gm text{stroke:none}
 .gm .gm-pt text{fill:#fff}
 /* Spots: aggiunta con pressione lunga sulla mappa */
