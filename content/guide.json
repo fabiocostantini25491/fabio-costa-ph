@@ -355,61 +355,49 @@
     },
     {
       "bozza": false,
-      "titolo": "Three beech woods, three altitudes",
-      "sottotitolo": "A quick guide to following the autumn colour down the ladder",
-      "slug": "three-beech-woods",
-      "luogo": "Lazio and Abruzzo, Italy",
+      "titolo": "Foliage, a quick guide",
+      "sottotitolo": "How autumn colour works, which trees to look for, and when",
+      "slug": "foliage-quick-guide",
+      "luogo": "Italy",
       "aggiornata": "2026-11-22",
       "copertina": "/img/foto/faggi-torti-ceppo.jpg",
-      "intro": "Autumn colour is not a date, it is a band of altitude that walks downhill — roughly two hundred metres a week. These three beech woods sit a thousand metres apart from top to bottom, so they do not peak together: they peak **in sequence**. Start high in late October and finish by the lake at the end of November, and one autumn gives you three completely different woods. Take them in the order below, highest first, and you are simply following the colour down.",
+      "intro": "Autumn colour is not a date on a calendar. It is a band of altitude that walks downhill, roughly two hundred metres a week, from the treeline to the valley floor. Get that one idea and the whole season opens up: instead of asking *when does this place turn*, you ask *what height is the colour at today* — and there is always somewhere, at some height, that is at its best this weekend. This guide is the short version: which trees give you what, when each of them turns, and how to tell whether this particular autumn is running early or late.",
       "zone": [
         {
-          "nome": "The highest · Bosco dei Faggi Torti, about 1,800 m",
-          "intro": "In the Gran Sasso and Monti della Laga National Park, above the hamlet of Ceppo on the Teramo side of Abruzzo. The beeches here grew bent and twisted — the usual explanation is the weight of the snow that sits on them for months. It is the first of the three to turn, and the first to be stripped: at this height a single hard frost with wind can end it in a week.",
+          "nome": "Where these photographs were taken",
+          "intro": "All three are beech, the species most people fall for, and they sit a thousand metres apart from top to bottom — which is why they do not peak together but in sequence, over about five weeks. Take them as examples of the idea rather than as the only places worth going: there is a wood like these within an hour of almost anywhere in Italy.",
           "luoghi": [
             {
-              "nome": "Bosco dei Faggi Torti (Jacci di Verre)",
+              "nome": "Bosco dei Faggi Torti, Ceppo (TE)",
               "lat": "42.658553",
               "lon": "13.434448",
               "luce": "Afternoon",
-              "consiglio": "Late afternoon, shooting **into** the light: the low sun comes through the red canopy and the trunks go pale against it. The shapes are the subject, so give them room — a longer lens from further back separates them better than a wide angle up close.",
+              "consiglio": "About 1,800 m, in the Gran Sasso and Monti della Laga National Park: the highest of the three, and the first to turn — usually mid to late October. The trunks grew bent and twisted, and the usual explanation is the weight of the snow that sits on them for months. Shoot late, **into** the light, so the low sun comes through the red canopy and the pale trunks stand against it.",
               "nota": "Fabio's note: the twisted trunks make every frame look busy. Find one tree that leads, and let the rest be texture.",
               "foto": "/img/foto/faggi-torti-ceppo.jpg"
-            }
-          ]
-        },
-        {
-          "nome": "The middle · Faggeta del Monte Cimino, 925–1,053 m",
-          "intro": "Above Soriano nel Cimino, in the Tuscia. A UNESCO site since 2017, part of the Ancient and Primeval Beech Forests of the Carpathians and Other Regions of Europe, with trees over two centuries old among the tallest beeches in Europe. It is a *faggeta depressa*: beech growing two or three hundred metres below where you would expect it in central Italy, kept there by volcanic soil, high rainfall and humid air from the lake country below. That is why its best week falls in the first half of November rather than late October.",
-          "luoghi": [
+            },
             {
-              "nome": "Faggeta Vetusta del Monte Cimino",
+              "nome": "Faggeta Vetusta del Monte Cimino (VT)",
               "lat": "42.407778",
               "lon": "12.201111",
               "luce": "Morning",
-              "consiglio": "An easy loop of about two kilometres and a hundred metres of ascent — an hour — from the car park at roughly 970 m, past the Sasso Menicante, the volcanic boulder that rocks if you push it. Mist in the morning is what you want: it separates the trunks into planes and turns any gap in the canopy into a beam.",
-              "nota": "Fabio's note: an overcast day beats a blue sky here. The yellows hold their colour and nothing blows out.",
+              "consiglio": "Between 925 m and the summit at 1,053 m, a UNESCO site since 2017, with trees over two centuries old among the tallest beeches in Europe. It is a *faggeta depressa* — beech growing a couple of hundred metres below where you would expect it in central Italy — so its best week falls in the first half of November. An easy loop of two kilometres from the car park at about 970 m.",
+              "nota": "Fabio's note: an overcast morning beats a blue sky here. The yellows hold their colour and nothing blows out.",
               "foto": "/img/foto/faggeta-monte-cimino.jpg"
-            }
-          ]
-        },
-        {
-          "nome": "The lowest · Monte Fogliano and the Eremo di San Girolamo, roughly 550–950 m",
-          "intro": "Inside the Lago di Vico reserve, on Monte Fogliano, between Vetralla and the lake. Another beech wood sitting far lower than it should, and the last of the three to turn — often still worth the drive at the end of November, when everything above has finished. In the middle of it there is a hermitage cut straight into the volcanic rock.",
-          "luoghi": [
+            },
             {
-              "nome": "Eremo di San Girolamo",
+              "nome": "Eremo di San Girolamo, Monte Fogliano (VT)",
               "lat": "42.3246",
               "lon": "12.132193",
               "luce": "Early morning",
-              "consiglio": "Carved entirely into a block of volcanic rock that pushes up out of the forest floor, on two levels, reached by a stairway and a wooden walkway. Go early, ideally the morning after rain: the mist holds in the hollow and the first sun comes through the canopy in shafts. Expose for the stone, not for the leaves.",
-              "nota": "Fabio's note: the walk can be extended to the wooded summit of Monte Fogliano at 966 m.",
+              "consiglio": "The lowest of the three, in the Lago di Vico reserve, and so the last to turn — often still worth the drive at the end of November. A hermitage carved straight into a block of volcanic rock that pushes out of the forest floor, reached by a stairway and a wooden walkway. Go the morning after rain: the mist holds in the hollow and the first sun comes through in shafts.",
+              "nota": "Fabio's note: expose for the stone, not for the leaves.",
               "foto": "/img/foto/eremo-san-girolamo-monte-fogliano.jpg"
             }
           ]
         }
       ],
-      "pratiche": "### When each one turns\n\nThese are the usual windows, not a forecast for this year. A hard frost in late October, or two days of strong wind, moves everything.\n\n| Wood | Height | Usually best |\n| --- | --- | --- |\n| Faggi Torti, Ceppo | about 1,800 m | Mid to late October |\n| Monte Cimino | 925–1,053 m | First half of November |\n| Monte Fogliano | 550–950 m | Mid to late November |\n\nThe gap from top to bottom is about a thousand metres, which by the old rule of four days for every hundred and twenty metres is roughly five weeks of difference. That is the whole point of this guide: if you arrive and the colour has gone, do not drive home — drive **down**.\n\n### Getting there\n\n**Faggi Torti.** The reference point is Ceppo, in the comune of Rocca Santa Maria (TE), about 35 km from Teramo. From there it is roughly an hour on foot, or a dirt road that wants a car with some ground clearance. There is no signage for the wood itself: follow the GPS position, and do not leave it until you are back on the road.\n\n**Monte Cimino.** From Soriano nel Cimino follow the signs for the summit; the road climbs to the walkers' car park at about 970 m, and the path starts straight away among the big beeches.\n\n**Monte Fogliano.** From the road above Vetralla, past the entrance of the Convento di Sant'Angelo; the marked path to the hermitage leaves on the right and follows the Fosso di San Girolamo for about a kilometre.\n\n### Before you go\n\nAll three are proper woods, not parks. Park without blocking the road or any forestry track, keep to the paths — at Monte Cimino the undergrowth is protected — and remember that a wood holds the damp: the ground stays slippery long after the rain has stopped.\n\nSunrise and sunset for the day you are going, and what the light is doing right now, are in the Tools on this site. And if you want the method behind the sequence rather than the three places, it is in the article *Do you know where and how to find Foliage?*"
+      "pratiche": "### The species worth chasing\n\nAltitude tells you *where* the colour is. The trees tell you *how long it stays*, and how forgiving the trip will be.\n\n| Tree | Usual band | Colour | The catch |\n| --- | --- | --- | --- |\n| **Larch** | 1,400–2,200 m | Gold, almost luminous | The shortest window of all: it drops within days of the first hard frost. The biggest reward and the biggest risk. |\n| **Beech** | 900–1,500 m | Copper, orange, red-brown | The forgiving one — it holds dead leaves for weeks. Start here if your date is uncertain. |\n| **Maple** | 400–1,200 m | The true reds | Scattered rather than in stands: a few trees inside another wood, so look for them rather than drive to them. |\n| **Chestnut** | 500–900 m | Deep gold | Late, and the forest floor matters as much as the canopy. |\n| **Poplar and aspen** | valley floors | Clean yellow, and it moves | First to be stripped by wind. |\n| **Oak** | below 800 m | Brown and leathery | Very late, often the last thing still holding in December. |\n| **Vineyards** | 200–600 m | Red or gold by variety | Not a wood, but the most photographed autumn colour in Italy. Usually early to mid November. |\n\n### When to go\n\nStart high and follow it down. As a rule of thumb for the whole country:\n\n- **Late September to mid October** — larch and the high Alps, above 1,500 m.\n- **Mid to late October** — the high Apennine beech woods, 1,300–1,800 m.\n- **First half of November** — beech lower down, 900–1,300 m, and the vineyards.\n- **Mid to late November** — chestnut, and the low beech woods that grow below their usual band.\n- **Late November into December** — oak, poplar, city parks. The last colour of all is usually in town.\n\n### Is this autumn early or late?\n\nThe calendar above is the average. Three free checks tell you where *this* year actually sits, and together they take ten minutes.\n\n1. **The first frost.** Pull the daily minimum temperatures for the area from any open weather archive and find the first night at or below zero. Larch above that point is on a countdown of days.\n2. **The snow line.** Snow that fell above your band is scenery. Snow that fell on it has closed it.\n3. **Wind and heavy rain in the last ten days.** This is what actually ends a display. A still, mild fortnight preserves a peak well past the date you would predict; two windy days remove it.\n\nThen look at a webcam the evening before. A single current frame beats any model — and read it with your own eyes, because fog, backlight and a dusting of snow on the lens fool software, not people.\n\n### Shooting it\n\nDo not wish for blue sky. An overcast day is the best light that exists inside a wood: no hotspots, no black shadows, and the yellows keep their saturation. Save the clear mornings for **backlight**, which is the one thing that makes a beech or a larch genuinely glow — shoot into the sun, low, with the leaves between you and it. Mist is a gift: it separates the trunks into planes and turns every gap in the canopy into a beam.\n\nA polariser will cut the sheen on wet leaves and deepen the colour, but take it off when you are shooting into the light. And keep one eye down: in a beech wood the floor is often better than the canopy.\n\n### Before you go\n\nWoods are not parks. Park without blocking the road or any forestry track, keep to the paths where the undergrowth is protected, and remember that a wood holds the damp long after the rain has stopped.\n\nSunrise and sunset for the day you are going, and what the light is doing right now, are in the Tools on this site. The longer version of the method behind this guide — including why the colour descends two hundred metres a week — is in the article *Do you know where and how to find Foliage?*"
     }
   ],
   "pdf": [
