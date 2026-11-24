@@ -143,8 +143,6 @@ const Spots = (() => {
   let tkV = true;           // false finché non è stato eseguito supabase-trekking.sql
   let wsV = true;           // false finché non è stato eseguito supabase-workshop.sql
   let pubV = true;          // false finché non è stato eseguito supabase-pubblico.sql
-  // la mappa pubblica mostra solo i posti firmati: chiave nuova, così chi aveva la vecchia selezione in cache la rifà
-  const PUBLIC_CACHE = "public-signed";
   let reports = new Map();  // spot_id → segnalazioni attive
   let alertMode = "show";   // show | hide | only
   let onlySupport = false;
@@ -528,7 +526,7 @@ const Spots = (() => {
     if (guestLoaded) { guest = true; return true; }
     try {
       // la selezione pubblica cambia di rado: resta sul dispositivo per 12 ore (meno traffico su Supabase)
-      const c = await idb.get(PUBLIC_CACHE);
+      const c = await idb.get("public");
       let all = c && Date.now() - c.at < 12 * 36e5 && Array.isArray(c.rows) ? c.rows : null;
       if (all) publicTotal = c.total || 0;
       else {
@@ -540,7 +538,7 @@ const Spots = (() => {
           if (!data || data.length < PAGE_SIZE) break;
         }
         try { const { data } = await api("/rest/v1/rpc/spots_total", { method: "POST", body: {}, auth: false }); publicTotal = +data || 0; } catch {}
-        idb.set(PUBLIC_CACHE, { at: Date.now(), rows: all, total: publicTotal });
+        idb.set("public", { at: Date.now(), rows: all, total: publicTotal });
       }
       spots = all.filter(x => Number.isFinite(+x.lat)).map(x => ({ ...x, lat: +x.lat, lon: +x.lon, list: "Public", category: CATS[x.category] ? x.category : "spot", fragile: false }));
       admin = false; guest = true; guestLoaded = true; reports = new Map();
@@ -4248,8 +4246,9 @@ const Spots = (() => {
           <input type="text" name="months" maxlength="60" placeholder="Best months, e.g. Oct–Apr (optional)" value="${esc(s.best_months || "")}">
           <label class="shot-check"><input type="checkbox" name="fragile"${s.fragile ? " checked" : ""}> 🛡️ Fragile — hide it from the public map, ask members not to geotag it</label>
           ${admin ? `<label class="pub-pick">Public map (visitors)
-            <select name="pub"><option value="no"${s.public_pick !== true ? " selected" : ""}>Not signed — stays on my map only</option>
-              <option value="yes"${s.public_pick === true ? " selected" : ""}>Signed — I have been here, show it to visitors</option></select></label>` : ""}
+            <select name="pub"><option value="auto"${s.public_pick == null ? " selected" : ""}>Automatic (1 spot every ~15 km)</option>
+              <option value="yes"${s.public_pick === true ? " selected" : ""}>Always show to visitors</option>
+              <option value="no"${s.public_pick === false ? " selected" : ""}>Never show to visitors</option></select></label>` : ""}
           <button type="submit" class="pop-btn primary">Save</button>
         </form>` : ""}` : ""}
       ${canEdit(s) ? `<p class="pop-own"><button type="button" class="pop-btn" data-editspot>✎ Edit place</button><button type="button" class="spot-delete" data-delete>Delete</button></p>` : ""}
@@ -4540,7 +4539,7 @@ const Spots = (() => {
       const btn = sf.querySelector("[type=submit]"); btn.disabled = true;
       try {
         await api("/rest/v1/rpc/set_social", { method: "POST", body: { p_spot: s.id, p_support: sf.support.checked, p_months: sf.months.value } });
-        if (admin && sf.pub) { const v = sf.pub.value; try { await api("/rest/v1/rpc/set_public", { method: "POST", body: { p_spot: s.id, p_pick: v === "yes" } }); try { idb.set(PUBLIC_CACHE, null); } catch {} } catch {} }
+        if (admin && sf.pub) { const v = sf.pub.value; try { await api("/rest/v1/rpc/set_public", { method: "POST", body: { p_spot: s.id, p_pick: v === "auto" ? null : v === "yes" } }); } catch {} }
         if (sf.fragile.checked !== !!s.fragile) await api("/rest/v1/rpc/set_fragile", { method: "POST", body: { p_spot: s.id, p_fragile: sf.fragile.checked } });
         spots = await fetchSpots(); map.closePopup(); renderApp();
         const n = spots.find(x => x.id === s.id); if (n) focusSpot(n);
@@ -4678,22 +4677,22 @@ const Spots = (() => {
     if (s.verified_at) return `<p class="vf">✓ <b>Verified by a local</b>${s.verified_name ? ` · ${esc(s.verified_name)}` : ""} · ${new Date(s.verified_at).toLocaleDateString(window.I18N?.locale || "en-GB", { month: "short", year: "numeric" })}</p>`;
     return "";
   }
-  // admin: one tap to sign a place. Only the places you sign reach the public map.
+  // admin: one tap to decide whether visitors see this place (and its full card) on the public map
   function pubPickHtml(s) {
     if (s.fragile) return `<p class="pc-pub"><span>👁 Visitors</span><em>Fragile: never shown to visitors</em></p>`;
-    const v = s.public_pick === true ? "yes" : "no";      // null (never decided) counts as not signed
+    const v = s.public_pick === true ? "yes" : s.public_pick === false ? "no" : "auto";
     const b = (k, l, t) => `<button type="button" data-pub="${k}" class="${v === k ? "on" : ""}" aria-pressed="${v === k}" title="${t}">${l}</button>`;
-    return `<p class="pc-pub"><span>👁 Visitors</span>${b("yes", "Signed", "You have been here: visitors see it, with its full card")}${b("no", "Not signed", "Stays on your map only")}</p>`;
+    return `<p class="pc-pub"><span>👁 Visitors</span>${b("yes", "Public", "Always on the public map, with its full card")}${b("auto", "Auto", "Public if it's the pick of its ~15 km area")}${b("no", "Hidden", "Never shown to visitors")}</p>`;
   }
   function wirePubPick(popup, s) {
     const box = popup.getElement()?.querySelector("[data-pubpick]"); if (!box) return;
     box.querySelectorAll("[data-pub]").forEach(btn => btn.addEventListener("click", async () => {
-      const k = btn.dataset.pub, pick = k === "yes";
+      const k = btn.dataset.pub, pick = k === "auto" ? null : k === "yes";
       try {
         await api("/rest/v1/rpc/set_public", { method: "POST", body: { p_spot: s.id, p_pick: pick } });
         s.public_pick = pick; box.innerHTML = pubPickHtml(s); wirePubPick(popup, s);
-        try { idb.set(PUBLIC_CACHE, null); } catch {}
-        toast(k === "yes" ? "Signed: visitors see this place, with its full card." : "Not signed: it stays on your map only.");
+        try { idb.set("public", null); } catch {}
+        toast(k === "yes" ? "Public: visitors see this place with its full card." : k === "no" ? "Hidden from visitors." : "Automatic: public if it's the pick of its area.");
       } catch (err) { toast(`Could not change it: ${err.message}`, true); }
     }));
   }
