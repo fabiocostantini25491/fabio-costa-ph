@@ -817,6 +817,15 @@ function fabPlaces() {
   return out;
 }
 const fabName = x => x.gl ? x.gl.l.nome : x.sb ? x.sb.name : x.t.name;
+/* la miniatura tonda del pin: stessa regola di scripts/build-pins.py, così non serve un elenco.
+   /img/foto/x.jpg → img/pins/img-foto-x-jpg.webp (qualche kB invece di mezzo mega) */
+const pinThumb = p => p ? `img/pins/${String(p).replace(/^\//, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "")}.webp` : "";
+function fabPinPhoto(x) {
+  const p = (x.items || [])[0];
+  const raw = p ? p.raw : (x.gl || (x.guides || [])[0])?.l.foto;
+  if (!raw) return null;
+  return { thumb: pinThumb(raw), full: p ? p.src : mediaUrl(raw) };
+}
 function fabCard(x, photoId) {
   const { t, sb, items } = x, p = items.find(q => q.id === photoId) || items[0];
   const T = s => window.I18N ? I18N.t(s) : s;
@@ -841,10 +850,13 @@ function drawFabioPlaces() {
   if (!map || !fabLayer) return;
   fabLayer.clearLayers(); fabPins.clear();
   fabPlaces().forEach(x => {
-    const name = fabName(x);
+    const name = fabName(x), ph = fabPinPhoto(x);
     const m = L.marker([x.lat, x.lon], { keyboard: true, riseOnHover: true, title: name,
-      icon: L.divIcon({ className: "", iconSize: [28, 28], iconAnchor: [14, 14], tooltipAnchor: [0, -14], popupAnchor: [0, -12],
-        html: `<div class="spot-pin pick fab-pin" style="--c:#9cc8ff" title="Fabio's pick">${FAB_CAM}<span class="pick-star" aria-hidden="true">★</span></div>` }) })
+      icon: ph
+        ? L.divIcon({ className: "", iconSize: [46, 46], iconAnchor: [23, 23], tooltipAnchor: [0, -25], popupAnchor: [0, -23],
+          html: `<div class="fab-photo-pin" title="Fabio's pick"><img src="${esc(ph.thumb)}" alt="" loading="lazy" decoding="async"><span class="pick-star" aria-hidden="true">★</span></div>` })
+        : L.divIcon({ className: "", iconSize: [28, 28], iconAnchor: [14, 14], tooltipAnchor: [0, -14], popupAnchor: [0, -12],
+          html: `<div class="spot-pin pick fab-pin" style="--c:#9cc8ff" title="Fabio's pick">${FAB_CAM}<span class="pick-star" aria-hidden="true">★</span></div>` }) })
       .addTo(fabLayer)
       .bindTooltip(esc(name), { direction: "top" })
       .bindPopup(() => fabCard(x, m._fabPhoto), { className: "fab-pop", maxWidth: 300, minWidth: 240, autoPanPaddingTopLeft: [20, 40], autoPanPaddingBottomRight: [20, 170] });
@@ -858,6 +870,11 @@ function drawFabioPlaces() {
     });
     m.on("popupopen", e => e.popup.getElement()?.querySelector("[data-fabstory]")?.addEventListener("click", () => fabStory(x, m._fabPhoto)));
     m.on("popupclose", () => { m._fabPhoto = null; });
+    // se la miniatura non c'è (foto aggiunta senza rilanciare scripts/build-pins.py) si usa la foto intera
+    if (ph) {
+      const img = m.getElement?.()?.querySelector("img");
+      if (img) img.addEventListener("error", () => { img.src = ph.full; }, { once: true });
+    }
     m._fab = x;
     fabPins.set(x.key, m);
   });

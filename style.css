@@ -3166,6 +3166,16 @@ body[data-page="explore"]::after{background:radial-gradient(90% 55% at 85% 0,rgb
 .spot-pin.signed.t3{outline:2px solid var(--fc);outline-offset:2px;box-shadow:0 0 0 5px rgba(6,16,29,.85),0 0 0 7px var(--fc),0 0 18px var(--fc)}
 .spot-pin.pick{outline:2px solid #ffd27a;outline-offset:2px}
 .spot-pin.pick.t3{box-shadow:0 0 0 5px rgba(6,16,29,.85),0 0 0 7px #ffd27a,0 0 20px #ffd27a}
+/* i posti di Fabio: il pin è la fotografia, così la mappa si legge come «qui c'è stato qualcuno» */
+.fab-photo-pin{position:relative;width:46px;height:46px;border-radius:50%;cursor:pointer;
+  box-shadow:0 3px 12px rgba(0,0,0,.6);transition:transform .16s ease}
+.fab-photo-pin img{width:100%;height:100%;display:block;border-radius:50%;object-fit:cover;background:#06101d}
+.fab-photo-pin::after{content:"";position:absolute;inset:-3px;border-radius:50%;border:2px solid #9cc8ff;pointer-events:none}
+.fab-photo-pin:hover,.leaflet-marker-icon:focus-visible .fab-photo-pin{transform:scale(1.09)}
+.fab-photo-pin .pick-star{position:absolute;top:-5px;left:-5px;width:19px;height:19px;border-radius:50%;display:grid;place-items:center;
+  font-size:11px;font-weight:700;line-height:1;color:#3a2300;background:linear-gradient(135deg,#ffe08a,#ffb347);
+  border:1.5px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.5)}
+@media (max-width:700px){.fab-photo-pin{width:40px;height:40px}}
 /* mappa della community: ogni folk ha la sua icona e il suo colore */
 .ph-pin[class*="folk-"]:not(.contrib):not(.dev){border-color:var(--fc);color:var(--fc);box-shadow:0 0 12px color-mix(in srgb,var(--fc) 55%,transparent)}
 .ph-pin[class*="folk-"]:not(.contrib):not(.dev) svg{stroke:var(--fc)}
