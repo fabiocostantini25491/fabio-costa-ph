@@ -396,8 +396,8 @@
     {
       "nome": "Portovenere",
       "id": "Portovenere",
-      "lat": "9.835623218343018",
-      "lon": "44.05279207719052",
+      "lat": "44.05279207719052  ",
+      "lon": "9.835623218343018",
       "categoria": "Paesaggi",
       "immagini": [
         "/img/foto/fb-untitled-7-jpg-2-1.jpg"
