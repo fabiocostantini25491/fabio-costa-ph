@@ -3176,6 +3176,18 @@ body[data-page="explore"]::after{background:radial-gradient(90% 55% at 85% 0,rgb
   font-size:11px;font-weight:700;line-height:1;color:#3a2300;background:linear-gradient(135deg,#ffe08a,#ffb347);
   border:1.5px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.5)}
 @media (max-width:700px){.fab-photo-pin{width:40px;height:40px}}
+/* l'ultimo posto arrivato sulla mappa: più grande, con la data sotto, e un alone che respira */
+.fab-photo-pin.is-latest{width:58px;height:58px}
+.fab-photo-pin.is-latest::after{border-color:#ffd27a;border-width:3px;inset:-4px}
+.fab-photo-pin.is-latest::before,.spot-pin.is-latest::before{content:"";position:absolute;inset:-4px;border-radius:50%;
+  border:2px solid #ffd27a;animation:fabBeat 2.6s ease-out infinite;pointer-events:none}
+@keyframes fabBeat{0%{transform:scale(1);opacity:.8}70%{transform:scale(1.65);opacity:0}100%{opacity:0}}
+.fab-latest{position:absolute;top:calc(100% + 7px);left:50%;transform:translateX(-50%);white-space:nowrap;
+  font:600 11px/1 var(--sans);letter-spacing:.6px;text-transform:uppercase;color:#3a2300;
+  background:linear-gradient(135deg,#ffe08a,#ffb347);border-radius:999px;padding:4px 9px;
+  box-shadow:0 2px 8px rgba(0,0,0,.5)}
+@media (max-width:700px){.fab-photo-pin.is-latest{width:50px;height:50px}}
+@media (prefers-reduced-motion:reduce){.fab-photo-pin.is-latest::before,.spot-pin.is-latest::before{animation:none}}
 /* mappa della community: ogni folk ha la sua icona e il suo colore */
 .ph-pin[class*="folk-"]:not(.contrib):not(.dev){border-color:var(--fc);color:var(--fc);box-shadow:0 0 12px color-mix(in srgb,var(--fc) 55%,transparent)}
 .ph-pin[class*="folk-"]:not(.contrib):not(.dev) svg{stroke:var(--fc)}

@@ -849,14 +849,32 @@ function drawFabioPlaces() {
   const map = maps.explore;
   if (!map || !fabLayer) return;
   fabLayer.clearLayers(); fabPins.clear();
-  fabPlaces().forEach(x => {
-    const name = fabName(x), ph = fabPinPhoto(x);
+  const places = fabPlaces();
+
+  // il filo di ogni viaggio: i posti di uno stesso viaggio uniti, nell'ordine in cui stanno nel viaggio
+  const byTrip = new Map();
+  places.forEach(x => { if (x.t) { const a = byTrip.get(x.t.id) || []; a.push(x); byTrip.set(x.t.id, a); } });
+  byTrip.forEach(a => { if (a.length > 1) L.polyline(a.map(x => [x.lat, x.lon]),
+    { color: "#9cc8ff", weight: 2, opacity: .45, dashArray: "1 9", lineCap: "round", interactive: false }).addTo(fabLayer); });
+
+  // l'ultimo posto arrivato sulla mappa (content/novita.json: quando è comparsa ogni foto)
+  const addedAt = x => (x.items || []).reduce((m, p) => { const d = Date.parse(addedOn.foto?.[p.raw] || "") || 0; return d > m ? d : m; }, 0);
+  let latestKey = "", latestAt = 0, latestLabel = "";
+  places.forEach(x => { const d = addedAt(x); if (d > latestAt) { latestAt = d; latestKey = x.key; } });
+  if (latestAt > Date.parse("2001-01-01")) {
+    const d = new Date(latestAt);
+    latestLabel = d.toLocaleDateString(undefined, { day: "numeric", month: "short" });
+  } else latestKey = "";
+
+  places.forEach(x => {
+    const name = fabName(x), ph = fabPinPhoto(x), isLatest = latestKey && x.key === latestKey;
     const m = L.marker([x.lat, x.lon], { keyboard: true, riseOnHover: true, title: name,
+      zIndexOffset: isLatest ? 500 : 0,
       icon: ph
         ? L.divIcon({ className: "", iconSize: [46, 46], iconAnchor: [23, 23], tooltipAnchor: [0, -25], popupAnchor: [0, -23],
-          html: `<div class="fab-photo-pin" title="Fabio's pick"><img src="${esc(ph.thumb)}" alt="" loading="lazy" decoding="async"><span class="pick-star" aria-hidden="true">★</span></div>` })
+          html: `<div class="fab-photo-pin${isLatest ? " is-latest" : ""}" title="Fabio's pick"><img src="${esc(ph.thumb)}" alt="" loading="lazy" decoding="async"><span class="pick-star" aria-hidden="true">★</span>${isLatest ? `<b class="fab-latest">${esc(latestLabel)}</b>` : ""}</div>` })
         : L.divIcon({ className: "", iconSize: [28, 28], iconAnchor: [14, 14], tooltipAnchor: [0, -14], popupAnchor: [0, -12],
-          html: `<div class="spot-pin pick fab-pin" style="--c:#9cc8ff" title="Fabio's pick">${FAB_CAM}<span class="pick-star" aria-hidden="true">★</span></div>` }) })
+          html: `<div class="spot-pin pick fab-pin${isLatest ? " is-latest" : ""}" style="--c:#9cc8ff" title="Fabio's pick">${FAB_CAM}<span class="pick-star" aria-hidden="true">★</span>${isLatest ? `<b class="fab-latest">${esc(latestLabel)}</b>` : ""}</div>` }) })
       .addTo(fabLayer)
       .bindTooltip(esc(name), { direction: "top" })
       .bindPopup(() => fabCard(x, m._fabPhoto), { className: "fab-pop", maxWidth: 300, minWidth: 240, autoPanPaddingTopLeft: [20, 40], autoPanPaddingBottomRight: [20, 170] });
